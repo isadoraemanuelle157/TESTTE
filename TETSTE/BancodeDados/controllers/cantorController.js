@@ -86,7 +86,18 @@ const remove = async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }
+const addAlbum = async (req, res) => {
+  try {
+    const cantor = await cantorService.addAlbumToCantor(
+      req.params.id,
+      req.body
+    )
 
+    res.json({ message: "Álbum adicionado", cantor })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
 module.exports = {
   create,
   list,

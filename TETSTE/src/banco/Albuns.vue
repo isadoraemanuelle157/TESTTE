@@ -64,6 +64,21 @@
                 <div class="input-glow"></div>
               </div>
             </div>
+            <div class="input-group">
+  <label>Selecionar Cantor(es)</label>
+  
+  <select v-model="form.cantores" multiple>
+    <option 
+      v-for="cantor in cantores" 
+      :key="cantor._id" 
+      :value="cantor._id"
+    >
+      {{ cantor.nome }}
+    </option>
+  </select>
+
+  <small>Segure CTRL para selecionar mais de um</small>
+</div>
 
             <div class="form-row">
               <div class="input-wrap" :class="{ 'active': focused === 'foto', 'filled': form.foto }">
@@ -284,6 +299,7 @@ export default {
   data() {
     return {
       albuns: [],
+      cantores: [],
       modoEdicao: false,
       saving: false,
       deleting: false,
@@ -299,7 +315,8 @@ export default {
         id: null,
         nome: "",
         descricao: "",
-        foto: ""
+        foto: "",
+        cantores: []
       }
     }
   },
@@ -312,10 +329,24 @@ export default {
   },
 
   mounted() {
+    this.carregarCantores()
     this.carregarAlbuns()
   },
 
   methods: {
+     async carregarCantores() {
+      try {
+        const res = await fetch('http://localhost:3002/cantores')
+        this.cantores = await res.json()
+      } catch (error) {
+        this.showToast('Erro ao carregar cantores', 'error')
+      }
+    },
+
+    abrirModalCriar() {
+      this.carregarCantores()
+      this.showModal = true
+    },
     getParticleStyle(i) {
       return {
         left: `${Math.random() * 100}%`,
@@ -351,10 +382,11 @@ export default {
       this.saving = true
       try {
         const payload = {
-          nome: this.form.nome,
-          descricao: this.form.descricao,
-          foto: this.form.foto || this.defaultCover
-        }
+  nome: this.form.nome,
+  descricao: this.form.descricao,
+  foto: this.form.foto || this.defaultCover,
+  cantores: this.form.cantores
+}
 
         if (this.modoEdicao) {
           await axios.put(`${API}/${this.form.id}`, payload)
@@ -378,7 +410,8 @@ export default {
         id: album._id,
         nome: album.nome,
         descricao: album.descricao,
-        foto: album.foto
+        foto: album.foto,
+        cantores: album.cantores ? album.cantores.map(c => c._id || c) : []
       }
       this.modoEdicao = true
       this.imageError = false
@@ -427,7 +460,8 @@ export default {
         id: null,
         nome: "",
         descricao: "",
-        foto: ""
+        foto: "",
+        cantores: []
       }
       this.modoEdicao = false
       this.imageError = false

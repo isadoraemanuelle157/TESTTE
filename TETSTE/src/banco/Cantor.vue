@@ -15,12 +15,10 @@
         <div class="logo-section">
           <div class="logo-icon soundup-gradient">
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <!-- SoundUp Icon - Sound Wave + Up Arrow -->
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
               <path d="M12 6v6l4.5 2.7.75-1.23-3.75-2.22V6H12z"/>
               <path d="M7 12c0-2.76 2.24-5 5-5v1.5c-1.93 0-3.5 1.57-3.5 3.5S10.07 15.5 12 15.5v1.5c-2.76 0-5-2.24-5-5z"/>
               <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4v-1.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 10.5 12 10.5V8z"/>
-              <!-- Up Arrow -->
               <path d="M16 6l-1.41 1.41L16.17 9H9v2h7.17l-1.58 1.59L16 14l4-4-4-4z" transform="rotate(-45 16 10)"/>
             </svg>
           </div>
@@ -46,7 +44,7 @@
       <p>Carregando artistas...</p>
     </div>
 
-    <!-- Artists Grid - SoundUp Style -->
+    <!-- Artists Grid -->
     <div v-else class="artists-grid">
       <!-- Add Artist Card -->
       <div class="artist-card add-card" @click="abrirModalCriar">
@@ -72,12 +70,8 @@
         @mouseenter="hoveredCard = cantor._id"
         @mouseleave="hoveredCard = null"
       >
-        <!-- SoundUp Circle Image -->
         <div class="circle-container">
-          <!-- Glow Effect -->
           <div class="circle-glow" :style="getGlowStyle(cantor.foto)"></div>
-          
-          <!-- Main Circle -->
           <div class="artist-circle" :class="{ 'playing': hoveredCard === cantor._id }">
             <div class="circle-inner">
               <img 
@@ -91,8 +85,6 @@
                 <span>{{ getIniciais(cantor.nome) }}</span>
               </div>
             </div>
-            
-            <!-- Hover Overlay with Edit Button -->
             <div class="circle-overlay">
               <button class="play-btn soundup-gradient" @click.stop="editarCantor(cantor)">
                 <svg viewBox="0 0 24 24" fill="currentColor">
@@ -102,24 +94,22 @@
               </button>
             </div>
           </div>
-
-          <!-- Audio Wave Animation -->
           <div class="audio-wave" v-if="hoveredCard === cantor._id">
             <span v-for="n in 5" :key="n" :style="{ animationDelay: (n * 0.1) + 's' }"></span>
           </div>
         </div>
 
-        <!-- Artist Info -->
         <div class="artist-info-row">
           <div class="artist-info-text">
             <h3 class="artist-name">{{ cantor.nome }}</h3>
             <p class="artist-meta">
               <span class="verified-badge soundup-gradient" v-if="hoveredCard === cantor._id">✓</span>
-              Artista • {{ formatarData(cantor.createdAt) }}
+              <span v-if="cantor.albuns && cantor.albuns.length > 0">
+                {{ cantor.albuns.length }} álbum(ns) • 
+              </span>
+              {{ formatarData(cantor.createdAt) }}
             </p>
           </div>
-          
-          <!-- Delete Button - Always Visible -->
           <button 
             class="delete-btn-visible" 
             @click.stop="confirmarExclusao(cantor)"
@@ -148,10 +138,10 @@
       </button>
     </div>
 
-    <!-- Create/Edit Modal - SoundUp Style -->
+    <!-- Create/Edit Modal com Gerenciamento de Álbuns -->
     <transition name="modal">
       <div v-if="showModal" class="modal-soundup" @click.self="fecharModal">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
           <button @click="fecharModal" class="modal-close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -162,70 +152,162 @@
           <h2>{{ modoEdicao ? 'Editar Artista' : 'Novo Artista' }}</h2>
 
           <form @submit.prevent="salvarCantor">
-            <!-- SoundUp Style Image Upload -->
-            <div class="upload-soundup">
-              <div 
-                class="upload-circle" 
-                @click="triggerFileInput"
-                :class="{ 'has-image': previewFoto || form.foto }"
-              >
-                <img 
-                  v-if="previewFoto || form.foto" 
-                  :src="previewFoto || form.foto" 
-                  alt="Preview"
-                />
-                <div v-else class="upload-placeholder">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  <span>Escolher foto</span>
+            <div class="form-layout">
+              <!-- Coluna Esquerda: Dados do Artista -->
+              <div class="form-column">
+                <div class="upload-soundup">
+                  <div 
+                    class="upload-circle" 
+                    @click="triggerFileInput"
+                    :class="{ 'has-image': previewFoto || form.foto }"
+                  >
+                    <img 
+                      v-if="previewFoto || form.foto" 
+                      :src="previewFoto || form.foto" 
+                      alt="Preview"
+                    />
+                    <div v-else class="upload-placeholder">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      <span>Escolher foto</span>
+                    </div>
+                    <div class="upload-hover soundup-gradient">
+                      <span>Alterar</span>
+                    </div>
+                  </div>
+                  
+                  <input 
+                    ref="fileInput"
+                    type="file" 
+                    accept="image/*" 
+                    @change="handleFileChange"
+                    hidden
+                  />
+                  
+                  <button 
+                    v-if="previewFoto || form.foto" 
+                    type="button" 
+                    @click="removerFoto"
+                    class="btn-remove"
+                  >
+                    Remover foto
+                  </button>
                 </div>
-                <div class="upload-hover soundup-gradient">
-                  <span>Alterar</span>
+
+                <div class="form-soundup">
+                  <div class="input-group">
+                    <label>Nome do Artista</label>
+                    <input 
+                      v-model="form.nome" 
+                      type="text" 
+                      placeholder="Nome do artista"
+                      required
+                      maxlength="100"
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label>URL da imagem (opcional)</label>
+                    <input 
+                      v-model="form.foto" 
+                      type="url" 
+                      placeholder="https://..."
+                      @input="previewFoto = null"
+                    />
+                  </div>
                 </div>
               </div>
-              
-              <input 
-                ref="fileInput"
-                type="file" 
-                accept="image/*" 
-                @change="handleFileChange"
-                hidden
-              />
-              
-              <button 
-                v-if="previewFoto || form.foto" 
-                type="button" 
-                @click="removerFoto"
-                class="btn-remove"
-              >
-                Remover foto
-              </button>
-            </div>
 
-            <!-- Form Fields -->
-            <div class="form-soundup">
-              <div class="input-group">
-                <label>Nome</label>
-                <input 
-                  v-model="form.nome" 
-                  type="text" 
-                  placeholder="Nome do artista"
-                  required
-                  maxlength="100"
-                />
-              </div>
+              <!-- Coluna Direita: Gerenciamento de Álbuns -->
+              <div class="form-column albums-column">
+                <div class="albums-section">
+                  <div class="albums-header">
+                    <h3>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="9" cy="9" r="2"></circle>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                      </svg>
+                      Álbuns
+                      <span class="album-count" v-if="form.albuns.length > 0">{{ form.albuns.length }}</span>
+                    </h3>
+                    <button 
+                      type="button" 
+                      class="btn-add-album-inline" 
+                      @click="abrirModalAdicionarAlbum"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      Adicionar Álbum
+                    </button>
+                  </div>
 
-              <div class="input-group">
-                <label>URL da imagem (opcional)</label>
-                <input 
-                  v-model="form.foto" 
-                  type="url" 
-                  placeholder="https://..."
-                  @input="previewFoto = null"
-                />
+                  <!-- Lista de Álbuns -->
+                  <div class="albums-list" v-if="form.albuns.length > 0">
+                    <div 
+                      v-for="(album, index) in form.albuns" 
+                      :key="index"
+                      class="album-item"
+                    >
+                      <div class="album-cover">
+                        <img v-if="album.foto" :src="album.foto" :alt="album.nome">
+                        <div v-else class="album-cover-placeholder soundup-gradient">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="9" cy="9" r="2"></circle>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                          </svg>
+                        </div>
+                      </div>
+                      <div class="album-info">
+                        <h4>{{ album.nome }}</h4>
+                        <p>{{ album.descricao }}</p>
+                      </div>
+                      <div class="album-actions">
+                        <button 
+                          type="button"
+                          class="btn-album-action edit"
+                          @click="editarAlbum(index)"
+                          title="Editar álbum"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+                        <button 
+                          type="button"
+                          class="btn-album-action delete"
+                          @click="removerAlbum(index)"
+                          title="Remover álbum"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Estado Vazio -->
+                  <div v-else class="albums-empty">
+                    <div class="empty-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="9" cy="9" r="2"></circle>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                      </svg>
+                    </div>
+                    <p>Nenhum álbum adicionado</p>
+                    <span>Adicione álbuns para este artista</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -240,7 +322,76 @@
                 :disabled="salvando || !form.nome.trim()"
               >
                 <span v-if="salvando" class="spinner"></span>
-                {{ salvando ? 'Salvando...' : (modoEdicao ? 'Salvar' : 'Criar') }}
+                {{ salvando ? 'Salvando...' : (modoEdicao ? 'Salvar Alterações' : 'Criar Artista') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal de Adicionar/Editar Álbum -->
+    <transition name="modal">
+      <div v-if="showAlbumModal" class="modal-soundup" @click.self="fecharModalAlbum">
+        <div class="modal-content">
+          <button @click="fecharModalAlbum" class="modal-close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <h2>{{ editandoAlbumIndex !== null ? 'Editar Álbum' : 'Novo Álbum' }}</h2>
+
+          <form @submit.prevent="salvarAlbumLocal">
+            <div class="form-soundup">
+              <div class="input-group">
+                <label>Nome do Álbum</label>
+                <input 
+                  v-model="albumForm.nome" 
+                  type="text"
+                  placeholder="Ex: Thriller, Abbey Road..."
+                  required 
+                />
+              </div>
+
+              <div class="input-group">
+                <label>Descrição</label>
+                <input 
+                  v-model="albumForm.descricao" 
+                  type="text"
+                  placeholder="Gênero, ano, descrição..."
+                  required 
+                />
+              </div>
+
+              <div class="input-group">
+                <label>Capa do Álbum (URL)</label>
+                <input 
+                  v-model="albumForm.foto" 
+                  type="url"
+                  placeholder="https://..."
+                />
+              </div>
+
+              <!-- Preview da capa -->
+              <div class="album-preview" v-if="albumForm.foto">
+                <label>Preview</label>
+                <div class="preview-image">
+                  <img :src="albumForm.foto" alt="Preview do álbum" @error="albumForm.foto = ''">
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" @click="fecharModalAlbum" class="btn-cancel">
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                class="btn-save soundup-gradient"
+              >
+                {{ editandoAlbumIndex !== null ? 'Salvar Alterações' : 'Adicionar Álbum' }}
               </button>
             </div>
           </form>
@@ -272,7 +423,7 @@
       </div>
     </transition>
 
-    <!-- Toast Notification - SoundUp Style -->
+    <!-- Toast Notification -->
     <transition name="toast">
       <div v-if="toast.show" :class="['toast-soundup', toast.type]">
         <div class="toast-icon">{{ toast.icon }}</div>
@@ -298,7 +449,8 @@ export default {
       
       form: {
         nome: '',
-        foto: ''
+        foto: '',
+        albuns: []
       },
       previewFoto: null,
       arquivoSelecionado: null,
@@ -308,6 +460,15 @@ export default {
       
       showDeleteModal: false,
       cantorParaExcluir: null,
+      
+      // Modal de Álbum Local
+      showAlbumModal: false,
+      editandoAlbumIndex: null,
+      albumForm: {
+        nome: '',
+        descricao: '',
+        foto: ''
+      },
       
       toast: {
         show: false,
@@ -323,9 +484,73 @@ export default {
   },
 
   methods: {
-    // Extrair cor dominante para glow (simulado)
+    // Gerenciamento de Álbuns no Modal de Artista
+    
+    abrirModalAdicionarAlbum() {
+      this.editandoAlbumIndex = null
+      this.albumForm = {
+        nome: '',
+        descricao: '',
+        foto: ''
+      }
+      this.showAlbumModal = true
+    },
+
+    editarAlbum(index) {
+      this.editandoAlbumIndex = index
+      const album = this.form.albuns[index]
+      this.albumForm = {
+        nome: album.nome,
+        descricao: album.descricao,
+        foto: album.foto || ''
+      }
+      this.showAlbumModal = true
+    },
+
+    removerAlbum(index) {
+      if (confirm('Tem certeza que deseja remover este álbum?')) {
+        this.form.albuns.splice(index, 1)
+        this.mostrarToast('Álbum removido', 'success', '🗑️')
+      }
+    },
+
+    salvarAlbumLocal() {
+      if (!this.albumForm.nome.trim()) {
+        this.mostrarToast('Nome do álbum é obrigatório', 'error', '⚠️')
+        return
+      }
+
+      const albumData = {
+        nome: this.albumForm.nome.trim(),
+        descricao: this.albumForm.descricao.trim(),
+        foto: this.albumForm.foto.trim()
+      }
+
+      if (this.editandoAlbumIndex !== null) {
+        // Editando álbum existente
+        this.form.albuns[this.editandoAlbumIndex] = albumData
+        this.mostrarToast('Álbum atualizado!', 'success', '✅')
+      } else {
+        // Adicionando novo álbum
+        this.form.albuns.push(albumData)
+        this.mostrarToast('Álbum adicionado!', 'success', '🎵')
+      }
+
+      this.fecharModalAlbum()
+    },
+
+    fecharModalAlbum() {
+      this.showAlbumModal = false
+      this.editandoAlbumIndex = null
+      this.albumForm = {
+        nome: '',
+        descricao: '',
+        foto: ''
+      }
+    },
+
+    // Métodos existentes
     getGlowStyle(foto) {
-      // Cores azul baseadas na nova paleta
       const colors = [
         'radial-gradient(circle, rgba(37,99,235,0.5) 0%, transparent 70%)',
         'radial-gradient(circle, rgba(59,130,246,0.5) 0%, transparent 70%)',
@@ -341,7 +566,22 @@ export default {
         this.loading = true
         const response = await fetch('http://localhost:3002/cantores')
         if (!response.ok) throw new Error('Erro ao carregar')
-        this.cantores = await response.json()
+        const data = await response.json()
+        
+        // Carregar álbuns para cada cantor
+        this.cantores = await Promise.all(data.map(async (cantor) => {
+          try {
+            const albunsResponse = await fetch(`http://localhost:3002/albuns?cantor=${cantor._id}`)
+            if (albunsResponse.ok) {
+              cantor.albuns = await albunsResponse.json()
+            } else {
+              cantor.albuns = []
+            }
+          } catch (e) {
+            cantor.albuns = []
+          }
+          return cantor
+        }))
       } catch (error) {
         this.mostrarToast('Erro ao carregar artistas', 'error', '❌')
       } finally {
@@ -349,48 +589,85 @@ export default {
       }
     },
 
-    async salvarCantor() {
-      if (!this.form.nome.trim()) return
-      
-      try {
-        this.salvando = true
-        let fotoUrl = this.form.foto
-        
-        if (this.arquivoSelecionado) {
-          fotoUrl = await this.converterParaBase64(this.arquivoSelecionado)
-        }
+   async salvarCantor() {
+  if (!this.form.nome.trim()) return
 
-        const dados = {
-          nome: this.form.nome.trim(),
-          foto: fotoUrl
-        }
+  try {
+    this.salvando = true
 
-        let response
-        
-        if (this.modoEdicao) {
-          response = await fetch(`http://localhost:3002/cantores/${this.cantorEditando._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
-          })
-          this.mostrarToast('Artista atualizado!', 'success', '✅')
-        } else {
-          response = await fetch('http://localhost:3002/cantores', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
-          })
-          this.mostrarToast('Artista adicionado!', 'success', '✅')
-        }
+    let fotoUrl = this.form.foto
 
-        this.fecharModal()
-        this.carregarCantores()
-      } catch (error) {
-        this.mostrarToast(error.message, 'error', '❌')
-      } finally {
-        this.salvando = false
-      }
-    },
+    if (this.arquivoSelecionado) {
+      fotoUrl = await this.converterParaBase64(this.arquivoSelecionado)
+    }
+
+    const dadosCantor = {
+      nome: this.form.nome.trim(),
+      foto: fotoUrl
+    }
+
+    let response
+    let cantorId
+
+    // ✏️ EDITAR
+    if (this.modoEdicao) {
+      response = await fetch(`http://localhost:3002/cantores/${this.cantorEditando._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosCantor)
+      })
+
+      const result = await response.json()
+      cantorId = result.cantor._id
+
+      this.mostrarToast('Artista atualizado!', 'success', '✅')
+    } 
+    // ➕ CRIAR
+    else {
+      response = await fetch('http://localhost:3002/cantores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dadosCantor)
+      })
+
+      const result = await response.json()
+      cantorId = result.cantor._id
+
+      this.mostrarToast('Artista criado!', 'success', '✅')
+    }
+
+  for (const album of this.form.albuns) {
+
+  // 👉 SE JÁ EXISTE, ATUALIZA
+  if (album._id) {
+    await fetch(`http://localhost:3002/albuns/${album._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(album)
+    })
+  } 
+  // 👉 SE NÃO EXISTE, CRIA
+  else {
+    await fetch('http://localhost:3002/albuns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...album,
+        cantores: [cantorId]
+      })
+    })
+  }
+}
+
+    this.fecharModal()
+    this.carregarCantores()
+
+  } catch (error) {
+    this.mostrarToast(error.message, 'error', '❌')
+  } finally {
+    this.salvando = false
+  }
+},
 
     async excluirCantor() {
       try {
@@ -463,10 +740,26 @@ export default {
       this.showModal = true
     },
 
-    editarCantor(cantor) {
+    async editarCantor(cantor) {
       this.modoEdicao = true
       this.cantorEditando = cantor
-      this.form = { nome: cantor.nome, foto: cantor.foto || '' }
+      
+      // Buscar álbuns do cantor
+      let albuns = []
+      try {
+        const response = await fetch(`http://localhost:3002/albuns?cantor=${cantor._id}`)
+        if (response.ok) {
+          albuns = await response.json()
+        }
+      } catch (e) {
+        console.error('Erro ao carregar álbuns:', e)
+      }
+      
+      this.form = { 
+        nome: cantor.nome, 
+        foto: cantor.foto || '',
+        albuns: albuns
+      }
       this.previewFoto = null
       this.arquivoSelecionado = null
       this.showModal = true
@@ -478,7 +771,11 @@ export default {
     },
 
     resetForm() {
-      this.form = { nome: '', foto: '' }
+      this.form = { 
+        nome: '', 
+        foto: '',
+        albuns: []
+      }
       this.previewFoto = null
       this.arquivoSelecionado = null
     },
@@ -530,7 +827,6 @@ export default {
   overflow-x: hidden;
 }
 
-/* SoundUp Gradient - Azul */
 .soundup-gradient {
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
 }
@@ -696,7 +992,7 @@ export default {
   font-weight: 300;
 }
 
-/* Loading - Vinyl Style */
+/* Loading */
 .loading-soundup {
   display: flex;
   flex-direction: column;
@@ -769,15 +1065,18 @@ export default {
   z-index: 1;
 }
 
-/* Artist Card - SoundUp Style */
+/* Artist Card */
 .artist-card {
   background: rgba(10, 10, 26, 0.6);
   backdrop-filter: blur(10px);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.3s ease;
   cursor: pointer;
   border: 1px solid rgba(37, 99, 235, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .artist-card:hover {
@@ -792,10 +1091,8 @@ export default {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
-  margin-bottom: 1rem;
 }
 
-/* Glow Effect */
 .circle-glow {
   position: absolute;
   top: -10%;
@@ -812,7 +1109,6 @@ export default {
   opacity: 1;
 }
 
-/* Main Circle - SoundUp Style */
 .artist-circle {
   position: relative;
   width: 100%;
@@ -856,7 +1152,6 @@ export default {
   color: white;
 }
 
-/* Overlay with Edit Button */
 .circle-overlay {
   position: absolute;
   bottom: 0;
@@ -922,7 +1217,6 @@ export default {
   opacity: 1;
 }
 
-/* Audio Wave Animation */
 .audio-wave {
   position: absolute;
   bottom: -15px;
@@ -952,7 +1246,6 @@ export default {
   50% { transform: scaleY(1); opacity: 1; }
 }
 
-/* Artist Info Row with Delete Button */
 .artist-info-row {
   display: flex;
   align-items: center;
@@ -996,7 +1289,6 @@ export default {
   font-weight: 900;
 }
 
-/* Delete Button - Always Visible */
 .delete-btn-visible {
   width: 36px;
   height: 36px;
@@ -1131,17 +1423,22 @@ export default {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  overflow-y: auto;
 }
 
 .modal-content {
   background: linear-gradient(180deg, #0a0a1a 0%, #050508 100%);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 2rem;
   width: 100%;
   max-width: 450px;
   position: relative;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(37, 99, 235, 0.2);
   border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.modal-large {
+  max-width: 900px;
 }
 
 .modal-small {
@@ -1164,6 +1461,7 @@ export default {
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  z-index: 10;
 }
 
 .modal-close:hover {
@@ -1182,12 +1480,268 @@ export default {
   background-clip: text;
 }
 
+/* Form Layout */
+.form-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.albums-column {
+  border-left: 1px solid rgba(37, 99, 235, 0.1);
+  padding-left: 2rem;
+}
+
+/* Albums Section */
+.albums-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.albums-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.albums-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--soundup-white);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.albums-header h3 svg {
+  width: 20px;
+  height: 20px;
+  color: #60a5fa;
+}
+
+.album-count {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.btn-add-album-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.1);
+  color: #60a5fa;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-add-album-inline:hover {
+  background: rgba(37, 99, 235, 0.2);
+  border-color: #2563eb;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.btn-add-album-inline svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Albums List */
+.albums-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.albums-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.albums-list::-webkit-scrollbar-track {
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: 2px;
+}
+
+.albums-list::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 235, 0.3);
+  border-radius: 2px;
+}
+
+.album-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(10, 10, 26, 0.6);
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.album-item:hover {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.2);
+  transform: translateX(4px);
+}
+
+.album-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.album-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.album-cover-placeholder svg {
+  width: 24px;
+  height: 24px;
+}
+
+.album-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.album-info h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--soundup-white);
+  margin: 0 0 0.25rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-info p {
+  font-size: 0.8rem;
+  color: var(--soundup-gray);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-album-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: rgba(10, 10, 26, 0.8);
+  color: var(--soundup-gray);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-album-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-album-action.edit:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+
+.btn-album-action.delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+}
+
+/* Albums Empty State */
+.albums-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--soundup-gray);
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(37, 99, 235, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.empty-icon svg {
+  width: 32px;
+  height: 32px;
+  color: #2563eb;
+  opacity: 0.5;
+}
+
+.albums-empty p {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--soundup-white);
+  margin: 0 0 0.5rem 0;
+}
+
+.albums-empty span {
+  font-size: 0.875rem;
+  color: var(--soundup-gray);
+}
+
 /* Upload SoundUp Style */
 .upload-soundup {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 2rem;
 }
 
 .upload-circle {
@@ -1263,7 +1817,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  margin-bottom: 2rem;
 }
 
 .input-group {
@@ -1299,10 +1852,40 @@ export default {
   color: var(--soundup-gray);
 }
 
+/* Album Preview */
+.album-preview {
+  margin-top: 0.5rem;
+}
+
+.album-preview label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--soundup-white);
+}
+
+.preview-image {
+  width: 100%;
+  height: 150px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid rgba(37, 99, 235, 0.2);
+}
+
+.preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Modal Actions */
 .modal-actions {
   display: flex;
   gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(37, 99, 235, 0.1);
 }
 
 .btn-cancel {
@@ -1380,7 +1963,7 @@ export default {
   animation: spin 0.8s linear infinite;
 }
 
-/* Toast - SoundUp Style */
+/* Toast */
 .toast-soundup {
   position: fixed;
   bottom: 2rem;
@@ -1476,6 +2059,28 @@ export default {
 
   .modal-content {
     padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .modal-large {
+    max-width: 100%;
+  }
+
+  .form-layout {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .albums-column {
+    border-left: none;
+    border-top: 1px solid rgba(37, 99, 235, 0.1);
+    padding-left: 0;
+    padding-top: 1.5rem;
+  }
+
+  .upload-circle {
+    width: 140px;
+    height: 140px;
   }
 }
 </style>

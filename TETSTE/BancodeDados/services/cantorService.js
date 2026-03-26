@@ -1,4 +1,5 @@
 const Cantor = require('../models/Cantor')
+const Album = require('../models/Album')
 
 // CRIAR
 const createCantor = async (data) => {
@@ -11,9 +12,20 @@ const getCantores = async () => {
   return await Cantor.find().sort({ _id: -1 })
 }
 
+
 // BUSCAR POR ID
 const getCantorById = async (id) => {
-  return await Cantor.findById(id)
+  const cantor = await Cantor.findById(id)
+
+  if (!cantor) return null
+
+  const albuns = await Album.find({ cantores: id })
+
+  return {
+    ...cantor.toObject(),
+    albuns,
+    totalAlbuns: albuns.length
+  }
 }
 
 // BUSCAR POR NOME
@@ -29,6 +41,15 @@ const updateCantor = async (id, data) => {
 // DELETAR
 const deleteCantor = async (id) => {
   return await Cantor.findByIdAndDelete(id)
+}
+const addAlbumToCantor = async (cantorId, albumData) => {
+  return await Cantor.findByIdAndUpdate(
+    cantorId,
+    {
+      $push: { albuns: albumData }
+    },
+    { new: true }
+  )
 }
 
 module.exports = {

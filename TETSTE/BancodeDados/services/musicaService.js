@@ -8,7 +8,7 @@ const createMusica = async (data) => {
 // LISTAR
 const getMusicas = async () => {
   return await Musica.find()
-    .populate('generoId', 'nome') // 🔥 traz nome do gênero
+    .populate('generoId', 'nome _id') // 🔥 traz nome do gênero
 }
 
 // BUSCAR POR ID

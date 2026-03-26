@@ -12,7 +12,6 @@ const musicaSchema = new mongoose.Schema({
   generoId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Genero',
-    required: true
   }
 
 }, {

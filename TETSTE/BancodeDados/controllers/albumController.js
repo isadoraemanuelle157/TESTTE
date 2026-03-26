@@ -13,7 +13,10 @@ const create = async (req, res) => {
 // LISTAR
 const list = async (req, res) => {
   try {
-    const albuns = await albumService.getAlbuns()
+    const { cantor } = req.query
+
+    const albuns = await albumService.getAlbuns(cantor)
+
     res.json(albuns)
   } catch (error) {
     res.status(500).json({ error: error.message })
