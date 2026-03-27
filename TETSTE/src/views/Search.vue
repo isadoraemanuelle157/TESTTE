@@ -1,419 +1,600 @@
 <template>
-  <div class="search-page-clean">
-    <!-- Header com Histórico de Buscas -->
-    <header class="top-header">
-      <div class="header-left">
-        <svg viewBox="0 0 24 24" fill="currentColor" class="logo">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-        </svg>
-        <span>SoundUp</span>
-      </div>
-
-      <!-- Histórico de Buscas Compacto -->
-      <div class="history-compact" ref="historyContainer">
-        <button 
-          v-if="searchHistory.length > 0" 
-          class="history-toggle"
-          @click="showHistory = !showHistory"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-          </svg>
-          Histórico
-          <span class="history-count">{{ searchHistory.length }}</span>
-        </button>
-        
-        <div v-if="showHistory && searchHistory.length" class="history-dropdown">
-          <div class="history-header-dropdown">
-            <span>Buscas Recentes</span>
-            <button @click="clearHistory" class="clear-btn-small">Limpar</button>
-          </div>
-          <div class="history-items">
-            <button
-              v-for="(item, index) in searchHistory.slice(0, 10)"
-              :key="index"
-              class="history-item-small"
-              @click="selectFromHistory(item)"
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" class="history-icon">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              {{ item }}
-            </button>
-          </div>
+  <div class="search-page">
+    <div class="search-container">
+      
+      <!-- Header com Logo -->
+      <header class="search-header">
+        <div class="header-brand">
+          <i class="fa fa-music brand-icon"></i>
+          <span class="brand-text">SoundUp</span>
         </div>
-      </div>
-    </header>
-
-    <!-- Barra de Busca Expandida -->
-    <div class="search-section-expanded">
-      <div class="search-wrapper-full" :class="{ focused: isFocused }">
-        <svg viewBox="0 0 24 24" fill="currentColor" class="search-icon-large">
-          <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-        </svg>
-        <input
-          ref="searchInput"
-          type="text"
-          v-model="searchQuery"
-          placeholder="Buscar músicas, artistas, álbuns, playlists..."
-          @focus="isFocused = true; showSuggestions = true"
-          @blur="handleBlur"
-          @keyup.enter="performSearch"
-          @input="handleInput"
-        />
-        <button v-if="searchQuery" class="clear-search-btn" @click="clearSearch">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-          </svg>
-        </button>
-      </div>
-
-      <!-- Sugestões Agrupadas por Tipo -->
-      <div v-if="showSuggestions && (groupedSuggestions.length > 0 || searchQuery.length === 0)" class="suggestions-panel">
         
-        <!-- Recomendado para você (quando não há busca) -->
-        <div v-if="searchQuery.length === 0" class="suggestion-group recommended-section">
-          <div class="group-header">
-            <svg viewBox="0 0 24 24" fill="currentColor" class="group-icon">
-              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-            </svg>
-            <span>Recomendado para você</span>
-          </div>
-          <div class="recommended-grid">
-            <div
-              v-for="(item, index) in recommendedItems"
-              :key="index"
-              class="recommended-item"
-              @click="selectSuggestion(item.name)"
-            >
-              <img :src="item.image" :alt="item.name" class="recommended-img">
-              <div class="recommended-info">
-                <span class="recommended-name">{{ item.name }}</span>
-                <span class="recommended-type">{{ item.type }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sugestões Agrupadas por Tipo -->
-        <div v-else>
-          <div
-            v-for="group in groupedSuggestions"
-            :key="group.type"
-            class="suggestion-group"
+        <!-- Histórico de Buscas -->
+        <div class="history-wrapper" ref="historyContainer">
+          <button 
+            v-if="searchHistory.length > 0" 
+            class="history-btn"
+            @click="showHistory = !showHistory"
           >
-            <div class="group-header">
-              <span :class="['type-badge', group.typeClass]">{{ group.type }}</span>
+            <i class="fa fa-history"></i>
+            <span class="history-label">Histórico</span>
+            <span class="history-badge">{{ searchHistory.length }}</span>
+          </button>
+          
+          <div v-if="showHistory && searchHistory.length" class="history-dropdown">
+            <div class="history-header">
+              <span>Buscas Recentes</span>
+              <button @click="clearHistory" class="clear-btn">Limpar</button>
             </div>
-            <div class="group-items">
+            <div class="history-list">
+              <button
+                v-for="(item, index) in searchHistory.slice(0, 10)"
+                :key="index"
+                class="history-item"
+                @click="selectFromHistory(item)"
+              >
+                <i class="fa fa-search history-icon"></i>
+                {{ item }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Barra de Busca Principal -->
+      <div class="search-main">
+        <div class="search-box" :class="{ focused: isFocused }">
+          <i class="fa fa-search search-icon"></i>
+          <input
+            ref="searchInput"
+            type="text"
+            v-model="searchQuery"
+            placeholder="O que você quer ouvir?"
+            @focus="isFocused = true; showSuggestions = true"
+            @blur="handleBlur"
+            @keyup.enter="performSearch"
+            @input="handleInput"
+          />
+          <button v-if="searchQuery" class="clear-btn-icon" @click="clearSearch">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Sugestões -->
+        <div v-if="showSuggestions" class="suggestions-box">
+          <!-- Recomendado (quando vazio) -->
+          <div v-if="searchQuery.length === 0" class="suggested-section">
+            <div class="suggested-header">
+              <i class="fa fa-star"></i>
+              <span>Recomendado para você</span>
+            </div>
+            <div class="suggested-grid">
               <div
-                v-for="(item, idx) in group.items"
-                :key="idx"
-                class="suggestion-item-smart"
+                v-for="(item, index) in recommendedItems"
+                :key="index"
+                class="suggested-card"
                 @click="selectSuggestion(item.name)"
               >
-                <img v-if="item.image" :src="item.image" class="suggestion-thumb">
-                <div v-else class="suggestion-thumb placeholder" :class="group.typeClass">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path v-if="group.type === 'Artista'" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    <path v-else-if="group.type === 'Música'" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                    <path v-else-if="group.type === 'Álbum'" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
-                    <path v-else d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                  </svg>
+                <img :src="item.image" :alt="item.name">
+                <div class="suggested-info">
+                  <span class="suggested-name">{{ item.name }}</span>
+                  <span class="suggested-type">{{ item.type }}</span>
                 </div>
-                <div class="suggestion-text">
-                  <span class="suggestion-name" v-html="highlightText(item.name)"></span>
-                  <span v-if="item.subtitle" class="suggestion-subtitle">{{ item.subtitle }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resultados agrupados -->
+          <div v-else-if="groupedSuggestions.length > 0" class="grouped-results">
+            <div
+              v-for="group in groupedSuggestions"
+              :key="group.type"
+              class="result-group"
+            >
+              <div class="group-label">{{ group.type }}</div>
+              <div class="group-items">
+                <div
+                  v-for="(item, idx) in group.items"
+                  :key="idx"
+                  class="group-item"
+                  @click="selectSuggestion(item.name)"
+                >
+                  <img v-if="item.image" :src="item.image" class="item-thumb">
+                  <div v-else class="item-thumb-placeholder" :class="group.typeClass">
+                    <i :class="getIconForType(group.type)"></i>
+                  </div>
+                  <div class="item-details">
+                    <span class="item-name" v-html="highlightText(item.name)"></span>
+                    <span v-if="item.subtitle" class="item-sub">{{ item.subtitle }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Conteúdo Principal - Largura Total -->
-    <main class="main-content-full">
-      
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-state">
-        <div class="spinner"></div>
-        <span>Buscando músicas...</span>
-      </div>
-
-      <!-- Estado Inicial -->
-      <div v-if="!hasSearched && !isLoading" class="discover-fullwidth">
+      <!-- Conteúdo Principal -->
+      <main class="search-content">
         
-        <!-- Grid de Categorias Compacto -->
-        <div class="quick-categories">
-          <h2 class="section-title">Explorar</h2>
-          <div class="category-pills">
-            <button
-              v-for="cat in quickCategories"
-              :key="cat"
-              class="cat-pill"
-              @click="searchAndGo(cat)"
-            >
-              {{ cat }}
-            </button>
-          </div>
+        <!-- Loading -->
+        <div v-if="isLoading" class="loading-state">
+          <div class="spinner"></div>
+          <span>Buscando...</span>
         </div>
 
-        <!-- Grid Principal de Descoberta -->
-        <div class="discovery-grid">
+        <!-- Estado Inicial - Descoberta -->
+        <div v-if="!hasSearched && !isLoading" class="discover-section">
           
-          <!-- Tendências -->
-          <div class="grid-section">
-            <h3 class="grid-title">Tendências</h3>
-            <div class="trend-boxes">
-              <div
-                v-for="(trend, index) in trending"
-                :key="trend"
-                class="trend-box"
-                :style="{ background: getTrendGradient(index) }"
-                @click="searchAndGo(trend)"
-              >
-                {{ trend }}
+          <!-- Categorias Rápidas com Botão Detalhado -->
+          <div class="quick-tags">
+            <div class="tags-header">
+              <h3 class="section-label">Explorar</h3>
+              
+              <!-- Botão Categorias Detalhadas -->
+              <div class="categories-dropdown-wrapper" ref="categoriesContainer">
+                <button 
+                  class="categories-btn"
+                  @click="showCategoriesDropdown = !showCategoriesDropdown"
+                  :class="{ active: showCategoriesDropdown }"
+                >
+                  <i class="fa fa-th-large"></i>
+                  <span>Categorias</span>
+                  <i class="fa fa-chevron-down" :class="{ rotate: showCategoriesDropdown }"></i>
+                </button>
+                
+                <!-- Dropdown de Categorias Detalhadas -->
+                <transition name="dropdown">
+                  <div v-if="showCategoriesDropdown" class="categories-dropdown">
+                    <div class="categories-dropdown-header">
+                      <i class="fa fa-th-large"></i>
+                      <span>Todas as Categorias</span>
+                      <button class="close-dropdown" @click="showCategoriesDropdown = false">
+                        <i class="fa fa-times"></i>
+                      </button>
+                    </div>
+                    
+                    <div class="categories-tabs">
+                      <button 
+                        v-for="tab in categoryTabs" 
+                        :key="tab.id"
+                        :class="{ active: activeCategoryTab === tab.id }"
+                        @click="activeCategoryTab = tab.id"
+                      >
+                        <i :class="tab.icon"></i>
+                        {{ tab.name }}
+                      </button>
+                    </div>
+                    
+                    <div class="categories-content">
+                      <!-- Tab: Gêneros -->
+                      <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
+                        <div class="category-section">
+                          <h4>Populares</h4>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in detailedCategories.genres.popular"
+                              :key="genre.name"
+                              class="tag-btn detailed"
+                              :style="{ borderColor: genre.color, color: genre.color }"
+                              @click="searchAndGo(genre.name); showCategoriesDropdown = false"
+                            >
+                              <i :class="genre.icon"></i>
+                              <span>{{ genre.name }}</span>
+                              <small v-if="genre.count">{{ genre.count }}</small>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div class="category-section">
+                          <h4>Estilos Regionais</h4>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in detailedCategories.genres.regional"
+                              :key="genre.name"
+                              class="tag-btn detailed"
+                              :style="{ borderColor: genre.color, color: genre.color }"
+                              @click="searchAndGo(genre.name); showCategoriesDropdown = false"
+                            >
+                              <i :class="genre.icon"></i>
+                              <span>{{ genre.name }}</span>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div class="category-section">
+                          <h4>Eletrônica & Dance</h4>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in detailedCategories.genres.electronic"
+                              :key="genre.name"
+                              class="tag-btn detailed"
+                              :style="{ borderColor: genre.color, color: genre.color }"
+                              @click="searchAndGo(genre.name); showCategoriesDropdown = false"
+                            >
+                              <i :class="genre.icon"></i>
+                              <span>{{ genre.name }}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Tab: Moods -->
+                      <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
+                        <div class="mood-grid detailed">
+                          <div
+                            v-for="mood in detailedCategories.moods"
+                            :key="mood.name"
+                            class="mood-card-detailed"
+                            :style="{ background: mood.gradient }"
+                            @click="searchAndGo(mood.name); showCategoriesDropdown = false"
+                          >
+                            <i :class="mood.icon"></i>
+                            <div class="mood-info">
+                              <span class="mood-name">{{ mood.name }}</span>
+                              <span class="mood-desc">{{ mood.description }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Tab: Atividades -->
+                      <div v-if="activeCategoryTab === 'activities'" class="category-tab-content">
+                        <div class="activity-list">
+                          <div
+                            v-for="activity in detailedCategories.activities"
+                            :key="activity.name"
+                            class="activity-item"
+                            @click="searchAndGo(activity.name); showCategoriesDropdown = false"
+                          >
+                            <div class="activity-icon" :style="{ background: activity.color }">
+                              <i :class="activity.icon"></i>
+                            </div>
+                            <div class="activity-info">
+                              <span class="activity-name">{{ activity.name }}</span>
+                              <span class="activity-desc">{{ activity.description }}</span>
+                            </div>
+                            <i class="fa fa-chevron-right activity-arrow"></i>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- Tab: Décadas -->
+                      <div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
+                        <div class="decade-timeline">
+                          <div
+                            v-for="decade in detailedCategories.decades"
+                            :key="decade.name"
+                            class="decade-item"
+                            @click="searchAndGo(decade.name); showCategoriesDropdown = false"
+                          >
+                            <div class="decade-bar" :style="{ width: decade.popularity + '%', background: decade.color }"></div>
+                            <div class="decade-info">
+                              <span class="decade-name">{{ decade.name }}</span>
+                              <span class="decade-desc">{{ decade.description }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
               </div>
             </div>
-          </div>
-
-          <!-- Gêneros -->
-          <div class="grid-section">
-            <h3 class="grid-title">Gêneros</h3>
-            <div class="genre-list-horizontal">
-              <div
-                v-for="genre in genres"
-                :key="genre.name"
-                class="genre-tag-large"
-                :style="{ background: genre.color }"
-                @click="searchAndGo(genre.name)"
+            
+            <div class="tags-row">
+              <button
+                v-for="cat in quickCategories"
+                :key="cat"
+                class="tag-btn"
+                @click="searchAndGo(cat)"
               >
-                {{ genre.name }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Moods -->
-          <div class="grid-section">
-            <h3 class="grid-title">Estados de Espírito</h3>
-            <div class="mood-cards">
-              <div
-                v-for="mood in moods"
-                :key="mood.name"
-                class="mood-card"
-                :style="{ background: mood.gradient }"
-                @click="searchAndGo(mood.name)"
-              >
-                <span class="mood-label">{{ mood.name }}</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Top Músicas do Deezer -->
-        <div class="content-block" v-if="chartTracks.length > 0">
-          <div class="block-header">
-            <h3>Top Músicas Brasil</h3>
-            <button @click="searchAndGo('Top Brasil')">Ver todas</button>
-          </div>
-          <div class="block-grid albums">
-            <div
-              v-for="track in chartTracks.slice(0, 4)"
-              :key="track.id"
-              class="grid-item album"
-              @click="playTrack(track)"
-            >
-              <img :src="track.album.cover_medium" :alt="track.title">
-              <span class="item-title">{{ track.title }}</span>
-              <span class="item-sub">{{ track.artist.name }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Artistas Populares do Deezer -->
-        <div class="content-block" v-if="popularArtistsReal.length > 0">
-          <div class="block-header">
-            <h3>Artistas Populares</h3>
-            <button @click="searchAndGo('Artistas')">Ver todos</button>
-          </div>
-          <div class="block-grid artists">
-            <div
-              v-for="artist in popularArtistsReal.slice(0, 8)"
-              :key="artist.id"
-              class="grid-item artist"
-              @click="searchArtist(artist.name)"
-            >
-              <img :src="artist.picture_medium" :alt="artist.name">
-              <span>{{ artist.name }}</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Resultados da Busca -->
-      <div v-else-if="hasSearched && !isLoading" class="search-results-full">
-        <div class="results-toolbar">
-          <h2>Resultados para "{{ lastSearch }}"</h2>
-          <div class="filter-chips">
-            <button
-              v-for="filter in searchFilters"
-              :key="filter"
-              :class="{ active: activeFilter === filter }"
-              @click="activeFilter = filter"
-            >
-              {{ filter }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="searchResults.length === 0" class="no-results">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
-          <p>Nenhum resultado encontrado para "{{ lastSearch }}"</p>
-        </div>
-
-        <div v-else class="results-masonry">
-          <div
-            v-for="(result, index) in filteredResults"
-            :key="result.id || index"
-            class="result-tile"
-            @click="playTrack(result)"
-          >
-            <div class="tile-visual">
-              <img :src="getBestImage(result)" :alt="getResultTitle(result)">
-              <button class="tile-play">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                {{ cat }}
               </button>
-              <span class="tile-type">{{ getResultType(result) }}</span>
             </div>
-            <div class="tile-info">
-              <h4>{{ getResultTitle(result) }}</h4>
-              <p>{{ getResultSubtitle(result) }}</p>
+          </div>
+
+          <!-- Grid de Descoberta -->
+          <div class="discovery-grid">
+            
+           
+
+            
+
+          </div>
+
+          <!-- Top Músicas -->
+          <div class="top-section" v-if="chartTracks.length > 0">
+            <div class="top-header">
+              <h3>Top Músicas Brasil</h3>
+              <button @click="searchAndGo('Top Brasil')" class="view-all">Ver todas</button>
+            </div>
+            <div class="top-tracks">
+              <div
+                v-for="(track, index) in chartTracks.slice(0, 5)"
+                :key="track.id"
+                class="track-card"
+                @click="playTrack(track)"
+              >
+                <span class="track-number">{{ index + 1 }}</span>
+                <img :src="track.album.cover_medium" :alt="track.title">
+                <div class="track-info">
+                  <span class="track-name">{{ track.title }}</span>
+                  <span class="track-artist">{{ track.artist.name }}</span>
+                </div>
+                
+                <!-- Botão de curtir no Top Músicas -->
+                <button 
+                  class="btn-like-track"
+                  @click.stop="toggleLikeTrack(track)"
+                  :class="{ liked: isTrackLiked(track.id) }"
+                  :title="isTrackLiked(track.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
+                >
+                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                </button>
+                
+                <button class="track-play">
+                  <i class="fa fa-play"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Artistas Populares -->
+          <div class="top-section" v-if="popularArtistsReal.length > 0">
+            <div class="top-header">
+              <h3>Artistas Populares</h3>
+              <button @click="searchAndGo('Artistas')" class="view-all">Ver todos</button>
+            </div>
+            <div class="artists-row">
+              <div
+                v-for="artist in popularArtistsReal.slice(0, 6)"
+                :key="artist.id"
+                class="artist-item"
+                @click="searchArtist(artist.name)"
+              >
+                <img :src="artist.picture_medium" :alt="artist.name">
+                <span class="artist-name">{{ artist.name }}</span>
+                <span class="artist-fans">{{ formatFans(artist.nb_fan) }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Resultados da Busca -->
+        <div v-else-if="hasSearched && !isLoading" class="search-results">
+          <div class="results-header">
+            <h2>Resultados para "{{ lastSearch }}"</h2>
+            <div class="filter-tabs">
+              <button
+                v-for="filter in searchFilters"
+                :key="filter"
+                :class="{ active: activeFilter === filter }"
+                @click="activeFilter = filter"
+              >
+                {{ filter }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="filteredResults.length === 0" class="no-results">
+            <i class="fa fa-search"></i>
+            <p>Nenhum resultado encontrado</p>
+          </div>
+
+          <div v-else class="results-grid">
+            <div
+              v-for="(result, index) in filteredResults"
+              :key="result.id || index"
+              class="result-card"
+            >
+              <div class="result-image" @click="playTrack(result)">
+                <img :src="getBestImage(result)" :alt="getResultTitle(result)">
+                <div class="result-overlay">
+                  <i class="fa fa-play"></i>
+                </div>
+                <span class="result-type">{{ getResultType(result) }}</span>
+              </div>
+              
+              <!-- Botão de curtir no resultado da busca -->
+              <button 
+                v-if="result.type === 'track'"
+                class="btn-like-result"
+                @click.stop="toggleLikeTrack(result)"
+                :class="{ liked: isTrackLiked(result.id) }"
+                :title="isTrackLiked(result.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
+              >
+                <i :class="isTrackLiked(result.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+              </button>
+              
+              <div class="result-info" @click="playTrack(result)">
+                <h4>{{ getResultTitle(result) }}</h4>
+                <p>{{ getResultSubtitle(result) }}</p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-    </main>
+      </main>
 
-    <!-- Player Fixo -->
-    <div v-if="currentTrack" class="fixed-player">
-      <div class="player-info">
-        <img :src="getPlayerImage(currentTrack)" :alt="getResultTitle(currentTrack)">
-        <div class="player-text">
-          <span class="player-title">{{ getResultTitle(currentTrack) }}</span>
-          <span class="player-artist">{{ getResultSubtitle(currentTrack) }}</span>
-        </div>
-      </div>
-      <div class="player-controls">
-        <button @click="togglePlay" class="play-btn">
-          <svg v-if="isPlaying" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-        </button>
-      </div>
-      <audio 
-        v-if="currentTrack && currentTrack.preview" 
-        ref="audioPlayer"
-        :src="currentTrack.preview"
-        @ended="isPlaying = false"
-        @play="isPlaying = true"
-        @pause="isPlaying = false"
-      ></audio>
     </div>
+
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <transition name="toast">
+      <div v-if="toast.show" class="toast" :class="toast.type">
+        <i :class="toast.icon"></i>
+        <span>{{ toast.message }}</span>
+      </div>
+    </transition>
+
   </div>
 </template>
 
 <script>
 export default {
-  name: 'SearchClean',
+  name: 'Search',
   
- data() {
-  return {
-    // ============ CONFIGURAÇÃO DA API ============
-    // ✅ Use este proxy para desenvolvimento (funciona imediatamente)
-    DEEZER_API: 'https://proxy.corsfix.com/?https://api.deezer.com',
-    
-    // ❌ API direta NÃO FUNCIONA no navegador (CORS bloqueado)
-    // DEEZER_API: 'https://api.deezer.com',
-    
-    // ==============================================
-    
-    searchQuery: '',
-    lastSearch: '',
-    isFocused: false,
-    hasSearched: false,
-    showSuggestions: false,
-    showHistory: false,
-    activeFilter: 'Todos',
-    currentTrack: null,
-    isPlaying: false,
-    isLoading: false,
-    
-    searchHistory: JSON.parse(localStorage.getItem('searchHistory')) || [],
-    suggestions: [],
-    searchResults: [],
-    chartTracks: [],
-    popularArtistsReal: [],
-
-    searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns'],
-
-    quickCategories: [
-      'Pop', 'Rock', 'Hip Hop', 'Eletrônica', 'Sertanejo', 
-      'Funk', 'MPB', 'Jazz', 'Clássica', 'Indie', 'Pagode', 'Forró'
-    ],
-
-    trending: [
-      'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional', 
-      'Trap Brasileiro', 'Rock Clássico', 'MPB Nova'
-    ],
-
-    trendGradients: [
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-    ],
-
-    genres: [
-      { name: 'Pop', color: '#E91E63' },
-      { name: 'Rock', color: '#F44336' },
-      { name: 'Hip Hop', color: '#FF9800' },
-      { name: 'Eletrônica', color: '#00BCD4' },
-      { name: 'Sertanejo', color: '#8D6E63' },
-      { name: 'Funk', color: '#FF5722' },
-      { name: 'MPB', color: '#9C27B0' },
-      { name: 'Gospel', color: '#1976D2' },
-      { name: 'Jazz', color: '#FFC107' },
-      { name: 'Clássica', color: '#795548' }
-    ],
-
-    moods: [
-      { name: 'Treino', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' },
-      { name: 'Foco', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Relaxar', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%)' },
-      { name: 'Festa', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { name: 'Triste', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Romântico', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-
-    recommendedItems: [
-      { name: 'The Weeknd', type: 'Artista', image: 'https://e-cdns-images.dzcdn.net/images/artist/9f6c0d74b0f2c27b2f0c6a5b5e5b5e5b/250x250-000000-80-0-0.jpg' },
-      { name: 'Blinding Lights', type: 'Música', image: 'https://e-cdns-images.dzcdn.net/images/cover/9f6c0d74b0f2c27b2f0c6a5b5e5b5e5b/250x250-000000-80-0-0.jpg' },
-      { name: 'After Hours', type: 'Álbum', image: 'https://e-cdns-images.dzcdn.net/images/cover/9f6c0d74b0f2c27b2f0c6a5b5e5b5e5b/250x250-000000-80-0-0.jpg' },
-      { name: 'Taylor Swift', type: 'Artista', image: 'https://e-cdns-images.dzcdn.net/images/artist/9f6c0d74b0f2c27b2f0c6a5b5e5b5e5b/250x250-000000-80-0-0.jpg' }
-    ]
-  }
-},
+  data() {
+    return {
+      // API Config
+      DEEZER_API: 'https://proxy.corsfix.com/?https://api.deezer.com',
+      
+      // Search State
+      searchQuery: '',
+      lastSearch: '',
+      isFocused: false,
+      hasSearched: false,
+      showSuggestions: false,
+      showHistory: false,
+      showCategoriesDropdown: false,
+      activeFilter: 'Todos',
+      isLoading: false,
+      activeCategoryTab: 'genres',
+      
+      // Curtidas (array de IDs de músicas curtidas)
+      likedTracks: [],
+      
+      // Data
+      searchHistory: JSON.parse(localStorage.getItem('searchHistory')) || [],
+      searchResults: [],
+      chartTracks: [],
+      popularArtistsReal: [],
+      
+      // Tabs de Categorias
+      categoryTabs: [
+        { id: 'genres', name: 'Gêneros', icon: 'fa fa-music' },
+        { id: 'moods', name: 'Estados de Espírito', icon: 'fa fa-smile-o' },
+        { id: 'activities', name: 'Atividades', icon: 'fa fa-bicycle' },
+        { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' }
+      ],
+      
+      // Categorias Detalhadas
+      detailedCategories: {
+        genres: {
+          popular: [
+            { name: 'Pop', icon: 'fa fa-star', color: '#E91E63', count: '2.4M' },
+            { name: 'Rock', icon: 'fa fa-bolt', color: '#F44336', count: '1.8M' },
+            { name: 'Hip Hop', icon: 'fa fa-microphone', color: '#FF9800', count: '3.2M' },
+            { name: 'Eletrônica', icon: 'fa fa-headphones', color: '#00BCD4', count: '2.1M' },
+            { name: 'R&B', icon: 'fa fa-heart', color: '#9C27B0', count: '890K' },
+            { name: 'Indie', icon: 'fa fa-tree', color: '#4CAF50', count: '1.2M' }
+          ],
+          regional: [
+            { name: 'Sertanejo', icon: 'fa fa-guitar', color: '#8D6E63' },
+            { name: 'Funk', icon: 'fa fa-fire', color: '#FF5722' },
+            { name: 'MPB', icon: 'fa fa-music', color: '#9C27B0' },
+            { name: 'Gospel', icon: 'fa fa-book', color: '#1976D2' },
+            { name: 'Forró', icon: 'fa fa-accordion', color: '#795548' },
+            { name: 'Pagode', icon: 'fa fa-users', color: '#FF9800' },
+            { name: 'Samba', icon: 'fa fa-drum', color: '#F44336' },
+            { name: 'Bossa Nova', icon: 'fa fa-coffee', color: '#4CAF50' }
+          ],
+          electronic: [
+            { name: 'House', icon: 'fa fa-home', color: '#00BCD4' },
+            { name: 'Techno', icon: 'fa fa-cog', color: '#3F51B5' },
+            { name: 'Trance', icon: 'fa fa-moon-o', color: '#9C27B0' },
+            { name: 'Dubstep', icon: 'fa fa-bomb', color: '#FF5722' },
+            { name: 'Drum & Bass', icon: 'fa fa-tachometer', color: '#E91E63' },
+            { name: 'Ambient', icon: 'fa fa-cloud', color: '#607D8B' }
+          ]
+        },
+        moods: [
+          { name: 'Treino', icon: 'fa fa-heartbeat', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)', description: 'Energia máxima para se exercitar' },
+          { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' },
+          { name: 'Relaxar', icon: 'fa fa-bed', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%)', description: 'Descanse e recarregue as energias' },
+          { name: 'Festa', icon: 'fa fa-glass', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: 'Animada para curtir com amigos' },
+          { name: 'Triste', icon: 'fa fa-tint', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Para aqueles dias difíceis' },
+          { name: 'Romântico', icon: 'fa fa-heart', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Momentos especiais a dois' },
+          { name: 'Alegre', icon: 'fa fa-sun-o', gradient: 'linear-gradient(135deg, #FFD93D 0%, #F6AD55 100%)', description: 'Bom humor e positividade' },
+          { name: 'Noturno', icon: 'fa fa-moon-o', gradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', description: 'Para a madrugada' }
+        ],
+        activities: [
+          { name: 'Academia', icon: 'fa fa-dumbbell', color: '#FF6B6B', description: 'Músicas para treinar pesado' },
+          { name: 'Corrida', icon: 'fa fa-running', color: '#4ECDC4', description: 'Ritmo para manter o pace' },
+          { name: 'Estudo', icon: 'fa fa-book', color: '#667eea', description: 'Concentração sem distrações' },
+          { name: 'Trabalho', icon: 'fa fa-briefcase', color: '#764ba2', description: 'Produtividade no escritório' },
+          { name: 'Viagem', icon: 'fa fa-car', color: '#f093fb', description: 'Na estrada ou no trânsito' },
+          { name: 'Cozinhar', icon: 'fa fa-cutlery', color: '#fa709a', description: 'Ritmo na cozinha' },
+          { name: 'Limpar', icon: 'fa fa-home', color: '#43e97b', description: 'Faxina com energia' },
+          { name: 'Dormir', icon: 'fa fa-moon-o', color: '#30cfd0', description: 'Sons para relaxar' }
+        ],
+        decades: [
+          { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
+          { name: '2010s', description: 'A década passada', color: '#1ed760', popularity: 88 },
+          { name: '2000s', description: 'Anos 2000', color: '#1db954', popularity: 82 },
+          { name: '90s', description: 'Clássicos dos 90', color: '#1aa34a', popularity: 78 },
+          { name: '80s', description: 'Ouro dos 80', color: '#1db954', popularity: 75 },
+          { name: '70s', description: 'Disco e rock', color: '#1ed760', popularity: 70 },
+          { name: '60s', description: 'Era clássica', color: '#1aa34a', popularity: 65 }
+        ]
+      },
+      
+      // Filters
+      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns'],
+      
+      // Quick Categories (visíveis na linha)
+      quickCategories: [
+        'Pop', 'Rock', 'Hip Hop', 'Eletrônica', 'Sertanejo', 
+        'Funk', 'MPB', 'Jazz'
+      ],
+      
+      // Trending
+      trending: [
+        'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional', 
+        'Trap Brasileiro', 'Rock Clássico', 'MPB Nova'
+      ],
+      
+      trendGradients: [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
+      ],
+      
+      // Genres (cards de descoberta)
+      genres: [
+        { name: 'Pop', color: '#E91E63' },
+        { name: 'Rock', color: '#F44336' },
+        { name: 'Hip Hop', color: '#FF9800' },
+        { name: 'Eletrônica', color: '#00BCD4' },
+        { name: 'Sertanejo', color: '#8D6E63' },
+        { name: 'Funk', color: '#FF5722' },
+        { name: 'MPB', color: '#9C27B0' },
+        { name: 'Gospel', color: '#1976D2' },
+        { name: 'Jazz', color: '#FFC107' },
+        { name: 'Clássica', color: '#795548' }
+      ],
+      
+      // Moods (cards de descoberta)
+      moods: [
+        { name: 'Treino', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' },
+        { name: 'Foco', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        { name: 'Relaxar', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%)' },
+        { name: 'Festa', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+        { name: 'Triste', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+        { name: 'Romântico', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
+      ],
+      
+      // Recommended
+      recommendedItems: [
+        { name: 'The Weeknd', type: 'Artista', image: 'https://i.ytimg.com/vi/34Na4j8AVgA/maxresdefault.jpg' },
+        { name: 'Blinding Lights', type: 'Música', image: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/maxresdefault.jpg' },
+        { name: 'After Hours', type: 'Álbum', image: 'https://i.ytimg.com/vi/yzTuBuRdAyA/maxresdefault.jpg' },
+        { name: 'Taylor Swift', type: 'Artista', image: 'https://i.ytimg.com/vi/b1kbLwvquGKU/maxresdefault.jpg' }
+      ],
+      
+      // Toast
+      toast: {
+        show: false,
+        message: "",
+        type: "success",
+        icon: "fa fa-check-circle"
+      }
+    }
+  },
 
   computed: {
     filteredResults() {
@@ -426,17 +607,15 @@ export default {
       }
       
       const filterType = typeMap[this.activeFilter]
-      return this.searchResults.filter(r => r.type === filterType || r.type === this.activeFilter)
+      return this.searchResults.filter(r => r.type === filterType)
     },
     
-    // Agrupar sugestões por tipo
     groupedSuggestions() {
       if (!this.searchQuery.trim()) return []
       
       const query = this.searchQuery.toLowerCase()
       const groups = {}
       
-      // Agrupar resultados da busca atual
       const matches = this.searchResults.filter(item => {
         const title = this.getResultTitle(item).toLowerCase()
         return title.includes(query)
@@ -459,13 +638,13 @@ export default {
         })
       })
       
-      const typeOrder = ['Artista', 'Música', 'Álbum', 'Playlist']
+      const typeOrder = ['Artista', 'Música', 'Álbum']
       
       return Object.values(groups)
         .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type))
         .map(group => ({
           ...group,
-          items: group.items.slice(0, 3)
+          items: group.items.slice(0, 4)
         }))
     }
   },
@@ -473,6 +652,7 @@ export default {
   mounted() {
     document.addEventListener('click', this.handleClickOutside)
     this.loadInitialData()
+    this.loadLikedTracks() // Carregar curtidas ao iniciar
   },
 
   beforeUnmount() {
@@ -480,8 +660,63 @@ export default {
   },
 
   methods: {
-    // MÉTODOS DA API DEEZER
+    // ===== SISTEMA DE CURTIDAS =====
     
+    // Carregar músicas curtidas do localStorage
+    loadLikedTracks() {
+      const stored = localStorage.getItem("curtidas")
+      if (stored) {
+        this.likedTracks = JSON.parse(stored)
+      }
+    },
+    
+    // Salvar músicas curtidas no localStorage
+    saveLikedTracks() {
+      localStorage.setItem("curtidas", JSON.stringify(this.likedTracks))
+    },
+    
+    // Verificar se uma música está curtida
+    isTrackLiked(trackId) {
+      return this.likedTracks.some(t => t.id === trackId)
+    },
+    
+    // Curtir/descurtir uma música
+    toggleLikeTrack(track) {
+      const index = this.likedTracks.findIndex(t => t.id === track.id)
+      
+      if (index === -1) {
+        // Adicionar aos curtidos
+        const trackToSave = {
+          id: track.id,
+          title: track.title || this.getResultTitle(track),
+          artist: track.artist?.name || this.getResultSubtitle(track),
+          album: track.album?.title || track.album,
+          duration: this.formatDuration(track.duration),
+          cover: this.getBestImage(track),
+          likedAt: new Date().toISOString()
+        }
+        
+        this.likedTracks.push(trackToSave)
+        this.showToast(`"${trackToSave.title}" adicionada aos curtidos!`, "success")
+      } else {
+        // Remover dos curtidos
+        const removed = this.likedTracks.splice(index, 1)[0]
+        this.showToast(`"${removed.title}" removida dos curtidos`, "info")
+      }
+      
+      // Salvar no localStorage
+      this.saveLikedTracks()
+    },
+    
+    // Formatar duração
+    formatDuration(seconds) {
+      if (!seconds) return "3:00"
+      const mins = Math.floor(seconds / 60)
+      const secs = seconds % 60
+      return `${mins}:${secs.toString().padStart(2, '0')}`
+    },
+
+    // API Methods
     async loadInitialData() {
       await this.loadChartTracks()
       await this.loadPopularArtists()
@@ -489,7 +724,6 @@ export default {
 
     async loadChartTracks() {
       try {
-        // Top tracks do Brasil (chart/0 = global, mas vamos buscar playlist BR)
         const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
         const data = await response.json()
         if (data.data) {
@@ -502,7 +736,6 @@ export default {
 
     async loadPopularArtists() {
       try {
-        // Buscar artistas populares (usando search por popularidade)
         const response = await fetch(`${this.DEEZER_API}/chart/0/artists?limit=10`)
         const data = await response.json()
         if (data.data) {
@@ -516,30 +749,16 @@ export default {
     async searchDeezer(query) {
       this.isLoading = true
       try {
-        // Busca tracks
-        const trackResponse = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(query)}&limit=20`)
-        const trackData = await trackResponse.json()
-        
-        // Busca artistas
-        const artistResponse = await fetch(`${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}&limit=10`)
-        const artistData = await artistResponse.json()
-        
-        // Busca álbuns
-        const albumResponse = await fetch(`${this.DEEZER_API}/search/album?q=${encodeURIComponent(query)}&limit=10`)
-        const albumData = await albumResponse.json()
+        const [tracks, artists, albums] = await Promise.all([
+          fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(query)}&limit=20`).then(r => r.json()),
+          fetch(`${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}&limit=10`).then(r => r.json()),
+          fetch(`${this.DEEZER_API}/search/album?q=${encodeURIComponent(query)}&limit=10`).then(r => r.json())
+        ])
 
-        // Combinar resultados
         const results = []
-        
-        if (trackData.data) {
-          results.push(...trackData.data.map(item => ({...item, type: 'track'})))
-        }
-        if (artistData.data) {
-          results.push(...artistData.data.map(item => ({...item, type: 'artist'})))
-        }
-        if (albumData.data) {
-          results.push(...albumData.data.map(item => ({...item, type: 'album'})))
-        }
+        if (tracks.data) results.push(...tracks.data.map(item => ({...item, type: 'track'})))
+        if (artists.data) results.push(...artists.data.map(item => ({...item, type: 'artist'})))
+        if (albums.data) results.push(...albums.data.map(item => ({...item, type: 'album'})))
 
         this.searchResults = results
       } catch (error) {
@@ -550,13 +769,7 @@ export default {
       }
     },
 
-    async searchArtist(artistName) {
-      this.searchQuery = artistName
-      await this.performSearch()
-    },
-
-    // MÉTODOS UTILITÁRIOS
-    
+    // Utility Methods
     getResultTitle(item) {
       if (item.type === 'track') return item.title
       if (item.type === 'artist') return item.name
@@ -566,9 +779,9 @@ export default {
 
     getResultSubtitle(item) {
       if (item.type === 'track') return item.artist?.name || 'Artista desconhecido'
-      if (item.type === 'artist') return `${item.nb_fan || 0} fãs`
+      if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
       if (item.type === 'album') return item.artist?.name || 'Artista desconhecido'
-      return item.description || ''
+      return ''
     },
 
     getResultType(item) {
@@ -582,40 +795,53 @@ export default {
 
     getBestImage(item) {
       if (item.type === 'track') {
-        return item.album?.cover_medium || item.album?.cover || 'https://via.placeholder.com/250'
+        return item.album?.cover_medium || item.album?.cover
       }
       if (item.type === 'artist') {
-        return item.picture_medium || item.picture || 'https://via.placeholder.com/250'
+        return item.picture_medium || item.picture
       }
       if (item.type === 'album') {
-        return item.cover_medium || item.cover || 'https://via.placeholder.com/250'
+        return item.cover_medium || item.cover
       }
-      return 'https://via.placeholder.com/250'
+      return ''
     },
 
-    getPlayerImage(track) {
-      if (track.type === 'track') {
-        return track.album?.cover_small || track.album?.cover
+    getIconForType(type) {
+      const icons = {
+        'Artista': 'fa fa-user',
+        'Música': 'fa fa-music',
+        'Álbum': 'fa fa-circle'
       }
-      return track.picture_small || track.cover_small || 'https://via.placeholder.com/50'
+      return icons[type] || 'fa fa-music'
     },
 
-    // MÉTODOS DE INTERAÇÃO
-
-    handleClickOutside(event) {
-      const historyEl = this.$refs.historyContainer
-      if (historyEl && !historyEl.contains(event.target)) {
-        this.showHistory = false
-      }
+    formatFans(num) {
+      if (!num) return '0'
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
+      return num.toString()
     },
 
     getTrendGradient(index) {
       return this.trendGradients[index % this.trendGradients.length]
     },
 
+    // Interaction Methods
+    handleClickOutside(event) {
+      const historyEl = this.$refs.historyContainer
+      const categoriesEl = this.$refs.categoriesContainer
+      
+      if (historyEl && !historyEl.contains(event.target)) {
+        this.showHistory = false
+      }
+      
+      if (categoriesEl && !categoriesEl.contains(event.target)) {
+        this.showCategoriesDropdown = false
+      }
+    },
+
     handleInput() {
       this.showSuggestions = true
-      // Debounce para busca automática de sugestões
       if (this.searchTimeout) clearTimeout(this.searchTimeout)
       this.searchTimeout = setTimeout(() => {
         if (this.searchQuery.length > 2) {
@@ -658,12 +884,12 @@ export default {
       this.hasSearched = true
       this.showSuggestions = false
       this.showHistory = false
+      this.showCategoriesDropdown = false
       
-      // Salvar no histórico
+      // Save to history
       this.searchHistory = [this.searchQuery, ...this.searchHistory.filter(h => h !== this.searchQuery)].slice(0, 10)
       localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory))
       
-      // Buscar na API
       await this.searchDeezer(this.searchQuery)
     },
 
@@ -672,10 +898,14 @@ export default {
       this.performSearch()
     },
 
+    async searchArtist(artistName) {
+      this.searchQuery = artistName
+      await this.performSearch()
+    },
+
     clearSearch() {
       this.searchQuery = ''
       this.hasSearched = false
-      this.suggestions = []
       this.searchResults = []
       this.$refs.searchInput.focus()
     },
@@ -687,802 +917,457 @@ export default {
     },
 
     playTrack(track) {
-      this.currentTrack = track
-      this.isPlaying = true
-      // Aguardar o DOM atualizar para acessar o audio
-      this.$nextTick(() => {
-        if (this.$refs.audioPlayer) {
-          this.$refs.audioPlayer.play()
+      // Converter para formato do player
+      const playerSong = this.convertToPlayerFormat(track)
+      
+      // Disparar evento global
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: [playerSong],
+          index: 0,
+          context: 'search'
         }
-      })
+      }))
     },
 
-    togglePlay() {
-      if (this.$refs.audioPlayer) {
-        if (this.isPlaying) {
-          this.$refs.audioPlayer.pause()
-        } else {
-          this.$refs.audioPlayer.play()
-        }
+    convertToPlayerFormat(track) {
+      return {
+        id: track.id,
+        title: this.getResultTitle(track),
+        artist: track.artist?.name || 'Artista desconhecido',
+        cover: this.getBestImage(track),
+        url: track.preview || track.link,
+        duration: track.duration || 30,
+        type: track.type || 'search'
       }
+    },
+    
+    // ===== TOAST =====
+    showToast(message, type = "success") {
+      const icons = {
+        success: "fa fa-check-circle",
+        error: "fa fa-exclamation-circle",
+        info: "fa fa-info-circle"
+      }
+      
+      this.toast = {
+        show: true,
+        message,
+        type,
+        icon: icons[type]
+      }
+      
+      setTimeout(() => {
+        this.toast.show = false
+      }, 3000)
     }
   }
 }
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
-.search-page-clean {
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
-  background: #0a0a0a;
-  color: white;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+.search-page {
+  min-height: 100vh;
+  color: #fff;
+  font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  background: linear-gradient(180deg, #050508 0%, #0a0a1a 30%, #0a1a3f 100%);
+  padding: 24px 0 120px 0;
   display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: fixed;
-  inset: 0;
-}
-
-.top-header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 32px;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  z-index: 100;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-left .logo {
-  width: 24px;
-  height: 24px;
-  color: #1DB954;
-}
-
-.header-left span {
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.history-compact {
-  position: relative;
-}
-
-.history-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.history-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.history-toggle svg {
-  width: 14px;
-  height: 14px;
-}
-
-.history-count {
-  width: 18px;
-  height: 18px;
-  background: #1DB954;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  font-size: 10px;
-  color: white;
 }
 
-.history-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  width: 280px;
-  background: #1a1a1a;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-  overflow: hidden;
-  z-index: 1000;
-}
-
-.history-header-dropdown {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.history-header-dropdown span {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-}
-
-.clear-btn-small {
-  font-size: 11px;
-  color: #1DB954;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.history-items {
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.history-item-small {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.search-container {
   width: 100%;
-  padding: 10px 14px;
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s;
+  max-width: 1000px;
+  padding: 0 32px;
 }
 
-.history-item-small:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
+/* Header */
+.search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
 }
 
-.history-icon {
-  width: 16px;
-  height: 16px;
-  color: #1DB954;
-  flex-shrink: 0;
-}
-
-.search-section-expanded {
-  flex-shrink: 0;
-  padding: 16px 32px;
-  position: relative;
-  z-index: 90;
-}
-
-.search-wrapper-full {
+.header-brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #1a1a1a;
-  border: 2px solid transparent;
-  border-radius: 10px;
-  padding: 12px 18px;
-  transition: all 0.2s;
 }
 
-.search-wrapper-full.focused {
-  background: #242424;
-  border-color: #1DB954;
-  box-shadow: 0 0 25px rgba(29, 185, 84, 0.15);
+.brand-icon {
+  font-size: 28px;
+  color: #1db954;
 }
 
-.search-icon-large {
-  width: 20px;
-  height: 20px;
-  color: #888;
-  flex-shrink: 0;
+.brand-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
 }
 
-.search-wrapper-full.focused .search-icon-large {
-  color: #1DB954;
+/* History */
+.history-wrapper {
+  position: relative;
 }
 
-.search-wrapper-full input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  color: white;
-  font-size: 15px;
-}
-
-.search-wrapper-full input::placeholder {
-  color: #666;
-}
-
-.clear-search-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.clear-search-btn:hover {
-  background: rgba(255, 68, 68, 0.8);
-  transform: rotate(90deg);
-}
-
-.clear-search-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Sugestões Inteligentes Agrupadas */
-.suggestions-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 32px;
-  right: 32px;
-  background: #1a1a1a;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-  overflow: hidden;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.suggestion-group {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.suggestion-group:last-child {
-  border-bottom: none;
-}
-
-.group-header {
+.history-btn {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.group-icon {
-  width: 16px;
-  height: 16px;
-  color: #1DB954;
-}
-
-.group-header span {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-}
-
-.type-badge {
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.type-badge.artista {
-  background: rgba(29, 185, 84, 0.2);
-  color: #1DB954;
-}
-
-.type-badge.musica {
-  background: rgba(33, 150, 243, 0.2);
-  color: #2196F3;
-}
-
-.type-badge.album {
-  background: rgba(156, 39, 176, 0.2);
-  color: #9C27B0;
-}
-
-.type-badge.playlist {
-  background: rgba(255, 152, 0, 0.2);
-  color: #FF9800;
-}
-
-.group-items {
-  padding: 4px 0;
-}
-
-.suggestion-item-smart {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.suggestion-item-smart:hover {
   background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: #b3b3b3;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.suggestion-thumb {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  object-fit: cover;
-  flex-shrink: 0;
+.history-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: #1db954;
 }
 
-.suggestion-thumb.placeholder {
+.history-badge {
+  width: 20px;
+  height: 20px;
+  background: #1db954;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #333;
+  font-size: 11px;
+  color: #000;
+  font-weight: 700;
 }
 
-.suggestion-thumb.placeholder svg {
-  width: 20px;
-  height: 20px;
-  color: #666;
+.history-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 300px;
+  background: #181818;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  overflow: hidden;
+  z-index: 100;
 }
 
-.suggestion-thumb.placeholder.artista {
-  background: rgba(29, 185, 84, 0.1);
-}
-
-.suggestion-thumb.placeholder.artista svg {
-  color: #1DB954;
-}
-
-.suggestion-thumb.placeholder.musica {
-  background: rgba(33, 150, 243, 0.1);
-}
-
-.suggestion-thumb.placeholder.musica svg {
-  color: #2196F3;
-}
-
-.suggestion-thumb.placeholder.album {
-  background: rgba(156, 39, 176, 0.1);
-}
-
-.suggestion-thumb.placeholder.album svg {
-  color: #9C27B0;
-}
-
-.suggestion-text {
+.history-header {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.suggestion-name {
-  font-size: 14px;
-  color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.suggestion-name mark {
-  background: none;
-  color: #1DB954;
-  font-weight: 600;
-}
-
-.suggestion-subtitle {
-  font-size: 12px;
-  color: #888;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Recomendado para você */
-.recommended-section {
+  justify-content: space-between;
+  align-items: center;
   padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.recommended-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 12px;
+.history-header span {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
 }
 
-.recommended-item {
+.clear-btn {
+  font-size: 12px;
+  color: #1db954;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.history-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.history-icon {
+  color: #1db954;
+  font-size: 12px;
+}
+
+/* Search Box */
+.search-main {
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #181818;
+  border: 2px solid transparent;
+  border-radius: 500px;
+  padding: 16px 24px;
+  transition: all 0.2s;
+}
+
+.search-box.focused {
+  background: #282828;
+  border-color: #1db954;
+  box-shadow: 0 0 30px rgba(29, 185, 84, 0.15);
+}
+
+.search-icon {
+  font-size: 20px;
+  color: #888;
+  transition: color 0.2s;
+}
+
+.search-box.focused .search-icon {
+  color: #1db954;
+}
+
+.search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.search-box input::placeholder {
+  color: #666;
+}
+
+.clear-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.clear-btn-icon:hover {
+  background: rgba(255, 68, 68, 0.8);
+}
+
+/* Suggestions */
+.suggestions-box {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #181818;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  overflow: hidden;
+  z-index: 90;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Suggested Section */
+.suggested-section {
+  padding: 20px;
+}
+
+.suggested-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: #1db954;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.suggested-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.suggested-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.recommended-item:hover {
+.suggested-card:hover {
   background: rgba(255, 255, 255, 0.08);
   transform: translateY(-2px);
 }
 
-.recommended-img {
+.suggested-card img {
   width: 48px;
   height: 48px;
   border-radius: 6px;
   object-fit: cover;
-  flex-shrink: 0;
 }
 
-.recommended-info {
+.suggested-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  gap: 4px;
 }
 
-.recommended-name {
+.suggested-name {
   font-size: 14px;
   font-weight: 600;
-  color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #fff;
 }
 
-.recommended-type {
+.suggested-type {
   font-size: 11px;
-  color: #1DB954;
+  color: #1db954;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.main-content-full {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0 32px 32px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+/* Grouped Results */
+.grouped-results {
+  padding: 16px 0;
 }
 
-.main-content-full::-webkit-scrollbar {
-  width: 6px;
+.result-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.main-content-full::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+.result-group:last-child {
+  border-bottom: none;
 }
 
-.quick-categories {
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 13px;
+.group-label {
+  padding: 12px 20px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #888;
-  margin-bottom: 12px;
 }
 
-.category-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.group-items {
+  padding: 0 16px 16px;
 }
 
-.cat-pill {
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  color: white;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.cat-pill:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #1DB954;
-  color: #1DB954;
-  transform: translateY(-2px);
-}
-
-.discovery-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.grid-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 14px;
-}
-
-.grid-title {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  margin-bottom: 12px;
-}
-
-.trend-boxes {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.trend-box {
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.trend-box:hover {
-  transform: translateX(3px);
-  filter: brightness(1.1);
-}
-
-.genre-list-horizontal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.genre-tag-large {
-  padding: 8px 12px;
-  border-radius: 16px;
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.genre-tag-large:hover {
-  transform: scale(1.05);
-  filter: brightness(1.2);
-}
-
-.mood-cards {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.mood-card {
-  aspect-ratio: 16/10;
-  border-radius: 8px;
+.group-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.mood-card:hover {
-  transform: scale(1.02);
-}
-
-.mood-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.content-block {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 16px;
-}
-
-.block-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.block-header h3 {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.block-header button {
-  font-size: 11px;
-  color: #888;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.block-header button:hover {
-  color: #1DB954;
-}
-
-.block-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.block-grid.artists {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.block-grid.albums,
-.block-grid.podcasts {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-.block-grid.playlists,
-.block-grid.radios,
-.block-grid.shows,
-.block-grid.discover {
-  grid-template-columns: 1fr;
-}
-
-.grid-item {
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.grid-item:hover {
-  transform: translateY(-3px);
-}
-
-.grid-item.artist {
-  text-align: center;
-}
-
-.grid-item.artist img {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 6px;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.grid-item.artist:hover img {
-  border-color: #1DB954;
-}
-
-.grid-item.artist span {
-  font-size: 11px;
-  color: #ccc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-.grid-item.album img,
-.grid-item.podcast img {
-  width: 100%;
-  aspect-ratio: 1;
+  gap: 12px;
+  padding: 10px 16px;
   border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.group-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.item-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
   object-fit: cover;
-  margin-bottom: 6px;
 }
 
-.grid-item.album .item-title,
-.grid-item.podcast .item-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
+.item-thumb-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #282828;
 }
 
-.grid-item.album .item-sub,
-.grid-item.podcast .item-sub {
-  font-size: 11px;
-  color: #888;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
+.item-thumb-placeholder.artista {
+  background: rgba(29, 185, 84, 0.1);
+  color: #1db954;
 }
 
-.grid-item.playlist,
-.grid-item.radio,
-.grid-item.show,
-.grid-item.discover {
-  aspect-ratio: 16/8;
-  border-radius: 8px;
+.item-thumb-placeholder.musica {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196F3;
+}
+
+.item-thumb-placeholder.album {
+  background: rgba(156, 39, 176, 0.1);
+  color: #9C27B0;
+}
+
+.item-details {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 12px;
   gap: 2px;
 }
 
-.playlist-badge,
-.radio-icon,
-.show-date,
-.discover-icon {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
+.item-name {
+  font-size: 14px;
+  color: #fff;
 }
 
-.item-title {
-  font-size: 13px;
+.item-name mark {
+  background: none;
+  color: #1db954;
   font-weight: 600;
-  color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .item-sub {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12px;
+  color: #888;
 }
 
-/* Loading State */
+/* Content */
+.search-content {
+  padding-bottom: 40px;
+}
+
+/* Loading */
 .loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 80px 20px;
   gap: 16px;
   color: #888;
 }
@@ -1491,7 +1376,7 @@ export default {
   width: 40px;
   height: 40px;
   border: 3px solid rgba(29, 185, 84, 0.3);
-  border-top-color: #1DB954;
+  border-top-color: #1db954;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -1500,267 +1385,1140 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-/* No Results */
-.no-results {
+/* Discover Section */
+.discover-section {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Quick Tags com Categorias Detalhadas */
+.quick-tags {
+  margin-bottom: 32px;
+}
+
+.tags-header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin: 0;
+}
+
+/* Botão Categorias */
+.categories-dropdown-wrapper {
+  position: relative;
+}
+
+.categories-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(29, 185, 84, 0.1);
+  border: 1px solid rgba(29, 185, 84, 0.3);
+  border-radius: 20px;
+  color: #1db954;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.categories-btn:hover {
+  background: rgba(29, 185, 84, 0.2);
+  border-color: #1db954;
+  transform: translateY(-1px);
+}
+
+.categories-btn.active {
+  background: #1db954;
+  color: #000;
+}
+
+.categories-btn i.fa-chevron-down {
+  font-size: 10px;
+  transition: transform 0.3s ease;
+}
+
+.categories-btn i.fa-chevron-down.rotate {
+  transform: rotate(180deg);
+}
+
+/* Dropdown de Categorias */
+.categories-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 600px;
+  max-width: 90vw;
+  background: #181818;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  overflow: hidden;
+  z-index: 95;
+}
+
+.categories-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  background: linear-gradient(90deg, rgba(29,185,84,0.1) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.categories-dropdown-header i {
+  font-size: 20px;
+  color: #1db954;
+}
+
+.categories-dropdown-header span {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.close-dropdown {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #888;
+  cursor: pointer;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  gap: 16px;
-  color: #666;
+  transition: all 0.2s;
 }
 
-.no-results svg {
-  width: 48px;
-  height: 48px;
-  opacity: 0.5;
+.close-dropdown:hover {
+  background: rgba(255, 68, 68, 0.8);
+  color: #fff;
 }
 
-.search-results-full {
-  padding-bottom: 100px;
+/* Tabs de Categorias */
+.categories-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0,0,0,0.2);
 }
 
-.results-toolbar {
-  margin-bottom: 20px;
+.categories-tabs button {
+  flex: 1;
+  padding: 16px 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #888;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 
-.results-toolbar h2 {
-  font-size: 20px;
+.categories-tabs button:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.03);
+}
+
+.categories-tabs button.active {
+  color: #1db954;
+  border-bottom-color: #1db954;
+  background: rgba(29,185,84,0.05);
+}
+
+/* Conteúdo das Categorias */
+.categories-content {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.category-tab-content {
+  animation: fadeIn 0.3s ease;
+}
+
+.category-section {
+  margin-bottom: 24px;
+}
+
+.category-section:last-child {
+  margin-bottom: 0;
+}
+
+.category-section h4 {
+  font-size: 11px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
   margin-bottom: 12px;
 }
 
-.filter-chips {
+/* Tags Detalhadas */
+.category-tags.detailed {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
-.filter-chips button {
-  padding: 6px 16px;
-  border-radius: 16px;
-  border: none;
-  background: #1a1a1a;
+.tag-btn.detailed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 1.5px solid;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-btn.detailed:hover {
+  background: rgba(255,255,255,0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.tag-btn.detailed i {
+  font-size: 12px;
+}
+
+.tag-btn.detailed small {
+  font-size: 10px;
+  opacity: 0.7;
+  background: rgba(0,0,0,0.3);
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 4px;
+}
+
+/* Mood Grid Detalhado */
+.mood-grid.detailed {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.mood-card-detailed {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.mood-card-detailed:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  filter: brightness(1.1);
+}
+
+.mood-card-detailed i {
+  font-size: 24px;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+}
+
+.mood-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mood-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.mood-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+}
+
+/* Activity List */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.activity-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateX(4px);
+}
+
+.activity-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+}
+
+.activity-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.activity-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.activity-desc {
+  font-size: 12px;
   color: #888;
+}
+
+.activity-arrow {
+  color: #888;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.activity-item:hover .activity-arrow {
+  color: #1db954;
+  transform: translateX(4px);
+}
+
+/* Decade Timeline */
+.decade-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.decade-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.decade-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.decade-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  opacity: 0.15;
+  transition: opacity 0.3s;
+}
+
+.decade-item:hover .decade-bar {
+  opacity: 0.25;
+}
+
+.decade-info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.decade-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.decade-desc {
+  font-size: 12px;
+  color: #888;
+}
+
+/* Tags Row (Explorar rápido) */
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tag-btn {
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #1db954;
+  color: #1db954;
+  transform: translateY(-2px);
+}
+
+/* Transitions */
+.dropdown-enter-active {
+  animation: dropdownIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.dropdown-leave-active {
+  animation: dropdownOut 0.2s ease;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dropdownOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+
+/* Discovery Grid */
+.discovery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.discovery-card {
+  background: #181818;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.card-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 16px;
+}
+
+/* Trend List */
+.trend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trend-item {
+  padding: 12px 16px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.trend-item:hover {
+  transform: translateX(4px);
+  filter: brightness(1.1);
+}
+
+/* Genre Cloud */
+.genre-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.genre-pill {
+  padding: 8px 14px;
+  border-radius: 16px;
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.filter-chips button:hover {
-  background: #242424;
-  color: white;
-}
-
-.filter-chips button.active {
-  background: #1DB954;
-  color: white;
-}
-
-.results-masonry {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 16px;
-}
-
-.result-tile {
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.result-tile:hover {
-  transform: translateY(-3px);
-}
-
-.tile-visual {
-  position: relative;
-  aspect-ratio: 1;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 10px;
-}
-
-.tile-visual img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.result-tile:hover .tile-visual img {
+.genre-pill:hover {
   transform: scale(1.05);
+  filter: brightness(1.2);
 }
 
-.tile-play {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  border: none;
+/* Mood Grid */
+.mood-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.mood-item {
+  aspect-ratio: 16/9;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
   cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
-.result-tile:hover .tile-play {
-  opacity: 1;
+.mood-item:hover {
+  transform: scale(1.02);
 }
 
-.tile-play svg {
-  width: 32px;
-  height: 32px;
-  color: #1DB954;
+/* Top Section */
+.top-section {
+  background: #181818;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
-.tile-type {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 3px 6px;
-  background: rgba(0,0,0,0.6);
-  border-radius: 3px;
-  font-size: 9px;
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.top-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.view-all {
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #1DB954;
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
-.tile-info h4 {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.view-all:hover {
+  color: #1db954;
 }
 
-.tile-info p {
-  font-size: 11px;
-  color: #888;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Fixed Player */
-.fixed-player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(20, 20, 20, 0.95);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 12px 32px;
+/* Top Tracks */
+.top-tracks {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 1000;
-}
-
-.player-info {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
 }
 
-.player-info img {
+.track-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.track-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.track-number {
+  width: 24px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #888;
+}
+
+.track-card img {
   width: 48px;
   height: 48px;
   border-radius: 4px;
   object-fit: cover;
 }
 
-.player-text {
+.track-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
-.player-title {
+.track-name {
   font-size: 14px;
   font-weight: 600;
-  color: white;
+  color: #fff;
 }
 
-.player-artist {
+.track-artist {
   font-size: 12px;
   color: #888;
 }
 
-.player-controls {
+/* Botão de curtir no Top Músicas */
+.btn-like-track {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
 }
 
-.play-btn {
-  width: 40px;
-  height: 40px;
+.track-card:hover .btn-like-track {
+  opacity: 1;
+}
+
+.btn-like-track:hover {
+  color: #ec4899;
+  transform: scale(1.2);
+}
+
+.btn-like-track.liked {
+  opacity: 1;
+  color: #ec4899;
+  animation: heartBeat 0.3s ease;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.track-play {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #1DB954;
+  background: #1db954;
   border: none;
-  color: white;
+  color: #000;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s;
+  opacity: 0;
+  transition: all 0.2s;
 }
 
-.play-btn:hover {
+.track-card:hover .track-play {
+  opacity: 1;
+}
+
+.track-play:hover {
   transform: scale(1.1);
 }
 
-.play-btn svg {
-  width: 20px;
-  height: 20px;
+/* Artists Row */
+.artists-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px;
 }
 
-@media screen and (max-width: 1200px) {
+.artist-item {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.artist-item:hover {
+  transform: translateY(-4px);
+}
+
+.artist-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 12px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.artist-item:hover img {
+  border-color: #1db954;
+}
+
+.artist-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist-fans {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Search Results */
+.results-header {
+  margin-bottom: 24px;
+}
+
+.results-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-tabs button {
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: none;
+  background: #181818;
+  color: #888;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tabs button:hover {
+  background: #282828;
+  color: #fff;
+}
+
+.filter-tabs button.active {
+  background: #1db954;
+  color: #000;
+}
+
+/* No Results */
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  gap: 16px;
+  color: #666;
+}
+
+.no-results i {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+/* Results Grid */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.result-card {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.result-card:hover {
+  transform: translateY(-4px);
+}
+
+.result-image {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.result-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.result-card:hover .result-image img {
+  transform: scale(1.05);
+}
+
+.result-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.result-card:hover .result-overlay {
+  opacity: 1;
+}
+
+.result-overlay i {
+  font-size: 32px;
+  color: #1db954;
+}
+
+.result-type {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.7);
+  border-radius: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1db954;
+  font-weight: 700;
+}
+
+/* Botão de curtir no resultado da busca */
+.btn-like-result {
+  position: absolute;
+  bottom: 50px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
+  z-index: 10;
+}
+
+.result-card:hover .btn-like-result {
+  opacity: 1;
+}
+
+.btn-like-result:hover {
+  background: rgba(236, 72, 153, 0.9);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.btn-like-result.liked {
+  opacity: 1;
+  background: rgba(236, 72, 153, 0.9);
+  color: #fff;
+  animation: heartBeat 0.3s ease;
+}
+
+.result-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-info p {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 16px 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  z-index: 2000;
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.toast.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.toast.error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.toast.info {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.toast i {
+  font-size: 20px;
+}
+
+/* Animações de transição Vue */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .results-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .suggested-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .artists-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .categories-dropdown {
+    width: 500px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .search-page {
+    margin-left: 200px;
+    width: calc(100% - 200px);
+  }
+  
   .discovery-grid {
     grid-template-columns: 1fr;
   }
   
-  .block-grid.artists {
-    grid-template-columns: repeat(4, 1fr);
+  .results-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
   
-  .recommended-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .categories-dropdown {
+    width: 450px;
+    right: -100px;
+  }
+  
+  .mood-grid.detailed {
+    grid-template-columns: 1fr;
   }
 }
 
-@media screen and (max-width: 768px) {
-  .top-header,
-  .search-section-expanded {
-    padding-left: 16px;
-    padding-right: 16px;
+@media (max-width: 768px) {
+  .search-page {
+    margin-left: 0;
+    width: 100%;
   }
   
-  .main-content-full {
-    padding: 0 16px 100px;
+  .search-container {
+    padding: 0 16px;
   }
   
-  .block-grid.artists {
+  .search-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  
+  .artists-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .suggested-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .categories-dropdown {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    max-height: 80vh;
+  }
+  
+  .categories-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .categories-tabs button {
+    flex-shrink: 0;
+  }
+  
+  /* Mostrar botão de curtir em mobile */
+  .btn-like-track,
+  .btn-like-result {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-box {
+    padding: 12px 16px;
+  }
+  
+  .search-box input {
+    font-size: 16px;
+  }
+  
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .result-info h4 {
+    font-size: 12px;
+  }
+  
+  .artists-row {
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .suggestions-panel {
-    left: 16px;
-    right: 16px;
+  .tags-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
   
-  .recommended-grid {
-    grid-template-columns: 1fr;
+  .category-tags.detailed {
+    gap: 8px;
   }
-
-  .fixed-player {
-    padding: 12px 16px;
+  
+  .tag-btn.detailed {
+    padding: 8px 12px;
+    font-size: 12px;
   }
 }
 </style>

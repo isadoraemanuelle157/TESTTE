@@ -2,6 +2,10 @@
 
 <div class="app">
 
+  <div>
+    <Navbar/>
+  </div>
+
   <!-- SIDEBAR -->
   <Sidebar />
 
@@ -16,10 +20,12 @@
 
 <script>
 import Sidebar from "@/components/Sidebar.vue"
+import Navbar from "@/components/Navbar.vue"
 
 export default {
 components:{
-Sidebar
+Sidebar,
+Navbar
 }
 }
 </script>

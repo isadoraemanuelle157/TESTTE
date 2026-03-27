@@ -1,14 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
+import HomeView from '../views/HomeView.vue'
 import Curtidas from '../views/Curtidas.vue'
 import Search from '../views/Search.vue'
 import Playlist from '../views/Playlist.vue'
-import CardsMusica from '@/components/CardsMusica.vue'
-import PlayMusicas from '@/components/PlayMusicas.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import Notificacoes from '@/components/Notificacoes.vue'
-import CreatePlaylistModal from '@/components/CreatePlaylistModal.vue'
-import AddToPlaylistModal from '@/components/AddToPlaylistModal.vue'
 import Artistas from '@/components/Artistas.vue'
 import ChatIAMusica from '@/components/ChatIAMusica.vue'
 import Carregamento1 from '@/components/Carregamento1.vue'
@@ -27,6 +23,11 @@ import Cantor from '@/banco/Cantor.vue'
 import TabelaGenero from '@/banco/tabelas/TabelaGenero.vue'
 import TabelaMusica from '@/banco/tabelas/TabelaMusica.vue'
 import TabelaUsuario from '@/banco/tabelas/TabelaUsuario.vue'
+import Navbar from '@/components/Navbar.vue'
+import Sidebar1 from '@/components/Sidebar1.vue'
+import MusicPlayer from '@/components/MusicPlayer.vue'
+import TabelaAlbum from '@/banco/tabelas/TabelaAlbum.vue'
+import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,7 +35,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: Home,
+      component: HomeView,
     },
     {
       path: '/curtidas',
@@ -46,20 +47,25 @@ const router = createRouter({
       name: 'search',
       component: Search,
     },
+     {
+      path: '/navbar',
+      name: 'navbar',
+      component: Navbar,
+    },
        {
       path: '/playlist',
       name: 'playlist',
       component: Playlist,
     },
     {
-      path: '/cardsmusica',
-      name: 'cardsmusica',
-      component: CardsMusica,
+      path: '/musicplayer',
+      name: 'musicplayer',
+      component: MusicPlayer,
     },
     {
-      path: '/playmusica',
-      name: 'playmusica',
-      component: PlayMusicas,
+      path: '/sidebar1',
+      name: 'sidebar1',
+      component: Sidebar1,
     },
     {
       path: '/sidebar',
@@ -70,16 +76,6 @@ const router = createRouter({
       path: '/notificacoes',
       name: 'notificacoes',
       component: Notificacoes,
-    },
-    {
-      path: '/createplaylistmodal',
-      name: 'createplaylistmodal',
-      component: CreatePlaylistModal,
-    },
-    {
-      path: '/addtoplaylistmodal',
-      name: 'addtoplaylistmodal',
-      component: AddToPlaylistModal,
     },
      {
       path: '/artistas',
@@ -145,6 +141,16 @@ const router = createRouter({
       path: '/tabelamusica',
       name: 'tabelamusica',
       component: TabelaMusica,
+    },
+    {
+      path: '/tabelaalbum',
+      name: 'tabelaalbum',
+      component: TabelaAlbum,
+    },
+    {
+      path: '/tabelacantor',
+      name: 'tabelacantor',
+      component: TabelaCantor,
     },
     {
       path: '/editarusuario/:id',

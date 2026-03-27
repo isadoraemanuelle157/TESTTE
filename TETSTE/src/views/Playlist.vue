@@ -1,1310 +1,2815 @@
 <template>
-  <div class="playlist-app">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="header-content">
-        <div class="logo">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
-            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-          </svg>
-          <span class="logo-text">MusicFlow</span>
-        </div>
-        <button @click="showCreateModal = true" class="btn-primary">
-          <svg viewBox="0 0 24 24" fill="currentColor" class="btn-icon">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-          </svg>
+  <div class="playlist-container">
+    
+    <!-- MODO LISTA: Mostra todas as playlists criadas -->
+    <div v-if="currentView === 'list'" class="playlists-list-view">
+      <div class="list-header">
+        <h1>Minhas Playlists</h1>
+        <button class="btn-create-new" @click="startCreate">
+          <i class="fa fa-plus"></i>
           Criar Playlist
         </button>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="main-content">
-      <div class="container">
-        <!-- Empty State -->
-        <div v-if="playlists.length === 0" class="empty-state">
-          <div class="empty-illustration">
-            <svg viewBox="0 0 200 200" class="empty-svg">
-              <defs>
-                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.2" />
-                  <stop offset="100%" style="stop-color:#a855f7;stop-opacity:0.2" />
-                </linearGradient>
-              </defs>
-              <circle cx="100" cy="100" r="80" fill="url(#grad1)"/>
-              <path d="M70 80 Q100 60 130 80 T130 120 Q100 140 70 120 T70 80" fill="none" stroke="#6366f1" stroke-width="3" stroke-linecap="round"/>
-              <circle cx="85" cy="95" r="5" fill="#6366f1"/>
-              <circle cx="115" cy="95" r="5" fill="#6366f1"/>
-              <path d="M90 110 Q100 118 110 110" fill="none" stroke="#6366f1" stroke-width="3" stroke-linecap="round"/>
-            </svg>
+      <!-- Grid de Playlists -->
+      <div v-if="playlists.length > 0" class="playlists-grid">
+        <div 
+          v-for="playlist in playlists" 
+          :key="playlist.id"
+          class="playlist-card"
+          @click="openPlaylist(playlist)"
+        >
+          <div class="card-cover">
+            <img v-if="playlist.image" :src="playlist.image" alt="Capa" />
+            <div v-else class="cover-default">
+              <i class="fa fa-music"></i>
+            </div>
+            <div class="play-overlay">
+              <button class="btn-play-card" @click.stop="playPlaylist(playlist)">
+                <i class="fa fa-play"></i>
+              </button>
+            </div>
           </div>
-          <h2>Nenhuma playlist ainda</h2>
-          <p>Crie sua primeira playlist para começar a organizar suas músicas</p>
-          <button @click="showCreateModal = true" class="btn-secondary">
-            Criar Playlist
-          </button>
-        </div>
-
-        <!-- Playlists Grid - LADO A LADO -->
-        <div v-else class="playlists-grid">
-          <div 
-            v-for="playlist in playlists" 
-            :key="playlist.id"
-            class="playlist-card"
-            :class="{ 'with-image': playlist.coverImage }"
-          >
-            <div class="card-image" :style="getPlaylistStyle(playlist)">
-              <div v-if="!playlist.coverImage" class="gradient-overlay">
-                <svg viewBox="0 0 24 24" fill="currentColor" class="music-icon">
-                  <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                </svg>
-              </div>
-              <img v-else :src="playlist.coverImage" :alt="playlist.name">
-              
-              <!-- Overlay com botões -->
-              <div class="card-overlay">
-                <button @click.stop="openPlaylist(playlist)" class="play-button">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </button>
-                <!-- Botão excluir playlist -->
-                <button @click.stop="deletePlaylist(playlist.id)" class="delete-btn" title="Excluir playlist">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <div class="card-info" @click="openPlaylist(playlist)">
-              <h3 class="playlist-name">{{ playlist.name || 'Minha Playlist' }}</h3>
-              <p class="playlist-count">{{ playlist.songs.length }} música{{ playlist.songs.length !== 1 ? 's' : '' }}</p>
-            </div>
+          <div class="card-info">
+            <h3>{{ playlist.title }}</h3>
+            <p class="card-meta">
+              <i :class="playlist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
+              {{ playlist.songs.length }} {{ playlist.songs.length === 1 ? 'música' : 'músicas' }}
+            </p>
+            <p class="card-desc" v-if="playlist.description">{{ playlist.description }}</p>
           </div>
         </div>
       </div>
-    </main>
 
-    <!-- Create Playlist Modal - TUDO VISÍVEL COM SCROLL -->
-    <Transition name="modal">
-      <div v-if="showCreateModal" class="modal-overlay" @click.self="closeModal">
-        <div class="modal-content create-modal">
-          <div class="modal-header">
-            <h2>Criar Nova Playlist</h2>
-            <button @click="closeModal" class="close-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Scroll container para o conteúdo -->
-          <div class="modal-scroll-content">
-            <div class="modal-body">
-              <!-- Image Upload -->
-              <div class="upload-section">
-                <div 
-                  class="upload-area"
-                  :class="{ 'has-image': previewImage }"
-                  @click="triggerFileInput"
-                  @dragover.prevent
-                  @drop.prevent="handleDrop"
-                >
-                  <input 
-                    ref="fileInput"
-                    type="file" 
-                    accept="image/*" 
-                    @change="handleFileSelect"
-                    class="hidden-input"
-                  >
-                  <div v-if="!previewImage" class="upload-placeholder">
-                    <svg viewBox="0 0 24 24" fill="currentColor" class="upload-icon">
-                      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                    </svg>
-                    <span>Adicionar foto</span>
-                    <small>ou arraste uma imagem</small>
-                  </div>
-                  <img v-else :src="previewImage" class="preview-image" alt="Preview">
-                  <button v-if="previewImage" @click.stop="removeImage" class="remove-image">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Name Input -->
-              <div class="form-group">
-                <label for="playlist-name">Nome da Playlist</label>
-                <input 
-                  id="playlist-name"
-                  v-model="newPlaylist.name"
-                  type="text" 
-                  placeholder="Digite um nome (opcional)"
-                  class="text-input"
-                >
-              </div>
-
-              <!-- Color Picker (shown when no name) -->
-              <div class="form-group color-section" v-if="!newPlaylist.name">
-                <label>Escolha uma cor</label>
-                <div class="color-grid">
-                  <button 
-                    v-for="color in colors" 
-                    :key="color"
-                    @click="newPlaylist.color = color"
-                    class="color-btn"
-                    :class="{ active: newPlaylist.color === color }"
-                    :style="{ background: color }"
-                  >
-                    <svg v-if="newPlaylist.color === color" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-footer">
-            <button @click="closeModal" class="btn-text">Cancelar</button>
-            <button 
-              @click="createPlaylist" 
-              class="btn-primary"
-              :disabled="!isValid"
-            >
-              Criar
-            </button>
+      <!-- Estado Vazio -->
+      <div v-else class="empty-playlists">
+        <div class="empty-illustration">
+          <i class="fa fa-headphones"></i>
+          <div class="sound-waves">
+            <span></span><span></span><span></span>
           </div>
         </div>
+        <h2>Nenhuma playlist ainda</h2>
+        <p>Crie sua primeira playlist e organize suas músicas favoritas</p>
       </div>
-    </Transition>
+    </div>
 
-    <!-- Playlist Detail Modal -->
-    <Transition name="modal">
-      <div v-if="selectedPlaylist" class="modal-overlay playlist-detail-overlay" @click.self="closePlaylistDetail">
-        <div class="modal-content playlist-detail">
-          <div class="detail-header" :style="getPlaylistStyle(selectedPlaylist)">
-            <button @click="closePlaylistDetail" class="back-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-              </svg>
-            </button>
-            <div class="detail-info">
-              <div class="detail-image" :style="getPlaylistStyle(selectedPlaylist)">
-                <div v-if="!selectedPlaylist.coverImage" class="gradient-icon">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                  </svg>
-                </div>
-                <img v-else :src="selectedPlaylist.coverImage" :alt="selectedPlaylist.name">
-              </div>
-              <div class="detail-text">
-                <h1>{{ selectedPlaylist.name || 'Minha Playlist' }}</h1>
-                <p>{{ selectedPlaylist.songs.length }} música{{ selectedPlaylist.songs.length !== 1 ? 's' : '' }}</p>
-              </div>
-            </div>
-          </div>
+    <!-- MODO CRIAÇÃO: Formulário de nova playlist -->
+    <div v-else-if="currentView === 'create'" class="create-view">
+      <button class="btn-back" @click="backToList">
+        <i class="fa fa-arrow-left"></i>
+        Voltar
+      </button>
 
-          <div class="detail-body">
-            <div v-if="selectedPlaylist.songs.length === 0" class="empty-songs">
-              <p>Esta playlist está vazia</p>
-              <button class="btn-secondary">Adicionar músicas</button>
+      <div class="create-mode">
+        <div class="create-header">
+          <h1>Criar nova playlist</h1>
+          <p>Configure sua playlist antes de começar a adicionar músicas</p>
+        </div>
+
+        <div class="create-form">
+          <!-- Upload de Capa -->
+          <div class="cover-upload" @click="triggerImageUpload">
+            <input 
+              type="file" 
+              ref="imageInput" 
+              accept="image/*" 
+              @change="handleImageUpload" 
+              hidden 
+            />
+            
+            <div v-if="playlistImage" class="preview-container">
+              <img :src="playlistImage" alt="Preview" />
+              <div class="change-overlay">
+                <i class="fa fa-camera"></i>
+                <span>Alterar foto</span>
+              </div>
             </div>
             
-            <div v-else class="songs-list">
-              <div 
-                v-for="(song, index) in selectedPlaylist.songs" 
-                :key="index"
-                class="song-item"
-              >
-                <div class="song-number">{{ index + 1 }}</div>
-                <div class="song-info">
-                  <h4>{{ song.title }}</h4>
-                  <p>{{ song.artist }}</p>
-                </div>
-                <div class="song-duration">{{ song.duration }}</div>
-                
-                <!-- Menu de 3 pontos com opções -->
-                <div class="song-menu-container">
-                  <button class="song-menu-btn" @click.stop="toggleSongMenu(index)">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                    </svg>
-                  </button>
-                  
-                  <!-- Dropdown menu -->
-                  <div v-if="activeSongMenu === index" class="song-dropdown">
-                    <button @click="playSong(song)" class="dropdown-item">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                      <span>Tocar</span>
-                    </button>
-                    <button @click="editSong(song)" class="dropdown-item">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                      <span>Editar</span>
-                    </button>
-                    <button @click="removeSong(index)" class="dropdown-item danger">
-                      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                      <span>Remover da playlist</span>
-                    </button>
+            <div v-else class="upload-placeholder">
+              <div class="upload-icon">
+                <i class="fa fa-music"></i>
+                <div class="plus-badge">+</div>
+              </div>
+              <span class="upload-text">Escolher foto</span>
+              <small>Opcional</small>
+            </div>
+          </div>
+
+          <!-- Campos do Formulário -->
+          <div class="form-fields">
+            <div class="field-group">
+              <label for="playlist-name">Nome da playlist *</label>
+              <input 
+                id="playlist-name"
+                type="text" 
+                v-model="playlistTitle" 
+                placeholder="Ex: Minhas Favoritas"
+                maxlength="100"
+                @keyup.enter="createPlaylist"
+                ref="titleInput"
+              />
+              <span class="char-count">{{ playlistTitle.length }}/100</span>
+            </div>
+
+            <div class="field-group">
+              <label for="playlist-desc">Descrição</label>
+              <textarea 
+                id="playlist-desc"
+                v-model="playlistDescription" 
+                placeholder="Adicione uma descrição opcional..."
+                maxlength="300"
+                rows="3"
+              ></textarea>
+              <span class="char-count">{{ playlistDescription.length }}/300</span>
+            </div>
+
+            <div class="field-group privacy-group">
+              <label>Privacidade</label>
+              <div class="privacy-options">
+                <button 
+                  class="privacy-btn"
+                  :class="{ active: isPublic }"
+                  @click="isPublic = true"
+                >
+                  <i class="fa fa-globe"></i>
+                  <div class="privacy-info">
+                    <strong>Pública</strong>
+                    <small>Todos podem ver</small>
                   </div>
-                </div>
+                </button>
+                <button 
+                  class="privacy-btn"
+                  :class="{ active: !isPublic }"
+                  @click="isPublic = false"
+                >
+                  <i class="fa fa-lock"></i>
+                  <div class="privacy-info">
+                    <strong>Privada</strong>
+                    <small>Só você vê</small>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Ações -->
+        <div class="create-actions">
+          <button class="btn-secondary" @click="cancelCreate">
+            Cancelar
+          </button>
+          <button 
+            class="btn-primary" 
+            @click="createPlaylist"
+            :disabled="!playlistTitle.trim()"
+            :class="{ loading: isLoading }"
+          >
+            <span v-if="!isLoading">
+              <i class="fa fa-plus"></i>
+              Criar playlist
+            </span>
+            <span v-else class="spinner">
+              <i class="fa fa-circle-o-notch fa-spin"></i>
+              Criando...
+            </span>
+          </button>
+        </div>
       </div>
-    </Transition>
-    
-    <!-- Overlay para fechar menu quando clicar fora -->
-    <div v-if="activeSongMenu !== null" class="menu-overlay" @click="activeSongMenu = null"></div>
+    </div>
+
+    <!-- MODO VISUALIZAÇÃO: Playlist já criada -->
+    <div v-else-if="currentView === 'view'" class="view-mode">
+      <button class="btn-back" @click="backToList">
+        <i class="fa fa-arrow-left"></i>
+        Voltar para Playlists
+      </button>
+      
+      <!-- Header da Playlist -->
+      <div class="playlist-header">
+        <div class="playlist-cover" @click="editMode && triggerImageUpload()">
+          <img v-if="currentPlaylist.image" :src="currentPlaylist.image" alt="Capa" />
+          <div v-else class="cover-default large">
+            <i class="fa fa-music"></i>
+          </div>
+          <div v-if="editMode" class="edit-overlay">
+            <i class="fa fa-pencil"></i>
+          </div>
+          <input 
+            v-if="editMode"
+            type="file" 
+            ref="imageInput" 
+            accept="image/*" 
+            @change="handleImageUpload" 
+            hidden 
+          />
+        </div>
+
+        <div class="playlist-info">
+          <span class="playlist-type">
+            <i :class="currentPlaylist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
+            Playlist {{ currentPlaylist.isPublic ? 'pública' : 'privada' }}
+          </span>
+          
+          <h1 v-if="!editMode" class="playlist-title">{{ currentPlaylist.title }}</h1>
+          <input 
+            v-else
+            type="text" 
+            v-model="editTitle" 
+            class="edit-title-input"
+            maxlength="100"
+          />
+          
+          <p v-if="!editMode && currentPlaylist.description" class="playlist-description">
+            {{ currentPlaylist.description }}
+          </p>
+          <textarea 
+            v-else-if="editMode"
+            v-model="editDescription" 
+            class="edit-desc-input"
+            maxlength="300"
+            rows="2"
+            placeholder="Descrição opcional..."
+          ></textarea>
+          
+          <div class="playlist-meta">
+            <span class="meta-item author">
+              <i class="fa fa-user-circle"></i> {{ currentPlaylist.authorName }}
+            </span>
+            <span class="meta-dot">•</span>
+            <span class="meta-item">{{ currentPlaylist.songs.length }} {{ currentPlaylist.songs.length === 1 ? 'música' : 'músicas' }}</span>
+            <span v-if="totalDuration" class="meta-dot">•</span>
+            <span v-if="totalDuration" class="meta-item">{{ totalDuration }}</span>
+          </div>
+        </div>
+
+        <!-- Botões de Ação do Header -->
+        <div class="header-actions">
+          <button 
+            v-if="!editMode" 
+            class="btn-icon" 
+            @click="startEdit"
+            title="Editar detalhes"
+          >
+            <i class="fa fa-pencil"></i>
+          </button>
+          <template v-else>
+            <button class="btn-text" @click="cancelEdit">
+              Cancelar
+            </button>
+            <button class="btn-primary small" @click="saveEdit">
+              Salvar
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Controles - SEMPRE VISÍVEIS -->
+      <div class="playlist-controls">
+        <button 
+          class="btn-play-big" 
+          @click="playAll" 
+          :disabled="!currentPlaylist.songs.length"
+          :title="!currentPlaylist.songs.length ? 'Adicione músicas para tocar' : 'Tocar playlist'"
+        >
+          <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
+        </button>
+        
+        <button 
+          class="btn-icon" 
+          @click="toggleLike" 
+          :class="{ liked: currentPlaylist.isLiked }"
+          title="Favoritar playlist"
+        >
+          <i :class="currentPlaylist.isLiked ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+        </button>
+        
+        <!-- DROPDOWN DE OPÇÕES CORRIGIDO -->
+        <div class="dropdown-wrapper" v-click-outside="closeOptions">
+          <button 
+            class="btn-icon" 
+            @click.stop="toggleOptions" 
+            title="Mais opções"
+          >
+            <i class="fa fa-ellipsis-h"></i>
+          </button>
+          <div v-show="showOptions" class="options-dropdown">
+            <div class="option-item" @click="sharePlaylist">
+              <i class="fa fa-share-alt"></i> Compartilhar
+            </div>
+            <div class="option-item" @click="startEdit">
+              <i class="fa fa-pencil"></i> Editar detalhes
+            </div>
+            <div class="option-item" @click="collaborativeMode">
+              <i class="fa fa-users"></i> Tornar colaborativa
+            </div>
+            <div class="option-divider"></div>
+            <div class="option-item danger" @click="confirmDeleteFromMenu">
+              <i class="fa fa-trash-o"></i> Excluir playlist
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Adicionar Músicas -->
+      <div class="add-songs-section">
+        <h3>
+          <i class="fa fa-plus-circle"></i>
+          {{ currentPlaylist.songs.length === 0 ? 'Adicione sua primeira música' : 'Adicionar músicas' }}
+        </h3>
+        
+        <div class="search-box" :class="{ 'is-focused': searchFocused, 'is-loading': isSearching }">
+          <i class="fa fa-search"></i>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            :placeholder="currentPlaylist.songs.length === 0 ? 'Busque uma música no Deezer...' : 'Buscar músicas, artistas no Deezer...'"
+            @input="debouncedSearch"
+            @focus="searchFocused = true"
+            @blur="searchFocused = false"
+          />
+          <i v-if="isSearching" class="fa fa-circle-o-notch fa-spin search-spinner"></i>
+          <button v-else-if="searchQuery" class="clear-search" @click="clearSearch">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+        
+        <div v-if="searchError" class="search-error">
+          <i class="fa fa-exclamation-circle"></i>
+          {{ searchError }}
+        </div>
+      </div>
+
+      <!-- Resultados da Busca Deezer -->
+      <div v-if="searchResults.length > 0" class="search-results">
+        <div class="results-header">
+          <span>Resultados do Deezer</span>
+          <small>{{ searchResults.length }} encontradas</small>
+        </div>
+        <div 
+          v-for="(song, index) in searchResults" 
+          :key="'search-'+song.id"
+          class="result-item"
+        >
+          <img :src="song.cover" class="result-cover" alt="" />
+          <div class="result-info">
+            <span class="result-title">{{ song.title }}</span>
+            <span class="result-artist">{{ song.artist }} • {{ song.album }}</span>
+          </div>
+          <span class="result-duration">{{ song.duration }}</span>
+          <button class="btn-add" @click="addSong(song)" :disabled="isSongAdded(song.id)">
+            <i :class="isSongAdded(song.id) ? 'fa fa-check' : 'fa fa-plus'"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Músicas da Playlist -->
+      <div v-if="currentPlaylist.songs.length > 0" class="songs-section">
+        <div class="songs-header">
+          <span>#</span>
+          <span>Título</span>
+          <span>Álbum</span>
+          <span><i class="fa fa-clock-o"></i></span>
+          <span></span>
+        </div>
+        
+        <div 
+          v-for="(song, index) in currentPlaylist.songs" 
+          :key="song.id"
+          class="song-item"
+          :class="{ playing: currentPlayingIndex === index && isPlaying }"
+          @dblclick="playSong(index)"
+        >
+          <span class="song-number">
+            <i v-if="currentPlayingIndex === index && isPlaying" class="fa fa-volume-up animate-pulse"></i>
+            <span v-else>{{ index + 1 }}</span>
+          </span>
+          
+          <div class="song-title">
+            <img :src="song.cover" alt="" />
+            <div>
+              <div :class="{ active: currentPlayingIndex === index }">{{ song.title }}</div>
+              <small>{{ song.artist }}</small>
+            </div>
+          </div>
+          
+          <span class="song-album">{{ song.album }}</span>
+          <span class="song-duration">{{ song.duration }}</span>
+          
+          <button class="btn-remove" @click="confirmRemoveSong(index)" title="Remover">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Estado Vazio -->
+      <div v-else class="empty-state">
+        <div class="empty-icon">
+          <i class="fa fa-music"></i>
+          <div class="pulse-ring"></div>
+        </div>
+        <h3>Sua playlist está vazia</h3>
+        <p>Use a busca acima para adicionar suas músicas favoritas do Deezer</p>
+      </div>
+    </div>
+
+    <!-- Toast Notification Aprimorado -->
+    <div v-if="toast.show" class="toast" :class="[toast.type, { 'toast-exit': toast.exiting }]">
+      <div class="toast-icon">
+        <i :class="toast.icon"></i>
+      </div>
+      <div class="toast-content">
+        <div class="toast-title" v-if="toast.title">{{ toast.title }}</div>
+        <div class="toast-message">{{ toast.message }}</div>
+      </div>
+      <button class="toast-close" @click="hideToast">
+        <i class="fa fa-times"></i>
+      </button>
+      <div class="toast-progress" :style="{ animationDuration: toast.duration + 'ms' }"></div>
+    </div>
+
+    <!-- Modal de Confirmação de Exclusão de Playlist -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDelete">
+      <div class="delete-modal" @click.stop>
+        <div class="modal-icon">
+          <i class="fa fa-exclamation-triangle"></i>
+        </div>
+        <h3>Excluir playlist?</h3>
+        <p>
+          Tem certeza que deseja excluir <strong>"{{ playlistToDelete?.title || currentPlaylist?.title }}"</strong>?
+          <br>
+          <span class="modal-warning">Esta ação não pode ser desfeita.</span>
+        </p>
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="cancelDelete">
+            Cancelar
+          </button>
+          <button class="btn-danger" @click="executeDelete" :disabled="isDeleting">
+            <span v-if="!isDeleting">
+              <i class="fa fa-trash-o"></i>
+              Sim, excluir
+            </span>
+            <span v-else class="spinner">
+              <i class="fa fa-circle-o-notch fa-spin"></i>
+              Excluindo...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação de Exclusão de Música Aprimorado -->
+    <div v-if="showRemoveSongModal" class="modal-overlay" @click="cancelRemoveSong">
+      <div class="delete-modal song-delete-modal" @click.stop>
+        <div class="modal-icon song-icon">
+          <i class="fa fa-music"></i>
+          <div class="remove-icon">
+            <i class="fa fa-times"></i>
+          </div>
+        </div>
+        <h3>Remover música?</h3>
+        <div class="song-preview" v-if="songToRemove">
+          <img :src="songToRemove.cover" alt="" class="song-preview-img" />
+          <div class="song-preview-info">
+            <strong>{{ songToRemove.title }}</strong>
+            <span>{{ songToRemove.artist }}</span>
+          </div>
+        </div>
+        <p class="remove-warning">
+          <i class="fa fa-info-circle"></i>
+          Esta música será removida da sua playlist. Você pode adicioná-la novamente depois.
+        </p>
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="cancelRemoveSong">
+            Cancelar
+          </button>
+          <button class="btn-danger btn-remove-song" @click="executeRemoveSong" :disabled="isRemovingSong">
+            <span v-if="!isRemovingSong">
+              <i class="fa fa-trash-o"></i>
+              Remover
+            </span>
+            <span v-else class="spinner">
+              <i class="fa fa-circle-o-notch fa-spin"></i>
+              Removendo...
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-
-const showCreateModal = ref(false)
-const selectedPlaylist = ref(null)
-const fileInput = ref(null)
-const previewImage = ref(null)
-const activeSongMenu = ref(null)
-
-const colors = [
-  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-  'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-  'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-  'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-  'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-  'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
-]
-
-const newPlaylist = ref({
-  name: '',
-  color: colors[0],
-  coverImage: null
-})
-
-// Sample data
-const playlists = ref([
-  {
-    id: 1,
-    name: 'Rock Classics',
-    color: colors[1],
-    coverImage: null,
-    songs: [
-      { title: 'Bohemian Rhapsody', artist: 'Queen', duration: '5:55' },
-      { title: 'Hotel California', artist: 'Eagles', duration: '6:30' },
-      { title: 'Stairway to Heaven', artist: 'Led Zeppelin', duration: '8:02' }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Pop Hits',
-    color: colors[3],
-    coverImage: null,
-    songs: [
-      { title: 'Blinding Lights', artist: 'The Weeknd', duration: '3:20' },
-      { title: 'Levitating', artist: 'Dua Lipa', duration: '3:23' }
-    ]
-  },
-  {
-    id: 3,
-    name: 'Minha Playlist',
-    color: colors[0],
-    coverImage: null,
-    songs: []
-  }
-])
-
-const isValid = computed(() => {
-  return newPlaylist.value.name.trim() || newPlaylist.value.color
-})
-
-const getPlaylistStyle = (playlist) => {
-  if (playlist.coverImage) {
-    return { backgroundImage: `url(${playlist.coverImage})` }
-  }
-  return { background: playlist.color || colors[0] }
-}
-
-const triggerFileInput = () => {
-  fileInput.value?.click()
-}
-
-const handleFileSelect = (event) => {
-  const file = event.target.files[0]
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      previewImage.value = e.target.result
-      newPlaylist.value.coverImage = e.target.result
+<script>
+const clickOutside = {
+  mounted(el, binding) {
+    el._clickOutside = (event) => {
+      if (!(el === event.target || el.contains(event.target))) {
+        binding.value()
+      }
     }
-    reader.readAsDataURL(file)
+    document.addEventListener('click', el._clickOutside)
+  },
+  unmounted(el) {
+    document.removeEventListener('click', el._clickOutside)
   }
 }
 
-const handleDrop = (event) => {
-  const file = event.dataTransfer.files[0]
-  if (file && file.type.startsWith('image/')) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      previewImage.value = e.target.result
-      newPlaylist.value.coverImage = e.target.result
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-const removeImage = () => {
-  previewImage.value = null
-  newPlaylist.value.coverImage = null
-  if (fileInput.value) fileInput.value.value = ''
-}
-
-const createPlaylist = () => {
-  const playlist = {
-    id: Date.now(),
-    name: newPlaylist.value.name || '',
-    color: newPlaylist.value.color,
-    coverImage: newPlaylist.value.coverImage,
-    songs: []
-  }
+export default {
+  name: "PlaylistManager",
+  directives: { 'click-outside': clickOutside },
   
-  playlists.value.unshift(playlist)
-  closeModal()
-}
+  data() {
+    return {
+      DEEZER_API: 'https://proxy.corsfix.com/?https://api.deezer.com',
+      
+      currentView: 'list',
+      playlists: [],
+      currentPlaylist: null,
+      
+      // Modal de exclusão de playlist
+      showDeleteModal: false,
+      playlistToDelete: null,
+      isDeleting: false,
+      deleteFromView: false,
+      
+      // Modal de exclusão de música
+      showRemoveSongModal: false,
+      songToRemove: null,
+      songToRemoveIndex: null,
+      isRemovingSong: false,
+      
+      editMode: false,
+      isLoading: false,
+      isSearching: false,
+      
+      playlistTitle: "",
+      playlistDescription: "",
+      playlistImage: null,
+      isPublic: true,
+      authorName: "Você",
+      
+      editTitle: "",
+      editDescription: "",
+      editImage: null,
+      editIsPublic: true,
+      
+      showOptions: false,
+      searchQuery: "",
+      searchFocused: false,
+      searchError: null,
+      
+      searchResults: [],
+      backupData: {},
+      searchTimer: null,
+      
+      // PLAYER DE ÁUDIO REAL
+      audioPlayer: null,
+      currentPlayingIndex: null,
+      isPlaying: false,
+      currentTrack: null,
+      
+      // Toast aprimorado
+      toast: {
+        show: false,
+        message: '',
+        title: '',
+        type: 'success',
+        icon: 'fa fa-check',
+        duration: 3000,
+        exiting: false,
+        timer: null
+      }
+    }
+  },
 
-const deletePlaylist = (id) => {
-  if (confirm('Tem certeza que deseja excluir esta playlist?')) {
-    playlists.value = playlists.value.filter(p => p.id !== id)
-    if (selectedPlaylist.value?.id === id) {
-      selectedPlaylist.value = null
+  computed: {
+    totalDuration() {
+      if (!this.currentPlaylist || this.currentPlaylist.songs.length === 0) return ""
+      const totalSeconds = this.currentPlaylist.songs.reduce((acc, s) => {
+        const parts = s.duration.split(':')
+        if (parts.length === 2) {
+          const [m, sec] = parts.map(Number)
+          return acc + (m * 60 + sec)
+        }
+        return acc
+      }, 0)
+      
+      const hours = Math.floor(totalSeconds / 3600)
+      const mins = Math.floor((totalSeconds % 3600) / 60)
+      
+      if (hours > 0) {
+        return `${hours}h ${mins}min`
+      }
+      return `${mins}min`
+    }
+  },
+
+  mounted() {
+    const saved = localStorage.getItem('user_playlists')
+    if (saved) {
+      this.playlists = JSON.parse(saved)
+    }
+
+    // Inicializar player de áudio REAL
+    this.initAudioPlayer()
+  },
+
+  beforeUnmount() {
+    if (this.audioPlayer) {
+      this.audioPlayer.pause()
+      this.audioPlayer.src = ''
+      this.audioPlayer.removeEventListener('ended', this.handleTrackEnded)
+      this.audioPlayer.removeEventListener('play', this.handleAudioPlay)
+      this.audioPlayer.removeEventListener('pause', this.handleAudioPause)
+      this.audioPlayer.removeEventListener('error', this.handleAudioError)
+    }
+  },
+
+  methods: {
+    // ===== INICIALIZAR PLAYER DE ÁUDIO REAL =====
+    initAudioPlayer() {
+      this.audioPlayer = new Audio()
+      
+      // Event listeners do player
+      this.audioPlayer.addEventListener('ended', this.handleTrackEnded)
+      this.audioPlayer.addEventListener('play', this.handleAudioPlay)
+      this.audioPlayer.addEventListener('pause', this.handleAudioPause)
+      this.audioPlayer.addEventListener('error', this.handleAudioError)
+      this.audioPlayer.addEventListener('canplay', () => {
+        console.log('Áudio pronto para tocar')
+      })
+    },
+    
+    handleTrackEnded() {
+      // Tocar próxima música automaticamente
+      if (this.currentPlaylist && this.currentPlayingIndex < this.currentPlaylist.songs.length - 1) {
+        this.playSong(this.currentPlayingIndex + 1)
+      } else {
+        this.isPlaying = false
+        this.currentPlayingIndex = null
+      }
+    },
+    
+    handleAudioPlay() {
+      this.isPlaying = true
+    },
+    
+    handleAudioPause() {
+      this.isPlaying = false
+    },
+    
+    handleAudioError(e) {
+      console.error('Erro no áudio:', e)
+      this.showToast({
+        title: 'Erro',
+        message: 'Não foi possível reproduzir esta música',
+        type: 'error',
+        icon: 'fa fa-exclamation-circle'
+      })
+      this.isPlaying = false
+    },
+    
+    // ===== REPRODUÇÃO REAL DE MÚSICA =====
+    async playSong(index) {
+      if (!this.currentPlaylist || !this.currentPlaylist.songs[index]) return
+      
+      const song = this.currentPlaylist.songs[index]
+      
+      // Se clicou na mesma música que está tocando, pausar/continuar
+      if (this.currentPlayingIndex === index && this.currentTrack?.deezerId === song.deezerId) {
+        if (this.isPlaying) {
+          this.audioPlayer.pause()
+        } else {
+          await this.audioPlayer.play()
+        }
+        return
+      }
+      
+      // Parar música anterior
+      this.audioPlayer.pause()
+      this.audioPlayer.src = ''
+      
+      this.currentPlayingIndex = index
+      this.currentTrack = song
+      
+      // Usar URL de preview do Deezer (30 segundos)
+      const previewUrl = song.preview
+      
+      if (!previewUrl) {
+        this.showToast({
+          title: 'Indisponível',
+          message: 'Preview não disponível para esta música',
+          type: 'warning',
+          icon: 'fa fa-info-circle'
+        })
+        return
+      }
+      
+      try {
+        // Configurar e tocar
+        this.audioPlayer.src = previewUrl
+        this.audioPlayer.volume = 0.5 // Volume padrão 50%
+        
+        await this.audioPlayer.play()
+        
+        // Notificar outros componentes (player global)
+        window.dispatchEvent(new CustomEvent('playlist-playback-started', {
+          detail: {
+            song: song,
+            playlist: this.currentPlaylist,
+            index: index
+          }
+        }))
+        
+      } catch (err) {
+        console.error('Erro ao tocar:', err)
+        this.showToast({
+          title: 'Erro',
+          message: 'Erro ao reproduzir música. Tente novamente.',
+          type: 'error',
+          icon: 'fa fa-exclamation-circle'
+        })
+        this.isPlaying = false
+      }
+    },
+    
+    togglePlay() {
+      if (!this.currentTrack && this.currentPlaylist?.songs.length > 0) {
+        // Se não tem música selecionada, tocar a primeira
+        this.playSong(0)
+      } else if (this.currentTrack) {
+        // Toggle play/pause
+        if (this.isPlaying) {
+          this.audioPlayer.pause()
+        } else {
+          this.audioPlayer.play()
+        }
+      }
+    },
+    
+    playAll() {
+      if (this.currentPlaylist?.songs.length === 0) {
+        this.showToast({
+          title: 'Playlist vazia',
+          message: 'Adicione músicas à playlist para poder ouvir',
+          type: 'warning',
+          icon: 'fa fa-info-circle'
+        })
+        return
+      }
+      
+      if (this.isPlaying) {
+        this.togglePlay()
+      } else {
+        this.playSong(0)
+      }
+    },
+    
+    playPlaylist(playlist) {
+      this.openPlaylist(playlist)
+      if (playlist.songs.length > 0) {
+        this.$nextTick(() => {
+          this.playSong(0)
+        })
+      } else {
+        this.showToast({
+          title: 'Playlist vazia',
+          message: 'Adicione músicas à playlist para poder ouvir',
+          type: 'warning',
+          icon: 'fa fa-info-circle'
+        })
+      }
+    },
+    
+    // ===== NAVEGAÇÃO =====
+    startCreate() {
+      this.resetForm()
+      this.currentView = 'create'
+      this.$nextTick(() => {
+        this.$refs.titleInput?.focus()
+      })
+    },
+    
+    backToList() {
+      // Não parar a música ao voltar para a lista
+      this.currentView = 'list'
+      this.currentPlaylist = null
+      this.editMode = false
+      this.clearSearch()
+      this.showOptions = false
+    },
+    
+    openPlaylist(playlist) {
+      this.currentPlaylist = playlist
+      this.currentView = 'view'
+      this.clearSearch()
+      this.showOptions = false
+    },
+    
+    // ===== CRIAÇÃO =====
+    createPlaylist() {
+      if (!this.playlistTitle.trim()) return
+      
+      this.isLoading = true
+      
+      setTimeout(() => {
+        const newPlaylist = {
+          id: Date.now(),
+          title: this.playlistTitle.trim(),
+          description: this.playlistDescription.trim(),
+          image: this.playlistImage,
+          isPublic: this.isPublic,
+          authorName: this.authorName,
+          isLiked: false,
+          songs: [],
+          createdAt: new Date().toISOString()
+        }
+        
+        this.playlists.unshift(newPlaylist)
+        this.savePlaylists()
+        
+        this.isLoading = false
+        this.showToast({
+          title: 'Sucesso!',
+          message: 'Playlist criada com sucesso!',
+          type: 'success',
+          icon: 'fa fa-check-circle'
+        })
+        
+        this.backToList()
+      }, 800)
+    },
+    
+    cancelCreate() {
+      if (this.playlistTitle.trim() || this.playlistDescription.trim() || this.playlistImage) {
+        if (!confirm("Descartar alterações?")) return
+      }
+      this.backToList()
+    },
+    
+    resetForm() {
+      this.playlistTitle = ""
+      this.playlistDescription = ""
+      this.playlistImage = null
+      this.isPublic = true
+      this.editMode = false
+    },
+    
+    // ===== EDIÇÃO =====
+    startEdit() {
+      this.editTitle = this.currentPlaylist.title
+      this.editDescription = this.currentPlaylist.description
+      this.editImage = this.currentPlaylist.image
+      this.editIsPublic = this.currentPlaylist.isPublic
+      this.backupData = { ...this.currentPlaylist }
+      this.editMode = true
+      this.showOptions = false
+    },
+    
+    cancelEdit() {
+      this.editMode = false
+    },
+    
+    saveEdit() {
+      if (!this.editTitle.trim()) {
+        this.showToast({
+          title: 'Atenção',
+          message: 'O título é obrigatório',
+          type: 'warning',
+          icon: 'fa fa-exclamation-triangle'
+        })
+        return
+      }
+      
+      this.currentPlaylist.title = this.editTitle.trim()
+      this.currentPlaylist.description = this.editDescription.trim()
+      this.currentPlaylist.image = this.editImage
+      this.currentPlaylist.isPublic = this.editIsPublic
+      
+      this.savePlaylists()
+      this.editMode = false
+      this.showToast({
+        title: 'Atualizado!',
+        message: 'Playlist atualizada com sucesso',
+        type: 'success',
+        icon: 'fa fa-check-circle'
+      })
+    },
+    
+    // ===== IMAGEM =====
+    triggerImageUpload() {
+      this.$refs.imageInput.click()
+    },
+    
+    handleImageUpload(event) {
+      const file = event.target.files[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          if (this.editMode) {
+            this.editImage = e.target.result
+            this.currentPlaylist.image = e.target.result
+          } else {
+            this.playlistImage = e.target.result
+          }
+        }
+        reader.readAsDataURL(file)
+      }
+    },
+    
+    // ===== BUSCA DEEZER API =====
+    debouncedSearch() {
+      clearTimeout(this.searchTimer)
+      this.searchError = null
+      if (this.searchQuery.length < 2) {
+        this.searchResults = []
+        return
+      }
+      this.searchTimer = setTimeout(() => this.searchDeezer(), 400)
+    },
+    
+    async searchDeezer() {
+      if (this.searchQuery.length < 2) return
+      
+      this.isSearching = true
+      this.searchError = null
+      
+      try {
+        const response = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=10`)
+        
+        if (!response.ok) throw new Error('Erro na busca')
+        
+        const data = await response.json()
+        
+        if (data.error) {
+          throw new Error(data.error.message || 'Erro na API do Deezer')
+        }
+        
+        this.searchResults = data.data.map(track => ({
+          id: track.id,
+          title: track.title,
+          artist: track.artist.name,
+          album: track.album.title,
+          duration: this.formatDuration(track.duration),
+          cover: track.album.cover_small || track.album.cover,
+          preview: track.preview, // URL do preview de 30 segundos
+          deezerId: track.id
+        }))
+        
+      } catch (error) {
+        console.error('Erro na busca Deezer:', error)
+        this.searchError = 'Erro ao buscar músicas. Tente novamente.'
+        this.searchResults = []
+      } finally {
+        this.isSearching = false
+      }
+    },
+    
+    formatDuration(seconds) {
+      const mins = Math.floor(seconds / 60)
+      const secs = seconds % 60
+      return `${mins}:${secs.toString().padStart(2, '0')}`
+    },
+    
+    clearSearch() {
+      this.searchQuery = ""
+      this.searchResults = []
+      this.searchError = null
+    },
+    
+    isSongAdded(deezerId) {
+      return this.currentPlaylist.songs.some(s => s.deezerId === deezerId)
+    },
+    
+    // ===== MÚSICAS =====
+    addSong(song) {
+      if (this.isSongAdded(song.id)) {
+        this.showToast({
+          title: 'Ops!',
+          message: 'Esta música já está na playlist',
+          type: 'warning',
+          icon: 'fa fa-info-circle'
+        })
+        return
+      }
+      
+      this.currentPlaylist.songs.push({
+        ...song,
+        addedDate: new Date().toLocaleDateString('pt-BR')
+      })
+      
+      this.savePlaylists()
+      this.showToast({
+        title: 'Adicionada!',
+        message: `"${song.title}" foi adicionada à playlist`,
+        type: 'success',
+        icon: 'fa fa-music'
+      })
+    },
+    
+    // ===== REMOÇÃO DE MÚSICA COM MODAL =====
+    confirmRemoveSong(index) {
+      this.songToRemoveIndex = index
+      this.songToRemove = this.currentPlaylist.songs[index]
+      this.showRemoveSongModal = true
+    },
+    
+    cancelRemoveSong() {
+      this.showRemoveSongModal = false
+      this.songToRemove = null
+      this.songToRemoveIndex = null
+    },
+    
+    async executeRemoveSong() {
+      if (this.songToRemoveIndex === null) return
+      
+      this.isRemovingSong = true
+      
+      await new Promise(resolve => setTimeout(resolve, 400))
+      
+      const removedSong = this.currentPlaylist.songs[this.songToRemoveIndex]
+      
+      // Se estiver tocando essa música, parar
+      if (this.currentPlayingIndex === this.songToRemoveIndex) {
+        this.audioPlayer.pause()
+        this.audioPlayer.src = ''
+        this.isPlaying = false
+        this.currentPlayingIndex = null
+        this.currentTrack = null
+      }
+      
+      this.currentPlaylist.songs.splice(this.songToRemoveIndex, 1)
+      this.savePlaylists()
+      
+      this.isRemovingSong = false
+      this.showRemoveSongModal = false
+      
+      // Toast aprimorado de remoção
+      this.showToast({
+        title: 'Música removida',
+        message: `"${removedSong.title}" foi removida da playlist`,
+        type: 'info',
+        icon: 'fa fa-trash',
+        duration: 4000
+      })
+      
+      this.songToRemove = null
+      this.songToRemoveIndex = null
+    },
+    
+    // ===== CONTROLES =====
+    toggleLike() {
+      this.currentPlaylist.isLiked = !this.currentPlaylist.isLiked
+      this.savePlaylists()
+      
+      const message = this.currentPlaylist.isLiked 
+        ? `"${this.currentPlaylist.title}" adicionada aos favoritos`
+        : `"${this.currentPlaylist.title}" removida dos favoritos`
+      
+      this.showToast({
+        title: this.currentPlaylist.isLiked ? 'Favoritada!' : 'Desfavoritada',
+        message: message,
+        type: 'success',
+        icon: this.currentPlaylist.isLiked ? 'fa fa-heart' : 'fa fa-heart-o'
+      })
+    },
+    
+    // ===== DROPDOWN OPÇÕES =====
+    toggleOptions() {
+      this.showOptions = !this.showOptions
+      console.log('Dropdown toggle:', this.showOptions)
+    },
+    
+    closeOptions() {
+      if (this.showOptions) {
+        this.showOptions = false
+        console.log('Dropdown fechado')
+      }
+    },
+    
+    // ===== OPÇÕES =====
+    sharePlaylist() {
+      const url = `${window.location.origin}/playlist/${this.currentPlaylist.id}`
+      navigator.clipboard?.writeText(url)
+      this.showToast({
+        title: 'Link copiado!',
+        message: 'O link da playlist foi copiado para a área de transferência',
+        type: 'success',
+        icon: 'fa fa-link'
+      })
+      this.showOptions = false
+    },
+    
+    collaborativeMode() {
+      this.showToast({
+        title: 'Em breve',
+        message: 'O modo colaborativo estará disponível em breve!',
+        type: 'info',
+        icon: 'fa fa-users'
+      })
+      this.showOptions = false
+    },
+    
+    // ===== EXCLUIR PLAYLIST =====
+    confirmDeleteFromMenu() {
+      this.deleteFromView = true
+      this.playlistToDelete = this.currentPlaylist
+      this.showDeleteModal = true
+      this.showOptions = false
+    },
+    
+    cancelDelete() {
+      this.showDeleteModal = false
+      this.playlistToDelete = null
+      this.deleteFromView = false
+    },
+    
+    async executeDelete() {
+      this.isDeleting = true
+      
+      await new Promise(resolve => setTimeout(resolve, 600))
+      
+      const playlistToDelete = this.playlistToDelete || this.currentPlaylist
+      
+      if (playlistToDelete) {
+        const index = this.playlists.findIndex(p => p.id === playlistToDelete.id)
+        if (index > -1) {
+          // Se estiver tocando música desta playlist, parar
+          if (this.currentTrack && this.currentPlaylist?.id === playlistToDelete.id) {
+            this.audioPlayer.pause()
+            this.audioPlayer.src = ''
+            this.isPlaying = false
+            this.currentTrack = null
+            this.currentPlayingIndex = null
+          }
+          
+          this.playlists.splice(index, 1)
+          this.savePlaylists()
+          this.showToast({
+            title: 'Excluída!',
+            message: `"${playlistToDelete.title}" foi excluída com sucesso`,
+            type: 'success',
+            icon: 'fa fa-check-circle'
+          })
+          
+          if (this.deleteFromView) {
+            this.backToList()
+          }
+        }
+      }
+      
+      this.isDeleting = false
+      this.showDeleteModal = false
+      this.playlistToDelete = null
+      this.deleteFromView = false
+    },
+    
+    // ===== PERSISTÊNCIA =====
+    savePlaylists() {
+      localStorage.setItem('user_playlists', JSON.stringify(this.playlists))
+    },
+    
+    // ===== TOAST APRIMORADO =====
+    showToast({ message, type = 'success', icon = 'fa fa-check', title = '', duration = 3000 }) {
+      // Clear existing toast
+      if (this.toast.timer) {
+        clearTimeout(this.toast.timer)
+      }
+      
+      this.toast = {
+        show: true,
+        message,
+        title,
+        type,
+        icon,
+        duration,
+        exiting: false,
+        timer: null
+      }
+      
+      // Auto hide
+      this.toast.timer = setTimeout(() => {
+        this.hideToast()
+      }, duration)
+    },
+    
+    hideToast() {
+      if (!this.toast.show) return
+      
+      this.toast.exiting = true
+      
+      setTimeout(() => {
+        this.toast.show = false
+        this.toast.exiting = false
+        if (this.toast.timer) {
+          clearTimeout(this.toast.timer)
+          this.toast.timer = null
+        }
+      }, 300)
     }
   }
 }
-
-const closeModal = () => {
-  showCreateModal.value = false
-  newPlaylist.value = { name: '', color: colors[0], coverImage: null }
-  previewImage.value = null
-}
-
-const openPlaylist = (playlist) => {
-  selectedPlaylist.value = playlist
-}
-
-const closePlaylistDetail = () => {
-  selectedPlaylist.value = null
-  activeSongMenu.value = null
-}
-
-// Menu de músicas
-const toggleSongMenu = (index) => {
-  activeSongMenu.value = activeSongMenu.value === index ? null : index
-}
-
-const playSong = (song) => {
-  alert(`Tocando: ${song.title} - ${song.artist}`)
-  activeSongMenu.value = null
-}
-
-const editSong = (song) => {
-  const newTitle = prompt('Novo título:', song.title)
-  if (newTitle !== null && newTitle.trim() !== '') {
-    song.title = newTitle.trim()
-  }
-  activeSongMenu.value = null
-}
-
-const removeSong = (index) => {
-  if (confirm('Remover esta música da playlist?')) {
-    selectedPlaylist.value.songs.splice(index, 1)
-  }
-  activeSongMenu.value = null
-}
-
-// Fechar menu ao pressionar ESC
-const handleEsc = (e) => {
-  if (e.key === 'Escape') {
-    activeSongMenu.value = null
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleEsc)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleEsc)
-})
 </script>
 
 <style scoped>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
-.playlist-app {
+.playlist-container {
   min-height: 100vh;
-  background: #0f0f0f;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #f8fafc;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  padding: 32px;
+  width: calc(90% - 260px);
+  max-width: calc(90% - 260px);
+  margin-left: 260px;
+  margin-right: auto;
+  box-sizing: border-box;
+  position: relative;
 }
 
-/* Header */
-.app-header {
-  background: rgba(15, 15, 15, 0.95);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  padding: 1rem 0;
+/* ===== TOAST NOTIFICATION APRIMORADO ===== */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  font-weight: 500;
+  z-index: 10000;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  min-width: 320px;
+  max-width: 450px;
+  animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
-.header-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 2rem;
+.toast-exit {
+  animation: slideOutRight 0.3s ease forwards;
+}
+
+.toast.success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.toast.error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.toast.warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+.toast.info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.toast-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+}
+
+.toast-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.toast-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+
+.toast-message {
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: 0.95;
+}
+
+.toast-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  background: rgba(255,255,255,0.25);
+  transform: rotate(90deg);
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgba(255,255,255,0.4);
+  animation: progress linear forwards;
+}
+
+@keyframes progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+}
+
+/* ===== MODAL DE EXCLUSÃO ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.delete-modal {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease;
+}
+
+.song-delete-modal {
+  max-width: 420px;
+}
+
+.modal-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  font-size: 36px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+  animation: pulse 2s infinite;
+  position: relative;
+}
+
+.modal-icon.song-icon {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+}
+
+.remove-icon {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 32px;
+  height: 32px;
+  background: #ef4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  border: 3px solid #1e293b;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.delete-modal h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: #f8fafc;
+}
+
+.delete-modal p {
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+}
+
+.delete-modal strong {
+  color: #f8fafc;
+}
+
+.modal-warning {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #ef4444;
+}
+
+.remove-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #fca5a5;
+  margin-bottom: 24px;
+}
+
+.song-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.song-preview-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.song-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+
+.song-preview-info strong {
+  color: #f8fafc;
+  font-size: 15px;
+}
+
+.song-preview-info span {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-danger {
+  padding: 12px 24px;
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-remove-song {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+/* ===== BOTÃO VOLTAR ===== */
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 24px;
+  padding: 8px 0;
+  transition: color 0.3s;
+}
+
+.btn-back:hover {
+  color: #f8fafc;
+}
+
+/* ===== VIEW: LISTA DE PLAYLISTS ===== */
+.playlists-list-view {
+  width: 100%;
+  animation: fadeIn 0.5s ease;
+}
+
+.list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 32px;
 }
 
-.logo {
+.list-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.btn-create-new {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border: none;
+  border-radius: 24px;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.3);
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
-  color: #6366f1;
+.btn-create-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(37,99,235,0.4);
 }
 
-.logo-text {
-  font-size: 1.5rem;
+/* Grid de Playlists */
+.playlists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.playlist-card {
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 1px solid rgba(255,255,255,0.05);
+  position: relative;
+}
+
+.playlist-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.card-cover {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.playlist-card:hover .card-cover img {
+  transform: scale(1.05);
+}
+
+.cover-default {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #334155, #1e293b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #475569;
+}
+
+.cover-default.large {
+  font-size: 80px;
+}
+
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.playlist-card:hover .play-overlay {
+  opacity: 1;
+}
+
+.btn-play-card {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.4);
+  transition: transform 0.2s;
+}
+
+.btn-play-card:hover {
+  transform: scale(1.1);
+}
+
+.card-info {
+  padding: 16px;
+}
+
+.card-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-meta {
+  font-size: 13px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.card-meta i {
+  font-size: 12px;
+}
+
+.card-desc {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+}
+
+/* Estado Vazio da Lista */
+.empty-playlists {
+  text-align: center;
+  padding: 80px 20px;
+  color: #64748b;
+}
+
+.empty-illustration {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 32px;
+}
+
+.empty-illustration i {
+  font-size: 80px;
+  opacity: 0.3;
+  position: relative;
+  z-index: 1;
+}
+
+.sound-waves {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.sound-waves span {
+  width: 4px;
+  background: #2563eb;
+  border-radius: 2px;
+  animation: sound-wave 1s ease-in-out infinite;
+}
+
+.sound-waves span:nth-child(1) { height: 20px; animation-delay: 0s; }
+.sound-waves span:nth-child(2) { height: 30px; animation-delay: 0.2s; }
+.sound-waves span:nth-child(3) { height: 25px; animation-delay: 0.4s; }
+
+@keyframes sound-wave {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.empty-playlists h2 {
+  font-size: 24px;
+  color: #f8fafc;
+  margin-bottom: 8px;
+}
+
+.empty-playlists p {
+  margin-bottom: 24px;
+  font-size: 16px;
+}
+
+/* ===== MODO CRIAÇÃO ===== */
+.create-view {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease;
+}
+
+.create-mode {
+  animation: fadeIn 0.5s ease;
+}
+
+.create-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.create-header h1 {
+  font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Buttons */
-.btn-primary {
-  display: inline-flex;
+.create-header p {
+  color: #64748b;
+  font-size: 16px;
+  margin: 0;
+}
+
+.create-form {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 40px;
+  align-items: flex-start;
+}
+
+/* Upload de Capa na Criação */
+.cover-upload {
+  flex-shrink: 0;
+  width: 232px;
+  height: 232px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border-radius: 16px;
+  border: 2px dashed #334155;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.cover-upload:hover {
+  border-color: #2563eb;
+  transform: scale(1.02);
+}
+
+.preview-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.preview-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.change-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.preview-container:hover .change-overlay {
+  opacity: 1;
+}
+
+.change-overlay i {
+  font-size: 32px;
   color: white;
-  border: none;
-  border-radius: 9999px;
+}
+
+.change-overlay span {
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.upload-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #64748b;
+}
+
+.upload-icon {
+  position: relative;
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.plus-badge {
+  position: absolute;
+  bottom: -5px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  background: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: white;
+  font-weight: bold;
+}
+
+.upload-text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.upload-placeholder small {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Campos do Formulário */
+.form-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.field-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.field-group input,
+.field-group textarea {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 16px;
+  color: #f8fafc;
+  font-size: 16px;
+  font-family: inherit;
+  transition: all 0.3s;
+  resize: none;
+}
+
+.field-group input:focus,
+.field-group textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.field-group input::placeholder,
+.field-group textarea::placeholder {
+  color: #475569;
+}
+
+.char-count {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Opções de Privacidade */
+.privacy-options {
+  display: flex;
+  gap: 12px;
+}
+
+.privacy-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: left;
+}
+
+.privacy-btn:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.privacy-btn.active {
+  border-color: #2563eb;
+  background: rgba(37,99,235,0.1);
+  color: #f8fafc;
+}
+
+.privacy-btn i {
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+}
+
+.privacy-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.privacy-info strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.privacy-info small {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Botões de Ação na Criação */
+.create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: #f8fafc;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+  transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.3);
+}
+
+.btn-primary {
+  padding: 12px 32px;
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 8px 30px rgba(37,99,235,0.4);
 }
 
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
-.btn-secondary {
-  padding: 0.875rem 2rem;
-  background: transparent;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 9999px;
-  font-weight: 600;
+.btn-primary.small {
+  padding: 8px 20px;
+  font-size: 13px;
+}
+
+.btn-primary.loading {
+  opacity: 0.8;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== MODO VISUALIZAÇÃO ===== */
+.view-mode {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  animation: fadeIn 0.5s ease;
+}
+
+.playlist-header {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+  align-items: flex-end;
+  position: relative;
+}
+
+.playlist-cover {
+  width: 232px;
+  height: 232px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.playlist-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.4);
+.playlist-cover:hover .edit-overlay {
+  opacity: 1;
+}
+
+.edit-overlay i {
+  color: white;
+  font-size: 32px;
+}
+
+.playlist-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.playlist-type {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playlist-title {
+  font-size: 48px;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.edit-title-input {
+  font-size: 32px;
+  font-weight: 900;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(37,99,235,0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #f8fafc;
+  width: 100%;
+  max-width: 400px;
+}
+
+.edit-desc-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(37,99,235,0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #f8fafc;
+  width: 100%;
+  max-width: 400px;
+  resize: none;
+  font-family: inherit;
+}
+
+.playlist-description {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+  max-width: 400px;
+}
+
+.playlist-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #94a3b8;
+  flex-wrap: wrap;
+}
+
+.meta-item.author {
+  color: #f8fafc;
+  font-weight: 500;
+}
+
+.meta-item i {
+  color: #2563eb;
+}
+
+.meta-dot {
+  color: #475569;
+}
+
+.header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
 }
 
 .btn-text {
-  padding: 0.75rem 1.5rem;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.7);
+  background: none;
   border: none;
-  font-weight: 600;
+  color: #94a3b8;
+  font-size: 14px;
   cursor: pointer;
+  padding: 8px 16px;
   transition: color 0.3s;
 }
 
 .btn-text:hover {
-  color: #fff;
+  color: #f8fafc;
 }
 
-.btn-icon {
-  width: 20px;
-  height: 20px;
-}
-
-/* Main Content */
-.main-content {
-  padding: 2rem 0;
-}
-
-.container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-/* Empty State */
-.empty-state {
-  text-align: center;
-  padding: 4rem 2rem;
-}
-
-.empty-illustration {
-  margin-bottom: 2rem;
-}
-
-.empty-svg {
-  width: 200px;
-  height: 200px;
-  opacity: 0.8;
-}
-
-.empty-state h2 {
-  font-size: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: #fff;
-}
-
-.empty-state p {
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 2rem;
-}
-
-/* Playlists Grid - LADO A LADO FIXO */
-.playlists-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1.5rem;
-  align-items: start;
-}
-
-.playlist-card {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  height: fit-content;
-}
-
-.playlist-card:hover {
-  transform: translateY(-4px);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-}
-
-.card-image {
-  aspect-ratio: 1;
+/* Controles */
+.playlist-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
   position: relative;
-  overflow: hidden;
-  background-size: cover;
-  background-position: center;
 }
 
-.gradient-overlay {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.music-icon {
-  width: 48px;
-  height: 48px;
-  opacity: 0.8;
-}
-
-.card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Overlay com botões */
-.card-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.playlist-card:hover .card-overlay {
-  opacity: 1;
-}
-
-.play-button {
+.btn-play-big {
   width: 56px;
   height: 56px;
-  background: rgba(99, 102, 241, 0.9);
   border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
   border: none;
   color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transform: scale(0.8);
-  transition: all 0.3s;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.play-button:hover {
-  transform: scale(1.1);
-  background: rgba(99, 102, 241, 1);
-}
-
-.play-button svg {
-  width: 28px;
-  height: 28px;
-  margin-left: 4px;
-}
-
-/* Botão excluir */
-.delete-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(239, 68, 68, 0.8);
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.delete-btn:hover {
-  background: rgba(239, 68, 68, 1);
-  transform: scale(1.1);
-}
-
-.delete-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-.card-info {
-  padding: 1rem;
-}
-
-.playlist-name {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.playlist-count {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-/* Modal - CORREÇÃO PARA VISIBILIDADE TOTAL */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background: #1a1a1a;
-  border-radius: 20px;
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-}
-
-/* Modal de criação com scroll */
-.create-modal {
-  max-width: 480px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  flex-shrink: 0;
-}
-
-.modal-header h2 {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.4);
   transition: all 0.3s;
 }
 
-.close-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.close-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Container de scroll para o body */
-.modal-scroll-content {
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-/* Upload Section */
-.upload-section {
-  margin-bottom: 1.5rem;
-}
-
-.upload-area {
-  aspect-ratio: 16/9;
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.upload-area:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.upload-area.has-image {
-  border-style: solid;
-  border-color: transparent;
-}
-
-.hidden-input {
-  display: none;
-}
-
-.upload-placeholder {
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.upload-icon {
-  width: 40px;
-  height: 40px;
-  margin-bottom: 0.5rem;
-  opacity: 0.6;
-}
-
-.upload-placeholder span {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.upload-placeholder small {
-  font-size: 0.875rem;
-  opacity: 0.7;
-}
-
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.remove-image {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.remove-image:hover {
-  background: rgba(239, 68, 68, 0.9);
-}
-
-.remove-image svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Form */
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.75rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.text-input {
-  width: 100%;
-  padding: 0.875rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: #fff;
-  font-size: 1rem;
-  transition: all 0.3s;
-}
-
-.text-input:focus {
-  outline: none;
-  border-color: #6366f1;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.text-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-/* Color Grid */
-.color-section {
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.color-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-}
-
-.color-btn {
-  aspect-ratio: 1;
-  border-radius: 12px;
-  border: 3px solid transparent;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.color-btn:hover {
+.btn-play-big:hover:not(:disabled) {
   transform: scale(1.05);
 }
 
-.color-btn.active {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px #6366f1;
+.btn-play-big:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
-.color-btn svg {
-  width: 24px;
-  height: 24px;
-  color: #fff;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
-}
-
-/* Playlist Detail */
-.playlist-detail-overlay {
-  align-items: flex-start;
-  padding-top: 2rem;
-}
-
-.playlist-detail {
-  max-width: 600px;
-  max-height: 85vh;
-}
-
-.detail-header {
-  padding: 2rem;
-  position: relative;
-  background-size: cover;
-  background-position: center;
-  flex-shrink: 0;
-}
-
-.detail-header::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8));
-}
-
-.back-btn {
-  position: relative;
-  z-index: 1;
+.btn-icon {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-  transition: all 0.3s;
-}
-
-.back-btn:hover {
-  background: rgba(0, 0, 0, 0.6);
-  transform: translateX(-2px);
-}
-
-.back-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-.detail-info {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-end;
-}
-
-.detail-image {
-  width: 150px;
-  height: 150px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-  flex-shrink: 0;
-  background-size: cover;
-  background-position: center;
-}
-
-.gradient-icon {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gradient-icon svg {
-  width: 48px;
-  height: 48px;
-  opacity: 0.8;
-}
-
-.detail-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.detail-text h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.detail-text p {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1rem;
-}
-
-.detail-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.empty-songs {
-  text-align: center;
-  padding: 3rem;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.empty-songs p {
-  margin-bottom: 1rem;
-}
-
-.songs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.song-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  border-radius: 8px;
-  transition: background 0.3s;
-  position: relative;
-}
-
-.song-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.song-number {
-  width: 32px;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.875rem;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-.song-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.song-info h4 {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.song-info p {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.6);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.song-duration {
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.5);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-/* Menu de 3 pontos */
-.song-menu-container {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.song-menu-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   transition: all 0.3s;
 }
 
-.song-item:hover .song-menu-btn {
-  opacity: 1;
+.btn-icon:hover {
+  color: #f8fafc;
+  background: rgba(255,255,255,0.1);
 }
 
-.song-menu-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.btn-icon.liked {
+  color: #ec4899;
 }
 
-.song-menu-btn svg {
-  width: 20px;
-  height: 20px;
+/* DROPDOWN CORRIGIDO */
+.dropdown-wrapper {
+  position: relative;
+  display: inline-block;
 }
 
-/* Dropdown menu */
-.song-dropdown {
+.options-dropdown {
   position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: #2a2a2a;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  z-index: 100;
-  min-width: 180px;
-  overflow: hidden;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 200px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  z-index: 1000;
+  animation: slideDown 0.2s ease;
 }
 
-.dropdown-item {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.9);
+.option-item {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 0.875rem;
+  gap: 12px;
+  font-size: 14px;
+  color: #e2e8f0;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+.option-item:hover {
+  background: rgba(255,255,255,0.05);
 }
 
-.dropdown-item.danger {
+.option-item i {
+  width: 16px;
+  color: #94a3b8;
+}
+
+.option-item.danger:hover {
+  background: rgba(239,68,68,0.1);
+}
+
+.option-item.danger i,
+.option-item.danger {
   color: #ef4444;
 }
 
-.dropdown-item.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
+.option-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+  margin: 8px 0;
 }
 
-.dropdown-item svg {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
+/* Busca */
+.add-songs-section {
+  margin-bottom: 32px;
 }
 
-/* Overlay para fechar menus */
-.menu-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
+.add-songs-section h3 {
+  font-size: 18px;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f8fafc;
 }
 
-/* Transitions */
-.modal-enter-active,
-.modal-leave-active {
-  transition: all 0.3s ease;
+.add-songs-section h3 i {
+  color: #2563eb;
 }
 
-.modal-enter-from,
-.modal-leave-to {
+.search-box {
+  position: relative;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s;
+}
+
+.search-box.is-focused {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(37,99,235,0.5);
+}
+
+.search-box.is-loading {
+  border-color: rgba(37,99,235,0.3);
+}
+
+.search-box i {
+  color: #64748b;
+  font-size: 20px;
+}
+
+.search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #f8fafc;
+  font-size: 16px;
+  outline: none;
+}
+
+.search-box input::placeholder {
+  color: #64748b;
+}
+
+.search-spinner {
+  color: #2563eb !important;
+}
+
+.clear-search {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.clear-search:hover {
+  color: #f8fafc;
+}
+
+.search-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 14px;
+}
+
+/* Resultados */
+.search-results {
+  background: rgba(15,23,42,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.2s;
+}
+
+.result-item:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.result-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.result-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-title {
+  font-size: 15px;
+  color: #f8fafc;
+  font-weight: 500;
+}
+
+.result-artist {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.result-duration {
+  font-size: 13px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-add {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(37,99,235,0.2);
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-add:hover:not(:disabled) {
+  background: rgba(37,99,235,0.3);
+  transform: scale(1.1);
+}
+
+.btn-add:disabled {
+  background: rgba(34,197,94,0.2);
+  color: #22c55e;
+  cursor: default;
+}
+
+/* Lista de Músicas */
+.songs-section {
+  margin-bottom: 48px;
+}
+
+.songs-header {
+  display: grid;
+  grid-template-columns: 50px 2fr 1fr 80px 50px;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.song-item {
+  display: grid;
+  grid-template-columns: 50px 2fr 1fr 80px 50px;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.song-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.song-item.playing {
+  background: rgba(37,99,235,0.1);
+  border-left: 3px solid #2563eb;
+}
+
+.song-number {
+  color: #64748b;
+  text-align: center;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.song-number i {
+  color: #2563eb;
+}
+
+.animate-pulse {
+  animation: pulse-icon 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.song-title {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.song-title img {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.song-title div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.song-title .active {
+  color: #2563eb;
+}
+
+.song-title small {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.song-album {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.song-duration {
+  color: #94a3b8;
+  font-size: 14px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-remove {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
   opacity: 0;
-  transform: scale(0.95);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Responsive */
+.song-item:hover .btn-remove {
+  opacity: 1;
+}
+
+.btn-remove:hover {
+  color: #ef4444;
+  background: rgba(239,68,68,0.1);
+}
+
+/* Estado Vazio */
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #64748b;
+}
+
+.empty-icon {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 24px;
+}
+
+.empty-icon i {
+  font-size: 64px;
+  opacity: 0.3;
+  position: relative;
+  z-index: 1;
+}
+
+.pulse-ring {
+  position: absolute;
+  inset: -20px;
+  border: 2px solid #2563eb;
+  border-radius: 50%;
+  opacity: 0;
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  color: #f8fafc;
+  margin: 0 0 8px 0;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== RESPONSIVO ========== */
+@media (max-width: 1024px) {
+  .playlist-container {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: none;
+  }
+}
+
 @media (max-width: 768px) {
-  .header-content {
-    padding: 0 1rem;
+  .playlist-container {
+    padding: 20px;
+    width: 90%;
   }
-  
-  .container {
-    padding: 0 1rem;
+
+  .create-form {
+    flex-direction: column;
+    align-items: center;
   }
-  
-  .playlists-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+
+  .cover-upload {
+    width: 180px;
+    height: 180px;
   }
-  
-  .detail-info {
+
+  .playlist-header {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
-  
-  .detail-image {
-    width: 120px;
-    height: 120px;
+
+  .playlist-cover {
+    width: 200px;
+    height: 200px;
+  }
+
+  .playlist-title {
+    font-size: 32px;
+  }
+
+  .header-actions { 
+    position: static;
+    margin-top: 16px;
+  }
+
+  .playlists-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .songs-header,
+  .song-item {
+    grid-template-columns: 40px 2fr 60px 40px;
+  }
+
+  .song-album {
+    display: none;
   }
   
-  .detail-text h1 {
-    font-size: 1.5rem;
+  .toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    min-width: auto;
+  }
+
+  .delete-modal {
+    padding: 32px 24px;
+  }
+
+  .modal-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 28px;
   }
   
-  .song-menu-btn {
-    opacity: 1;
+  .options-dropdown {
+    left: auto;
+    right: 0;
   }
 }
 </style>
