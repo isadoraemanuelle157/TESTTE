@@ -1,23 +1,32 @@
 const mongoose = require('mongoose');
 
 const cantorSchema = new mongoose.Schema({
-  nome: { type: String, required: true },
+  nome: { type: String, required: true, trim: true },
   foto: { type: String, default: '' },
 
-  albuns: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Album'
-}],
+  albuns: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Album'
+    }],
+    default: []
+  },
 
-  musicas: [{ // 🔥 NOVO
-  type: mongoose.Schema.Types.ObjectId,
-    ref: 'Musica'
-}],
+  musicas: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Musica'
+    }],
+    default: []
+  },
 
-  generos: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Genero'
-}],
+  generos: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Genero'
+    }],
+    default: []
+  },
 
   createdAt: { type: Date, default: Date.now }
 });

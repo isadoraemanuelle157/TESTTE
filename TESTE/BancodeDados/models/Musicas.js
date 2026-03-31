@@ -1,29 +1,36 @@
 const mongoose = require('mongoose')
 
 const musicaSchema = new mongoose.Schema({
-  nome: { type: String, required: true },
-  duracao: { type: String, required: true },
-  foto: { type: String, required: true },
-  humor: { type: String, required: true },
-  letra: { type: String, required: true },
-  link: { type: String, required: true },
+  nome: { type: String, required: true, trim: true },
+  duracao: { type: String, required: true, trim: true },
+  foto: { type: String, required: true, trim: true },
+  humor: { type: String, required: true, trim: true },
+  letra: { type: String, required: true, trim: true },
+  link: { type: String, required: true, trim: true },
 
-  // 🔥 RELAÇÃO CORRETA
-  generos: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Genero'
-  }],
+  generos: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Genero'
+    }],
+    default: []
+  },
 
-  albuns: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Album'
-  }],
+  albuns: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Album'
+    }],
+    default: []
+  },
 
-  cantores: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Cantor',
-    required: true
-  }]
+  cantores: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Cantor'
+    }],
+    default: []
+  }
 
 }, {
   timestamps: true

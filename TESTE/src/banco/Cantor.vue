@@ -873,29 +873,43 @@ export default {
 
   // 🔥 NOVO: Métodos para Música (similares aos do Álbum)
   abrirModalAdicionarMusica() {
-    this.editandoMusicaIndex = null
-    this.musicaForm = {
-      nome: '',
-      descricao: '',
-      foto: '',
-      generos: [],
-      albuns: []
-    }
-    this.showMusicaModal = true
-  },
+  this.editandoMusicaIndex = null
+  this.musicaForm = {
+    nome: '',
+    duracao: '',
+    foto: '',
+    humor: '',
+    letra: '',
+    link: '',
+    generos: [],
+    albuns: []
+  }
+  this.showMusicaModal = true
+},
 
   editarMusica(index) {
-    this.editandoMusicaIndex = index
-    const musica = this.form.musicas[index]
-    this.musicaForm = {
-      nome: musica.nome,
-      descricao: musica.descricao || '',
-      foto: musica.foto || '',
-      generos: musica.generos || [],
-      albuns: musica.albuns || []
-    }
-    this.showMusicaModal = true
-  },
+  this.editandoMusicaIndex = index
+  const musica = this.form.musicas[index]
+
+  this.musicaForm = {
+    _id: musica._id || null,
+    nome: musica.nome || '',
+    duracao: musica.duracao || '',
+    foto: musica.foto || '',
+    humor: musica.humor || '',
+    letra: musica.letra || '',
+    link: musica.link || '',
+    generos: Array.isArray(musica.generos)
+      ? musica.generos.map(g => typeof g === 'object' ? g._id : g).filter(Boolean)
+      : [],
+    albuns: Array.isArray(musica.albuns)
+      ? musica.albuns.map(a => typeof a === 'object' ? a._id : a).filter(Boolean)
+      : []
+  }
+
+  this.showMusicaModal = true
+},
+
 
   removerMusicaLocal(index) {
     if (confirm('Tem certeza que deseja remover esta música?')) {
@@ -904,54 +918,83 @@ export default {
     }
   },
 
-  salvarMusicaLocal() {
+ async salvarMusicaLocal() {
   const m = this.musicaForm
 
   if (
-    !m.nome.trim() ||
-    !m.duracao.trim() ||
-    !m.humor.trim() ||
-    !m.link.trim() ||
-    !m.letra.trim() ||
-    !m.foto.trim()
+    !m.nome?.trim() ||
+    !m.duracao?.trim() ||
+    !m.humor?.trim() ||
+    !m.link?.trim() ||
+    !m.letra?.trim() ||
+    !m.foto?.trim()
   ) {
     this.mostrarToast('Preencha todos os campos obrigatórios', 'error', '⚠️')
     return
   }
 
-  const musicaData = {
-    nome: m.nome.trim(),
-    duracao: m.duracao.trim(),
-    humor: m.humor.trim(),
-    link: m.link.trim(),
-    letra: m.letra.trim(),
-    foto: m.foto.trim(),
-    generos: m.generos,
-    albuns: m.albuns
-  }
+  try {
+    const cantorId = this.modoEdicao && this.cantorEditando?._id
+      ? this.cantorEditando._id
+      : null
 
-  if (this.editandoMusicaIndex !== null) {
-    this.form.musicas[this.editandoMusicaIndex] = musicaData
-    this.mostrarToast('Música atualizada!', 'success', '✅')
-  } else {
-    this.form.musicas.push(musicaData)
-    this.mostrarToast('Música adicionada!', 'success', '🎵')
-  }
+    const musicaPayload = {
+      nome: m.nome.trim(),
+      duracao: m.duracao.trim(),
+      humor: m.humor.trim(),
+      link: m.link.trim(),
+      letra: m.letra.trim(),
+      foto: m.foto.trim(),
+      generos: Array.isArray(m.generos) ? m.generos.filter(Boolean) : [],
+      albuns: Array.isArray(m.albuns) ? m.albuns.filter(a => typeof a === 'object' ? a._id : a).filter(Boolean) : [],
+      cantores: cantorId ? [cantorId] : []
+    }
 
-  this.fecharModalMusica()
+    const response = await fetch('http://localhost:3002/musicas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(musicaPayload)
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Erro ao criar música')
+    }
+
+    const musicaCriada = result.musica || result
+
+    if (!musicaCriada?._id) {
+      throw new Error('A API não retornou o ID da música')
+    }
+
+    if (!this.form.musicas.includes(musicaCriada._id)) {
+      this.form.musicas.push(musicaCriada._id)
+    }
+
+    this.mostrarToast('Música salva no banco!', 'success', '🎵')
+    this.fecharModalMusica()
+    await this.carregarMusicas()
+
+  } catch (error) {
+    this.mostrarToast(error.message || 'Erro ao salvar música', 'error', '❌')
+  }
 },
 
-  fecharModalMusica() {
-    this.showMusicaModal = false
-    this.editandoMusicaIndex = null
-    this.musicaForm = {
-      nome: '',
-      descricao: '',
-      foto: '',
-      generos: [],
-      albuns: []
-    }
-  },
+fecharModalMusica() {
+  this.showMusicaModal = false
+  this.editandoMusicaIndex = null
+  this.musicaForm = {
+    nome: '',
+    duracao: '',
+    foto: '',
+    humor: '',
+    letra: '',
+    link: '',
+    generos: [],
+    albuns: []
+  }
+},
     // Gerenciamento de Álbuns no Modal de Artista
     
     abrirModalAdicionarAlbum() {
@@ -1089,13 +1132,18 @@ export default {
         }
 
         const dadosCantor = {
-          nome: this.form.nome.trim(),
-          foto: fotoUrl,
-          generos: this.form.generos,
-          musicas: this.form.musicas.map(m => 
-  typeof m === 'object' ? m._id : m
-)
-        }
+  nome: this.form.nome?.trim(),
+  foto: fotoUrl?.trim?.() || fotoUrl || '',
+  generos: Array.isArray(this.form.generos)
+    ? this.form.generos.filter(Boolean)
+    : [],
+  musicas: Array.isArray(this.form.musicas)
+    ? this.form.musicas
+        .map(m => typeof m === 'object' ? m._id : m)
+        .filter(Boolean)
+    : []
+}
+
 
         let response
         let cantorId
@@ -1133,7 +1181,7 @@ export default {
                 nome: album.nome,
                 descricao: album.descricao,
                 foto: album.foto || '',
-                cantores: [cantorId]
+                cantor: cantorId
               })
             })
 
@@ -1150,7 +1198,7 @@ export default {
                 nome: album.nome,
                 descricao: album.descricao,
                 foto: album.foto || '',
-                cantores: [cantorId]
+                 cantor: cantorId
               })
             })
 

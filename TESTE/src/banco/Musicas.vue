@@ -737,20 +737,19 @@ toggleCantor(id) {
       this.loading = true
       try {
         const payload = {
-          nome: this.form.nome,
-          duracao: this.form.duracao,
-          foto: this.form.foto && this.isValidUrl(this.form.foto)
-            ? this.form.foto
-            : this.defaultImage,
-          humor: this.form.humor,
-          letra: this.form.letra,
-          link: this.form.link,
+  nome: this.form.nome,
+  duracao: this.form.duracao,
+  foto: this.form.foto && this.isValidUrl(this.form.foto)
+    ? this.form.foto
+    : this.defaultImage,
+  humor: this.form.humor,
+  letra: this.form.letra,
+  link: this.form.link,
 
-          // 🔥 Envia arrays diretamente
-          generos: this.form.generos,
-          albuns: this.form.album ? [this.form.album] : [],
-          cantores: this.form.cantores
-        }
+  generos: this.form.generos || [],
+  album: this.form.album || null,
+  cantores: this.form.cantores || []
+}
 
         if (!payload.albuns || payload.albuns.length === 0) {
           delete payload.albuns
@@ -767,7 +766,8 @@ toggleCantor(id) {
         this.reset()
         this.carregarMusicas()
       } catch (err) {
-        this.showToast('Erro ao salvar música', 'error')
+        this.showToast(err.response?.data?.error || err.message, 'error')
+console.error(err)
       } finally {
         this.loading = false
       }

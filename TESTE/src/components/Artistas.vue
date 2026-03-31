@@ -205,42 +205,61 @@ export default {
 
   methods: {
     // ============ API DEEZER ============
-    
-    async loadArtists() {
-      this.isLoading = true;
-      this.error = null;
-      
-      try {
-        // Buscar artistas do chart global (top artistas)
-        const response = await fetch(`${this.CORS_PROXY}${this.DEEZER_API}/chart/0/artists?limit=20`);
-        
-        if (!response.ok) {
-          throw new Error('Erro ao carregar artistas');
-        }
-        
-        const data = await response.json();
-        
-        if (data.data && data.data.length > 0) {
-          // Enriquecer dados dos artistas com informações adicionais
-          this.artists = await this.enrichArtistsData(data.data);
-          this.subtitle = `Top ${this.artists.length} artistas mais ouvidos em 2025`;
-        } else {
-          throw new Error('Nenhum artista encontrado');
-        }
-        
-        this.$nextTick(() => {
-          this.checkArrows();
-        });
-        
-      } catch (error) {
-        console.error('Erro ao carregar artistas:', error);
-        this.error = 'Não foi possível carregar os artistas. Verifique sua conexão.';
-        // Fallback: tentar carregar artistas de gênero específico
-        await this.loadGenreArtists();
-      } finally {
-        this.isLoading = false;
-      }
-    },
+    async loadCantoresFromDB() {
+  try {
+    const response = await fetch('http://localhost:3002/cantores')
+    const data = await response.json()
+
+    // converter para formato parecido com Deezer
+    return data.map(cantor => ({
+      id: cantor._id,
+      name: cantor.nome,
+      picture: cantor.foto || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
+      picture_medium: cantor.foto,
+      picture_big: cantor.foto,
+      nb_fan: cantor.musicas?.length * 1000 || 0, // fake popularity
+      source: 'db', // 🔥 importante para diferenciar
+      generos: cantor.generos || []
+    }))
+
+  } catch (error) {
+    console.error('Erro ao buscar cantores do banco:', error)
+    return []
+  }
+},
+   async loadArtists() {
+  this.isLoading = true;
+  this.error = null;
+
+  try {
+    // 🔥 1. Deezer
+    const deezerResponse = await fetch(`${this.CORS_PROXY}${this.DEEZER_API}/chart/0/artists?limit=10`);
+    const deezerData = await deezerResponse.json();
+
+    let deezerArtists = []
+    if (deezerData.data) {
+      deezerArtists = await this.enrichArtistsData(deezerData.data)
+    }
+
+    // 🔥 2. Banco
+    const dbArtists = await this.loadCantoresFromDB()
+
+    // 🔥 3. JUNTAR OS DOIS
+    this.artists = [...dbArtists, ...deezerArtists]
+
+    this.subtitle = `Artistas do sistema + Top globais`
+
+    this.$nextTick(() => {
+      this.checkArrows()
+    })
+
+  } catch (error) {
+    console.error('Erro geral:', error)
+    this.error = 'Erro ao carregar artistas'
+  } finally {
+    this.isLoading = false
+  }
+},
     
     async loadGenreArtists() {
       // Fallback: buscar artistas de gêneros populares
@@ -339,21 +358,18 @@ export default {
     },
     
     getArtistGenre(artist) {
-      // Deezer não retorna gênero diretamente na lista, então usamos um mapeamento básico
-      // ou retornamos um valor padrão
-      if (artist.genres && artist.genres.length > 0) {
-        return artist.genres[0].name;
-      }
-      
-      // Mapeamento básico baseado em palavras-chave do nome
-      const name = artist.name.toLowerCase();
-      if (name.includes('swift') || name.includes('grande') || name.includes('bieber')) return 'Pop';
-      if (name.includes('kendrick') || name.includes('drake') || name.includes('eminem')) return 'Hip-Hop';
-      if (name.includes('weeknd') || name.includes('mars')) return 'R&B';
-      if (name.includes('gaga') || name.includes('perry')) return 'Pop';
-      
-      return 'Música';
-    },
+  // 🔥 se vier do banco
+  if (artist.source === 'db') {
+    return artist.generos?.map(g => g.nome).join(', ') || 'Artista Local'
+  }
+
+  // Deezer (fallback atual)
+  if (artist.genres && artist.genres.length > 0) {
+    return artist.genres[0].name;
+  }
+
+  return 'Música';
+},
 
     // ============ FOLLOW SYSTEM ============
     
@@ -401,10 +417,14 @@ export default {
     // ============ NAVIGATION ============
     
     goToArtist(artist) {
-      // Abrir página do artista no Deezer ou navegar internamente
-      window.open(`https://www.deezer.com/artist/${artist.id}`, '_blank');
-      // Ou usar router: this.$router?.push(`/artist/${artist.id}`);
-    },
+  if (artist.source === 'db') {
+    // 👉 rota interna
+    this.$router?.push(`/cantor/${artist.id}`)
+  } else {
+    // 👉 Deezer
+    window.open(`https://www.deezer.com/artist/${artist.id}`, '_blank')
+  }
+},
 
     goToArtistFromModal(artist) {
       this.closeAllModal();

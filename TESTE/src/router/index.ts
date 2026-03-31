@@ -28,6 +28,7 @@ import Sidebar1 from '@/components/Sidebar1.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import TabelaAlbum from '@/banco/tabelas/TabelaAlbum.vue'
 import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
+import Dashboard from '@/views/Dashboard.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -36,6 +37,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: Dashboard,
     },
     {
       path: '/curtidas',

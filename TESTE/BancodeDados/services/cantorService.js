@@ -3,27 +3,46 @@ const Album = require('../models/Album')
 const Genero = require('../models/generosMusicais')
 const Musica = require('../models/Musicas')
 
-const createCantor = async (data) => {
-  if (data.generos && !Array.isArray(data.generos)) {
-    data.generos = [data.generos]
-  }
+const normalizeIds = (value) => {
+  if (!value) return []
 
-  const cantor = new Cantor(data)
-  const savedCantor = await cantor.save()
+  const arr = Array.isArray(value) ? value : [value]
 
-  // 🔥 RELACIONAR MUSICAS (FALTANDO)
-if (data.musicas?.length) {
-  for (const musicaId of data.musicas) {
-    await Musica.findByIdAndUpdate(musicaId, {
-      $addToSet: { cantores: savedCantor._id }
+  return arr
+    .map(item => {
+      if (!item) return null
+      if (typeof item === 'object') return item._id || null
+      return item
     })
-  }
+    .filter(Boolean)
 }
 
-  // 🔥 generos (já tem)
-  if (data.generos?.length) {
+const createCantor = async (data) => {
+  const payload = {
+    nome: data.nome?.trim(),
+    foto: data.foto?.trim?.() || data.foto || '',
+    generos: normalizeIds(data.generos),
+    musicas: normalizeIds(data.musicas),
+    albuns: normalizeIds(data.albuns)
+  }
+
+  if (!payload.nome) {
+    throw new Error('Nome do cantor é obrigatório')
+  }
+
+  const cantor = new Cantor(payload)
+  const savedCantor = await cantor.save()
+
+  if (payload.musicas.length) {
+    await Musica.updateMany(
+      { _id: { $in: payload.musicas } },
+      { $addToSet: { cantores: savedCantor._id } }
+    )
+  }
+
+  if (payload.generos.length) {
     await Genero.updateMany(
-      { _id: { $in: data.generos } },
+      { _id: { $in: payload.generos } },
       { $addToSet: { cantores: savedCantor._id } }
     )
   }
@@ -31,10 +50,9 @@ if (data.musicas?.length) {
   return savedCantor
 }
 
-// LISTAR
 const getCantores = async () => {
   return await Cantor.find()
-   .populate('generos', '_id nome') // 🔥 NOVO
+    .populate('generos', '_id nome')
     .populate({
       path: 'albuns',
       select: '_id nome musicas',
@@ -44,11 +62,13 @@ const getCantores = async () => {
         select: '_id nome'
       }
     })
-    .populate('musicas', '_id nome') // 🔥 NOVO
+    .populate('musicas', '_id nome')
 }
-// BUSCAR POR ID
+
 const getCantorById = async (id) => {
   return await Cantor.findById(id)
+    .populate('generos', '_id nome')
+    .populate('musicas', '_id nome')
     .populate({
       path: 'albuns',
       select: '_id nome musicas',
@@ -59,21 +79,26 @@ const getCantorById = async (id) => {
       }
     })
 }
-// BUSCAR POR NOME
+
 const getCantorByNome = async (nome) => {
   return await Cantor.findOne({ nome })
 }
 
-// ATUALIZAR
 const updateCantor = async (id, data) => {
-  const Musica = require('../models/Musicas')
-
   const cantorAntigo = await Cantor.findById(id)
+  if (!cantorAntigo) throw new Error('Cantor não encontrado')
 
-  const musicasAntigas = cantorAntigo.musicas?.map(m => m.toString()) || []
-  const musicasNovas = data.musicas || []
+  const payload = {
+    nome: data.nome?.trim(),
+    foto: data.foto?.trim?.() || data.foto || '',
+    generos: normalizeIds(data.generos),
+    musicas: normalizeIds(data.musicas),
+    albuns: normalizeIds(data.albuns)
+  }
 
-  // 🔥 REMOVE das antigas
+  const musicasAntigas = (cantorAntigo.musicas || []).map(m => m.toString())
+  const musicasNovas = payload.musicas.map(m => m.toString())
+
   for (const musicaId of musicasAntigas) {
     if (!musicasNovas.includes(musicaId)) {
       await Musica.findByIdAndUpdate(musicaId, {
@@ -82,7 +107,6 @@ const updateCantor = async (id, data) => {
     }
   }
 
-  // 🔥 ADICIONA nas novas
   for (const musicaId of musicasNovas) {
     if (!musicasAntigas.includes(musicaId)) {
       await Musica.findByIdAndUpdate(musicaId, {
@@ -91,22 +115,32 @@ const updateCantor = async (id, data) => {
     }
   }
 
-  // 🔥 AGORA SIM atualiza cantor
-  return await Cantor.findByIdAndUpdate(id, data, { new: true })
+  return await Cantor.findByIdAndUpdate(id, payload, { new: true })
 }
 
-
-// DELETAR
 const deleteCantor = async (id) => {
+  await Musica.updateMany(
+    { cantores: id },
+    { $pull: { cantores: id } }
+  )
+
+  await Genero.updateMany(
+    { cantores: id },
+    { $pull: { cantores: id } }
+  )
+
+  await Album.updateMany(
+    { cantores: id },
+    { $pull: { cantores: id } }
+  )
+
   return await Cantor.findByIdAndDelete(id)
 }
 
 const addAlbumToCantor = async (cantorId, albumId) => {
   return await Cantor.findByIdAndUpdate(
     cantorId,
-    {
-      $addToSet: { albuns: albumId }
-    },
+    { $addToSet: { albuns: albumId } },
     { new: true }
   )
 }
