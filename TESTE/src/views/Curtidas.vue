@@ -248,7 +248,7 @@ export default {
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
 .curtidas {
-  margin-left: 260px;
+ 
   padding: 40px;
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui;

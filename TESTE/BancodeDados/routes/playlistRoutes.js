@@ -1,6 +1,5 @@
 const express = require('express')
 const router = express.Router()
-
 const controller = require('../controllers/playlistController')
 
 // CRUD
@@ -11,10 +10,10 @@ router.put('/:id', controller.update)
 router.delete('/:id', controller.remove)
 
 // MÚSICAS
-router.post('/:id/musica/:musicaId', controller.addMusica)
-router.delete('/:id/musica/:musicaId', controller.removeMusica)
+router.post('/:id/musicas/:musicaId', controller.addMusica)
+router.delete('/:id/musicas/:musicaId', controller.removeMusica)
 
 // FAVORITAR
-router.post('/:id/favoritar/:usuarioId', controller.toggleFavorita)
+router.post('/:id/favoritar', controller.toggleFavorita)
 
 module.exports = router

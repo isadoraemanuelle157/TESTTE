@@ -29,6 +29,8 @@ import MusicPlayer from '@/components/MusicPlayer.vue'
 import TabelaAlbum from '@/banco/tabelas/TabelaAlbum.vue'
 import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
 import Dashboard from '@/views/Dashboard.vue'
+import Registrar2 from '@/banco/Registrar2.vue'
+import Perfil from '@/views/Perfil.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -129,9 +131,19 @@ const router = createRouter({
       component: Registrar,
     },
      {
+      path: '/registrar2',
+      name: 'registrar2',
+      component: Registrar2,
+    },
+     {
       path: '/login',
       name: 'login',
       component: Login,
+    },
+    {
+      path: '/perfil',
+      name: 'perfil',
+      component: Perfil,
     },
      {
       path: '/tabelausuario',

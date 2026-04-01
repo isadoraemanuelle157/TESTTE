@@ -1,13 +1,15 @@
+<!-- Navbar.vue -->
 <template>
   <nav class="navbar" :class="{ scrolled: isScrolled }">
     <div class="navbar-content">
       <!-- Logo/Brand -->
-      <div class="navbar-brand" v-if="showBrand">
+      <div class="navbar-brand" @click="$router.push('/')">
         <div class="brand-icon">
           <i class="fa fa-headphones"></i>
         </div>
         <span class="brand-text">SoundUp</span>
       </div>
+
 
       <!-- Navigation Links (opcional) -->
       <div class="nav-links" v-if="showNavLinks">
@@ -25,15 +27,16 @@
         </router-link>
       </div>
 
+
       <!-- Right Section -->
       <div class="nav-right">
         <!-- Search Bar -->
         <div class="search-container" :class="{ expanded: isSearchFocused }">
           <div class="search-wrapper">
             <i class="fa fa-search search-icon"></i>
-            <input 
-              type="text" 
-              placeholder="Buscar músicas, artistas..." 
+            <input
+              type="text"
+              placeholder="Buscar músicas, artistas..."
               class="search-input"
               v-model="searchQuery"
               @focus="isSearchFocused = true"
@@ -46,10 +49,11 @@
           </div>
         </div>
 
+
         <!-- Notifications -->
         <div class="notif-wrapper">
-          <button 
-            class="icon-btn notif-btn" 
+          <button
+            class="icon-btn notif-btn"
             @click="toggleNotifications"
             :class="{ active: showNotifications }"
           >
@@ -60,11 +64,12 @@
             </span>
           </button>
 
+
           <transition name="dropdown">
             <div v-if="showNotifications" class="dropdown-panel notif-dropdown">
               <div class="dropdown-header">
                 <h4>Notificações</h4>
-                <button 
+                <button
                   v-if="notificationCount > 0"
                   class="text-btn"
                   @click="markAllRead"
@@ -72,13 +77,13 @@
                   Limpar
                 </button>
               </div>
-              
+             
               <div class="dropdown-body">
                 <div v-if="notifications.length === 0" class="empty-state">
                   <i class="fa fa-bell-slash"></i>
                   <p>Sem notificações</p>
                 </div>
-                
+               
                 <div
                   v-for="(notif, index) in notifications"
                   :key="index"
@@ -100,31 +105,33 @@
           </transition>
         </div>
 
-        <!-- User Menu -->
-        <div class="user-wrapper">
-          <button 
-            class="user-btn" 
+
+        <!-- User Menu (Logado) -->
+        <div class="user-wrapper" v-if="isLoggedIn">
+          <button
+            class="user-btn"
             @click="toggleUserMenu"
             :class="{ active: showUserMenu }"
           >
             <div class="user-avatar">
-              <img 
-                v-if="userAvatar" 
-                :src="userAvatar" 
+              <img
+                v-if="userAvatar"
+                :src="userAvatar"
                 alt="Avatar"
-                @error="userAvatar = null"
+                @error="handleAvatarError"
               />
               <i v-else class="fa fa-user"></i>
             </div>
-            <span class="user-name">{{ userName || 'Entrar' }}</span>
+            <span class="user-name">{{ userName }}</span>
             <i class="fa fa-chevron-down arrow-icon" :class="{ rotate: showUserMenu }"></i>
           </button>
 
+
           <transition name="dropdown">
             <div v-if="showUserMenu" class="dropdown-panel user-dropdown">
-              <div class="dropdown-header user-header" v-if="isLoggedIn">
+              <div class="dropdown-header user-header">
                 <div class="header-avatar">
-                  <img v-if="userAvatar" :src="userAvatar" />
+                  <img v-if="userAvatar" :src="userAvatar" @error="handleAvatarError" />
                   <i v-else class="fa fa-user"></i>
                 </div>
                 <div class="header-info">
@@ -133,53 +140,32 @@
                 </div>
               </div>
 
-              <div class="dropdown-body">
-                <template v-if="!isLoggedIn">
-                  <div class="dropdown-item highlight" @click="handleLogin">
-                    <div class="item-icon" style="background: linear-gradient(135deg, #2563eb, #7c3aed);">
-                      <i class="fa fa-sign-in"></i>
-                    </div>
-                    <div class="item-content">
-                      <span class="item-title">Entrar</span>
-                      <span class="item-desc">Acesse sua conta</span>
-                    </div>
-                  </div>
-                  
-                  <div class="dropdown-item" @click="handleRegister">
-                    <div class="item-icon" style="background: rgba(255,255,255,0.1);">
-                      <i class="fa fa-user-plus"></i>
-                    </div>
-                    <div class="item-content">
-                      <span class="item-title">Criar conta</span>
-                      <span class="item-desc">Comece gratuitamente</span>
-                    </div>
-                  </div>
-                </template>
 
-                <template v-else>
-                  <div class="dropdown-item" @click="goToProfile">
-                    <div class="item-icon">
-                      <i class="fa fa-user-circle"></i>
-                    </div>
-                    <span>Meu Perfil</span>
+              <div class="dropdown-body">
+                <div class="dropdown-item" @click="goToProfile">
+                  <div class="item-icon">
+                    <i class="fa fa-user-circle"></i>
                   </div>
-                  
-                  <div class="dropdown-item" @click="goToSettings">
-                    <div class="item-icon">
-                      <i class="fa fa-cog"></i>
-                    </div>
-                    <span>Configurações</span>
+                  <span>Meu Perfil</span>
+                </div>
+               
+                <div class="dropdown-item" @click="goToSettings">
+                  <div class="item-icon">
+                    <i class="fa fa-cog"></i>
                   </div>
-                  
-                  <div class="dropdown-item" @click="goToLibrary">
-                    <div class="item-icon">
-                      <i class="fa fa-heart"></i>
-                    </div>
-                    <span>Favoritos</span>
+                  <span>Configurações</span>
+                </div>
+               
+                <div class="dropdown-item" @click="goToLibrary">
+                  <div class="item-icon">
+                    <i class="fa fa-heart"></i>
                   </div>
-                </template>
+                  <span>Favoritos</span>
+                </div>
+
 
                 <div class="dropdown-divider"></div>
+
 
                 <div class="dropdown-item" @click="goToHelp">
                   <div class="item-icon">
@@ -188,7 +174,8 @@
                   <span>Ajuda & Suporte</span>
                 </div>
 
-                <div v-if="isLoggedIn" class="dropdown-item danger" @click="handleLogout">
+
+                <div class="dropdown-item danger" @click="handleLogout">
                   <div class="item-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
                     <i class="fa fa-sign-out"></i>
                   </div>
@@ -198,17 +185,31 @@
             </div>
           </transition>
         </div>
+
+
+        <!-- Login/Register Buttons (Não logado) -->
+        <div class="auth-buttons" v-else>
+          <button class="btn-login" @click="handleLogin">
+            Entrar
+          </button>
+          <button class="btn-register" @click="handleRegister">
+            Criar conta
+          </button>
+        </div>
       </div>
     </div>
   </nav>
 </template>
 
+
 <script>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
+
 export default {
   name: 'Navbar',
+
 
   props: {
     showBrand: {
@@ -218,41 +219,36 @@ export default {
     showNavLinks: {
       type: Boolean,
       default: false
-    },
-    isLoggedIn: {
-      type: Boolean,
-      default: false
-    },
-    userName: {
-      type: String,
-      default: ''
-    },
-    userEmail: {
-      type: String,
-      default: ''
-    },
-    userAvatar: {
-      type: String,
-      default: null
     }
   },
 
+
   emits: ['login', 'register', 'logout', 'search'],
+
 
   setup(props, { emit }) {
     const router = useRouter()
-    
-    // Estados
+   
+    // Estados de UI
     const isScrolled = ref(false)
     const showNotifications = ref(false)
     const showUserMenu = ref(false)
     const isSearchFocused = ref(false)
     const searchQuery = ref('')
 
+
+    // Estados do usuário
+    const isLoggedIn = ref(false)
+    const userName = ref('')
+    const userEmail = ref('')
+    const userAvatar = ref(null)
+    const userId = ref(null)
+
+
     // Notificações mock
     const notificationCount = ref(3)
     const hasNewNotifications = computed(() => notificationCount.value > 0)
-    
+   
     const notifications = ref([
       {
         title: 'Nova música adicionada à sua playlist',
@@ -277,20 +273,49 @@ export default {
       }
     ])
 
+
+    // Carregar dados do usuário do localStorage
+    const loadUserData = () => {
+      const storedUser = localStorage.getItem('usuario')
+      const storedProfile = localStorage.getItem('usuario_perfil')
+      const loggedIn = localStorage.getItem('isLoggedIn')
+     
+      if (loggedIn === 'true' && storedUser) {
+        const userData = JSON.parse(storedUser)
+        const profileData = storedProfile ? JSON.parse(storedProfile) : {}
+       
+        isLoggedIn.value = true
+        userName.value = userData.nome || profileData.nome || 'Usuário'
+        userEmail.value = userData.email || profileData.email || ''
+        userAvatar.value = userData.avatar || profileData.avatar || null
+        userId.value = userData.id || userData._id || null
+      } else {
+        isLoggedIn.value = false
+        userName.value = ''
+        userEmail.value = ''
+        userAvatar.value = null
+        userId.value = null
+      }
+    }
+
+
     // Handlers
     const handleScroll = () => {
       isScrolled.value = window.scrollY > 20
     }
+
 
     const toggleNotifications = () => {
       showNotifications.value = !showNotifications.value
       showUserMenu.value = false
     }
 
+
     const toggleUserMenu = () => {
       showUserMenu.value = !showUserMenu.value
       showNotifications.value = false
     }
+
 
     const markAsRead = (index) => {
       if (!notifications.value[index].read) {
@@ -299,10 +324,12 @@ export default {
       }
     }
 
+
     const markAllRead = () => {
       notifications.value.forEach(n => n.read = true)
       notificationCount.value = 0
     }
+
 
     const handleSearch = () => {
       if (searchQuery.value.trim()) {
@@ -311,40 +338,71 @@ export default {
       }
     }
 
+
     const handleLogin = () => {
       showUserMenu.value = false
       emit('login')
+      router.push('/login')
     }
+
 
     const handleRegister = () => {
       showUserMenu.value = false
       emit('register')
+      router.push('/registrar')
     }
 
+
     const handleLogout = () => {
+      // Limpar dados do localStorage
+      localStorage.removeItem('usuario')
+      localStorage.removeItem('usuario_perfil')
+      localStorage.removeItem('isLoggedIn')
+      localStorage.removeItem('token')
+     
+      // Atualizar estado
+      isLoggedIn.value = false
+      userName.value = ''
+      userEmail.value = ''
+      userAvatar.value = null
+      userId.value = null
+     
       showUserMenu.value = false
       emit('logout')
+     
+      // Redirecionar para login
+      router.push('/login')
     }
+
 
     const goToProfile = () => {
       showUserMenu.value = false
-      router.push('/profile')
+      router.push('/perfil')
     }
+
 
     const goToSettings = () => {
       showUserMenu.value = false
       router.push('/settings')
     }
 
+
     const goToLibrary = () => {
       showUserMenu.value = false
       router.push('/library')
     }
 
+
     const goToHelp = () => {
       showUserMenu.value = false
       router.push('/help')
     }
+
+
+    const handleAvatarError = () => {
+      userAvatar.value = null
+    }
+
 
     // Click outside to close dropdowns
     const handleClickOutside = (e) => {
@@ -355,15 +413,37 @@ export default {
       }
     }
 
+
+    // Ouvir eventos de login/registro
+    const handleUserLoggedIn = (event) => {
+      loadUserData()
+    }
+
+
     onMounted(() => {
       window.addEventListener('scroll', handleScroll)
       document.addEventListener('click', handleClickOutside)
+     
+      // Carregar dados do usuário ao montar
+      loadUserData()
+     
+      // Ouvir eventos de login de outros componentes
+      window.addEventListener('user-logged-in', handleUserLoggedIn)
+      window.addEventListener('storage', (e) => {
+        // Atualizar se outra aba modificou o localStorage
+        if (e.key === 'usuario' || e.key === 'isLoggedIn') {
+          loadUserData()
+        }
+      })
     })
+
 
     onUnmounted(() => {
       window.removeEventListener('scroll', handleScroll)
       document.removeEventListener('click', handleClickOutside)
+      window.removeEventListener('user-logged-in', handleUserLoggedIn)
     })
+
 
     return {
       isScrolled,
@@ -374,6 +454,10 @@ export default {
       notificationCount,
       hasNewNotifications,
       notifications,
+      isLoggedIn,
+      userName,
+      userEmail,
+      userAvatar,
       toggleNotifications,
       toggleUserMenu,
       markAsRead,
@@ -385,14 +469,17 @@ export default {
       goToProfile,
       goToSettings,
       goToLibrary,
-      goToHelp
+      goToHelp,
+      handleAvatarError
     }
   }
 }
 </script>
 
+
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+
 
 /* ===== NAVBAR PRINCIPAL ===== */
 .navbar {
@@ -405,12 +492,13 @@ export default {
   transition: all 0.3s ease;
 }
 
+
 .navbar::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, 
-    rgba(5, 5, 8, 0.95) 0%, 
+  background: linear-gradient(180deg,
+    rgba(5, 5, 8, 0.95) 0%,
     rgba(10, 10, 26, 0.85) 50%,
     rgba(10, 10, 26, 0.7) 100%
   );
@@ -420,14 +508,16 @@ export default {
   transition: all 0.3s ease;
 }
 
+
 .navbar.scrolled::before {
-  background: linear-gradient(180deg, 
-    rgba(5, 5, 8, 0.98) 0%, 
+  background: linear-gradient(180deg,
+    rgba(5, 5, 8, 0.98) 0%,
     rgba(10, 10, 26, 0.95) 100%
   );
   border-bottom: 1px solid rgba(37, 99, 235, 0.2);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
 }
+
 
 .navbar-content {
   position: relative;
@@ -438,6 +528,7 @@ export default {
   padding: 0 32px;
 }
 
+
 /* ===== BRAND ===== */
 .navbar-brand {
   display: flex;
@@ -445,6 +536,7 @@ export default {
   gap: 12px;
   cursor: pointer;
 }
+
 
 .brand-icon {
   width: 40px;
@@ -460,9 +552,11 @@ export default {
   transition: transform 0.3s ease;
 }
 
+
 .navbar-brand:hover .brand-icon {
   transform: scale(1.05) rotate(-5deg);
 }
+
 
 .brand-text {
   font-size: 22px;
@@ -474,6 +568,7 @@ export default {
   letter-spacing: -0.5px;
 }
 
+
 /* ===== NAV LINKS ===== */
 .nav-links {
   display: flex;
@@ -481,6 +576,7 @@ export default {
   gap: 8px;
   margin-left: 40px;
 }
+
 
 .nav-link {
   display: flex;
@@ -496,15 +592,18 @@ export default {
   position: relative;
 }
 
+
 .nav-link:hover {
   color: #f8fafc;
   background: rgba(37, 99, 235, 0.1);
 }
 
+
 .nav-link.active {
   color: #f8fafc;
   background: rgba(37, 99, 235, 0.15);
 }
+
 
 .nav-link.active::before {
   content: '';
@@ -518,6 +617,7 @@ export default {
   border-radius: 3px 3px 0 0;
 }
 
+
 /* ===== RIGHT SECTION ===== */
 .nav-right {
   display: flex;
@@ -526,17 +626,20 @@ export default {
   margin-left: auto;
 }
 
+
 /* ===== SEARCH ===== */
 .search-container {
   position: relative;
   transition: all 0.3s ease;
 }
 
+
 .search-wrapper {
   position: relative;
   display: flex;
   align-items: center;
 }
+
 
 .search-icon {
   position: absolute;
@@ -546,6 +649,7 @@ export default {
   transition: color 0.3s ease;
   z-index: 2;
 }
+
 
 .search-input {
   width: 280px;
@@ -560,9 +664,11 @@ export default {
   outline: none;
 }
 
+
 .search-input::placeholder {
   color: #64748b;
 }
+
 
 .search-input:focus {
   width: 320px;
@@ -571,10 +677,12 @@ export default {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
+
 .search-input:focus + .search-icon,
 .search-container.expanded .search-icon {
   color: #2563eb;
 }
+
 
 .clear-search {
   position: absolute;
@@ -588,9 +696,11 @@ export default {
   transition: color 0.3s ease;
 }
 
+
 .clear-search:hover {
   color: #f8fafc;
 }
+
 
 /* ===== ICON BUTTONS ===== */
 .icon-btn {
@@ -610,6 +720,7 @@ export default {
   overflow: hidden;
 }
 
+
 .btn-bg {
   position: absolute;
   inset: 0;
@@ -618,6 +729,7 @@ export default {
   transition: opacity 0.3s ease;
 }
 
+
 .icon-btn:hover {
   color: #f8fafc;
   border-color: rgba(37, 99, 235, 0.3);
@@ -625,15 +737,18 @@ export default {
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.2);
 }
 
+
 .icon-btn:hover .btn-bg {
   opacity: 1;
 }
+
 
 .icon-btn.active {
   color: #2563eb;
   border-color: rgba(37, 99, 235, 0.5);
   background: rgba(37, 99, 235, 0.1);
 }
+
 
 /* Badge */
 .badge {
@@ -655,16 +770,71 @@ export default {
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
+
 .badge.pulse {
   animation: pulse 2s infinite;
 }
+
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
 }
 
-/* ===== USER BUTTON ===== */
+
+/* ===== AUTH BUTTONS (Não logado) ===== */
+.auth-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+
+.btn-login {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+
+.btn-login:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+
+.btn-register {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+}
+
+
+.btn-register:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+
+/* ===== USER BUTTON (Logado) ===== */
+.user-wrapper {
+  position: relative;
+}
+
+
 .user-btn {
   display: flex;
   align-items: center;
@@ -679,16 +849,19 @@ export default {
   transition: all 0.3s ease;
 }
 
+
 .user-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(37, 99, 235, 0.3);
   box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
 }
 
+
 .user-btn.active {
   background: rgba(37, 99, 235, 0.1);
   border-color: rgba(37, 99, 235, 0.5);
 }
+
 
 .user-avatar {
   width: 36px;
@@ -703,11 +876,13 @@ export default {
   color: white;
 }
 
+
 .user-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 
 .user-name {
   color: #f8fafc;
@@ -719,6 +894,7 @@ export default {
   white-space: nowrap;
 }
 
+
 .arrow-icon {
   font-size: 12px;
   color: #64748b;
@@ -726,9 +902,11 @@ export default {
   margin-left: 4px;
 }
 
+
 .arrow-icon.rotate {
   transform: rotate(180deg);
 }
+
 
 /* ===== DROPDOWNS ===== */
 .notif-wrapper,
@@ -736,13 +914,14 @@ export default {
   position: relative;
 }
 
+
 .dropdown-panel {
   position: absolute;
   top: 55px;
   right: 0;
   width: 360px;
-  background: linear-gradient(180deg, 
-    rgba(20, 20, 35, 0.98) 0%, 
+  background: linear-gradient(180deg,
+    rgba(20, 20, 35, 0.98) 0%,
     rgba(15, 15, 25, 0.98) 100%
   );
   backdrop-filter: blur(20px);
@@ -754,9 +933,11 @@ export default {
   z-index: 1001;
 }
 
+
 .notif-dropdown {
   right: -10px;
 }
+
 
 .dropdown-header {
   display: flex;
@@ -766,12 +947,14 @@ export default {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+
 .dropdown-header h4 {
   color: #f8fafc;
   font-size: 16px;
   font-weight: 600;
   margin: 0;
 }
+
 
 .text-btn {
   background: none;
@@ -785,27 +968,33 @@ export default {
   transition: all 0.2s ease;
 }
 
+
 .text-btn:hover {
   background: rgba(37, 99, 235, 0.1);
 }
+
 
 .dropdown-body {
   max-height: 400px;
   overflow-y: auto;
 }
 
+
 .dropdown-body::-webkit-scrollbar {
   width: 6px;
 }
+
 
 .dropdown-body::-webkit-scrollbar-track {
   background: transparent;
 }
 
+
 .dropdown-body::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
 }
+
 
 /* Empty State */
 .empty-state {
@@ -818,16 +1007,19 @@ export default {
   text-align: center;
 }
 
+
 .empty-state i {
   font-size: 40px;
   margin-bottom: 12px;
   opacity: 0.5;
 }
 
+
 .empty-state p {
   font-size: 14px;
   margin: 0;
 }
+
 
 /* Notif Item */
 .notif-item {
@@ -841,13 +1033,16 @@ export default {
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
+
 .notif-item:hover {
   background: rgba(37, 99, 235, 0.05);
 }
 
+
 .notif-item.unread {
   background: rgba(37, 99, 235, 0.08);
 }
+
 
 .notif-avatar {
   width: 44px;
@@ -861,10 +1056,12 @@ export default {
   flex-shrink: 0;
 }
 
+
 .notif-content {
   flex: 1;
   min-width: 0;
 }
+
 
 .notif-title {
   color: #f8fafc;
@@ -874,11 +1071,13 @@ export default {
   line-height: 1.4;
 }
 
+
 .notif-time {
   color: #64748b;
   font-size: 12px;
   margin: 0;
 }
+
 
 .unread-dot {
   width: 8px;
@@ -889,18 +1088,21 @@ export default {
   box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
 }
 
+
 /* User Dropdown Specifics */
 .user-dropdown {
   width: 320px;
 }
 
+
 .user-header {
-  background: linear-gradient(135deg, 
-    rgba(37, 99, 235, 0.15) 0%, 
+  background: linear-gradient(135deg,
+    rgba(37, 99, 235, 0.15) 0%,
     rgba(124, 58, 237, 0.15) 100%
   );
   padding: 24px 20px;
 }
+
 
 .header-avatar {
   width: 56px;
@@ -916,15 +1118,18 @@ export default {
   border: 3px solid rgba(255, 255, 255, 0.1);
 }
 
+
 .header-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
+
 .header-info {
   margin-left: 16px;
 }
+
 
 .header-info h4 {
   color: #f8fafc;
@@ -933,11 +1138,13 @@ export default {
   margin: 0 0 4px 0;
 }
 
+
 .header-info p {
   color: #94a3b8;
   font-size: 13px;
   margin: 0;
 }
+
 
 /* Dropdown Items */
 .dropdown-item {
@@ -951,22 +1158,12 @@ export default {
   font-size: 14px;
 }
 
+
 .dropdown-item:hover {
   background: rgba(37, 99, 235, 0.1);
   color: #f8fafc;
 }
 
-.dropdown-item.highlight {
-  background: rgba(37, 99, 235, 0.15);
-  margin: 8px;
-  border-radius: 12px;
-  border: 1px solid rgba(37, 99, 235, 0.2);
-}
-
-.dropdown-item.highlight:hover {
-  background: rgba(37, 99, 235, 0.25);
-  transform: translateX(4px);
-}
 
 .item-icon {
   width: 40px;
@@ -980,25 +1177,11 @@ export default {
   flex-shrink: 0;
 }
 
-.item-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.item-title {
-  font-weight: 500;
-  color: #f8fafc;
-}
-
-.item-desc {
-  font-size: 12px;
-  color: #64748b;
-}
 
 .dropdown-item.danger:hover {
   background: rgba(239, 68, 68, 0.1);
 }
+
 
 .dropdown-divider {
   height: 1px;
@@ -1006,68 +1189,84 @@ export default {
   margin: 8px 0;
 }
 
+
 /* ===== TRANSITIONS ===== */
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+
 .dropdown-enter-from {
   opacity: 0;
   transform: translateY(-10px) scale(0.95);
 }
+
 
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-10px) scale(0.95);
 }
 
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
   .navbar {
     left: 220px;
   }
-  
+ 
   .search-input {
     width: 200px;
   }
-  
+ 
   .search-input:focus {
     width: 240px;
   }
 }
 
+
 @media (max-width: 992px) {
   .navbar {
     left: 0;
   }
-  
+ 
   .navbar-content {
     padding: 0 20px;
   }
-  
+ 
   .nav-links {
     display: none;
   }
-  
+ 
   .brand-text {
     display: none;
   }
 }
 
+
 @media (max-width: 768px) {
   .search-container {
     display: none;
   }
-  
+ 
   .user-name {
     display: none;
   }
-  
+ 
   .user-btn {
     padding-right: 12px;
   }
-  
+ 
+  .auth-buttons {
+    gap: 8px;
+  }
+ 
+  .btn-login,
+  .btn-register {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+ 
   .dropdown-panel {
     position: fixed;
     top: 70px;
@@ -1077,14 +1276,19 @@ export default {
   }
 }
 
+
 @media (max-width: 480px) {
   .navbar-content {
     padding: 0 16px;
   }
-  
+ 
   .icon-btn {
     width: 38px;
     height: 38px;
   }
+ 
+  .auth-buttons .btn-login {
+    display: none;
+  }
 }
-</style>
+</style> 

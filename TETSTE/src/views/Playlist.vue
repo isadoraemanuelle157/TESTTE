@@ -231,6 +231,23 @@
             rows="2"
             placeholder="Descrição opcional..."
           ></textarea>
+          <div v-if="editMode" class="privacy-edit">
+  <label>Privacidade:</label>
+
+  <button 
+    :class="{ active: editIsPublic }"
+    @click="editIsPublic = true"
+  >
+    🌍 Pública
+  </button>
+
+  <button 
+    :class="{ active: !editIsPublic }"
+    @click="editIsPublic = false"
+  >
+    🔒 Privada
+  </button>
+</div>
           
           <div class="playlist-meta">
             <span class="meta-item author">
@@ -604,15 +621,10 @@ export default {
     }
   },
 
-  mounted() {
-    const saved = localStorage.getItem('user_playlists')
-    if (saved) {
-      this.playlists = JSON.parse(saved)
-    }
-
-    // Inicializar player de áudio REAL
-    this.initAudioPlayer()
-  },
+ mounted() {
+  this.loadPlaylists() // ← novo
+  this.initAudioPlayer()
+},
 
   beforeUnmount() {
     if (this.audioPlayer) {
@@ -807,38 +819,87 @@ export default {
     },
     
     // ===== CRIAÇÃO =====
-    createPlaylist() {
-      if (!this.playlistTitle.trim()) return
-      
-      this.isLoading = true
-      
-      setTimeout(() => {
-        const newPlaylist = {
-          id: Date.now(),
-          title: this.playlistTitle.trim(),
-          description: this.playlistDescription.trim(),
-          image: this.playlistImage,
-          isPublic: this.isPublic,
-          authorName: this.authorName,
-          isLiked: false,
-          songs: [],
-          createdAt: new Date().toISOString()
-        }
-        
-        this.playlists.unshift(newPlaylist)
-        this.savePlaylists()
-        
-        this.isLoading = false
-        this.showToast({
-          title: 'Sucesso!',
-          message: 'Playlist criada com sucesso!',
-          type: 'success',
-          icon: 'fa fa-check-circle'
-        })
-        
-        this.backToList()
-      }, 800)
-    },
+async createPlaylist() {
+  if (!this.playlistTitle.trim()) return
+
+  this.isLoading = true
+
+  try {
+    const user = JSON.parse(localStorage.getItem('usuario'))
+
+if (!user || !user.id) {
+  this.showToast({
+    title: 'Erro',
+    message: 'Usuário não autenticado',
+    type: 'error'
+  })
+  return
+}
+
+const res = await fetch('http://localhost:3002/playlists', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    nome: this.playlistTitle,
+    descricao: this.playlistDescription,
+    capa: this.playlistImage,
+    publica: this.isPublic,
+    usuarioId: user.id
+  })
+})
+
+    const data = await res.json()
+
+    await this.loadPlaylists()
+
+    this.showToast({
+      title: 'Sucesso!',
+      message: 'Playlist salva no banco!',
+      type: 'success',
+      icon: 'fa fa-check-circle'
+    })
+
+    this.backToList()
+
+  } catch (err) {
+    console.error(err)
+    this.showToast({
+      title: 'Erro',
+      message: 'Erro ao salvar no banco',
+      type: 'error'
+    })
+  }
+
+  this.isLoading = false
+},
+
+async loadPlaylists() {
+const user = JSON.parse(localStorage.getItem('usuario'))
+
+const userId = user?.id || user?._id
+
+if (!userId) {
+  this.showToast({
+    title: 'Erro',
+    message: 'Usuário não autenticado',
+    type: 'error'
+  })
+  return
+}
+
+  const res = await fetch(`http://localhost:3002/playlists?usuarioId=${user.id}`)
+  const data = await res.json()
+
+  this.playlists = data.map(p => ({
+    id: p._id,
+    title: p.nome,
+    description: p.descricao,
+    image: p.capa,
+    isPublic: p.publica,
+    songs: p.musicas || [],
+    authorName: user.nome
+  }))
+},
     
     cancelCreate() {
       if (this.playlistTitle.trim() || this.playlistDescription.trim() || this.playlistImage) {
@@ -870,31 +931,53 @@ export default {
       this.editMode = false
     },
     
-    saveEdit() {
-      if (!this.editTitle.trim()) {
-        this.showToast({
-          title: 'Atenção',
-          message: 'O título é obrigatório',
-          type: 'warning',
-          icon: 'fa fa-exclamation-triangle'
-        })
-        return
-      }
-      
-      this.currentPlaylist.title = this.editTitle.trim()
-      this.currentPlaylist.description = this.editDescription.trim()
-      this.currentPlaylist.image = this.editImage
-      this.currentPlaylist.isPublic = this.editIsPublic
-      
-      this.savePlaylists()
-      this.editMode = false
-      this.showToast({
-        title: 'Atualizado!',
-        message: 'Playlist atualizada com sucesso',
-        type: 'success',
-        icon: 'fa fa-check-circle'
+   async saveEdit() {
+  if (!this.editTitle.trim()) {
+    this.showToast({
+      title: 'Atenção',
+      message: 'O título é obrigatório',
+      type: 'warning'
+    })
+    return
+  }
+
+  try {
+    const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: this.editTitle.trim(),
+        descricao: this.editDescription.trim(),
+        capa: this.editImage,
+        publica: this.editIsPublic // 🔥 importante
       })
-    },
+    })
+
+    const data = await res.json()
+
+    // 🔥 atualizar no front com dados reais
+    this.currentPlaylist.title = data.nome
+    this.currentPlaylist.description = data.descricao
+    this.currentPlaylist.image = data.capa
+    this.currentPlaylist.isPublic = data.publica
+
+    this.editMode = false
+
+    this.showToast({
+      title: 'Atualizado!',
+      message: 'Playlist salva no banco',
+      type: 'success'
+    })
+
+  } catch (err) {
+    console.error(err)
+    this.showToast({
+      title: 'Erro',
+      message: 'Erro ao atualizar playlist',
+      type: 'error'
+    })
+  }
+},
     
     // ===== IMAGEM =====
     triggerImageUpload() {
@@ -998,7 +1081,6 @@ export default {
         addedDate: new Date().toLocaleDateString('pt-BR')
       })
       
-      this.savePlaylists()
       this.showToast({
         title: 'Adicionada!',
         message: `"${song.title}" foi adicionada à playlist`,
@@ -1039,7 +1121,6 @@ export default {
       }
       
       this.currentPlaylist.songs.splice(this.songToRemoveIndex, 1)
-      this.savePlaylists()
       
       this.isRemovingSong = false
       this.showRemoveSongModal = false
@@ -1058,21 +1139,26 @@ export default {
     },
     
     // ===== CONTROLES =====
-    toggleLike() {
-      this.currentPlaylist.isLiked = !this.currentPlaylist.isLiked
-      this.savePlaylists()
-      
-      const message = this.currentPlaylist.isLiked 
-        ? `"${this.currentPlaylist.title}" adicionada aos favoritos`
-        : `"${this.currentPlaylist.title}" removida dos favoritos`
-      
-      this.showToast({
-        title: this.currentPlaylist.isLiked ? 'Favoritada!' : 'Desfavoritada',
-        message: message,
-        type: 'success',
-        icon: this.currentPlaylist.isLiked ? 'fa fa-heart' : 'fa fa-heart-o'
+    async toggleLike() {
+  try {
+    const user = JSON.parse(localStorage.getItem('usuario'))
+
+    const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}/favorita`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuarioId: user.id
       })
-    },
+    })
+
+    const data = await res.json()
+
+    this.currentPlaylist.isLiked = data.favoritas.includes(user.id)
+
+  } catch (err) {
+    console.error(err)
+  }
+},
     
     // ===== DROPDOWN OPÇÕES =====
     toggleOptions() {
@@ -1125,49 +1211,26 @@ export default {
     },
     
     async executeDelete() {
-      this.isDeleting = true
-      
-      await new Promise(resolve => setTimeout(resolve, 600))
-      
-      const playlistToDelete = this.playlistToDelete || this.currentPlaylist
-      
-      if (playlistToDelete) {
-        const index = this.playlists.findIndex(p => p.id === playlistToDelete.id)
-        if (index > -1) {
-          // Se estiver tocando música desta playlist, parar
-          if (this.currentTrack && this.currentPlaylist?.id === playlistToDelete.id) {
-            this.audioPlayer.pause()
-            this.audioPlayer.src = ''
-            this.isPlaying = false
-            this.currentTrack = null
-            this.currentPlayingIndex = null
-          }
-          
-          this.playlists.splice(index, 1)
-          this.savePlaylists()
-          this.showToast({
-            title: 'Excluída!',
-            message: `"${playlistToDelete.title}" foi excluída com sucesso`,
-            type: 'success',
-            icon: 'fa fa-check-circle'
-          })
-          
-          if (this.deleteFromView) {
-            this.backToList()
-          }
-        }
-      }
-      
-      this.isDeleting = false
-      this.showDeleteModal = false
-      this.playlistToDelete = null
-      this.deleteFromView = false
-    },
+  try {
+    await fetch(`http://localhost:3002/playlists/${this.playlistToDelete.id}`, {
+      method: 'DELETE'
+    })
+
+    this.playlists = this.playlists.filter(p => p.id !== this.playlistToDelete.id)
+
+    this.showToast({
+      title: 'Excluída!',
+      message: 'Playlist removida do banco',
+      type: 'success'
+    })
+
+    this.backToList()
+
+  } catch (err) {
+    console.error(err)
+  }
+},
     
-    // ===== PERSISTÊNCIA =====
-    savePlaylists() {
-      localStorage.setItem('user_playlists', JSON.stringify(this.playlists))
-    },
     
     // ===== TOAST APRIMORADO =====
     showToast({ message, type = 'success', icon = 'fa fa-check', title = '', duration = 3000 }) {
@@ -1220,8 +1283,8 @@ export default {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   padding: 32px;
-  width: calc(90% - 260px);
-  max-width: calc(90% - 260px);
+    width: calc(90% - 260px);
+    max-width: calc(90% - 260px);
   margin-left: 260px;
   margin-right: auto;
   box-sizing: border-box;

@@ -11,6 +11,7 @@ const generoRoutes = require('./routes/generosMusicaisRoutes')
 const musicaRoutes = require('./routes/musicaRoutes')
 const albumRoutes = require('./routes/albumRoutes')
 const cantorRoutes = require('./routes/cantorRoutes')
+const playlistRoutes = require('./routes/playlistRoutes')
 
 // MIDDLEWARES
 app.use(cors())
@@ -22,6 +23,7 @@ app.use('/generos', generoRoutes)
 app.use('/musicas', musicaRoutes)
 app.use('/albuns', albumRoutes)
 app.use('/cantores', cantorRoutes)
+app.use('/playlists', playlistRoutes)
 
 // SERVIDOR
 app.listen(3002, () => {

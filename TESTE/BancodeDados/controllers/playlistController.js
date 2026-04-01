@@ -3,7 +3,13 @@ const playlistService = require('../services/playlistService')
 // CRIAR
 const create = async (req, res) => {
   try {
-    const playlist = await playlistService.createPlaylist(req.body)
+    const { usuarioId } = req.body
+
+    const playlist = await playlistService.createPlaylist(
+      req.body,
+      usuarioId
+    )
+
     res.status(201).json(playlist)
   } catch (err) {
     res.status(400).json({ error: err.message })
@@ -13,7 +19,10 @@ const create = async (req, res) => {
 // LISTAR
 const getAll = async (req, res) => {
   try {
-    const playlists = await playlistService.getPlaylists()
+    const { usuarioId } = req.query
+
+    const playlists = await playlistService.getPlaylists(usuarioId)
+
     res.json(playlists)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -79,10 +88,13 @@ const removeMusica = async (req, res) => {
 // FAVORITAR
 const toggleFavorita = async (req, res) => {
   try {
+    const { usuarioId } = req.body
+
     const playlist = await playlistService.toggleFavorita(
       req.params.id,
-      req.params.usuarioId
+      usuarioId
     )
+
     res.json(playlist)
   } catch (err) {
     res.status(400).json({ error: err.message })

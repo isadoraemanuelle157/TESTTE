@@ -1,3 +1,4 @@
+<!-- Login.vue -->
 <template>
   <div class="container">
     <!-- Animated Background -->
@@ -216,13 +217,22 @@ export default {
           this.form
         )
 
+        const userData = response.data.user
+        
+        // Salvar dados completos do usuário no localStorage
+        localStorage.setItem("usuario", JSON.stringify(userData))
+        localStorage.setItem("usuario_perfil", JSON.stringify(userData))
+        localStorage.setItem("isLoggedIn", "true")
+        
+        // Disparar evento para atualizar navbar
+        window.dispatchEvent(new CustomEvent('user-logged-in', {
+          detail: userData
+        }))
+
         this.mensagem = "Login realizado! Redirecionando..."
         
-        localStorage.setItem("usuario", JSON.stringify(response.data.user))
-        localStorage.setItem("token", response.data.token)
-
         setTimeout(() => {
-          this.$router.push("/dashboard")
+          this.$router.push("/perfil")
         }, 1500)
 
       } catch (err) {

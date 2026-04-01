@@ -1,11 +1,13 @@
 const userService = require('../services/usuarioService')
-const Usuario = require('../models/Usuario')
 
 // CADASTRO
 const create = async (req, res) => {
   try {
     const user = await userService.createUser(req.body)
-    res.status(201).json({ message: 'Usuário criado', user })
+    res.status(201).json({ 
+      message: 'Usuário criado', 
+      user // ← já vem formatado do service
+    })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
@@ -15,10 +17,12 @@ const create = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, senha } = req.body
-
     const user = await userService.loginUser(email, senha)
 
-    res.json({ message: 'Login realizado', user })
+    res.json({ 
+      message: 'Login realizado', 
+      user // ← já vem formatado
+    })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
@@ -49,29 +53,26 @@ const getById = async (req, res) => {
   }
 }
 
-// ❗ EDITAR USUÁRIO
+// EDITAR USUÁRIO
 const update = async (req, res) => {
   try {
-    const { nome, email } = req.body
-
-    const user = await Usuario.findByIdAndUpdate(
-      req.params.id,
-      { nome, email },
-      { new: true }
-    )
+    const user = await userService.updateUser(req.params.id, req.body)
 
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado" })
     }
 
-    res.json({ message: "Usuário atualizado", user })
+    res.json({ 
+      message: "Usuário atualizado", 
+      user // ← já vem formatado com id
+    })
 
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 }
 
-// ❗ EXCLUIR USUÁRIO
+// EXCLUIR USUÁRIO
 const remove = async (req, res) => {
   try {
     const user = await userService.deleteUser(req.params.id)
@@ -80,7 +81,7 @@ const remove = async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado" })
     }
 
-    res.json({ message: "Usuário removido" })
+    res.json({ message: "Usuário removido", user })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
@@ -91,6 +92,6 @@ module.exports = {
   login,
   list,
   getById,
-  update,   // 👈 ADICIONADO
+  update,
   remove
 }

@@ -1,41 +1,51 @@
 const Playlist = require('../models/Playlist')
 
+
 // 🔥 CRIAR
-const createPlaylist = async (data) => {
+const createPlaylist = async (data, userId) => {
   if (!data.nome) {
     throw new Error('Nome da playlist é obrigatório')
   }
 
+  if (!userId) {
+    throw new Error('Usuário não autenticado')
+  }
+
   const playlist = new Playlist({
     nome: data.nome,
-    descricao: data.descricao,
-    capa: data.capa,
-    usuario: data.usuario,
-    publica: data.publica
+    descricao: data.descricao || '',
+    capa: data.capa || '',
+    usuario: userId, // 🔥 agora vem do usuário logado
+    publica: data.publica ?? true
   })
 
   return await playlist.save()
 }
 
-// 🔥 LISTAR TODAS
-const getPlaylists = async () => {
-  return await Playlist.find()
-    .populate('usuario', 'nome')
+const getPlaylists = async (userId) => {
+  return await Playlist.find({ usuario: userId }) // 🔥 filtro por usuário
     .populate('musicas', 'nome duracao')
-    .populate('favoritas', 'nome')
+    .sort({ createdAt: -1 })
 }
 
 // 🔥 BUSCAR POR ID
 const getPlaylistById = async (id) => {
   return await Playlist.findById(id)
-    .populate('usuario', 'nome')
     .populate('musicas', 'nome duracao')
-    .populate('favoritas', 'nome')
 }
 
 // 🔥 ATUALIZAR
 const updatePlaylist = async (id, data) => {
-  return await Playlist.findByIdAndUpdate(id, data, { new: true })
+  return await Playlist.findByIdAndUpdate(
+    id,
+    {
+      nome: data.nome,
+      descricao: data.descricao,
+      capa: data.capa,
+      publica: data.publica
+    },
+    { new: true }
+  )
 }
 
 // 🔥 DELETAR
@@ -61,18 +71,18 @@ const removeMusica = async (playlistId, musicaId) => {
   )
 }
 
-// 🔥 FAVORITAR PLAYLIST
-const toggleFavorita = async (playlistId, usuarioId) => {
+// 🔥 FAVORITAR
+const toggleFavorita = async (playlistId, userId) => {
   const playlist = await Playlist.findById(playlistId)
 
   if (!playlist) throw new Error('Playlist não encontrada')
 
-  const jaFavoritou = playlist.favoritas.includes(usuarioId)
+  const jaFavoritou = playlist.favoritas.includes(userId)
 
   if (jaFavoritou) {
-    playlist.favoritas.pull(usuarioId)
+    playlist.favoritas.pull(userId)
   } else {
-    playlist.favoritas.push(usuarioId)
+    playlist.favoritas.push(userId)
   }
 
   return await playlist.save()

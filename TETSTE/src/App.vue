@@ -31,7 +31,10 @@ Navbar
 </script>
 
 <style>
-
+* {
+  margin: 0;
+  padding: 0;
+}
 .app{
   display:flex;
   height:100vh;
@@ -41,7 +44,6 @@ Navbar
 
 .content{
   flex:1;
-  margin-left:260px;
   padding:30px;
   min-height:100vh;
   overflow-y:auto;

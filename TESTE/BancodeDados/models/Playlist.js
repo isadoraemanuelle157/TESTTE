@@ -17,11 +17,12 @@ const playlistSchema = new mongoose.Schema({
     default: ''
   },
 
-  usuario: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
-    required: true
-  },
+  // 🔥 AGORA NÃO É MAIS OBRIGATÓRIO
+ usuario: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Usuario',
+  required: true // 🔥 obrigatório agora
+},
 
   musicas: [
     {

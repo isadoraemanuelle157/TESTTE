@@ -1,3 +1,4 @@
+<!-- Registrar.vue - Etapa 1 -->
 <template>
   <div class="container">
     <!-- Background Elements -->
@@ -7,7 +8,22 @@
       <div class="shape shape-3"></div>
     </div>
 
+
     <div class="card" :class="{ 'loading-state': loading }">
+      <!-- Progress Steps -->
+      <div class="progress-steps">
+        <div class="step active">
+          <div class="step-number">1</div>
+          <span class="step-label">Conta</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <span class="step-label">Perfil</span>
+        </div>
+      </div>
+
+
       <!-- Logo/Icon Section -->
       <div class="brand-section">
         <div class="logo-wrapper">
@@ -22,15 +38,16 @@
         <p class="subtitle">Junte-se a nós hoje mesmo</p>
       </div>
 
+
       <form @submit.prevent="registrar" class="form-content">
         <!-- Nome -->
         <div class="input-group" :class="{ 'focused': focused === 'nome', 'filled': form.nome }">
           <div class="input-wrapper">
             <span class="input-icon">👤</span>
-            <input 
-              v-model="form.nome" 
-              type="text" 
-              required 
+            <input
+              v-model="form.nome"
+              type="text"
+              required
               @focus="focused = 'nome'"
               @blur="focused = null"
               placeholder=" "
@@ -39,14 +56,15 @@
           </div>
         </div>
 
+
         <!-- Email -->
         <div class="input-group" :class="{ 'focused': focused === 'email', 'filled': form.email }">
           <div class="input-wrapper">
             <span class="input-icon">✉️</span>
-            <input 
-              v-model="form.email" 
-              type="email" 
-              required 
+            <input
+              v-model="form.email"
+              type="email"
+              required
               @focus="focused = 'email'"
               @blur="focused = null"
               placeholder=" "
@@ -55,22 +73,23 @@
           </div>
         </div>
 
+
         <!-- Senha -->
         <div class="input-group" :class="{ 'focused': focused === 'senha', 'filled': form.senha }">
           <div class="input-wrapper">
             <span class="input-icon">🔒</span>
-            <input 
-              v-model="form.senha" 
-              :type="showPassword ? 'text' : 'password'" 
-              required 
+            <input
+              v-model="form.senha"
+              :type="showPassword ? 'text' : 'password'"
+              required
               @focus="focused = 'senha'"
               @blur="focused = null"
               placeholder=" "
             />
             <label>Senha</label>
-            <button 
-              type="button" 
-              class="toggle-password" 
+            <button
+              type="button"
+              class="toggle-password"
               @click="showPassword = !showPassword"
             >
               {{ showPassword ? '🙈' : '👁️' }}
@@ -87,10 +106,36 @@
           </div>
         </div>
 
+
+        <!-- Confirmar Senha -->
+        <div class="input-group" :class="{ 'focused': focused === 'confirmarSenha', 'filled': form.confirmarSenha }">
+          <div class="input-wrapper">
+            <span class="input-icon">🔐</span>
+            <input
+              v-model="form.confirmarSenha"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              required
+              @focus="focused = 'confirmarSenha'"
+              @blur="focused = null"
+              placeholder=" "
+            />
+            <label>Confirmar senha</label>
+            <button
+              type="button"
+              class="toggle-password"
+              @click="showConfirmPassword = !showConfirmPassword"
+            >
+              {{ showConfirmPassword ? '🙈' : '👁️' }}
+            </button>
+          </div>
+          <span class="error-text" v-if="senhasNaoCoincidem">As senhas não coincidem</span>
+        </div>
+
+
         <!-- Submit Button -->
         <button type="submit" :disabled="loading || !isValid" class="submit-btn">
           <span class="btn-content" v-if="!loading">
-            <span>Cadastrar</span>
+            <span>Continuar</span>
             <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
@@ -102,6 +147,7 @@
         </button>
       </form>
 
+
       <!-- Messages -->
       <transition name="slide-up">
         <div v-if="mensagem || erro" :class="['alert', mensagem ? 'success' : 'error']">
@@ -110,15 +156,17 @@
         </div>
       </transition>
 
+
       <!-- Divider -->
       <div class="divider">
         <span>ou</span>
       </div>
 
+
       <!-- Login Link -->
       <div class="footer-section">
         <p class="login-text">
-          Já tem uma conta? 
+          Já tem uma conta?
           <span class="link" @click="$router.push('/login')">
             Fazer login
             <svg class="link-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -131,23 +179,27 @@
   </div>
 </template>
 
+
 <script>
 import axios from "axios"
 
+
 export default {
-  name: "Register",
+  name: "Registrar",
   data() {
     return {
       form: {
         nome: "",
         email: "",
-        senha: ""
+        senha: "",
+        confirmarSenha: ""
       },
       loading: false,
       mensagem: "",
       erro: "",
       focused: null,
-      showPassword: false
+      showPassword: false,
+      showConfirmPassword: false
     }
   },
   computed: {
@@ -172,8 +224,15 @@ export default {
       if (this.passwordStrength <= 75) return 'Boa'
       return 'Forte'
     },
+    senhasNaoCoincidem() {
+      return this.form.confirmarSenha && this.form.senha !== this.form.confirmarSenha
+    },
     isValid() {
-      return this.form.nome && this.form.email && this.form.senha.length >= 6
+      return this.form.nome &&
+             this.form.email &&
+             this.form.senha.length >= 6 &&
+             this.form.confirmarSenha &&
+             !this.senhasNaoCoincidem
     }
   },
   methods: {
@@ -182,26 +241,46 @@ export default {
       this.erro = ""
       this.mensagem = ""
 
+
       if (!this.isValid) {
-        this.erro = "Preencha todos os campos corretamente!"
+        if (this.senhasNaoCoincidem) {
+          this.erro = "As senhas não coincidem!"
+        } else {
+          this.erro = "Preencha todos os campos corretamente!"
+        }
         this.loading = false
         return
       }
 
+
       try {
         const response = await axios.post(
           "http://localhost:3002/usuarios/registrar",
-          this.form
+          {
+            nome: this.form.nome,
+            email: this.form.email,
+            senha: this.form.senha
+          }
         )
 
-        this.mensagem = "Conta criada com sucesso! Redirecionando..."
-        
+
+        const userData = response.data.user
+       
+        // Salvar dados temporários (ainda não faz login definitivo)
+        localStorage.setItem("usuario_temp", JSON.stringify(userData))
+
+
+        this.mensagem = "Conta criada! Complete seu perfil..."
+       
+        // Redirecionar para etapa 2 após 1 segundo
         setTimeout(() => {
-          this.$router.push("/login")
-        }, 2000)
+          this.$router.push("/registrar2")
+        }, 1000)
+
 
       } catch (err) {
         this.erro = err.response?.data?.error || "Erro ao criar conta. Tente novamente."
+        setTimeout(() => this.erro = "", 5000)
       } finally {
         this.loading = false
       }
@@ -210,12 +289,14 @@ export default {
 }
 </script>
 
+
 <style scoped>
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
+
 
 .container {
   min-height: 100vh;
@@ -229,6 +310,7 @@ export default {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
+
 /* Background Shapes */
 .bg-shapes {
   position: absolute;
@@ -238,6 +320,7 @@ export default {
   pointer-events: none;
 }
 
+
 .shape {
   position: absolute;
   border-radius: 50%;
@@ -245,6 +328,7 @@ export default {
   opacity: 0.4;
   animation: float 20s infinite ease-in-out;
 }
+
 
 .shape-1 {
   width: 400px;
@@ -255,6 +339,7 @@ export default {
   animation-delay: 0s;
 }
 
+
 .shape-2 {
   width: 300px;
   height: 300px;
@@ -263,6 +348,7 @@ export default {
   right: -50px;
   animation-delay: 5s;
 }
+
 
 .shape-3 {
   width: 250px;
@@ -274,11 +360,13 @@ export default {
   animation-delay: 10s;
 }
 
+
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(30px, -30px) scale(1.1); }
   66% { transform: translate(-20px, 20px) scale(0.9); }
 }
+
 
 /* Card */
 .card {
@@ -286,11 +374,11 @@ export default {
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
-  padding: 40px;
+  padding: 32px 40px 40px;
   width: 100%;
   max-width: 420px;
   color: white;
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.05);
   position: relative;
@@ -298,10 +386,73 @@ export default {
   transition: transform 0.3s ease;
 }
 
+
 .card.loading-state {
   transform: scale(0.98);
   opacity: 0.9;
 }
+
+
+/* Progress Steps */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: #64748b;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+
+.step.active .step-number {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+
+.step-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+
+.step.active .step-label {
+  color: #f8fafc;
+}
+
+
+.step-line {
+  width: 60px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+}
+
 
 /* Brand Section */
 .brand-section {
@@ -309,12 +460,14 @@ export default {
   margin-bottom: 32px;
 }
 
+
 .logo-wrapper {
   position: relative;
   width: 80px;
   height: 80px;
   margin: 0 auto 20px;
 }
+
 
 .logo {
   width: 80px;
@@ -329,11 +482,13 @@ export default {
   box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
 }
 
+
 .logo svg {
   width: 40px;
   height: 40px;
   color: white;
 }
+
 
 .pulse-ring {
   position: absolute;
@@ -348,10 +503,12 @@ export default {
   z-index: 1;
 }
 
+
 @keyframes pulse {
   0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
   100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
+
 
 h1 {
   font-size: 1.875rem;
@@ -363,10 +520,12 @@ h1 {
   background-clip: text;
 }
 
+
 .subtitle {
   color: #94a3b8;
   font-size: 0.95rem;
 }
+
 
 /* Form */
 .form-content {
@@ -375,15 +534,18 @@ h1 {
   gap: 20px;
 }
 
+
 .input-group {
   position: relative;
 }
+
 
 .input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
 }
+
 
 .input-icon {
   position: absolute;
@@ -394,10 +556,12 @@ h1 {
   opacity: 0.6;
 }
 
+
 .input-group.focused .input-icon {
   opacity: 1;
   transform: scale(1.1);
 }
+
 
 input {
   width: 100%;
@@ -411,15 +575,18 @@ input {
   outline: none;
 }
 
+
 input:focus {
   border-color: #6366f1;
   background: rgba(30, 41, 59, 0.8);
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
+
 .input-group.focused input {
   border-color: #6366f1;
 }
+
 
 label {
   position: absolute;
@@ -434,6 +601,7 @@ label {
   padding: 0 4px;
 }
 
+
 input:focus + label,
 input:not(:placeholder-shown) + label,
 .input-group.filled label {
@@ -443,6 +611,7 @@ input:not(:placeholder-shown) + label,
   background: #111827;
   font-weight: 500;
 }
+
 
 .toggle-password {
   position: absolute;
@@ -456,15 +625,18 @@ input:not(:placeholder-shown) + label,
   padding: 0;
 }
 
+
 .toggle-password:hover {
   opacity: 1;
 }
+
 
 /* Password Strength */
 .password-strength {
   margin-top: 8px;
   padding: 0 4px;
 }
+
 
 .strength-bar {
   height: 4px;
@@ -473,11 +645,13 @@ input:not(:placeholder-shown) + label,
   overflow: hidden;
 }
 
+
 .strength-fill {
   height: 100%;
   border-radius: 2px;
   transition: all 0.3s ease;
 }
+
 
 .strength-text {
   font-size: 0.75rem;
@@ -487,6 +661,17 @@ input:not(:placeholder-shown) + label,
   font-weight: 600;
   transition: color 0.3s;
 }
+
+
+/* Error Text */
+.error-text {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  display: block;
+  padding: 0 4px;
+}
+
 
 /* Submit Button */
 .submit-btn {
@@ -505,6 +690,7 @@ input:not(:placeholder-shown) + label,
   margin-top: 8px;
 }
 
+
 .submit-btn::before {
   content: '';
   position: absolute;
@@ -516,20 +702,24 @@ input:not(:placeholder-shown) + label,
   transition: left 0.5s;
 }
 
+
 .submit-btn:hover:not(:disabled)::before {
   left: 100%;
 }
+
 
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
 }
 
+
 .submit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   filter: grayscale(0.5);
 }
+
 
 .btn-content {
   display: flex;
@@ -538,15 +728,18 @@ input:not(:placeholder-shown) + label,
   gap: 8px;
 }
 
+
 .arrow-icon {
   width: 20px;
   height: 20px;
   transition: transform 0.3s;
 }
 
+
 .submit-btn:hover .arrow-icon {
   transform: translateX(4px);
 }
+
 
 .loading-spinner {
   display: flex;
@@ -554,6 +747,7 @@ input:not(:placeholder-shown) + label,
   justify-content: center;
   gap: 12px;
 }
+
 
 .spinner {
   width: 20px;
@@ -564,9 +758,11 @@ input:not(:placeholder-shown) + label,
   animation: spin 1s linear infinite;
 }
 
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
 
 /* Alert */
 .alert {
@@ -580,17 +776,20 @@ input:not(:placeholder-shown) + label,
   animation: slideUp 0.3s ease;
 }
 
+
 .alert.success {
   background: rgba(34, 197, 94, 0.15);
   border: 1px solid rgba(34, 197, 94, 0.3);
   color: #4ade80;
 }
 
+
 .alert.error {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
 }
+
 
 .alert-icon {
   width: 24px;
@@ -603,13 +802,16 @@ input:not(:placeholder-shown) + label,
   flex-shrink: 0;
 }
 
+
 .alert.success .alert-icon {
   background: rgba(34, 197, 94, 0.2);
 }
 
+
 .alert.error .alert-icon {
   background: rgba(239, 68, 68, 0.2);
 }
+
 
 @keyframes slideUp {
   from {
@@ -622,14 +824,17 @@ input:not(:placeholder-shown) + label,
   }
 }
 
+
 .slide-up-enter-active, .slide-up-leave-active {
   transition: all 0.3s ease;
 }
+
 
 .slide-up-enter-from, .slide-up-leave-to {
   opacity: 0;
   transform: translateY(-10px);
 }
+
 
 /* Divider */
 .divider {
@@ -640,6 +845,7 @@ input:not(:placeholder-shown) + label,
   font-size: 0.875rem;
 }
 
+
 .divider::before,
 .divider::after {
   content: '';
@@ -648,19 +854,23 @@ input:not(:placeholder-shown) + label,
   background: rgba(148, 163, 184, 0.2);
 }
 
+
 .divider span {
   padding: 0 16px;
 }
+
 
 /* Footer */
 .footer-section {
   text-align: center;
 }
 
+
 .login-text {
   color: #94a3b8;
   font-size: 0.95rem;
 }
+
 
 .link {
   color: #818cf8;
@@ -673,6 +883,7 @@ input:not(:placeholder-shown) + label,
   position: relative;
 }
 
+
 .link::after {
   content: '';
   position: absolute;
@@ -684,13 +895,16 @@ input:not(:placeholder-shown) + label,
   transition: width 0.3s;
 }
 
+
 .link:hover {
   color: #a5b4fc;
 }
 
+
 .link:hover::after {
   width: 100%;
 }
+
 
 .link-arrow {
   width: 16px;
@@ -698,33 +912,39 @@ input:not(:placeholder-shown) + label,
   transition: transform 0.3s;
 }
 
+
 .link:hover .link-arrow {
   transform: translateX(4px);
 }
 
+
 /* Responsive */
 @media (max-width: 480px) {
   .card {
-    padding: 32px 24px;
+    padding: 24px 20px 32px;
   }
-  
+ 
   h1 {
     font-size: 1.5rem;
   }
-  
+ 
   .logo-wrapper {
     width: 60px;
     height: 60px;
   }
-  
+ 
   .logo {
     width: 60px;
     height: 60px;
   }
-  
+ 
   .logo svg {
     width: 30px;
     height: 30px;
+  }
+ 
+  .step-line {
+    width: 40px;
   }
 }
 </style>
