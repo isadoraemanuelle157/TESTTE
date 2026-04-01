@@ -3,7 +3,6 @@ import HomeView from '../views/HomeView.vue'
 import Curtidas from '../views/Curtidas.vue'
 import Search from '../views/Search.vue'
 import Playlist from '../views/Playlist.vue'
-import Sidebar from '@/components/Sidebar.vue'
 import Notificacoes from '@/components/Notificacoes.vue'
 import Artistas from '@/components/Artistas.vue'
 import ChatIAMusica from '@/components/ChatIAMusica.vue'
@@ -23,8 +22,7 @@ import Cantor from '@/banco/Cantor.vue'
 import TabelaGenero from '@/banco/tabelas/TabelaGenero.vue'
 import TabelaMusica from '@/banco/tabelas/TabelaMusica.vue'
 import TabelaUsuario from '@/banco/tabelas/TabelaUsuario.vue'
-import Navbar from '@/components/Navbar.vue'
-import Sidebar1 from '@/components/Sidebar1.vue'
+
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import TabelaAlbum from '@/banco/tabelas/TabelaAlbum.vue'
 import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
@@ -55,11 +53,6 @@ const router = createRouter({
       name: 'search',
       component: Search,
     },
-     {
-      path: '/navbar',
-      name: 'navbar',
-      component: Navbar,
-    },
        {
       path: '/playlist',
       name: 'playlist',
@@ -69,16 +62,6 @@ const router = createRouter({
       path: '/musicplayer',
       name: 'musicplayer',
       component: MusicPlayer,
-    },
-    {
-      path: '/sidebar1',
-      name: 'sidebar1',
-      component: Sidebar1,
-    },
-    {
-      path: '/sidebar',
-      name: 'sidebar',
-      component: Sidebar,
     },
     {
       path: '/notificacoes',

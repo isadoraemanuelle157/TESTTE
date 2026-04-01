@@ -31,20 +31,33 @@ Navbar
 </script>
 
 <style>
-
-.app{
-  display:flex;
-  height:100vh;
-  background:#000;
-  color:white;
+* {
+  box-sizing: border-box;
 }
 
-.content{
-  flex:1;
-  margin-left:260px;
-  padding:30px;
-  min-height:100vh;
-  overflow-y:auto;
+html, body, #app {
+  margin: 0;
+  height: 100%;
 }
 
+/* LAYOUT PRINCIPAL */
+.app {
+  display: flex;
+  min-height: 100vh;
+  background: #fff; /* fundo global */
+}
+
+/* ÁREA DA DIREITA */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* CONTEÚDO */
+.content {
+  flex: 1;
+
+  overflow-y: auto;
+}
 </style>
