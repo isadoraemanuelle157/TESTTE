@@ -24,14 +24,14 @@ const createPlaylist = async (data, userId) => {
 
 const getPlaylists = async (userId) => {
   return await Playlist.find({ usuario: userId }) // 🔥 filtro por usuário
-    .populate('musicas', 'nome duracao')
+    .populate('musicas', 'nome duracao foto link')
     .sort({ createdAt: -1 })
 }
 
 // 🔥 BUSCAR POR ID
 const getPlaylistById = async (id) => {
   return await Playlist.findById(id)
-    .populate('musicas', 'nome duracao')
+.populate('musicas', 'nome duracao foto link')
 }
 
 // 🔥 ATUALIZAR

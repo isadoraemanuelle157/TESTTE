@@ -261,15 +261,22 @@ export default {
 
       try {
         // Atualizar usuário no backend com dados completos
-        const response = await axios.put(
-          `http://localhost:3002/usuarios/${this.userId}`, // ✅ Usar this.userId
-          {
-            username: this.form.username,
-            bio: this.form.bio,
-            localizacao: this.form.localizacao,
-            avatar: this.form.avatar,
-            cover: this.form.cover
-          }
+      const token = localStorage.getItem("token")
+
+const response = await axios.put(
+  `http://localhost:3002/usuarios/${this.userId}`,
+  {
+    username: this.form.username,
+    bio: this.form.bio,
+    localizacao: this.form.localizacao,
+    avatar: this.form.avatar,
+    cover: this.form.cover
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
         )
 
         const userDataCompleto = response.data.user

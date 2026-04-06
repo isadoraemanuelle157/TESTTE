@@ -46,6 +46,25 @@ const getById = async (req, res) => {
   }
 }
 
+const search = async (req, res) => {
+  try {
+    const { q } = req.query
+
+    if (!q || q.trim().length < 2) {
+      return res.json([]) // 🔥 sempre retorna array
+    }
+
+    const musicas = await musicaService.searchMusicas(q)
+
+    res.json(musicas || [])
+  } catch (err) {
+    console.error('🔥 ERRO SEARCH:', err)
+    res.status(500).json([]) // 🔥 NUNCA retorne objeto aqui
+  }
+}
+
+
+
 // ATUALIZAR
 const update = async (req, res) => {
   try {
@@ -174,10 +193,44 @@ const remove = async (req, res) => {
   }
 }
 
+const Curtida = require('../models/Curtida')
+
+// ❤️ CURTIR / DESCURTIR MÚSICA
+const toggleCurtida = async (req, res) => {
+  try {
+    const userId = req.user.id
+    const musicaId = req.params.id
+
+    // 🔥 verifica se já existe curtida
+    const existente = await Curtida.findOne({
+      usuario: userId,
+      musica: musicaId
+    })
+
+    if (existente) {
+      await existente.deleteOne()
+      return res.json({ liked: false })
+    }
+
+    await Curtida.create({
+      usuario: userId,
+      musica: musicaId
+    })
+
+    res.json({ liked: true })
+
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erro ao curtir música' })
+  }
+}
+
 module.exports = {
   create,
   list,
   getById,
   update,
-  remove
+  remove,
+  search,
+  toggleCurtida 
 }

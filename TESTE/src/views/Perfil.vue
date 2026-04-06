@@ -3,33 +3,42 @@
   <div class="perfil">
     <!-- Header do Perfil -->
     <div class="profile-header">
-      <div class="cover-image" :style="coverStyle">
-        <div class="cover-gradient"></div>
-        <div class="cover-actions" v-if="isOwnProfile">
-          <button class="btn-cover-action" @click="triggerCoverUpload">
-            <i class="fa fa-camera"></i> Alterar capa
-          </button>
-          <button class="btn-cover-action btn-gradient" @click="openEditModal">
-            <i class="fa fa-pencil"></i> Editar perfil
-          </button>
-        </div>
-        <input
-          type="file"
-          ref="coverInput"
-          accept="image/*"
-          @change="handleCoverChange"
-          style="display: none"
-        />
-      </div>
+     <div class="cover-image" :style="coverStyle">
+  <div class="cover-gradient"></div>
+
+  <div class="cover-actions" v-if="isOwnProfile">
+    <button
+      type="button"
+      class="btn-cover-action"
+      @click.stop.prevent="triggerCoverUpload"
+    >
+      <i class="fa fa-camera"></i> Alterar capa
+    </button>
+  </div>
+
+  <input
+    type="file"
+    ref="coverInput"
+    accept="image/*"
+    style="display: none"
+    @change="handleCoverChange"
+  />
+</div>
      
       <div class="profile-info-container">
         <div class="avatar-section">
           <div class="avatar-wrapper" :class="{ 'online': isOnline }">
             <img :src="usuario.avatar || defaultAvatar" :alt="usuario.nome" class="avatar" @error="handleAvatarError" />
             <div class="avatar-status" v-if="isOwnProfile"></div>
-            <button class="btn-edit-avatar" @click="triggerAvatarUpload" v-if="isOwnProfile">
-              <i class="fa fa-camera"></i>
-            </button>
+          <button
+  type="button"
+  class="btn-edit-avatar"
+  @click="triggerAvatarUpload"
+  v-if="isOwnProfile"
+>
+  <i class="fa fa-camera"></i>
+</button>
+
             <input
               type="file"
               ref="avatarInput"
@@ -94,9 +103,9 @@
         </div>
        
         <div class="profile-actions">
-          <button class="btn-primary" @click="openEditModal" v-if="isOwnProfile">
-            <i class="fa fa-pencil"></i> Editar perfil
-          </button>
+        <button type="button" class="btn-primary" @click="openEditModal" v-if="isOwnProfile">
+  <i class="fa fa-pencil"></i> Editar perfil
+</button>
           <button class="btn-follow" @click="toggleFollow" v-else :class="{ 'following': isFollowing }">
             <i :class="isFollowing ? 'fa fa-check' : 'fa fa-plus'"></i>
             {{ isFollowing ? 'Seguindo' : 'Seguir' }}
@@ -235,9 +244,9 @@
                   <i class="fa fa-trophy" :class="`rank-${index + 1}`"></i>
                 </div>
                 <span class="mini-number" v-else>{{ index + 1 }}</span>
-                <img :src="musica.cover" :alt="musica.title" />
+                <img :src="musica.cover" :alt="musica.nome" />
                 <div class="mini-info">
-                  <h4>{{ musica.title }}</h4>
+                  <h4>{{ musica.nome }}</h4>
                   <p>{{ musica.artist }}</p>
                 </div>
                 <button class="btn-like-mini" @click.stop="toggleLike(musica)" :class="{ 'active': musica.curtido }">
@@ -271,7 +280,7 @@
             <div class="playlists-grid" v-if="playlistsRecentes.length > 0">
               <div
                 v-for="playlist in playlistsRecentes"
-                :key="playlist.id"
+                :key="playlist._id"
                 class="playlist-card"
                 @click="openPlaylist(playlist)"
               >
@@ -297,10 +306,6 @@
                 <i class="fa fa-list"></i>
               </div>
               <h4>Nenhuma playlist</h4>
-              <p v-if="isOwnProfile">Crie sua primeira playlist</p>
-              <button class="btn-create" @click="createPlaylist" v-if="isOwnProfile">
-                <i class="fa fa-plus"></i> Criar playlist
-              </button>
             </div>
           </div>
 
@@ -397,9 +402,9 @@
                 <span v-if="currentPlayingId !== musica.id">{{ index + 1 }}</span>
                 <i v-else class="fa fa-volume-up playing-icon"></i>
               </span>
-              <img :src="musica.cover" :alt="musica.title" />
+              <img :src="musica.cover" :alt="musica.nome" />
               <div class="row-info">
-                <h4 :class="{ 'playing': currentPlayingId === musica.id }">{{ musica.title }}</h4>
+                <h4 :class="{ 'playing': currentPlayingId === musica.id }">{{ musica.nome}}</h4>
                 <p>{{ musica.artist }}</p>
               </div>
               <span class="row-album">{{ musica.album }}</span>
@@ -438,18 +443,10 @@
 
       <!-- Tab: Playlists -->
       <div v-if="activeTab === 'playlists'" class="tab-content">
-        <div class="playlists-full-grid">
-          <div class="create-playlist-card" @click="createPlaylist" v-if="isOwnProfile">
-            <div class="create-icon">
-              <i class="fa fa-plus"></i>
-            </div>
-            <h4>Criar Playlist</h4>
-            <p>Organize suas músicas favoritas</p>
-          </div>
-         
+        <div class="playlists-full-grid">        
           <div
             v-for="playlist in filteredPlaylists"
-            :key="playlist.id"
+            :key="playlist._id"
             class="playlist-card-large"
             @click="openPlaylist(playlist)"
           >
@@ -823,17 +820,17 @@
             <div class="playlist-selector">
               <div
                 v-for="playlist in minhasPlaylists"
-                :key="playlist.id"
+                :key="playlist._id"
                 class="playlist-option"
                 @click="addMusicToPlaylist(playlist)"
-                :class="{ 'selected': selectedPlaylist === playlist.id }"
+                :class="{ 'selected': selectedPlaylist === playlist._id }"
               >
                 <img :src="playlist.cover" :alt="playlist.nome" />
                 <div class="playlist-option-info">
                   <h4>{{ playlist.nome }}</h4>
                   <p>{{ playlist.musicas }} músicas</p>
                 </div>
-                <i class="fa fa-check" v-if="selectedPlaylist === playlist.id"></i>
+                <i class="fa fa-check" v-if="selectedPlaylist === playlist._id"></i>
               </div>
              
               <div class="playlist-option create-new" @click="createAndAdd">
@@ -1002,27 +999,31 @@ export default {
   },
 
   computed: {
-    coverStyle() {
-      if (this.usuario.cover) {
-        return {
-          backgroundImage: `url(${this.usuario.cover})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }
+   coverStyle() {
+  return this.usuario.cover
+    ? {
+        backgroundImage: `url(${this.usuario.cover})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
       }
-      return { background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }
-    },
+    : {
+        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+      }
+},
    
-    previewCoverStyle() {
-      if (this.editForm.cover) {
-        return {
-          backgroundImage: `url(${this.editForm.cover})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }
+previewCoverStyle() {
+  return this.editForm.cover
+    ? {
+        backgroundImage: `url(${this.editForm.cover})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
       }
-      return { background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }
-    },
+    : {
+        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+      }
+},
    
     isNewMember() {
       if (!this.usuario.membroDesde) return false
@@ -1096,28 +1097,34 @@ export default {
     }
   },
 
-  mounted() {
-    this.carregarUsuarioLogado()
-    this.carregarDados()
-    this.carregarCurtidas()
-    this.carregarArtistas()
-    this.carregarAtividades()
-   
-    window.addEventListener('focus', () => {
-      this.carregarCurtidas()
-      this.carregarDados()
-    })
-   
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'usuario_perfil') {
-        this.carregarUsuarioLogado()
-      }
-    })
-  },
+mounted() {
+  this.carregarUsuarioLogado()
+  this.carregarDados()
+  this.carregarCurtidas()
+  this.carregarArtistas()
+  this.carregarAtividades()
 
-  beforeUnmount() {
-    if (this.toastTimeout) clearTimeout(this.toastTimeout)
-  },
+  this.onPlaylistUpdated = () => this.carregarDados()
+  this.onLikesUpdated = () => this.carregarCurtidas()
+  this.onPerfilUpdated = () => this.carregarUsuarioLogado()
+
+  window.addEventListener('playlist-updated', this.onPlaylistUpdated)
+  window.addEventListener('likes-updated', this.onLikesUpdated)
+  window.addEventListener('perfil-updated', this.onPerfilUpdated)
+  window.addEventListener('focus', this.handleFocus)
+  window.addEventListener('storage', this.handleStorage)
+},
+
+beforeUnmount() {
+  if (this.toastTimeout) clearTimeout(this.toastTimeout)
+
+  window.removeEventListener('playlist-updated', this.onPlaylistUpdated)
+  window.removeEventListener('likes-updated', this.onLikesUpdated)
+  window.removeEventListener('perfil-updated', this.onPerfilUpdated)
+  window.removeEventListener('focus', this.handleFocus)
+  window.removeEventListener('storage', this.handleStorage)
+},
+
 
   methods: {
     carregarUsuarioLogado() {
@@ -1138,84 +1145,135 @@ export default {
         this.tabs[2].count = this.estatisticas.playlists
         this.tabs[4].count = this.estatisticas.seguidores
       } else {
-        this.$router.push('/login')
-      }
+  this.$router.push('/login')
+}
     },
+    getAuthConfig() {
+  const token = localStorage.getItem('token')
+
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }
+},
+async compressImage(file, {
+  maxWidth = 1600,
+  maxHeight = 1600,
+  quality = 0.75,
+  mimeType = 'image/jpeg'
+} = {}) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = (e) => {
+      const img = new Image()
+
+      img.onload = () => {
+        let { width, height } = img
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+
+        const compressedBase64 = canvas.toDataURL(mimeType, quality)
+        resolve(compressedBase64)
+      }
+
+      img.onerror = reject
+      img.src = e.target.result
+    }
+
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+},
+
+persistUsuario(user) {
+  localStorage.setItem('usuario', JSON.stringify(user))
+  localStorage.setItem('usuario_perfil', JSON.stringify(user))
+  window.dispatchEvent(new Event('perfil-updated'))
+},
+
+    handleFocus() {
+  this.carregarCurtidas()
+  this.carregarDados()
+},
+
+handleStorage(e) {
+  if (e.key === 'usuario_perfil') {
+    this.carregarUsuarioLogado()
+  }
+},
    
-    carregarDados() {
-      // Playlists
-      const storedPlaylists = localStorage.getItem('playlists')
-      if (storedPlaylists) {
-        this.todasPlaylists = JSON.parse(storedPlaylists)
-        this.minhasPlaylists = this.todasPlaylists.filter(p => p.criador === this.usuario.id)
-        this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
-        this.estatisticas.playlists = this.todasPlaylists.length
-      } else {
-        this.todasPlaylists = [
-          {
-            id: 1,
-            nome: "Minhas Favoritas",
-            descricao: "As músicas que mais curto ouvir",
-            cover: "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=300&h=300&fit=crop",
-            musicas: 24,
-            privacidade: "Pública",
-            tags: ['Pop', 'Rock'],
-            duracaoTotal: '1h 32min',
-            curtidas: 156
-          },
-          {
-            id: 2,
-            nome: "Rock Clássico",
-            descricao: "Os melhores do rock dos anos 70-90",
-            cover: "https://images.unsplash.com/photo-1511735111819-9a3f77ebd235?w=300&h=300&fit=crop",
-            musicas: 45,
-            privacidade: "Pública",
-            tags: ['Rock', 'Clássico'],
-            duracaoTotal: '3h 15min',
-            curtidas: 89
-          },
-          {
-            id: 3,
-            nome: "Para Relaxar",
-            descricao: "Músicas tranquilas para estudar",
-            cover: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=300&h=300&fit=crop",
-            musicas: 18,
-            privacidade: "Privada",
-            tags: ['Lo-Fi', 'Jazz'],
-            duracaoTotal: '45min',
-            curtidas: 0
-          }
-        ]
-        this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
-        this.estatisticas.playlists = this.todasPlaylists.length
-        this.minhasPlaylists = this.todasPlaylists
-      }
-     
-      // Histórico
-      const storedHistory = localStorage.getItem('historico')
-      if (storedHistory) {
-        this.historicoCompleto = JSON.parse(storedHistory)
-        this.historicoRecente = this.historicoCompleto.slice(0, 5)
-      }
-     
-      // Top track (mock)
-      this.topTrack = {
-        id: 'top1',
-        title: "Bohemian Rhapsody",
-        artist: "Queen",
-        cover: "https://images.unsplash.com/photo-1511735111819-9a3f77ebd235?w=300&h=300&fit=crop",
-        plays: 1234
-      }
-    },
+async carregarDados() {
+  const token = localStorage.getItem("token")
+
+const res = await fetch("http://localhost:3002/playlists", {
+  headers: { Authorization: `Bearer ${token}` }
+})
+
+if (!res.ok) {
+  console.error("Erro ao buscar playlists")
+  return
+}
+
+const data = await res.json() || []
+
+this.todasPlaylists = data.map(p => ({
+  _id: p._id,
+  nome: p.nome,
+  cover: p.cover || p.capa || 'https://via.placeholder.com/150',
+  musicas: p.musicas?.length || 0,
+  privacidade: p.privacidade || (p.privada ? 'Privada' : 'Pública'),
+  descricao: p.descricao || '',
+  duracaoTotal: p.duracaoTotal || '0 min',
+  curtidas: p.curtidas || 0
+}))
+this.minhasPlaylists = data
+this.playlistsRecentes = data.slice(0, 4)
+this.estatisticas.playlists = data.length
+this.tabs[2].count = data.length
+},
    
-    carregarCurtidas() {
-      const stored = localStorage.getItem("curtidas")
-      if (stored) {
-        this.musicasFavoritas = JSON.parse(stored)
-        this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
-        this.tabs[1].count = this.musicasFavoritas.length
-      }
-    },
+async carregarCurtidas() {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`http://localhost:3002/curtidas`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) throw new Error("Erro ao buscar curtidas")
+
+    const data = await res.json()
+
+    this.musicasFavoritas = data.map(c => ({
+      id: c.musica._id,
+      nome: c.musica.nome,
+      cantores: c.musica.cantores || [],
+      cover: c.musica.foto,
+      url: c.musica.link,
+      duration: c.musica.duracao
+    }))
+
+    this.estatisticas.musicasCurtidas = data.length
+    this.tabs[1].count = data.length
+
+  } catch (error) {
+    console.error(error)
+  }
+},
    
     carregarArtistas() {
       this.artistasFavoritos = [
@@ -1241,64 +1299,146 @@ export default {
       this.usuario.avatar = this.defaultAvatar
     },
 
-    triggerAvatarUpload() {
-      this.$refs.avatarInput.click()
-    },
+ triggerAvatarUpload() {
+  if (this.$refs.avatarInput) {
+    this.$refs.avatarInput.click()
+  }
+},
 
-    triggerCoverUpload() {
-      this.$refs.coverInput.click()
-    },
+triggerCoverUpload() {
+  if (this.$refs.coverInput) {
+    this.$refs.coverInput.click()
+  }
+},
 
-    handleAvatarChange(event) {
-      const file = event.target.files[0]
-      if (!file) return
-     
-      if (!file.type.startsWith('image/')) {
-        this.showToast({ title: "Erro", message: "Selecione uma imagem válida", type: "error", icon: "fa fa-exclamation-circle" })
-        return
-      }
-     
-      if (file.size > 5 * 1024 * 1024) {
-        this.showToast({ title: "Erro", message: "Imagem deve ter no máximo 5MB", type: "error", icon: "fa fa-exclamation-circle" })
-        return
-      }
-     
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        this.editForm.avatar = e.target.result
-        this.showToast({ title: "Imagem carregada", message: "Avatar atualizado no preview", type: "success", icon: "fa fa-check" })
-      }
-      reader.readAsDataURL(file)
-    },
 
-    handleCoverChange(event) {
-      const file = event.target.files[0]
-      if (!file) return
-     
-      if (file.size > 10 * 1024 * 1024) {
-        this.showToast({ title: "Erro", message: "Capa deve ter no máximo 10MB", type: "error", icon: "fa fa-exclamation-circle" })
-        return
-      }
-     
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        this.editForm.cover = e.target.result
-        this.showToast({ title: "Imagem carregada", message: "Capa atualizada no preview", type: "success", icon: "fa fa-check" })
-      }
-      reader.readAsDataURL(file)
-    },
+  handleAvatarChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
 
-    openEditModal() {
-      this.editForm = {
-        ...this.usuario,
-        generos: this.usuario.generos || [],
-        mostrarAtividade: this.usuario.mostrarAtividade !== false,
-        perfilPrivado: this.usuario.perfilPrivado || false
-      }
-      this.formErrors = {}
-      this.usernameStatus = { type: '', message: '', icon: '' }
-      this.showEditModal = true
-    },
+  if (!file.type.startsWith('image/')) {
+    this.showToast({
+      title: "Erro",
+      message: "Selecione uma imagem válida",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    this.showToast({
+      title: "Erro",
+      message: "Imagem deve ter no máximo 5MB",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const novoAvatar = e.target.result
+
+    if (!this.showEditModal) {
+      this.openEditModal()
+      this.$nextTick(() => {
+        this.editForm.avatar = novoAvatar
+      })
+    } else {
+      this.editForm.avatar = novoAvatar
+    }
+
+    this.showToast({
+      title: "Imagem carregada",
+      message: "Avatar atualizado no preview",
+      type: "success",
+      icon: "fa fa-check"
+    })
+  }
+
+  reader.readAsDataURL(file)
+  event.target.value = ''
+},
+
+async handleAvatarChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    this.showToast({
+      title: "Erro",
+      message: "Selecione uma imagem válida",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+    return
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    this.showToast({
+      title: "Erro",
+      message: "Avatar original deve ter no máximo 2MB",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+    return
+  }
+
+  try {
+    const novoAvatar = await this.compressImage(file, {
+      maxWidth: 512,
+      maxHeight: 512,
+      quality: 0.78,
+      mimeType: 'image/jpeg'
+    })
+
+    if (!this.showEditModal) {
+      this.openEditModal()
+      this.$nextTick(() => {
+        this.editForm.avatar = novoAvatar
+      })
+    } else {
+      this.editForm.avatar = novoAvatar
+    }
+
+    this.showToast({
+      title: "Imagem carregada",
+      message: "Avatar atualizado no preview",
+      type: "success",
+      icon: "fa fa-check"
+    })
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível processar o avatar",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  } finally {
+    event.target.value = ''
+  }
+},
+
+openEditModal() {
+  this.editForm = {
+    nome: this.usuario.nome || '',
+    username: this.usuario.username || '',
+    email: this.usuario.email || '',
+    bio: this.usuario.bio || '',
+    avatar: this.usuario.avatar || null,
+    cover: this.usuario.cover || null,
+    localizacao: this.usuario.localizacao || '',
+    website: this.usuario.website || '',
+    generos: [...(this.usuario.generos || [])],
+    perfilPrivado: !!this.usuario.perfilPrivado,
+    mostrarAtividade: this.usuario.mostrarAtividade !== false
+  }
+
+  this.formErrors = {}
+  this.usernameStatus = { type: '', message: '', icon: '' }
+  this.showEditModal = true
+},
 
     closeEditModal() {
       this.showEditModal = false
@@ -1353,60 +1493,81 @@ export default {
       return Object.keys(this.formErrors).length === 0
     },
 
-    async saveProfile() {
-      if (!this.validateForm()) return
-     
-      this.saving = true
-     
-      try {
-        const response = await axios.put(
-          `http://localhost:3002/usuarios/${this.usuario.id}`,
-          {
-            nome: this.editForm.nome,
-            username: this.editForm.username,
-            bio: this.editForm.bio,
-            email: this.editForm.email,
-            localizacao: this.editForm.localizacao,
-            avatar: this.editForm.avatar,
-            cover: this.editForm.cover,
-            website: this.editForm.website,
-            generos: this.editForm.generos,
-            perfilPrivado: this.editForm.perfilPrivado,
-            mostrarAtividade: this.editForm.mostrarAtividade
-          }
-        )
-       
-        const updatedUser = response.data.user
-        this.usuario = { ...this.usuario, ...updatedUser }
-       
-        localStorage.setItem('usuario', JSON.stringify(this.usuario))
-        localStorage.setItem('usuario_perfil', JSON.stringify(this.usuario))
-       
-        window.dispatchEvent(new CustomEvent('user-profile-updated', {
-          detail: this.usuario
-        }))
+ async saveProfile() {
+  if (!this.validateForm()) return
 
-        this.saving = false
-        this.closeEditModal()
-       
-        this.showToast({
-          title: "Perfil atualizado! 🎉",
-          message: "Suas alterações foram salvas com sucesso",
-          type: "success",
-          icon: "fa fa-check-circle",
-          duration: 4000
-        })
-       
-      } catch (error) {
-        this.saving = false
-        this.showToast({
-          title: "Erro ao salvar",
-          message: error.response?.data?.error || "Tente novamente mais tarde",
-          type: "error",
-          icon: "fa fa-exclamation-circle"
-        })
-      }
-    },
+  this.saving = true
+
+  try {
+    if (!this.usuario?.id) {
+      throw new Error("Usuário não identificado")
+    }
+
+    const payload = {
+      nome: this.editForm.nome,
+      username: this.editForm.username,
+      bio: this.editForm.bio,
+      email: this.editForm.email,
+      localizacao: this.editForm.localizacao
+    }
+
+    if (this.editForm.avatar !== this.usuario.avatar) {
+      payload.avatar = this.editForm.avatar ?? null
+    }
+
+    if (this.editForm.cover !== this.usuario.cover) {
+      payload.cover = this.editForm.cover ?? null
+    }
+
+    if (this.editForm.website !== this.usuario.website) {
+      payload.website = this.editForm.website ?? ''
+    }
+
+    if (JSON.stringify(this.editForm.generos || []) !== JSON.stringify(this.usuario.generos || [])) {
+      payload.generos = this.editForm.generos ?? []
+    }
+
+    if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
+      payload.perfilPrivado = !!this.editForm.perfilPrivado
+    }
+
+    if (this.editForm.mostrarAtividade !== this.usuario.mostrarAtividade) {
+      payload.mostrarAtividade = this.editForm.mostrarAtividade !== false
+    }
+
+    const response = await axios.put(
+      `http://localhost:3002/usuarios/${this.usuario.id}`,
+      payload,
+      this.getAuthConfig()
+    )
+
+    const updatedUser = response.data.user
+      ? { ...this.usuario, ...response.data.user }
+      : { ...this.usuario, ...payload }
+
+    this.usuario = updatedUser
+    this.persistUsuario(this.usuario)
+
+    this.closeEditModal()
+
+    this.showToast({
+      title: "Perfil atualizado! 🎉",
+      message: "Suas alterações foram salvas com sucesso",
+      type: "success",
+      icon: "fa fa-check-circle",
+      duration: 4000
+    })
+  } catch (error) {
+    this.showToast({
+      title: "Erro ao salvar",
+      message: error.response?.data?.error || error.message || "Tente novamente mais tarde",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  } finally {
+    this.saving = false
+  }
+},
 
     showMoreOptions() {
       this.showContextMenu = !this.showContextMenu
@@ -1474,9 +1635,10 @@ export default {
       this.deleting = true
      
       try {
-        await axios.delete(`http://localhost:3002/usuarios/${this.usuario.id}`, {
-          data: { senha: this.deletePassword }
-        })
+       await axios.delete(`http://localhost:3002/usuarios/${this.usuario.id}`, {
+  data: { senha: this.deletePassword },
+  ...this.getAuthConfig()
+})
        
         // Limpar dados locais
         localStorage.removeItem('usuario')
@@ -1516,46 +1678,50 @@ export default {
       })
     },
 
-    shareProfile() {
-      const profileUrl = `${window.location.origin}/perfil/${this.usuario.username || this.usuario.id}`
-     
-      if (navigator.share) {
-        navigator.share({
-          title: `Perfil de ${this.usuario.nome}`,
-          text: `Confira o perfil musical de ${this.usuario.nome}! 🎵`,
-          url: profileUrl
-        })
-      } else {
-        navigator.clipboard.writeText(profileUrl)
-        this.showToast({
-          title: "Link copiado! 📋",
-          message: "O link do perfil foi copiado para a área de transferência",
-          type: "success",
-          icon: "fa fa-link"
-        })
-      }
-    },
+ shareProfile() {
+  const profileUrl = `${window.location.origin}/perfil/${this.usuario.username || this.usuario.id}`
+ 
+  if (navigator.share) {
+    navigator.share({
+      title: `Perfil de ${this.usuario.nome}`,
+      text: `Confira o perfil musical de ${this.usuario.nome}! 🎵`,
+      url: profileUrl
+    })
+  } else {
+    navigator.clipboard.writeText(profileUrl)
+    this.showToast({
+      title: "Link copiado! 📋",
+      message: "O link do perfil foi copiado para a área de transferência",
+      type: "success",
+      icon: "fa fa-link"
+    })
+  }
+},
 
     playMusic(musica) {
       this.currentPlayingId = musica.id
      
-      const playerSong = {
-        id: musica.id,
-        title: musica.title,
-        artist: musica.artist,
-        cover: musica.cover,
-        url: musica.preview || musica.url,
-        duration: musica.duration || 30,
-        type: 'profile'
-      }
+const playerSong = {
+  id: musica.id,
+  title: musica.nome,
+artist: musica.cantores && musica.cantores.length
+  ? musica.cantores.map(c => c.nome).join(', ')
+  : 'Artista desconhecido',
+  cover: musica.cover,
+  url: musica.preview || musica.url,
+  duration: musica.duration || 30,
+  type: 'profile'
+}
      
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
           playlist: this.musicasFavoritas.map(m => ({
             id: m.id,
-            title: m.title,
-            artist: m.artist,
+        title: m.nome,
+artist: m.cantores && m.cantores.length
+  ? m.cantores.map(c => c.nome).join(', ')
+  : 'Artista desconhecido',
             cover: m.cover,
             url: m.preview || m.url,
             duration: m.duration || 30,
@@ -1601,10 +1767,11 @@ export default {
         localStorage.setItem("curtidas", JSON.stringify(this.musicasFavoritas))
         this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
         this.tabs[1].count = this.musicasFavoritas.length
-       
+      
+
         this.showToast({
           title: "Removida dos curtidos 💔",
-          message: `"${musica.title}" foi removida da sua coleção`,
+          message: `"${musica.nome}" foi removida da sua coleção`,
           type: "info",
           icon: "fa fa-heart-broken"
         })
@@ -1630,12 +1797,12 @@ export default {
     },
 
     addMusicToPlaylist(playlist) {
-      this.selectedPlaylist = playlist.id
+      this.selectedPlaylist = playlist._id
      
       setTimeout(() => {
         this.showToast({
           title: "Adicionada! ✅",
-          message: `"${this.musicToAdd.title}" foi adicionada à playlist "${playlist.nome}"`,
+          message: `"${this.musicToAdd.nome}" foi adicionada à playlist "${playlist.nome}"`,
           type: "success",
           icon: "fa fa-check"
         })
@@ -1645,15 +1812,10 @@ export default {
 
     createAndAdd() {
       this.closeAddToPlaylistModal()
-      this.createPlaylist()
     },
 
     openPlaylist(playlist) {
-      this.$router.push(`/playlist/${playlist.id}`)
-    },
-
-    createPlaylist() {
-      this.$router.push('/playlist/create')
+      this.$router.push(`/playlist/${playlist._id}`)
     },
 
     togglePlaylistLike(playlist) {
@@ -1782,7 +1944,10 @@ export default {
     },
 
     showToast(options) {
-      if (this.toastTimeout) clearTimeout(this.toastTimeout)
+     if (this.toastTimeout) {
+  clearTimeout(this.toastTimeout)
+  this.toastTimeout = null
+}
      
       this.toast = {
         show: true,
@@ -1822,39 +1987,37 @@ export default {
   height: 350px;
   position: relative;
   overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
   padding: 24px;
 }
 
 .cover-gradient {
+  pointer-events: none;
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.6) 60%, rgba(15, 23, 42, 0.95) 100%);
 }
 
 .cover-actions {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  gap: 12px;
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 30;
 }
 
 .btn-cover-action {
-  padding: 10px 20px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  color: white;
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
 }
 
 .btn-cover-action:hover {
@@ -2070,6 +2233,21 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
+}
+.btn-cover-action {
+  padding: 10px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
 }
 
 .profile-actions {

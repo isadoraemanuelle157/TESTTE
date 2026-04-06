@@ -263,11 +263,12 @@ export default {
           }
         )
 
+const userData = response.data.user
+const token = response.data.token
 
-        const userData = response.data.user
-       
-        // Salvar dados temporários (ainda não faz login definitivo)
-        localStorage.setItem("usuario_temp", JSON.stringify(userData))
+localStorage.setItem("usuario_temp", JSON.stringify(userData))
+localStorage.setItem("token", token) // 🔥 ADICIONAR
+
 
 
         this.mensagem = "Conta criada! Complete seu perfil..."

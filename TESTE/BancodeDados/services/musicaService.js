@@ -129,6 +129,17 @@ const updateMusica = async (id, data) => {
     throw err
   }
 }
+const searchMusicas = async (query) => {
+  if (!query) return []
+
+  return await Musica.find({
+    nome: { $regex: query, $options: 'i' }
+  })
+    .populate('cantores', 'nome')
+    .populate('albuns', 'nome')
+    .limit(10)
+}
+
 
 const deleteMusica = async (id) => {
   const musica = await Musica.findById(id)
@@ -156,5 +167,6 @@ module.exports = {
   getMusicas,
   getMusicaById,
   updateMusica,
-  deleteMusica
+  deleteMusica,
+  searchMusicas
 }

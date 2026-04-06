@@ -652,7 +652,6 @@ export default {
   mounted() {
     document.addEventListener('click', this.handleClickOutside)
     this.loadInitialData()
-    this.loadLikedTracks() // Carregar curtidas ao iniciar
   },
 
   beforeUnmount() {
@@ -663,51 +662,61 @@ export default {
     // ===== SISTEMA DE CURTIDAS =====
     
     // Carregar músicas curtidas do localStorage
-    loadLikedTracks() {
-      const stored = localStorage.getItem("curtidas")
-      if (stored) {
-        this.likedTracks = JSON.parse(stored)
+   async loadLikedTracks() {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`http://localhost:3002/curtidas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
-    
-    // Salvar músicas curtidas no localStorage
-    saveLikedTracks() {
-      localStorage.setItem("curtidas", JSON.stringify(this.likedTracks))
-    },
+    })
+
+    const data = await res.json()
+
+    // 🔥 salvar só os IDs das músicas
+    this.likedTracks = data.map(c => c.musica?._id || c.musica?.id)
+
+  } catch (err) {
+    console.error(err)
+  }
+},
     
     // Verificar se uma música está curtida
-    isTrackLiked(trackId) {
-      return this.likedTracks.some(t => t.id === trackId)
-    },
-    
+  isTrackLiked(trackId) {
+  return this.likedTracks.some(id => String(id) === String(trackId))
+},
     // Curtir/descurtir uma música
-    toggleLikeTrack(track) {
-      const index = this.likedTracks.findIndex(t => t.id === track.id)
-      
-      if (index === -1) {
-        // Adicionar aos curtidos
-        const trackToSave = {
-          id: track.id,
-          title: track.title || this.getResultTitle(track),
-          artist: track.artist?.name || this.getResultSubtitle(track),
-          album: track.album?.title || track.album,
-          duration: this.formatDuration(track.duration),
-          cover: this.getBestImage(track),
-          likedAt: new Date().toISOString()
+   async toggleLikeTrack(track) {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(
+      `http://localhost:3002/musicas/${track.id}/curtir`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-        
-        this.likedTracks.push(trackToSave)
-        this.showToast(`"${trackToSave.title}" adicionada aos curtidos!`, "success")
-      } else {
-        // Remover dos curtidos
-        const removed = this.likedTracks.splice(index, 1)[0]
-        this.showToast(`"${removed.title}" removida dos curtidos`, "info")
       }
-      
-      // Salvar no localStorage
-      this.saveLikedTracks()
-    },
-    
+    )
+
+    const data = await res.json()
+
+    if (data.liked) {
+      this.likedTracks.push(track.id)
+
+      this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+    } else {
+      this.likedTracks = this.likedTracks.filter(id => id != track.id)
+
+      this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
+    }
+
+  } catch (err) {
+    console.error(err)
+  }
+},
     // Formatar duração
     formatDuration(seconds) {
       if (!seconds) return "3:00"
@@ -745,6 +754,59 @@ export default {
         console.error('Erro ao carregar artistas:', error)
       }
     },
+    async searchAll(query) {
+  this.isLoading = true
+
+  try {
+    // 🔥 BUSCA LOCAL (SEU BACKEND)
+    const localPromise = fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`)
+      .then(r => r.json())
+
+    // 🔥 BUSCA DEEZER
+    const deezerPromise = Promise.all([
+      fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(query)}&limit=20`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}&limit=10`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/album?q=${encodeURIComponent(query)}&limit=10`).then(r => r.json())
+    ])
+
+    const [localMusicas, [tracks, artists, albums]] = await Promise.all([
+      localPromise,
+      deezerPromise
+    ])
+
+    let results = []
+
+    // 🔥 FORMATAR MUSICAS DO SEU BANCO
+    if (localMusicas && Array.isArray(localMusicas)) {
+      const formattedLocal = localMusicas.map(m => ({
+        id: m._id,
+        title: m.nome,
+        artist: { name: m.cantores?.[0]?.nome || 'Artista' },
+        album: { title: m.albuns?.[0]?.nome || '' },
+        duration: 180,
+        preview: m.link,
+        cover: m.foto,
+        type: 'track',
+        source: 'local' // 🔥 IMPORTANTE
+      }))
+
+      results.push(...formattedLocal)
+    }
+
+    // 🔥 DEEZER
+    if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
+    if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist' })))
+    if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album' })))
+
+    this.searchResults = results
+
+  } catch (err) {
+    console.error(err)
+    this.searchResults = []
+  } finally {
+    this.isLoading = false
+  }
+},
 
     async searchDeezer(query) {
       this.isLoading = true
@@ -793,18 +855,25 @@ export default {
       return typeMap[item.type] || item.type
     },
 
-    getBestImage(item) {
-      if (item.type === 'track') {
-        return item.album?.cover_medium || item.album?.cover
-      }
-      if (item.type === 'artist') {
-        return item.picture_medium || item.picture
-      }
-      if (item.type === 'album') {
-        return item.cover_medium || item.cover
-      }
-      return ''
-    },
+   getBestImage(item) {
+  // 🔥 músicas do seu banco
+  if (item.source === 'local') {
+    return item.cover
+  }
+
+  // 🔥 Deezer
+  if (item.type === 'track') {
+    return item.album?.cover_medium || item.album?.cover
+  }
+  if (item.type === 'artist') {
+    return item.picture_medium || item.picture
+  }
+  if (item.type === 'album') {
+    return item.cover_medium || item.cover
+  }
+
+  return ''
+},
 
     getIconForType(type) {
       const icons = {
@@ -845,7 +914,7 @@ export default {
       if (this.searchTimeout) clearTimeout(this.searchTimeout)
       this.searchTimeout = setTimeout(() => {
         if (this.searchQuery.length > 2) {
-          this.searchDeezer(this.searchQuery)
+          this.searchAll(this.searchQuery)
         }
       }, 300)
     },
@@ -890,7 +959,8 @@ export default {
       this.searchHistory = [this.searchQuery, ...this.searchHistory.filter(h => h !== this.searchQuery)].slice(0, 10)
       localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory))
       
-      await this.searchDeezer(this.searchQuery)
+      await this.searchAll(this.searchQuery)
+
     },
 
     searchAndGo(term) {
@@ -931,17 +1001,17 @@ export default {
       }))
     },
 
-    convertToPlayerFormat(track) {
-      return {
-        id: track.id,
-        title: this.getResultTitle(track),
-        artist: track.artist?.name || 'Artista desconhecido',
-        cover: this.getBestImage(track),
-        url: track.preview || track.link,
-        duration: track.duration || 30,
-        type: track.type || 'search'
-      }
-    },
+  convertToPlayerFormat(track) {
+  return {
+    id: track.id,
+    title: this.getResultTitle(track),
+    artist: track.artist?.name || 'Artista desconhecido',
+    cover: this.getBestImage(track),
+    url: track.preview || track.link, // 🔥 local usa link
+    duration: track.duration || 30,
+    type: track.type || 'search'
+  }
+},
     
     // ===== TOAST =====
     showToast(message, type = "success") {

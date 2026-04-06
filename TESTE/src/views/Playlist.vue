@@ -186,7 +186,7 @@
       </button>
       
       <!-- Header da Playlist -->
-      <div class="playlist-header">
+      <div class="playlist-header" :class="{ 'edit-mode-active': editMode }">
         <div class="playlist-cover" @click="editMode && triggerImageUpload()">
           <img v-if="currentPlaylist.image" :src="currentPlaylist.image" alt="Capa" />
           <div v-else class="cover-default large">
@@ -194,6 +194,7 @@
           </div>
           <div v-if="editMode" class="edit-overlay">
             <i class="fa fa-pencil"></i>
+            <span>Alterar capa</span>
           </div>
           <input 
             v-if="editMode"
@@ -206,50 +207,71 @@
         </div>
 
         <div class="playlist-info">
-          <span class="playlist-type">
+          <span class="playlist-type" v-if="!editMode">
             <i :class="currentPlaylist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
             Playlist {{ currentPlaylist.isPublic ? 'pública' : 'privada' }}
           </span>
           
+          <!-- MODO EDIÇÃO: Header editável -->
+          <div v-if="editMode" class="edit-mode-indicator">
+            <i class="fa fa-pencil-square-o"></i>
+            <span>Editando playlist</span>
+          </div>
+
           <h1 v-if="!editMode" class="playlist-title">{{ currentPlaylist.title }}</h1>
-          <input 
-            v-else
-            type="text" 
-            v-model="editTitle" 
-            class="edit-title-input"
-            maxlength="100"
-          />
+          
+          <!-- Input de título estilizado no modo edição -->
+          <div v-else class="edit-field title-field">
+            <label>Nome da playlist</label>
+            <input 
+              type="text" 
+              v-model="editTitle" 
+              class="edit-title-input"
+              maxlength="100"
+              placeholder="Nome da playlist"
+            />
+            <span class="edit-char-count">{{ editTitle.length }}/100</span>
+          </div>
           
           <p v-if="!editMode && currentPlaylist.description" class="playlist-description">
             {{ currentPlaylist.description }}
           </p>
-          <textarea 
-            v-else-if="editMode"
-            v-model="editDescription" 
-            class="edit-desc-input"
-            maxlength="300"
-            rows="2"
-            placeholder="Descrição opcional..."
-          ></textarea>
-          <div v-if="editMode" class="privacy-edit">
-  <label>Privacidade:</label>
-
-  <button 
-    :class="{ active: editIsPublic }"
-    @click="editIsPublic = true"
-  >
-    🌍 Pública
-  </button>
-
-  <button 
-    :class="{ active: !editIsPublic }"
-    @click="editIsPublic = false"
-  >
-    🔒 Privada
-  </button>
-</div>
           
-          <div class="playlist-meta">
+          <!-- Textarea de descrição estilizada no modo edição -->
+          <div v-else-if="editMode" class="edit-field desc-field">
+            <label>Descrição</label>
+            <textarea 
+              v-model="editDescription" 
+              class="edit-desc-input"
+              maxlength="300"
+              rows="2"
+              placeholder="Descrição opcional..."
+            ></textarea>
+            <span class="edit-char-count">{{ editDescription.length }}/300</span>
+          </div>
+          
+          <!-- Privacidade no modo edição -->
+          <div v-if="editMode" class="edit-privacy-section">
+            <label>Privacidade</label>
+            <div class="edit-privacy-options">
+              <button 
+                :class="{ active: editIsPublic }"
+                @click="editIsPublic = true"
+              >
+                <i class="fa fa-globe"></i>
+                <span>Pública</span>
+              </button>
+              <button 
+                :class="{ active: !editIsPublic }"
+                @click="editIsPublic = false"
+              >
+                <i class="fa fa-lock"></i>
+                <span>Privada</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="playlist-meta" v-if="!editMode">
             <span class="meta-item author">
               <i class="fa fa-user-circle"></i> {{ currentPlaylist.authorName }}
             </span>
@@ -272,9 +294,11 @@
           </button>
           <template v-else>
             <button class="btn-text" @click="cancelEdit">
+              <i class="fa fa-times"></i>
               Cancelar
             </button>
             <button class="btn-primary small" @click="saveEdit">
+              <i class="fa fa-check"></i>
               Salvar
             </button>
           </template>
@@ -283,22 +307,22 @@
 
       <!-- Controles - SEMPRE VISÍVEIS -->
       <div class="playlist-controls">
-        <button 
-          class="btn-play-big" 
-          @click="playAll" 
-          :disabled="!currentPlaylist.songs.length"
-          :title="!currentPlaylist.songs.length ? 'Adicione músicas para tocar' : 'Tocar playlist'"
-        >
-          <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
-        </button>
+       <button 
+  class="btn-play-big" 
+  @click="playAll" 
+  :disabled="!currentPlaylist.songs.length"
+  :title="!currentPlaylist.songs.length ? 'Adicione músicas para tocar' : 'Tocar playlist'"
+>
+  <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
+</button>
         
-        <button 
-          class="btn-icon" 
-          @click="toggleLike" 
-          :class="{ liked: currentPlaylist.isLiked }"
+        <button  
+  class="btn-icon" 
+  @click.stop="toggleFavorita"
+          :class="{ liked: currentPlaylist.isFavorita }"
           title="Favoritar playlist"
         >
-          <i :class="currentPlaylist.isLiked ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+          <i :class="currentPlaylist.isFavorita ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
         </button>
         
         <!-- DROPDOWN DE OPÇÕES CORRIGIDO -->
@@ -341,7 +365,7 @@
             type="text" 
             v-model="searchQuery" 
             :placeholder="currentPlaylist.songs.length === 0 ? 'Busque uma música no Deezer...' : 'Buscar músicas, artistas no Deezer...'"
-            @input="debouncedSearch"
+           @input="debouncedSearch"
             @focus="searchFocused = true"
             @blur="searchFocused = false"
           />
@@ -541,6 +565,7 @@ export default {
       
       currentView: 'list',
       playlists: [],
+      favoritas: [],
       currentPlaylist: null,
       
       // Modal de exclusão de playlist
@@ -600,29 +625,31 @@ export default {
   },
 
   computed: {
-    totalDuration() {
-      if (!this.currentPlaylist || this.currentPlaylist.songs.length === 0) return ""
-      const totalSeconds = this.currentPlaylist.songs.reduce((acc, s) => {
-        const parts = s.duration.split(':')
-        if (parts.length === 2) {
-          const [m, sec] = parts.map(Number)
-          return acc + (m * 60 + sec)
-        }
-        return acc
-      }, 0)
-      
-      const hours = Math.floor(totalSeconds / 3600)
-      const mins = Math.floor((totalSeconds % 3600) / 60)
-      
-      if (hours > 0) {
-        return `${hours}h ${mins}min`
-      }
-      return `${mins}min`
+   totalDuration() {
+  if (!this.currentPlaylist || this.currentPlaylist.songs.length === 0) return ""
+
+  const totalSeconds = this.currentPlaylist.songs.reduce((acc, s) => {
+    const duration = s.duration || s.duracao
+
+    if (!duration || typeof duration !== 'string' || !duration.includes(':')) {
+      return acc
     }
+
+    const [m, sec] = duration.split(':').map(Number)
+    return acc + ((m || 0) * 60 + (sec || 0))
+  }, 0)
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const mins = Math.floor((totalSeconds % 3600) / 60)
+
+  return hours > 0 ? `${hours}h ${mins}min` : `${mins}min`
+}
+
   },
 
- mounted() {
-  this.loadPlaylists() // ← novo
+ async mounted() {
+  await this.loadPlaylists()   // 🔥 espera carregar playlists
+  await this.loadFavoritas()   // 🔥 só depois marca favoritas
   this.initAudioPlayer()
 },
 
@@ -744,6 +771,21 @@ export default {
         this.isPlaying = false
       }
     },
+    normalizeSong(song) {
+  if (!song) return null
+
+  return {
+    id: song._id || song.id,
+    deezerId: song.deezerId || song._id || song.id,
+    title: song.title || song.nome || 'Sem título',
+    artist: song.artist || (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
+    album: song.album || song.albuns?.[0]?.nome || 'Sem álbum',
+    duration: song.duration || song.duracao || '0:00',
+    cover: song.cover || song.foto || '',
+    preview: song.preview || song.link || '',
+    isFromDB: song.isFromDB ?? true
+  }
+},
     
     togglePlay() {
       if (!this.currentTrack && this.currentPlaylist?.songs.length > 0) {
@@ -825,9 +867,10 @@ async createPlaylist() {
   this.isLoading = true
 
   try {
-    const user = JSON.parse(localStorage.getItem('usuario'))
+  const user = JSON.parse(localStorage.getItem('usuario'))
+const userId = user?._id || user?.id
 
-if (!user || !user.id) {
+if (!userId) {
   this.showToast({
     title: 'Erro',
     message: 'Usuário não autenticado',
@@ -835,22 +878,28 @@ if (!user || !user.id) {
   })
   return
 }
-
+const token = localStorage.getItem("token")
 const res = await fetch('http://localhost:3002/playlists', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json',
+   'Authorization': `Bearer ${token}`
+},
   body: JSON.stringify({
     nome: this.playlistTitle,
     descricao: this.playlistDescription,
     capa: this.playlistImage,
     publica: this.isPublic,
-    usuarioId: user.id
   })
 })
 
-    const data = await res.json()
+const data = await res.json()
 
-    await this.loadPlaylists()
+await this.loadPlaylists()
+
+// 🔥 AVISA O PERFIL
+window.dispatchEvent(new Event('playlist-updated'))
+this.backToList()
+
 
     this.showToast({
       title: 'Sucesso!',
@@ -874,33 +923,76 @@ const res = await fetch('http://localhost:3002/playlists', {
 },
 
 async loadPlaylists() {
-const user = JSON.parse(localStorage.getItem('usuario'))
+  const user = JSON.parse(localStorage.getItem('usuario'))
+const userId = user?._id || user?.id
 
-const userId = user?.id || user?._id
 
-if (!userId) {
-  this.showToast({
-    title: 'Erro',
-    message: 'Usuário não autenticado',
-    type: 'error'
-  })
-  return
-}
+  if (!userId) {
+    this.showToast({
+      title: 'Erro',
+      message: 'Usuário não autenticado',
+      type: 'error'
+    })
+    return
+  }
 
-  const res = await fetch(`http://localhost:3002/playlists?usuarioId=${user.id}`)
+ const token = localStorage.getItem("token")
+
+const res = await fetch(`http://localhost:3002/playlists`, {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
+
   const data = await res.json()
 
-  this.playlists = data.map(p => ({
-    id: p._id,
-    title: p.nome,
-    description: p.descricao,
-    image: p.capa,
+const safeArray = Array.isArray(data) ? data : []
+
+this.playlists = safeArray.map(p => ({
+    id: p._id || p.id,
+    title: p.nome || p.title,
+    description: p.descricao || '',
+    image: p.capa || null,
     isPublic: p.publica,
-    songs: p.musicas || [],
-    authorName: user.nome
+     isFavorita: false, // 🔥 IMPORTANTE
+  totalCurtidas: 0,
+    songs: Array.isArray(p.musicas)
+      ? p.musicas.map(m => this.normalizeSong(m)).filter(Boolean)
+      : [],
+    authorName: user.nome || 'Você'
   }))
 },
     
+async loadFavoritas() {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`http://localhost:3002/favoritas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    const data = await res.json()
+
+    this.favoritas = data.map(f => ({
+      id: f.playlist._id,
+      title: f.playlist.nome,
+      description: f.playlist.descricao,
+      image: f.playlist.capa,
+      songs: f.playlist.musicas || []
+    }))
+
+    // 🔥 marca playlists como favoritas
+    this.playlists.forEach(p => {
+      p.isFavorita = this.favoritas.some(f => f.id === p.id)
+    })
+
+  } catch (err) {
+    console.error(err)
+  }
+},
+
     cancelCreate() {
       if (this.playlistTitle.trim() || this.playlistDescription.trim() || this.playlistImage) {
         if (!confirm("Descartar alterações?")) return
@@ -938,20 +1030,26 @@ if (!userId) {
       message: 'O título é obrigatório',
       type: 'warning'
     })
+    window.dispatchEvent(new Event('playlist-updated')) // 🔥 AQUI SIM
     return
   }
 
   try {
-    const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nome: this.editTitle.trim(),
-        descricao: this.editDescription.trim(),
-        capa: this.editImage,
-        publica: this.editIsPublic // 🔥 importante
-      })
-    })
+    const token = localStorage.getItem("token")
+
+   const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    nome: this.editTitle.trim(),
+    descricao: this.editDescription.trim(),
+    capa: this.editImage,
+    publica: this.editIsPublic
+  })
+})
 
     const data = await res.json()
 
@@ -1002,51 +1100,63 @@ if (!userId) {
     
     // ===== BUSCA DEEZER API =====
     debouncedSearch() {
-      clearTimeout(this.searchTimer)
-      this.searchError = null
-      if (this.searchQuery.length < 2) {
-        this.searchResults = []
-        return
-      }
-      this.searchTimer = setTimeout(() => this.searchDeezer(), 400)
-    },
+  clearTimeout(this.searchTimer)
+  this.searchTimer = setTimeout(() => this.searchMusicas(), 400)
+},
     
-    async searchDeezer() {
-      if (this.searchQuery.length < 2) return
-      
-      this.isSearching = true
-      this.searchError = null
-      
-      try {
-        const response = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=10`)
-        
-        if (!response.ok) throw new Error('Erro na busca')
-        
-        const data = await response.json()
-        
-        if (data.error) {
-          throw new Error(data.error.message || 'Erro na API do Deezer')
-        }
-        
-        this.searchResults = data.data.map(track => ({
-          id: track.id,
-          title: track.title,
-          artist: track.artist.name,
-          album: track.album.title,
-          duration: this.formatDuration(track.duration),
-          cover: track.album.cover_small || track.album.cover,
-          preview: track.preview, // URL do preview de 30 segundos
-          deezerId: track.id
-        }))
-        
-      } catch (error) {
-        console.error('Erro na busca Deezer:', error)
-        this.searchError = 'Erro ao buscar músicas. Tente novamente.'
-        this.searchResults = []
-      } finally {
-        this.isSearching = false
-      }
-    },
+   async searchMusicas() {
+  if (this.searchQuery.length < 2) return
+
+  this.isSearching = true
+  this.searchError = null
+
+  try {
+    // 🔥 BUSCA NO SEU BACKEND
+    const res = await fetch(`http://localhost:3002/musicas/search?q=${this.searchQuery}`)
+ const dbMusicas = await res.json()
+
+const safeArray = Array.isArray(dbMusicas) ? dbMusicas : []
+
+const formattedDb = safeArray.map(m => ({
+
+  id: m._id,
+  deezerId: m._id,
+  title: m.nome,
+  artist: m.cantores?.map(c => c.nome).join(', ') || 'Desconhecido',
+  album: m.albuns?.[0]?.nome || 'Sem álbum',
+  duration: m.duracao,
+  cover: m.foto,
+  preview: m.link,
+  isFromDB: true
+}))
+
+
+    // 🔥 DEEZER
+    const response = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=5`)
+    const data = await response.json()
+
+    const deezer = data.data.map(track => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist.name,
+      album: track.album.title,
+      duration: this.formatDuration(track.duration),
+      cover: track.album.cover_small,
+      preview: track.preview,
+      deezerId: track.id,
+      isFromDB: false
+    }))
+
+    // 🔥 JUNTA OS DOIS
+    this.searchResults = [...formattedDb, ...deezer]
+
+  } catch (err) {
+    console.error(err)
+    this.searchError = 'Erro ao buscar músicas'
+  } finally {
+    this.isSearching = false
+  }
+},
     
     formatDuration(seconds) {
       const mins = Math.floor(seconds / 60)
@@ -1065,29 +1175,29 @@ if (!userId) {
     },
     
     // ===== MÚSICAS =====
-    addSong(song) {
-      if (this.isSongAdded(song.id)) {
-        this.showToast({
-          title: 'Ops!',
-          message: 'Esta música já está na playlist',
-          type: 'warning',
-          icon: 'fa fa-info-circle'
-        })
-        return
-      }
-      
-      this.currentPlaylist.songs.push({
-        ...song,
-        addedDate: new Date().toLocaleDateString('pt-BR')
+   async addSong(song) {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (song.isFromDB) {
+      await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${song.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       })
-      
-      this.showToast({
-        title: 'Adicionada!',
-        message: `"${song.title}" foi adicionada à playlist`,
-        type: 'success',
-        icon: 'fa fa-music'
-      })
-    },
+    }
+
+    await this.loadPlaylists()
+    window.dispatchEvent(new Event('playlist-updated'))
+
+    const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
+    this.currentPlaylist = updated
+
+  } catch (err) {
+    console.error(err)
+  }
+},
     
     // ===== REMOÇÃO DE MÚSICA COM MODAL =====
     confirmRemoveSong(index) {
@@ -1139,27 +1249,57 @@ if (!userId) {
     },
     
     // ===== CONTROLES =====
-    async toggleLike() {
+async toggleFavorita() {
   try {
-    const user = JSON.parse(localStorage.getItem('usuario'))
+    const token = localStorage.getItem("token")
 
-    const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}/favorita`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        usuarioId: user.id
-      })
-    })
+    const res = await fetch(
+      `http://localhost:3002/favoritas/${this.currentPlaylist.id}/favoritar`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // 🔥 IMPORTANTE
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tipo: 'playlist' // 🔥 ESSENCIAL
+        })
+      }
+    )
 
     const data = await res.json()
+    console.log('RES FAVORITA:', data)
 
-    this.currentPlaylist.isLiked = data.favoritas.includes(user.id)
+    const favorited = data.favorited
+
+    this.currentPlaylist.isFavorita = favorited
+
+    const playlist = this.playlists.find(p => p.id === this.currentPlaylist.id)
+    if (playlist) playlist.isFavorita = favorited
+
+    if (favorited) {
+      if (!this.favoritas.some(f => f.id === this.currentPlaylist.id)) {
+        this.favoritas.push(this.currentPlaylist)
+      }
+    } else {
+      this.favoritas = this.favoritas.filter(f => f.id !== this.currentPlaylist.id)
+    }
+
+    this.showToast({
+      title: favorited ? 'Favoritada ❤️' : 'Removida 💔',
+      message: this.currentPlaylist.title,
+      type: 'success'
+    })
 
   } catch (err) {
     console.error(err)
+    this.showToast({
+      title: 'Erro',
+      message: 'Erro ao favoritar playlist',
+      type: 'error'
+    })
   }
 },
-    
     // ===== DROPDOWN OPÇÕES =====
     toggleOptions() {
       this.showOptions = !this.showOptions
@@ -1212,10 +1352,14 @@ if (!userId) {
     
     async executeDelete() {
   try {
-    await fetch(`http://localhost:3002/playlists/${this.playlistToDelete.id}`, {
-      method: 'DELETE'
-    })
+   const token = localStorage.getItem("token")
 
+await fetch(`http://localhost:3002/playlists/${this.playlistToDelete.id}`, {
+  method: 'DELETE',
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
     this.playlists = this.playlists.filter(p => p.id !== this.playlistToDelete.id)
 
     this.showToast({
@@ -1223,7 +1367,7 @@ if (!userId) {
       message: 'Playlist removida do banco',
       type: 'success'
     })
-
+window.dispatchEvent(new Event('playlist-updated'))
     this.backToList()
 
   } catch (err) {
@@ -1277,18 +1421,253 @@ if (!userId) {
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
+/* ========== CORREÇÃO DO ESPAÇO À DIREITA ========== */
 .playlist-container {
   min-height: 100vh;
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   padding: 32px;
-  width: calc(90% - 260px);
-  max-width: calc(90% - 260px);
+  width: calc(100% - 260px);
   margin-left: 260px;
-  margin-right: auto;
+  margin-top: 35px;
   box-sizing: border-box;
   position: relative;
+  /* Garante que não ultrapasse a viewport */
+  overflow-x: hidden;
+}
+
+/* ========== MODO DE EDIÇÃO APRIMORADO ========== */
+
+/* Indicador visual de modo edição */
+.edit-mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  animation: pulse-edit 2s infinite;
+  width: fit-content;
+}
+
+@keyframes pulse-edit {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+/* Container dos campos de edição */
+.edit-field {
+  position: relative;
+  margin-bottom: 16px;
+  animation: slideIn 0.3s ease;
+}
+
+.edit-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* Input de título estilizado */
+.edit-title-input {
+  width: 100%;
+  max-width: 500px;
+  font-size: 28px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(37, 99, 235, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #f8fafc;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.edit-title-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 4px 20px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Textarea de descrição estilizada */
+.edit-desc-input {
+  width: 100%;
+  max-width: 500px;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(37, 99, 235, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #f8fafc;
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.edit-desc-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 4px 20px rgba(37, 99, 235, 0.2);
+}
+
+/* Contador de caracteres nos inputs de edição */
+.edit-char-count {
+  position: absolute;
+  right: 12px;
+  bottom: -20px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Seção de privacidade no modo edição */
+.edit-privacy-section {
+  margin-top: 20px;
+  animation: slideIn 0.3s ease 0.1s both;
+}
+
+.edit-privacy-section label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+
+.edit-privacy-options {
+  display: flex;
+  gap: 12px;
+}
+
+.edit-privacy-options button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-privacy-options button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.edit-privacy-options button.active {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.15);
+  color: #f8fafc;
+}
+
+.edit-privacy-options button i {
+  font-size: 16px;
+}
+
+/* Header em modo edição */
+.playlist-header.edit-mode-active {
+  background: rgba(245, 158, 11, 0.03);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(245, 158, 11, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* Overlay de edição na capa melhorado */
+.edit-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.playlist-cover:hover .edit-overlay {
+  opacity: 1;
+}
+
+.edit-overlay i {
+  color: white;
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.edit-overlay span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Botões de ação no header melhorados */
+.header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.btn-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-text:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Animações */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ===== TOAST NOTIFICATION APRIMORADO ===== */
@@ -2146,7 +2525,7 @@ if (!userId) {
 }
 
 .btn-primary.small {
-  padding: 8px 20px;
+  padding: 10px 20px;
   font-size: 13px;
 }
 
@@ -2192,27 +2571,6 @@ if (!userId) {
   object-fit: cover;
 }
 
-.edit-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
-  cursor: pointer;
-}
-
-.playlist-cover:hover .edit-overlay {
-  opacity: 1;
-}
-
-.edit-overlay i {
-  color: white;
-  font-size: 32px;
-}
-
 .playlist-info {
   flex: 1;
   display: flex;
@@ -2237,30 +2595,6 @@ if (!userId) {
   font-weight: 900;
   margin: 0;
   line-height: 1.1;
-}
-
-.edit-title-input {
-  font-size: 32px;
-  font-weight: 900;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(37,99,235,0.5);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: #f8fafc;
-  width: 100%;
-  max-width: 400px;
-}
-
-.edit-desc-input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(37,99,235,0.5);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: #f8fafc;
-  width: 100%;
-  max-width: 400px;
-  resize: none;
-  font-family: inherit;
 }
 
 .playlist-description {
@@ -2291,28 +2625,6 @@ if (!userId) {
 
 .meta-dot {
   color: #475569;
-}
-
-.header-actions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: flex;
-  gap: 12px;
-}
-
-.btn-text {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 16px;
-  transition: color 0.3s;
-}
-
-.btn-text:hover {
-  color: #f8fafc;
 }
 
 /* Controles */
@@ -2797,17 +3109,16 @@ if (!userId) {
 /* ========== RESPONSIVO ========== */
 @media (max-width: 1024px) {
   .playlist-container {
-    width: 90%;
-    margin-left: auto;
-    margin-right: auto;
-    max-width: none;
+    width: 100%;
+    margin-left: 0; /* Remove margem em telas menores */
+    padding: 20px;
   }
 }
 
 @media (max-width: 768px) {
   .playlist-container {
-    padding: 20px;
-    width: 90%;
+    padding: 16px;
+    width: 100%;
   }
 
   .create-form {
@@ -2838,6 +3149,8 @@ if (!userId) {
   .header-actions { 
     position: static;
     margin-top: 16px;
+    width: 100%;
+    justify-content: center;
   }
 
   .playlists-grid {
@@ -2873,6 +3186,20 @@ if (!userId) {
   .options-dropdown {
     left: auto;
     right: 0;
+  }
+
+  /* Ajustes para modo edição em mobile */
+  .edit-title-input {
+    font-size: 22px;
+    max-width: 100%;
+  }
+
+  .edit-desc-input {
+    max-width: 100%;
+  }
+
+  .edit-privacy-options {
+    justify-content: center;
   }
 }
 </style>

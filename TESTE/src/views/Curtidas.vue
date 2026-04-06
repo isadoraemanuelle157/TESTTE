@@ -1,4 +1,4 @@
-'<template>
+<template>
   <div class="curtidas">
     <div class="header">
       <h1><i class="fa fa-heart"></i> Músicas Curtidas</h1>
@@ -46,14 +46,64 @@
             <i class="fa fa-heart"></i>
           </button>
           
-          <button class="btn-more" @click="showOptions(musica)">
-            <i class="fa fa-ellipsis-v"></i>
-          </button>
+          <div class="dropdown-container" ref="dropdownContainers">
+            <button 
+              class="btn-more" 
+              @click="toggleMenu(index, $event)"
+              :class="{ 'active': activeMenuIndex === index }"
+            >
+              <i class="fa fa-ellipsis-v"></i>
+            </button>
+            
+            <!-- Menu Dropdown Moderno -->
+            <transition name="menu-pop">
+              <div 
+                v-if="activeMenuIndex === index" 
+                class="modern-dropdown"
+                :style="getDropdownPosition(index)"
+                ref="dropdownMenus"
+              >
+              
+                
+                <!-- Opções -->
+                <div class="dropdown-options">
+                  <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
+                    <div class="option-icon playlist-icon">
+                      <i class="fa fa-plus-square-o"></i>
+                    </div>
+                    <div class="option-content">
+                      <span class="option-label">Adicionar à playlist</span>
+                      <span class="option-hint">Escolha uma playlist existente</span>
+                    </div>
+                    <i class="fa fa-chevron-right option-arrow"></i>
+                  </button>
+                  
+                  <button class="dropdown-option" @click="favoritarMusica(musica)">
+                    <div class="option-icon favorite-icon">
+                      <i class="fa fa-star-o"></i>
+                    </div>
+                    <div class="option-content">
+                      <span class="option-label">Favoritar</span>
+                      <span class="option-hint">Adicionar aos favoritos especiais</span>
+                    </div>
+                    <i class="fa fa-chevron-right option-arrow"></i>
+                  </button>
+                </div>
+                
+                <!-- Footer -->
+                <div class="dropdown-footer">
+                  <button class="dropdown-close" @click="closeMenu">
+                    <i class="fa fa-times"></i> Fechar
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Toast de Notificação Melhorado -->
+    <!-- Toast de Notificação -->
     <transition name="toast">
       <div v-if="toast.show" class="toast-notification" :class="toast.type">
         <div class="toast-content">
@@ -73,6 +123,48 @@
         </button>
       </div>
     </transition>
+    <!-- MODAL PLAYLIST -->
+<transition name="fade">
+  <div v-if="showPlaylistModal" class="modal-overlay">
+    <div class="modal">
+      
+      <div class="modal-header">
+        <h3>Adicionar à playlist</h3>
+        <button @click="showPlaylistModal = false">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div v-if="playlists.length === 0" class="empty-playlists">
+          <p>Você não tem playlists ainda</p>
+        </div>
+
+        <div v-else class="playlist-list">
+          <div 
+            v-for="playlist in playlists" 
+            :key="playlist._id"
+            class="playlist-item"
+          >
+            <div>
+              <strong>{{ playlist.nome }}</strong>
+              <p>{{ playlist.musicas.length }} músicas</p>
+            </div>
+
+            <button 
+              class="btn-add"
+              @click="adicionarNaPlaylist(playlist._id)"
+            >
+              Adicionar
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</transition>
+
   </div>
 </template>
 
@@ -85,6 +177,11 @@ export default {
       musicas: [],
       ultimaMusicaRemovida: null,
       ultimoIndiceRemovido: null,
+      activeMenuIndex: null,
+      showPlaylistModal: false,
+  playlists: [],
+  musicaSelecionada: null,
+   usuarioId: null,
       toast: {
         show: false,
         title: "",
@@ -97,27 +194,54 @@ export default {
   },
 
   mounted() {
-    this.carregarCurtidas()
-    
-    // Atualizar quando a aba ganhar foco
-    window.addEventListener('focus', this.carregarCurtidas)
-    
-    // Atualizar quando houver mudanças no localStorage
-    window.addEventListener('storage', this.handleStorageChange)
-  },
+    const user = JSON.parse(localStorage.getItem("usuario"))
+this.usuarioId = user?._id || user?.id
+
+  this.carregarCurtidas()
+  window.addEventListener('focus', this.carregarCurtidas)
+  document.addEventListener('click', this.handleClickOutside)
+},
 
   beforeUnmount() {
     window.removeEventListener('focus', this.carregarCurtidas)
     window.removeEventListener('storage', this.handleStorageChange)
+    document.removeEventListener('click', this.handleClickOutside)
   },
 
   methods: {
-    carregarCurtidas() {
-      const stored = localStorage.getItem("curtidas")
-      if (stored) {
-        this.musicas = JSON.parse(stored)
+  async carregarCurtidas() {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`http://localhost:3002/curtidas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      console.error("Erro API:", text)
+      return
+    }
+
+    const data = await res.json()
+
+    // 🔥 adapta pro formato do seu front
+ this.musicas = data.map(c => ({
+  id: c.musica?._id,
+  title: c.musica?.nome,
+  artist: c.musica?.cantores?.[0]?.nome || 'Artista',
+  cover: c.musica?.foto,
+  url: c.musica?.link,
+  duration: 180
+}))
+
+
+  } catch (err) {
+    console.error(err)
+  }
+},
     
     handleStorageChange(e) {
       if (e.key === 'curtidas') {
@@ -125,36 +249,155 @@ export default {
       }
     },
 
-    removerCurtida(musica) {
-      const index = this.musicas.findIndex(m => m.id === musica.id)
-      if (index !== -1) {
-        // Salvar para possível desfazer
-        this.ultimaMusicaRemovida = { ...musica }
-        this.ultimoIndiceRemovido = index
-        
-        // Remover da lista
-        this.musicas.splice(index, 1)
-        localStorage.setItem("curtidas", JSON.stringify(this.musicas))
-        
-        // Mostrar toast melhorado com opção de desfazer
-        this.showToast({
-          title: "Removida dos curtidos",
-          message: `"${musica.title}" foi removida da sua coleção`,
-          type: "info",
-          icon: "fa fa-heart-broken",
-          showUndo: true,
-          duration: 5000
-        })
+    toggleMenu(index, event) {
+      event.stopPropagation()
+      if (this.activeMenuIndex === index) {
+        this.activeMenuIndex = null
+      } else {
+        this.activeMenuIndex = index
       }
     },
 
+    closeMenu() {
+      this.activeMenuIndex = null
+    },
+
+    handleClickOutside(event) {
+      const dropdowns = this.$refs.dropdownContainers
+      if (dropdowns) {
+        const clickedInside = dropdowns.some(container => 
+          container && container.contains(event.target)
+        )
+        if (!clickedInside) {
+          this.activeMenuIndex = null
+        }
+      }
+    },
+
+    getDropdownPosition(index) {
+      // Posicionamento inteligente baseado na posição do card
+      return {}
+    },
+
+   async adicionarAPlaylist(musica) {
+  this.closeMenu()
+  this.musicaSelecionada = musica
+  this.showPlaylistModal = true
+
+  try {
+   const token = localStorage.getItem("token")
+
+const res = await fetch(`http://localhost:3002/playlists`, {
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
+
+    const data = await res.json()
+    this.playlists = data
+  } catch (err) {
+    console.error(err)
+  }
+},
+async adicionarNaPlaylist(playlistId) {
+  try {
+ const token = localStorage.getItem("token")
+
+await fetch(`http://localhost:3002/playlists/${playlistId}/musicas/${this.musicaSelecionada.id}`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${token}`
+  }
+})
+
+    this.showToast({
+      title: "Adicionado!",
+      message: `"${this.musicaSelecionada.title}" foi adicionada à playlist`,
+      type: "success",
+      icon: "fa fa-check"
+    })
+
+    this.showPlaylistModal = false
+
+  } catch (err) {
+    console.error(err)
+  }
+},
+
+   async favoritarMusica(musica) {
+  this.closeMenu()
+
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        tipo: "musica"
+      })
+    })
+
+    if (!res.ok) throw new Error("Erro ao favoritar")
+
+    this.showToast({
+      title: "⭐ Favoritada!",
+      message: `"${musica.title}" adicionada aos favoritos`,
+      type: "success",
+      icon: "fa fa-star"
+    })
+
+    // 🔥 REDIRECIONA PRA FAVORITAS
+    this.$router.push('/favoritas')
+    window.dispatchEvent(new Event('likes-updated'))
+
+  } catch (err) {
+    console.error(err)
+
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível favoritar",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  }
+},
+
+async removerCurtida(musica) {
+  try {
+    const token = localStorage.getItem("token")
+
+   await fetch(`http://localhost:3002/musicas/${musica.id}/curtir`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    // remove do front
+    this.musicas = this.musicas.filter(m => m.id !== musica.id)
+
+    this.showToast({
+      title: "Removida dos curtidos",
+      message: `"${musica.title}" foi removida`,
+      type: "info",
+      icon: "fa fa-heart-broken"
+    })
+    window.dispatchEvent(new Event('likes-updated'))
+
+  } catch (err) {
+    console.error(err)
+  }
+},
+
     desfazerRemocao() {
       if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
-        // Restaurar música na posição original
         this.musicas.splice(this.ultimoIndiceRemovido, 0, this.ultimaMusicaRemovida)
         localStorage.setItem("curtidas", JSON.stringify(this.musicas))
         
-        // Mostrar toast de confirmação
         this.showToast({
           title: "Ação desfeita",
           message: `"${this.ultimaMusicaRemovida.title}" foi restaurada`,
@@ -164,14 +407,12 @@ export default {
           duration: 3000
         })
         
-        // Limpar backup
         this.ultimaMusicaRemovida = null
         this.ultimoIndiceRemovido = null
       }
     },
 
     showToast(options) {
-      // Limpar timeout anterior se existir
       if (this.toastTimeout) {
         clearTimeout(this.toastTimeout)
       }
@@ -185,7 +426,6 @@ export default {
         showUndo: options.showUndo || false
       }
       
-      // Auto-esconder após duração especificada
       const duration = options.duration || 3000
       this.toastTimeout = setTimeout(() => {
         this.toast.show = false
@@ -194,8 +434,6 @@ export default {
 
     playMusic(index) {
       const musica = this.musicas[index]
-      
-      // Converter para formato do player global
       const playerSong = {
         id: musica.id,
         title: musica.title,
@@ -206,7 +444,6 @@ export default {
         type: 'liked'
       }
       
-      // Disparar evento global para o player
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
@@ -232,13 +469,7 @@ export default {
     },
 
     goToSearch() {
-      // Navegar para a página de busca
       this.$router.push('/search')
-    },
-
-    showOptions(musica) {
-      console.log("Opções para:", musica)
-      // Implementar menu de opções (pode ser um dropdown)
     }
   }
 }
@@ -248,10 +479,11 @@ export default {
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
 .curtidas {
+margin-top:28px;
   margin-left: 260px;
   padding: 40px;
   color: #f8fafc;
-  font-family: 'Segoe UI', system-ui;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
 }
@@ -274,6 +506,7 @@ export default {
 
 .header h1 i {
   color: #ec4899;
+  filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.5));
 }
 
 .count {
@@ -282,7 +515,48 @@ export default {
   background: rgba(255,255,255,0.05);
   padding: 8px 16px;
   border-radius: 20px;
+  backdrop-filter: blur(10px);
 }
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  background: #121212;
+  padding: 20px;
+  border-radius: 12px;
+  width: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.playlist-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #1e1e1e;
+  border-radius: 8px;
+}
+
+.btn-add {
+  background: #1db954;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+}
+
 
 /* Estado Vazio */
 .empty-state {
@@ -294,13 +568,14 @@ export default {
 .empty-icon {
   width: 120px;
   height: 120px;
-  background: rgba(236, 72, 153, 0.1);
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.05));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 24px;
   animation: pulse 2s ease-in-out infinite;
+  border: 1px solid rgba(236, 72, 153, 0.3);
 }
 
 @keyframes pulse {
@@ -311,7 +586,7 @@ export default {
 .empty-icon i {
   font-size: 48px;
   color: #ec4899;
-  opacity: 0.7;
+  opacity: 0.9;
 }
 
 .empty-state h3 {
@@ -337,7 +612,7 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 20px rgba(37,99,235,0.3);
 }
 
@@ -387,13 +662,15 @@ export default {
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .music-card:hover {
   background: rgba(255,255,255,0.06);
   border-color: rgba(236, 72, 153, 0.3);
   transform: translateX(4px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 .music-number {
@@ -409,6 +686,7 @@ export default {
   height: 56px;
   border-radius: 8px;
   object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .music-info {
@@ -439,6 +717,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
 .btn-like {
@@ -466,6 +745,11 @@ export default {
   background: rgba(236, 72, 153, 0.2);
 }
 
+/* Container do Dropdown */
+.dropdown-container {
+  position: relative;
+}
+
 .btn-more {
   width: 36px;
   height: 36px;
@@ -481,12 +765,230 @@ export default {
   transition: all 0.3s;
 }
 
-.btn-more:hover {
+.btn-more:hover, .btn-more.active {
   color: #f8fafc;
   background: rgba(255,255,255,0.1);
+  transform: rotate(90deg);
 }
 
-/* ===== TOAST NOTIFICATION MELHORADO ===== */
+/* ===== MENU DROPDOWN MODERNO ===== */
+.modern-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 280px;
+  background: rgba(30, 30, 46, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+  transform-origin: top right;
+}
+
+/* Animação do Menu */
+.menu-pop-enter-active {
+  animation: menuPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.menu-pop-leave-active {
+  animation: menuPopOut 0.2s ease forwards;
+}
+
+@keyframes menuPop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes menuPopOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-10px);
+  }
+}
+
+/* Header do Dropdown */
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(124, 58, 237, 0.1));
+}
+
+.dropdown-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.dropdown-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dropdown-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-artist {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  margin: 0 16px;
+}
+
+/* Opções do Dropdown */
+.dropdown-options {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+}
+
+.dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(4px);
+}
+
+.option-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.playlist-icon {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+  color: #60a5fa;
+}
+
+.favorite-icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+  color: #fbbf24;
+}
+
+.dropdown-option:hover .playlist-icon {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.dropdown-option:hover .favorite-icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.2));
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.option-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.option-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.option-arrow {
+  color: #475569;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.dropdown-option:hover .option-arrow {
+  color: #94a3b8;
+  transform: translateX(4px);
+}
+
+/* Footer do Dropdown */
+.dropdown-footer {
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-close {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.dropdown-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+/* ===== TOAST NOTIFICATION ===== */
 .toast-notification {
   position: fixed;
   bottom: 32px;
@@ -496,10 +998,12 @@ export default {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: #1e1e2e;
+  background: rgba(30, 30, 46, 0.98);
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 
-              0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5), 
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   z-index: 9999;
   min-width: 320px;
   max-width: 480px;
@@ -665,6 +1169,28 @@ export default {
     font-size: 14px;
   }
 
+  .modern-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
   .toast-notification {
     left: 16px;
     right: 16px;
@@ -674,9 +1200,8 @@ export default {
     padding: 14px 16px;
   }
 
-  .toast-enter-active,
-  .toast-leave-active {
-    animation-name: toastSlideInMobile;
+  .toast-enter-active {
+    animation: toastSlideInMobile 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
   @keyframes toastSlideInMobile {
@@ -690,6 +1215,4 @@ export default {
     }
   }
 }
-</style>'''
-
-
+</style>

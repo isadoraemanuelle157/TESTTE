@@ -1,52 +1,52 @@
-const mongoose = require('mongoose')
+  const mongoose = require('mongoose')
 
-const playlistSchema = new mongoose.Schema({
-  nome: {
-    type: String,
-    required: true,
-    trim: true
+  const playlistSchema = new mongoose.Schema({
+    nome: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    descricao: {
+      type: String,
+      default: ''
+    },
+
+    capa: {
+      type: String,
+      default: ''
+    },
+
+    // 🔥 AGORA NÃO É MAIS OBRIGATÓRIO
+  usuario: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true // 🔥 obrigatório agora
   },
 
-  descricao: {
-    type: String,
-    default: ''
-  },
+    musicas: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Musica'
+      }
+    ],
 
-  capa: {
-    type: String,
-    default: ''
-  },
+    publica: {
+      type: Boolean,
+      default: true
+    },
 
-  // 🔥 AGORA NÃO É MAIS OBRIGATÓRIO
- usuario: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Usuario',
-  required: true // 🔥 obrigatório agora
-},
+    favoritas: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Usuario'
+      }
+    ],
 
-  musicas: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Musica'
+    createdAt: {
+      type: Date,
+      default: Date.now
     }
-  ],
+  })
 
-  publica: {
-    type: Boolean,
-    default: true
-  },
-
-  favoritas: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Usuario'
-    }
-  ],
-
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-})
-
-module.exports = mongoose.model('Playlist', playlistSchema)
+  module.exports = mongoose.model('Playlist', playlistSchema)

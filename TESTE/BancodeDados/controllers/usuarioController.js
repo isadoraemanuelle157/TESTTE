@@ -1,13 +1,23 @@
 const userService = require('../services/usuarioService')
+const jwt = require('jsonwebtoken')
 
 // CADASTRO
 const create = async (req, res) => {
   try {
     const user = await userService.createUser(req.body)
+
+    const token = jwt.sign(
+      { id: user.id },
+      "SEGREDO_SUPER_SECRETO",
+      { expiresIn: '7d' }
+    )
+
     res.status(201).json({ 
       message: 'Usuário criado', 
-      user // ← já vem formatado do service
+      user,
+      token
     })
+
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
@@ -16,19 +26,28 @@ const create = async (req, res) => {
 // LOGIN
 const login = async (req, res) => {
   try {
-    const { email, senha } = req.body
+    const { email, senha } = req.body // 🔥 CORREÇÃO
+
     const user = await userService.loginUser(email, senha)
+
+    const token = jwt.sign(
+      { id: user.id },
+      "SEGREDO_SUPER_SECRETO",
+      { expiresIn: '7d' }
+    )
 
     res.json({ 
       message: 'Login realizado', 
-      user // ← já vem formatado
+      user,
+      token
     })
+
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 }
 
-// LISTAR
+// RESTO IGUAL
 const list = async (req, res) => {
   try {
     const users = await userService.getUsers()
@@ -38,7 +57,6 @@ const list = async (req, res) => {
   }
 }
 
-// BUSCAR POR ID
 const getById = async (req, res) => {
   try {
     const user = await userService.getUserById(req.params.id)
@@ -53,7 +71,6 @@ const getById = async (req, res) => {
   }
 }
 
-// EDITAR USUÁRIO
 const update = async (req, res) => {
   try {
     const user = await userService.updateUser(req.params.id, req.body)
@@ -64,7 +81,7 @@ const update = async (req, res) => {
 
     res.json({ 
       message: "Usuário atualizado", 
-      user // ← já vem formatado com id
+      user
     })
 
   } catch (error) {
@@ -72,7 +89,6 @@ const update = async (req, res) => {
   }
 }
 
-// EXCLUIR USUÁRIO
 const remove = async (req, res) => {
   try {
     const user = await userService.deleteUser(req.params.id)

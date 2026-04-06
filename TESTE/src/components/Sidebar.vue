@@ -1,4 +1,4 @@
-  <template>
+<template>
     <aside class="sidebar">
       <div>
         <!-- Logo FODA -->
@@ -66,55 +66,67 @@
             </li>
 
             <li>
+              <router-link to="/favoritas" class="nav-link">
+                <i class="fa fa-star"></i>
+                <span>Favoritas</span>
+              </router-link>
+            </li>
+
+            <li>
               <router-link to="/playlist" class="nav-link">
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list-ul"></i>
                 <span>Playlists</span>
               </router-link>
             </li>
 
             <li>
-          <router-link to="/salademusica" class="nav-link">
-            <i class="fa fa-list"></i>
-            <span>Sala de Música</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/karaoke" class="nav-link">
-            <i class="fa fa-list"></i>
-            <span>Karaoke</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/desafiomusical" class="nav-link">
-            <i class="fa fa-list"></i>
-            <span>Desafio Musical</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/carregamento2" class="nav-link">
-            <i class="fa fa-list"></i>
-            <span>Carregamento 1</span>
-          </router-link>
-        </li>
-        <li>
-          <router-link to="/carregamento1" class="nav-link">
-            <i class="fa fa-list"></i>
-            <span>Carregamento 2</span>
-          </router-link>
-        </li>
-         <li>
-          <router-link to="/chatiamusica" class="nav-link">
-            <i class="fa fa-list"></i>
-            <span>Chat IA</span>
-          </router-link>
-        </li>
+              <router-link to="/salademusica" class="nav-link">
+                <i class="fa fa-music"></i>
+                <span>Sala de Música</span>
+              </router-link>
+            </li>
+            
+            <li>
+              <router-link to="/karaoke" class="nav-link">
+                <i class="fa fa-microphone"></i>
+                <span>Karaoke</span>
+              </router-link>
+            </li>
+            
+            <li>
+              <router-link to="/desafiomusical" class="nav-link">
+                <i class="fa fa-trophy"></i>
+                <span>Desafio Musical</span>
+              </router-link>
+            </li>
+            
+            <li>
+              <router-link to="/carregamento2" class="nav-link">
+                <i class="fa fa-spinner"></i>
+                <span>Carregamento 1</span>
+              </router-link>
+            </li>
+            
+            <li>
+              <router-link to="/carregamento1" class="nav-link">
+                <i class="fa fa-circle-o-notch"></i>
+                <span>Carregamento 2</span>
+              </router-link>
+            </li>
+            
+            <li>
+              <router-link to="/chatiamusica" class="nav-link">
+                <i class="fa fa-comments"></i>
+                <span>Chat IA</span>
+              </router-link>
+            </li>
 
-     <li>
-  <router-link to="/matchmusical" class="nav-link">
-    <img src="@/assets/icon-match.png" class="icon-match">
-    <span>Match Musical</span>
-  </router-link>
-</li>
+            <li>
+              <router-link to="/matchmusical" class="nav-link">
+                <img src="@/assets/icon-match.png" class="icon-match">
+                <span>Match Musical</span>
+              </router-link>
+            </li>
           </ul>
         </nav>
       </div>

@@ -217,13 +217,14 @@ export default {
           this.form
         )
 
-        const userData = response.data.user
-        
-        // Salvar dados completos do usuário no localStorage
-        localStorage.setItem("usuario", JSON.stringify(userData))
-        localStorage.setItem("usuario_perfil", JSON.stringify(userData))
-        localStorage.setItem("isLoggedIn", "true")
-        
+       const userData = response.data.user
+const token = response.data.token
+
+localStorage.setItem("usuario", JSON.stringify(userData))
+localStorage.setItem("usuario_perfil", JSON.stringify(userData))
+localStorage.setItem("token", token)
+localStorage.setItem("isLoggedIn", "true")
+
         // Disparar evento para atualizar navbar
         window.dispatchEvent(new CustomEvent('user-logged-in', {
           detail: userData

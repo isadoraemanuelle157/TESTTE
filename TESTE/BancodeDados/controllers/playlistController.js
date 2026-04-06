@@ -1,17 +1,16 @@
 const playlistService = require('../services/playlistService')
+const Playlist = require('../models/Playlist') // 🔥 FALTAVA
 
 // CRIAR
 const create = async (req, res) => {
   try {
-    const { usuarioId } = req.body
+   const userId = req.user.id
 
-    const playlist = await playlistService.createPlaylist(
-      req.body,
-      usuarioId
-    )
+    const playlist = await playlistService.createPlaylist(req.body, userId)
 
     res.status(201).json(playlist)
   } catch (err) {
+    console.error(err)
     res.status(400).json({ error: err.message })
   }
 }
@@ -19,12 +18,14 @@ const create = async (req, res) => {
 // LISTAR
 const getAll = async (req, res) => {
   try {
-    const { usuarioId } = req.query
+    const userId = req.user.id
 
-    const playlists = await playlistService.getPlaylists(usuarioId)
+    const playlists = await playlistService.getPlaylists(userId)
+
 
     res.json(playlists)
   } catch (err) {
+    console.error(err)
     res.status(500).json({ error: err.message })
   }
 }
@@ -88,11 +89,11 @@ const removeMusica = async (req, res) => {
 // FAVORITAR
 const toggleFavorita = async (req, res) => {
   try {
-    const { usuarioId } = req.body
+    const userId = req.user.id
 
     const playlist = await playlistService.toggleFavorita(
       req.params.id,
-      usuarioId
+      userId
     )
 
     res.json(playlist)

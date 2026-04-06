@@ -78,24 +78,41 @@ const getUserById = async (id) => {
 }
 
 const updateUser = async (id, data) => {
-  const { nome, username, bio, avatar, cover, localizacao, email } = data
-  
+  const {
+    nome,
+    username,
+    bio,
+    avatar,
+    cover,
+    localizacao,
+    email,
+    website,
+    generos,
+    perfilPrivado,
+    mostrarAtividade
+  } = data
+
   const updateData = {}
-  if (nome) updateData.nome = nome
-  if (username) updateData.username = username
+
+  if (nome !== undefined) updateData.nome = nome
+  if (username !== undefined) updateData.username = username
   if (bio !== undefined) updateData.bio = bio
-  if (avatar !== undefined) updateData.avatar = avatar // ← corrigido: verifica undefined não só truthy
-  if (cover !== undefined) updateData.cover = cover     // ← corrigido
-  if (localizacao !== undefined) updateData.localizacao = localizacao // ← corrigido
-  if (email) updateData.email = email
+  if (avatar !== undefined) updateData.avatar = avatar
+  if (cover !== undefined) updateData.cover = cover
+  if (localizacao !== undefined) updateData.localizacao = localizacao
+  if (email !== undefined) updateData.email = email
+  if (website !== undefined) updateData.website = website
+  if (generos !== undefined) updateData.generos = generos
+  if (perfilPrivado !== undefined) updateData.perfilPrivado = perfilPrivado
+  if (mostrarAtividade !== undefined) updateData.mostrarAtividade = mostrarAtividade
 
   const user = await Usuario.findByIdAndUpdate(
     id,
     updateData,
     { new: true, select: '-senha' }
   )
-  
-  return formatUser(user) // ← retorna formatado com id
+
+  return formatUser(user)
 }
 
 const deleteUser = async (id) => {

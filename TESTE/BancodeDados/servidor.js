@@ -12,10 +12,14 @@ const musicaRoutes = require('./routes/musicaRoutes')
 const albumRoutes = require('./routes/albumRoutes')
 const cantorRoutes = require('./routes/cantorRoutes')
 const playlistRoutes = require('./routes/playlistRoutes')
+const curtidaRoutes = require('./routes/curtidaRoutes')
+const favoritaRoutes = require('./routes/favoritaRoutes')
+
 
 // MIDDLEWARES
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '20mb' }))
+app.use(express.urlencoded({ extended: true, limit: '20mb' }))
 
 // USA ROTAS
 app.use('/usuarios', usuarioRoutes)
@@ -24,6 +28,8 @@ app.use('/musicas', musicaRoutes)
 app.use('/albuns', albumRoutes)
 app.use('/cantores', cantorRoutes)
 app.use('/playlists', playlistRoutes)
+app.use('/curtidas', curtidaRoutes)
+app.use('/favoritas', favoritaRoutes)
 
 // SERVIDOR
 app.listen(3002, () => {

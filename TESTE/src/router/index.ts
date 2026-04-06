@@ -29,6 +29,7 @@ import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Registrar2 from '@/banco/Registrar2.vue'
 import Perfil from '@/views/Perfil.vue'
+import Favoritas from '@/views/Favoritas.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -47,6 +48,11 @@ const router = createRouter({
       path: '/curtidas',
       name: 'curtidas',
       component: Curtidas,
+    },
+    {
+      path: '/favoritas',
+      name: 'favoritas',
+      component: Favoritas,
     },
        {
       path: '/search',
