@@ -8,11 +8,8 @@ const auth = require('../middleware/authMiddleware')
 router.post('/seguir', auth, followController.seguir)
 router.delete('/desseguir', auth, followController.desseguir)
 
+router.get('/seguidores/:id', followController.seguidores)
 router.get('/usuario/seguindo', auth, followController.seguindo)
 router.get('/verificar', auth, followController.verificar)
-
-// 🔓 PÚBLICAS
-router.get('/cantor/:id/seguidores', followController.seguidores)
-router.get('/cantor/:id/total', followController.total)
 
 module.exports = router

@@ -1,41 +1,42 @@
 const Follow = require('../models/Follow')
 
-// SEGUIR
-const seguirCantor = async (usuario_id, cantor_id) => {
-  return await Follow.create({ usuario_id, cantor_id })
+// SEGUIR (GENÉRICO)
+const seguir = async (seguidor_id, seguindo_id, tipo) => {
+  return await Follow.create({ seguidor_id, seguindo_id, tipo })
 }
 
 // DESSEGUIR
-const desseguirCantor = async (usuario_id, cantor_id) => {
-  return await Follow.findOneAndDelete({ usuario_id, cantor_id })
+const desseguir = async (seguidor_id, seguindo_id, tipo) => {
+  return await Follow.findOneAndDelete({ seguidor_id, seguindo_id, tipo })
 }
 
-// SEGUIDORES DO CANTOR
-const getSeguidores = async (cantor_id) => {
-  return await Follow.find({ cantor_id })
-    .populate('usuario_id', 'nome username avatar')
+// QUEM SEGUE ALGUÉM
+const getSeguidores = async (seguindo_id, tipo) => {
+  return await Follow.find({ seguindo_id, tipo })
+    .populate('seguidor_id', 'nome username avatar')
 }
 
 // QUEM O USUÁRIO SEGUE
-const getSeguindo = async (usuario_id) => {
-  return await Follow.find({ usuario_id })
-    .populate('cantor_id', 'nome foto')
+// followService
+const getSeguindo = async (seguidor_id) => {
+  return await Follow.find({ seguidor_id })
+    .populate('seguindo_id', 'nome username avatar')
 }
 
 // CONTADOR
-const contarSeguidores = async (cantor_id) => {
-  return await Follow.countDocuments({ cantor_id })
+const contarSeguidores = async (seguindo_id, tipo) => {
+  return await Follow.countDocuments({ seguindo_id, tipo })
 }
 
-// VERIFICAR SE SEGUE
-const verificar = async (usuario_id, cantor_id) => {
-  const existe = await Follow.findOne({ usuario_id, cantor_id })
+// VERIFICAR
+const verificar = async (seguidor_id, seguindo_id, tipo) => {
+  const existe = await Follow.findOne({ seguidor_id, seguindo_id, tipo })
   return !!existe
 }
 
 module.exports = {
-  seguirCantor,
-  desseguirCantor,
+  seguir,
+  desseguir,
   getSeguidores,
   getSeguindo,
   contarSeguidores,

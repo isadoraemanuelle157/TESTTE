@@ -1,23 +1,40 @@
 const mongoose = require('mongoose')
 
 const followSchema = new mongoose.Schema({
-  usuario_id: {
+  seguidor_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',
     required: true
   },
-  cantor_id: {
+
+  seguindo_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Cantor',
+    required: true,
+    refPath: 'tipoRef'
+  },
+
+  tipo: {
+    type: String,
+    enum: ['usuario', 'cantor'],
     required: true
   },
+
+  tipoRef: {
+    type: String,
+    enum: ['Usuario', 'Cantor'],
+    required: true
+  },
+
   createdAt: {
     type: Date,
     default: Date.now
   }
 })
 
-// 🔥 impede duplicação
-followSchema.index({ usuario_id: 1, cantor_id: 1 }, { unique: true })
+// evita duplicação
+followSchema.index(
+  { seguidor_id: 1, seguindo_id: 1, tipo: 1 },
+  { unique: true }
+)
 
 module.exports = mongoose.model('Follow', followSchema)

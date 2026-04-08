@@ -88,13 +88,14 @@
               <span class="stat-label">Playlists</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ formatNumber(estatisticas.seguidores) }}</span>
-              <span class="stat-label">Seguidores</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ formatNumber(estatisticas.seguindo) }}</span>
-              <span class="stat-label">Seguindo</span>
-            </div>
+  <span class="stat-value">{{ seguidoresList.length }}</span>
+  <span class="stat-label">Seguidores</span>
+</div>
+
+<div class="stat-item">
+  <span class="stat-value">{{ seguindoList.length }}</span>
+  <span class="stat-label">Seguindo</span>
+</div>
             <div class="stat-item" v-if="estatisticas.ouvintesMensais">
               <span class="stat-value highlight">{{ formatNumber(estatisticas.ouvintesMensais) }}</span>
               <span class="stat-label">Ouvintes/mês</span>
@@ -968,6 +969,7 @@ export default {
   data() {
     return {
       activeTab: 'overview',
+      seguindoList: [],
        openedPlaylist: null,
       tabs: [
         { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
@@ -1184,6 +1186,7 @@ mounted() {
   this.carregarFavoritos()
   this.carregarArtistas()
   this.carregarAtividades()
+  this.carregarFollows() 
 
   this.onPlaylistUpdated = () => this.carregarDados()
   this.onLikesUpdated = () => this.carregarCurtidas()
@@ -1231,6 +1234,39 @@ beforeUnmount() {
   this.$router.push('/login')
 }
     },
+    async carregarFollows() {
+  try {
+    const token = localStorage.getItem("token")
+    const userId = this.usuario.id
+
+    // 🔥 seguidores do usuário
+    const resSeguidores = await axios.get(
+      `http://localhost:3002/follow/seguidores/${userId}?tipo=usuario`
+    )
+
+    this.seguidoresList = resSeguidores.data
+
+    // 🔥 quem o usuário segue
+    const resSeguindo = await axios.get(
+      `http://localhost:3002/follow/usuario/seguindo`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    )
+
+    // 🔥 FILTRAR só usuários
+    this.seguindoList = resSeguindo.data.filter(f => f.tipo === 'usuario')
+
+    // 🔥 atualizar números
+    this.estatisticas.seguidores = this.seguidoresList.length
+    this.estatisticas.seguindo = this.seguindoList.length
+
+    this.tabs[4].count = this.seguidoresList.length
+
+  } catch (error) {
+    console.error("Erro ao carregar follows:", error)
+  }
+},
     getAuthConfig() {
   const token = localStorage.getItem('token')
 
