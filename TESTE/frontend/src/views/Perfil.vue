@@ -3,7 +3,7 @@
   <div class="perfil">
     <!-- Header do Perfil -->
     <div class="profile-header">
-     <div class="cover-image" :style="coverStyle">
+ <div class="cover-image" :style="coverStyle">
   <div class="cover-gradient"></div>
 
   <div class="cover-actions" v-if="isOwnProfile">
@@ -263,7 +263,7 @@
               </div>
               <h4>Nenhuma música curtida</h4>
               <p v-if="isOwnProfile">Comece a curtir músicas para vê-las aqui</p>
-              <button class="btn-explore" @click="$router.push('/explorar')" v-if="isOwnProfile">
+              <button class="btn-explore" @click="$router.push('/search')" v-if="isOwnProfile">
                 <i class="fa fa-compass"></i> Explorar músicas
               </button>
             </div>
@@ -277,30 +277,62 @@
                 Ver todas <i class="fa fa-arrow-right"></i>
               </button>
             </div>
-            <div class="playlists-grid" v-if="playlistsRecentes.length > 0">
-              <div
-                v-for="playlist in playlistsRecentes"
-                :key="playlist._id"
-                class="playlist-card"
-                @click="openPlaylist(playlist)"
-              >
-                <div class="playlist-cover">
-                  <img :src="playlist.cover" :alt="playlist.nome" />
-                  <div class="playlist-overlay">
-                    <button class="btn-play-playlist">
-                      <i class="fa fa-play"></i>
-                    </button>
-                  </div>
-                  <div class="playlist-badge" v-if="playlist.privacidade === 'Privada'">
-                    <i class="fa fa-lock"></i>
-                  </div>
-                </div>
-                <div class="playlist-info-card">
-                  <h4>{{ playlist.nome }}</h4>
-                  <p>{{ playlist.musicas }} músicas • {{ playlist.privacidade }}</p>
-                </div>
-              </div>
-            </div>
+           <div class="playlist-list" v-if="playlistsRecentes.length > 0">
+  <div
+    v-for="playlist in playlistsRecentes"
+    :key="playlist._id"
+    class="playlist-row"
+  >
+    <!-- LINHA PRINCIPAL -->
+    <div class="playlist-header" @click="togglePlaylist(playlist._id)">
+      
+      <div class="playlist-left">
+        <i 
+          class="fa"
+          :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
+        ></i>
+
+        <img :src="playlist.capa" class="playlist-thumb" />
+
+        <div>
+          <h4>{{ playlist.nome }}</h4>
+          <p>{{ playlist.totalMusicas }} músicas • {{ playlist.privacidade }}</p>
+        </div>
+      </div>
+
+      <button class="btn-play-mini">
+        <i class="fa fa-play"></i>
+      </button>
+    </div>
+
+    <!-- MÚSICAS (EXPANSÍVEL) -->
+    <transition name="fade">
+      <div v-if="openedPlaylist === playlist._id" class="playlist-musicas">
+        
+        <div
+          v-for="(musica, index) in playlist.musicas"
+          :key="musica._id"
+          class="musica-item"
+          @click="playMusic(musica)"
+        >
+          <span>{{ index + 1 }}</span>
+          <img :src="musica.foto" />
+          
+          <div>
+            <h5>{{ musica.nome }}</h5>
+            <p>{{ musica.duracao }}</p>
+          </div>
+
+          <button @click.stop="playMusic(musica)">
+            <i class="fa fa-play"></i>
+          </button>
+        </div>
+
+      </div>
+    </transition>
+
+  </div>
+</div>
             <div class="empty-state" v-else>
               <div class="empty-icon">
                 <i class="fa fa-list"></i>
@@ -330,7 +362,50 @@
               <p>Nenhum artista favorito ainda</p>
             </div>
           </div>
+          
+           <!-- Favoritos -->
+         <div class="content-section">
+  <div class="section-header">
+    <h3><i class="fa fa-star"></i> Favoritos</h3>
+  </div>
 
+  <div class="mini-list" v-if="favoritosRecentes.length > 0">
+    <div
+      v-for="(item, index) in favoritosRecentes"
+      :key="`${item.type}-${item.id}`"
+      class="mini-item"
+      @click="abrirFavorito(item)"
+    >
+      <div class="mini-rank" v-if="index < 3">
+        <i class="fa fa-star" :class="`rank-${index + 1}`"></i>
+      </div>
+      <span class="mini-number" v-else>{{ index + 1 }}</span>
+
+      <img :src="item.cover" :alt="item.nome" />
+
+      <div class="mini-info">
+        <h4>{{ item.nome }}</h4>
+        <p>
+          {{ item.type === 'musica'
+            ? item.artist
+            : `${item.musicas || 0} músicas • ${item.duracaoTotal || '0 min'}` }}
+        </p>
+      </div>
+
+      <button
+        class="btn-play-mini"
+        @click.stop="abrirFavorito(item)"
+      >
+        <i :class="item.type === 'musica' ? 'fa fa-play' : 'fa fa-list'"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="empty-state compact" v-else>
+    <p>Nenhum favorito ainda</p>
+  </div>
+</div>
+          
           <!-- Atividade Recente -->
           <div class="content-section full-width">
             <div class="section-header">
@@ -434,7 +509,7 @@
             </div>
             <h4>Sua coleção está vazia</h4>
             <p>As músicas que você curtir aparecerão aqui</p>
-            <button class="btn-explore" @click="$router.push('/explorar')">
+            <button class="btn-explore" @click="$router.push('/search')">
               <i class="fa fa-compass"></i> Descobrir músicas
             </button>
           </div>
@@ -466,7 +541,7 @@
               <h4>{{ playlist.nome }}</h4>
               <p>{{ playlist.descricao || 'Sem descrição' }}</p>
               <div class="playlist-meta-large">
-                <span><i class="fa fa-music"></i> {{ playlist.musicas }} músicas</span>
+                <span><i class="fa fa-music"></i> {{ playlist.musicas.length }} músicas</span>
                 <span><i class="fa fa-clock-o"></i> {{ playlist.duracaoTotal || '0 min' }}</span>
                 <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
               </div>
@@ -828,7 +903,7 @@
                 <img :src="playlist.cover" :alt="playlist.nome" />
                 <div class="playlist-option-info">
                   <h4>{{ playlist.nome }}</h4>
-                  <p>{{ playlist.musicas }} músicas</p>
+                  <p>{{ playlist.musicas.length }} músicas</p>
                 </div>
                 <i class="fa fa-check" v-if="selectedPlaylist === playlist._id"></i>
               </div>
@@ -893,6 +968,7 @@ export default {
   data() {
     return {
       activeTab: 'overview',
+       openedPlaylist: null,
       tabs: [
         { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
         { id: 'likes', label: 'Curtidas', icon: 'fa fa-heart', count: 0 },
@@ -938,17 +1014,19 @@ export default {
         ouvintesMensais: 0
       },
      
-      // Listas
-      musicasFavoritas: [],
-      playlistsRecentes: [],
-      todasPlaylists: [],
-      minhasPlaylists: [],
-      historicoRecente: [],
-      historicoCompleto: [],
-      artistasFavoritos: [],
-      atividadesRecentes: [],
-      seguidoresList: [],
-      topTrack: null,
+ // Listas
+musicasFavoritas: [],
+playlistsRecentes: [],
+todasPlaylists: [],
+minhasPlaylists: [],
+historicoRecente: [],
+historicoCompleto: [],
+artistasFavoritos: [],
+favoritos: [],
+favoritosRecentes: [],
+atividadesRecentes: [],
+seguidoresList: [],
+topTrack: null,
      
       // Filtros e Ordenação
       showFilters: false,
@@ -1013,9 +1091,11 @@ export default {
 },
    
 previewCoverStyle() {
-  return this.editForm.cover
+  const cover = this.editForm.cover || this.usuario.cover
+
+  return cover
     ? {
-        backgroundImage: `url(${this.editForm.cover})`,
+        backgroundImage: `url(${cover})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
@@ -1101,15 +1181,18 @@ mounted() {
   this.carregarUsuarioLogado()
   this.carregarDados()
   this.carregarCurtidas()
+  this.carregarFavoritos()
   this.carregarArtistas()
   this.carregarAtividades()
 
   this.onPlaylistUpdated = () => this.carregarDados()
   this.onLikesUpdated = () => this.carregarCurtidas()
+  this.onFavoritesUpdated = () => this.carregarFavoritos()
   this.onPerfilUpdated = () => this.carregarUsuarioLogado()
 
   window.addEventListener('playlist-updated', this.onPlaylistUpdated)
   window.addEventListener('likes-updated', this.onLikesUpdated)
+  window.addEventListener('favoritas-updated', this.onFavoritesUpdated)
   window.addEventListener('perfil-updated', this.onPerfilUpdated)
   window.addEventListener('focus', this.handleFocus)
   window.addEventListener('storage', this.handleStorage)
@@ -1120,11 +1203,11 @@ beforeUnmount() {
 
   window.removeEventListener('playlist-updated', this.onPlaylistUpdated)
   window.removeEventListener('likes-updated', this.onLikesUpdated)
+  window.removeEventListener('favoritas-updated', this.onFavoritesUpdated)
   window.removeEventListener('perfil-updated', this.onPerfilUpdated)
   window.removeEventListener('focus', this.handleFocus)
   window.removeEventListener('storage', this.handleStorage)
 },
-
 
   methods: {
     carregarUsuarioLogado() {
@@ -1158,6 +1241,75 @@ beforeUnmount() {
     }
   }
 },
+async handleCoverChange(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    this.showToast({
+      title: "Erro",
+      message: "Selecione uma imagem válida para a capa",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    this.showToast({
+      title: "Erro",
+      message: "A imagem da capa deve ter no máximo 5MB",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+    return
+  }
+
+  try {
+    const novaCover = await this.compressImage(file, {
+      maxWidth: 1600,
+      maxHeight: 900,
+      quality: 0.82,
+      mimeType: 'image/jpeg'
+    })
+
+    if (!this.showEditModal) {
+      this.openEditModal()
+      this.$nextTick(() => {
+        this.editForm.cover = novaCover
+      })
+    } else {
+      this.editForm.cover = novaCover
+    }
+
+    this.showToast({
+      title: "Capa atualizada",
+      message: "A nova capa foi carregada no preview",
+      type: "success",
+      icon: "fa fa-check"
+    })
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível processar a imagem da capa",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  } finally {
+    event.target.value = ''
+  }
+},
+abrirFavorito(item) {
+  if (item.type === 'musica') {
+    this.playMusic(item)
+    return
+  }
+
+  if (item.type === 'playlist') {
+    this.openPlaylist({ _id: item.id })
+  }
+},
+
 async compressImage(file, {
   maxWidth = 1600,
   maxHeight = 1600,
@@ -1205,9 +1357,10 @@ persistUsuario(user) {
   window.dispatchEvent(new Event('perfil-updated'))
 },
 
-    handleFocus() {
+  handleFocus() {
   this.carregarCurtidas()
   this.carregarDados()
+  this.carregarFavoritos()
 },
 
 handleStorage(e) {
@@ -1261,10 +1414,12 @@ async carregarCurtidas() {
     this.musicasFavoritas = data.map(c => ({
       id: c.musica._id,
       nome: c.musica.nome,
-      cantores: c.musica.cantores || [],
+     cantores: (c.musica.cantores || []).filter(c => c && c.nome),
       cover: c.musica.foto,
       url: c.musica.link,
-      duration: c.musica.duracao
+      duration: c.musica.duracao,
+      curtido: true,              // 🔥 MUITO IMPORTANTE
+      dataCurtida: c.createdAt    // 🔥 para ordenação
     }))
 
     this.estatisticas.musicasCurtidas = data.length
@@ -1272,6 +1427,61 @@ async carregarCurtidas() {
 
   } catch (error) {
     console.error(error)
+  }
+}, 
+
+async carregarFavoritos() {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch("http://localhost:3002/favoritas", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) throw new Error("Erro ao buscar favoritas")
+
+    const data = await res.json()
+
+    this.favoritos = data.map(f => {
+      if (f.musica) {
+        return {
+          id: f.musica._id,
+          type: "musica",
+          nome: f.musica.nome,
+          artist: f.musica.cantores?.length
+            ? f.musica.cantores.map(c => c.nome).join(', ')
+            : "Artista desconhecido",
+          cover: f.musica.foto,
+          url: f.musica.link,
+          duration: f.musica.duracao,
+          dataFavoritado: f.createdAt
+        }
+      }
+
+      if (f.playlist) {
+        return {
+          id: f.playlist._id,
+          type: "playlist",
+          nome: f.playlist.nome,
+          artist: f.playlist.descricao || "Playlist",
+          cover: f.playlist.capa || f.playlist.cover || "https://via.placeholder.com/150",
+          musicas: f.playlist.quantidadeMusicas || f.playlist.musicas?.length || 0,
+          duracaoTotal: f.playlist.duracaoTotal || "0 min",
+          dataFavoritado: f.createdAt
+        }
+      }
+
+      return null
+    }).filter(Boolean)
+
+    this.favoritosRecentes = [...this.favoritos]
+      .sort((a, b) => new Date(b.dataFavoritado) - new Date(a.dataFavoritado))
+      .slice(0, 6)
+
+  } catch (error) {
+    console.error(error)
+    this.favoritos = []
+    this.favoritosRecentes = []
   }
 },
    
@@ -1309,56 +1519,6 @@ triggerCoverUpload() {
   if (this.$refs.coverInput) {
     this.$refs.coverInput.click()
   }
-},
-
-
-  handleAvatarChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  if (!file.type.startsWith('image/')) {
-    this.showToast({
-      title: "Erro",
-      message: "Selecione uma imagem válida",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-    return
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    this.showToast({
-      title: "Erro",
-      message: "Imagem deve ter no máximo 5MB",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-    return
-  }
-
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const novoAvatar = e.target.result
-
-    if (!this.showEditModal) {
-      this.openEditModal()
-      this.$nextTick(() => {
-        this.editForm.avatar = novoAvatar
-      })
-    } else {
-      this.editForm.avatar = novoAvatar
-    }
-
-    this.showToast({
-      title: "Imagem carregada",
-      message: "Avatar atualizado no preview",
-      type: "success",
-      icon: "fa fa-check"
-    })
-  }
-
-  reader.readAsDataURL(file)
-  event.target.value = ''
 },
 
 async handleAvatarChange(event) {
@@ -1704,8 +1864,11 @@ openEditModal() {
 const playerSong = {
   id: musica.id,
   title: musica.nome,
-artist: musica.cantores && musica.cantores.length
-  ? musica.cantores.map(c => c.nome).join(', ')
+artist: musica.cantores?.length
+  ? musica.cantores
+      .filter(c => c && c.nome)
+      .map(c => c.nome)
+      .join(', ')
   : 'Artista desconhecido',
   cover: musica.cover,
   url: musica.preview || musica.url,
@@ -1760,30 +1923,73 @@ artist: m.cantores && m.cantores.length
       })
     },
 
-    removerCurtida(musica) {
-      const index = this.musicasFavoritas.findIndex(m => m.id === musica.id)
-      if (index !== -1) {
-        this.musicasFavoritas.splice(index, 1)
-        localStorage.setItem("curtidas", JSON.stringify(this.musicasFavoritas))
-        this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
-        this.tabs[1].count = this.musicasFavoritas.length
-      
+   async removerCurtida(musica) {
+  try {
+    const token = localStorage.getItem("token")
 
-        this.showToast({
-          title: "Removida dos curtidos 💔",
-          message: `"${musica.nome}" foi removida da sua coleção`,
-          type: "info",
-          icon: "fa fa-heart-broken"
-        })
+    await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
 
-    toggleLike(item) {
-      item.curtido = !item.curtido
-      if (!item.curtido) {
-        this.removerCurtida(item)
+    // remove da tela
+    this.musicasFavoritas = this.musicasFavoritas.filter(
+      m => m.id !== musica.id
+    )
+
+    this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
+    this.tabs[1].count = this.musicasFavoritas.length
+
+    this.showToast({
+      title: "Removida dos curtidos 💔",
+      message: `"${musica.nome}" foi removida da sua coleção`,
+      type: "info",
+      icon: "fa fa-heart-broken"
+    })
+
+  } catch (error) {
+    console.error(error)
+  }
+},
+
+  async toggleLike(musica) {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
+
+    const data = await res.json()
+
+    musica.curtido = data.liked
+
+    if (!data.liked) {
+      // 🔥 remove da lista
+      this.musicasFavoritas = this.musicasFavoritas.filter(
+        m => m.id !== musica.id
+      )
+    } else {
+      // 🔥 adiciona no topo
+      this.musicasFavoritas.unshift({
+        ...musica,
+        curtido: true,
+        dataCurtida: new Date()
+      })
+    }
+
+    this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
+    this.tabs[1].count = this.musicasFavoritas.length
+
+  } catch (error) {
+    console.error(error)
+  }
+},
 
     addToPlaylist(musica) {
       this.musicToAdd = musica
@@ -1817,6 +2023,9 @@ artist: m.cantores && m.cantores.length
     openPlaylist(playlist) {
       this.$router.push(`/playlist/${playlist._id}`)
     },
+     togglePlaylist(id) {
+    this.openedPlaylist = this.openedPlaylist === id ? null : id
+  },
 
     togglePlaylistLike(playlist) {
       playlist.curtida = !playlist.curtida
@@ -1976,7 +2185,56 @@ artist: m.cantores && m.cantores.length
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   padding-bottom: 100px;
 }
+.playlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
+.playlist-row {
+  background: #181818;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.playlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.playlist-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.playlist-thumb {
+  width: 45px;
+  height: 45px;
+  border-radius: 6px;
+}
+
+.playlist-musicas {
+  padding: 10px 15px;
+  background: #121212;
+}
+
+.musica-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.musica-item img {
+  width: 35px;
+  height: 35px;
+  border-radius: 4px;
+}
 /* ===== HEADER DO PERFIL ===== */
 .profile-header {
   position: relative;
@@ -1984,46 +2242,53 @@ artist: m.cantores && m.cantores.length
 }
 
 .cover-image {
-  height: 350px;
   position: relative;
+  width: 100%;
+  height: 320px;
+  border-radius: 20px 20px 0 0;
   overflow: hidden;
-  padding: 24px;
 }
 
 .cover-gradient {
-  pointer-events: none;
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.6) 60%, rgba(15, 23, 42, 0.95) 100%);
+  background: linear-gradient(
+    to top,
+    rgba(15, 23, 42, 0.75) 0%,
+    rgba(15, 23, 42, 0.25) 45%,
+    rgba(15, 23, 42, 0.05) 100%
+  );
+  pointer-events: none;
 }
 
 .cover-actions {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  right: 16px;
+  bottom: 96px; /* sobe o botão acima da área sobreposta */
   z-index: 30;
+  pointer-events: auto;
 }
 
 .btn-cover-action {
-  padding: 10px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+    position: relative;
+  z-index: 31;
 }
 
 .btn-cover-action:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.72);
+  transform: translateY(-1px);
 }
 
 .btn-cover-action.btn-gradient {

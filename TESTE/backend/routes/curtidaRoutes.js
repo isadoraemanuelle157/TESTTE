@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware')
 
 
 // 🔥 listar playlists curtidas do usuário
+router.post('/:id', authMiddleware, controller.toggle)
 router.get('/', authMiddleware, controller.getMinhasCurtidas)
 
 module.exports = router

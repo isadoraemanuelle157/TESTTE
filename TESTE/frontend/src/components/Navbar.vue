@@ -389,7 +389,7 @@ export default {
 
     const goToLibrary = () => {
       showUserMenu.value = false
-      router.push('/library')
+      router.push('/favoritas')
     }
 
 

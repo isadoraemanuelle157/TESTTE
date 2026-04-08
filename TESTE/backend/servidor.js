@@ -14,6 +14,8 @@ const cantorRoutes = require('./routes/cantorRoutes')
 const playlistRoutes = require('./routes/playlistRoutes')
 const curtidaRoutes = require('./routes/curtidaRoutes')
 const favoritaRoutes = require('./routes/favoritaRoutes')
+const vibeRoutes = require('./routes/vibeRoutes')
+const followRoutes = require('./routes/followRoutes')
 
 
 // MIDDLEWARES
@@ -30,6 +32,8 @@ app.use('/cantores', cantorRoutes)
 app.use('/playlists', playlistRoutes)
 app.use('/curtidas', curtidaRoutes)
 app.use('/favoritas', favoritaRoutes)
+app.use('/vibes', vibeRoutes)
+app.use('/follows', followRoutes)
 
 // SERVIDOR
 app.listen(3002, () => {

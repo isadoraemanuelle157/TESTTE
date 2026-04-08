@@ -9,7 +9,7 @@ const create = async (req, res) => {
     const token = jwt.sign(
       { id: user.id },
       "SEGREDO_SUPER_SECRETO",
-      { expiresIn: '7d' }
+      { expiresIn: '365d' }
     )
 
     res.status(201).json({ 

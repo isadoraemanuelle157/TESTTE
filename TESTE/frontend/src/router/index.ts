@@ -30,6 +30,8 @@ import Dashboard from '@/views/Dashboard.vue'
 import Registrar2 from '@/banco/Registrar2.vue'
 import Perfil from '@/views/Perfil.vue'
 import Favoritas from '@/views/Favoritas.vue'
+import FeitoParaVoce from '@/components/FeitoParaVoce.vue'
+import Vibe from '@/banco/Vibe.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,6 +70,11 @@ const router = createRouter({
       path: '/musicplayer',
       name: 'musicplayer',
       component: MusicPlayer,
+    },
+      {
+      path: '/feitoparavoce',
+      name: 'feitoparavoce',
+      component: FeitoParaVoce,
     },
     {
       path: '/notificacoes',
@@ -168,6 +175,11 @@ const router = createRouter({
       path: '/generos',
       name: 'generos',
       component: Generos,
+    },
+      {
+      path: '/vibe',
+      name: 'vibe',
+      component: Vibe,
     },
       {
       path: '/musicas',

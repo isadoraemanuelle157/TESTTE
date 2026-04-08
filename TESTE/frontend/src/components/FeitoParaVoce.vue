@@ -310,108 +310,18 @@ export default {
       selectedVibes: [],
       showSuccess: false,
 
-      genres: [
-        { name: "Pop", emoji: "🎵", color: "#E91E63", gradient: "linear-gradient(135deg, #E91E63 0%, #F48FB1 100%)" },
-        { name: "Rock", emoji: "🎸", color: "#F44336", gradient: "linear-gradient(135deg, #F44336 0%, #EF5350 100%)" },
-        { name: "Hip Hop", emoji: "🎤", color: "#FF9800", gradient: "linear-gradient(135deg, #FF9800 0%, #FFB74D 100%)" },
-        { name: "Eletrônica", emoji: "🎹", color: "#00BCD4", gradient: "linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%)" },
-        { name: "R&B", emoji: "🎷", color: "#9C27B0", gradient: "linear-gradient(135deg, #9C27B0 0%, #CE93D8 100%)" },
-        { name: "Funk", emoji: "💃", color: "#FF5722", gradient: "linear-gradient(135deg, #FF5722 0%, #FF8A65 100%)" },
-        { name: "Trap", emoji: "🔥", color: "#673AB7", gradient: "linear-gradient(135deg, #673AB7 0%, #9575CD 100%)" },
-        { name: "K-Pop", emoji: "⭐", color: "#E040FB", gradient: "linear-gradient(135deg, #E040FB 0%, #EA80FC 100%)" },
-        { name: "Indie", emoji: "🌿", color: "#4CAF50", gradient: "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)" },
-        { name: "Lo-Fi", emoji: "☕", color: "#607D8B", gradient: "linear-gradient(135deg, #607D8B 0%, #90A4AE 100%)" },
-        { name: "Jazz", emoji: "🎺", color: "#FFC107", gradient: "linear-gradient(135deg, #FFC107 0%, #FFD54F 100%)" },
-        { name: "Clássica", emoji: "🎻", color: "#795548", gradient: "linear-gradient(135deg, #795548 0%, #A1887F 100%)" },
-        { name: "Reggae", emoji: "🌴", color: "#2E7D32", gradient: "linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%)" },
-        { name: "Country", emoji: "🤠", color: "#8D6E63", gradient: "linear-gradient(135deg, #8D6E63 0%, #BCAAA4 100%)" },
-        { name: "Metal", emoji: "🤘", color: "#37474F", gradient: "linear-gradient(135deg, #37474F 0%, #546E7A 100%)" },
-        { name: "Sertanejo", emoji: "🌾", color: "#F57C00", gradient: "linear-gradient(135deg, #F57C00 0%, #FFB74D 100%)" },
-        { name: "Samba", emoji: "🥁", color: "#D32F2F", gradient: "linear-gradient(135deg, #D32F2F 0%, #E57373 100%)" },
-        { name: "Gospel", emoji: "🙏", color: "#1976D2", gradient: "linear-gradient(135deg, #1976D2 0%, #64B5F6 100%)" },
-        { name: "MPB", emoji: "🇧🇷", color: "#009688", gradient: "linear-gradient(135deg, #009688 0%, #4DB6AC 100%)" },
-        { name: "Bossa Nova", emoji: "🌙", color: "#3F51B5", gradient: "linear-gradient(135deg, #3F51B5 0%, #7986CB 100%)" }
-      ],
+    genres: [],
 
-      artists: [
-        { name: "The Weeknd", photo: "https://i.pravatar.cc/400?img=11", genre: "R&B/Pop", popularity: 98 },
-        { name: "Taylor Swift", photo: "https://i.pravatar.cc/400?img=5", genre: "Pop/Country", popularity: 96 },
-        { name: "Drake", photo: "https://i.pravatar.cc/400?img=12", genre: "Hip Hop/Rap", popularity: 95 },
-        { name: "Bad Bunny", photo: "https://i.pravatar.cc/400?img=13", genre: "Reggaeton", popularity: 94 },
-        { name: "Billie Eilish", photo: "https://i.pravatar.cc/400?img=9", genre: "Pop Alternativo", popularity: 92 },
-        { name: "Ed Sheeran", photo: "https://i.pravatar.cc/400?img=3", genre: "Pop", popularity: 91 },
-        { name: "Ariana Grande", photo: "https://i.pravatar.cc/400?img=10", genre: "Pop", popularity: 90 },
-        { name: "Post Malone", photo: "https://i.pravatar.cc/400?img=14", genre: "Pop/Rock", popularity: 89 },
-        { name: "Doja Cat", photo: "https://i.pravatar.cc/400?img=8", genre: "Pop/Rap", popularity: 88 },
-        { name: "Justin Bieber", photo: "https://i.pravatar.cc/400?img=15", genre: "Pop", popularity: 87 },
-        { name: "BTS", photo: "https://i.pravatar.cc/400?img=6", genre: "K-Pop", popularity: 96 },
-        { name: "Travis Scott", photo: "https://i.pravatar.cc/400?img=16", genre: "Trap/Hip Hop", popularity: 93 },
-        { name: "Olivia Rodrigo", photo: "https://i.pravatar.cc/400?img=7", genre: "Pop Rock", popularity: 89 },
-        { name: "Kendrick Lamar", photo: "https://i.pravatar.cc/400?img=17", genre: "Rap", popularity: 88 },
-        { name: "Dua Lipa", photo: "https://i.pravatar.cc/400?img=4", genre: "Pop", popularity: 87 },
-        { name: "Harry Styles", photo: "https://i.pravatar.cc/400?img=18", genre: "Pop/Rock", popularity: 86 }
-      ],
+     artists: [],
 
-      vibes: [
-        {
-          name: "Foco Total",
-          emoji: "🧠",
-          gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          description: "Concentração máxima para estudar ou trabalhar",
-          tags: ["Lo-Fi", "Instrumental", "Ambiente"]
-        },
-        {
-          name: "Energia Máxima",
-          emoji: "⚡",
-          gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-          description: "Para treinar, correr ou qualquer atividade física",
-          tags: ["EDM", "Rock", "Funk"]
-        },
-        {
-          name: "Relaxamento",
-          emoji: "🌊",
-          gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-          description: "Momento de paz e tranquilidade",
-          tags: ["Acústico", "Natureza", "Meditação"]
-        },
-        {
-          name: "Festa com Amigos",
-          emoji: "🎉",
-          gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-          description: "Aquele clima de celebração e diversão",
-          tags: ["Pop", "Funk", "Sertanejo"]
-        },
-        {
-          name: "Cozinhando",
-          emoji: "🍳",
-          gradient: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
-          description: "Trilha sonora perfeita para cozinhar",
-          tags: ["Jazz", "Bossa Nova", "Pop"]
-        },
-        {
-          name: "Dirigindo",
-          emoji: "🚗",
-          gradient: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
-          description: "Para aquela viagem de carro",
-          tags: ["Rock", "Indie", "Clássico"]
-        },
-        {
-          name: "Noite Romântica",
-          emoji: "💕",
-          gradient: "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)",
-          description: "Clima perfeito para momentos especiais",
-          tags: ["R&B", "Soul", "Jazz"]
-        },
-        {
-          name: "Tristeza",
-          emoji: "🌧️",
-          gradient: "linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)",
-          description: "Para aqueles dias que precisamos sentir",
-          tags: ["Indie", "Acústico", "Emo"]
-        }
-      ]
+    vibes: []
     }
   },
+  mounted() {
+  this.loadGeneros()
+  this.loadCantores()
+  this.loadVibes()
+},
 
   computed: {
     genreProgress() {
@@ -454,84 +364,186 @@ export default {
   },
 
   methods: {
-    getBgStyle(step) {
-      const gradients = {
-        1: 'radial-gradient(circle at 20% 50%, rgba(233, 30, 99, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 152, 0, 0.1) 0%, transparent 50%)',
-        2: 'radial-gradient(circle at 50% 50%, rgba(29, 185, 84, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%)',
-        3: 'radial-gradient(circle at 80% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%)'
-      }
-      return { background: gradients[step] }
-    },
+  async loadGeneros() {
+    try {
+      const res = await fetch("http://localhost:3002/generos")
+      const data = await res.json()
 
-    toggleGenre(genre) {
-      if (this.selectedGenres.includes(genre)) {
-        this.selectedGenres = this.selectedGenres.filter(g => g !== genre)
-      } else {
-        this.selectedGenres.push(genre)
-      }
-    },
+      this.genres = data.map((g, index) => ({
+        name: g.nome,
+        emoji: this.getEmoji(g.nome),
+        color: this.getColor(index),
+        gradient: this.getGradient(index)
+      }))
 
-    toggleArtist(name) {
-      if (this.selectedArtists.includes(name)) {
-        this.selectedArtists = this.selectedArtists.filter(a => a !== name)
-      } else {
-        this.selectedArtists.push(name)
-      }
-    },
-
-    toggleVibe(vibe) {
-      if (this.selectedVibes.includes(vibe)) {
-        this.selectedVibes = this.selectedVibes.filter(v => v !== vibe)
-      } else {
-        this.selectedVibes.push(vibe)
-      }
-    },
-
-    removeItem(item) {
-      if (this.selectedGenres.includes(item.name)) {
-        this.selectedGenres = this.selectedGenres.filter(g => g !== item.name)
-      } else if (this.selectedArtists.includes(item.name)) {
-        this.selectedArtists = this.selectedArtists.filter(a => a !== item.name)
-      } else {
-        this.selectedVibes = this.selectedVibes.filter(v => v !== item.name)
-      }
-    },
-
-    nextStep() {
-      if (this.currentStep === 3) {
-        this.showSuccess = true
-      } else {
-        this.currentStep++
-      }
-    },
-
-    prevStep() {
-      if (this.currentStep > 1) this.currentStep--
-    },
-
-    goToStep(step) {
-      if (step < this.currentStep) this.currentStep = step
-    },
-
-    goBackFromSuccess() {
-      this.showSuccess = false
-    },
-
-    skipOnboarding() {
-      if (confirm('Tem certeza que deseja pular? Suas recomendações podem não ser tão precisas.')) {
-        this.finishOnboarding()
-      }
-    },
-
-    finishOnboarding() {
-      console.log('Onboarding finalizado:', {
-        genres: this.selectedGenres,
-        artists: this.selectedArtists,
-        vibes: this.selectedVibes
-      })
+    } catch (err) {
+      console.error("Erro ao carregar gêneros:", err)
     }
+  },
+  async loadCantores() {
+  try {
+    const res = await fetch("http://localhost:3002/cantores")
+    const data = await res.json()
+
+    // 🔥 transformar dados do banco para UI
+    this.artists = data.map((c, index) => ({
+      name: c.nome,
+      photo: c.foto || `https://i.pravatar.cc/400?img=${index + 1}`,
+
+      // pegar gênero (se existir)
+      genre: c.generos?.length
+        ? c.generos.map(g => g.nome).join(", ")
+        : "Sem gênero",
+
+      // fake de popularidade (ou você pode criar no banco depois)
+      popularity: Math.floor(Math.random() * 20) + 80
+    }))
+
+  } catch (err) {
+    console.error("Erro ao carregar cantores:", err)
+  }
+},
+async loadVibes() {
+  try {
+    const res = await fetch("http://localhost:3002/vibes")
+    const data = await res.json()
+
+    this.vibes = data.map(v => ({
+      name: v.nome,
+      emoji: v.emoji || "🎵",
+      gradient: v.gradient || "linear-gradient(135deg, #667eea, #764ba2)",
+      description: v.descricao,
+      tags: v.tags || []
+    }))
+
+  } catch (err) {
+    console.error("Erro ao carregar vibes:", err)
+  }
+},
+
+getEmoji(nome) {
+  if (!nome) return "🎶"
+
+const normalizado = nome
+  .toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "") // remove acentos
+  .replace(/\s+/g, "")
+  
+  const map = {
+    pop: "🎵",
+    rock: "🎸",
+    funk: "💃",
+    hiphop: "🎤",
+    eletronica: "🎹",
+    gospel: "🙏",
+    samba: "🥁",
+    sertanejo: "🌾",
+    mpb: "🇧🇷"
+  }
+
+  return map[normalizado] || "🎶"
+},
+
+  getColor(index) {
+    const colors = [
+      "#E91E63", "#F44336", "#FF9800", "#00BCD4",
+      "#9C27B0", "#4CAF50", "#FFC107", "#3F51B5"
+    ]
+    return colors[index % colors.length]
+  },
+
+  getGradient(index) {
+    const gradients = [
+      "linear-gradient(135deg, #E91E63 0%, #F48FB1 100%)",
+      "linear-gradient(135deg, #F44336 0%, #EF5350 100%)",
+      "linear-gradient(135deg, #FF9800 0%, #FFB74D 100%)",
+      "linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%)",
+      "linear-gradient(135deg, #9C27B0 0%, #CE93D8 100%)",
+      "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)"
+    ]
+    return gradients[index % gradients.length]
+  },
+
+  getBgStyle(step) {
+    const gradients = {
+      1: 'radial-gradient(circle at 20% 50%, rgba(233, 30, 99, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 152, 0, 0.1) 0%, transparent 50%)',
+      2: 'radial-gradient(circle at 50% 50%, rgba(29, 185, 84, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%)',
+      3: 'radial-gradient(circle at 80% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%)'
+    }
+    return { background: gradients[step] }
+  },
+
+  toggleGenre(genre) {
+    if (this.selectedGenres.includes(genre)) {
+      this.selectedGenres = this.selectedGenres.filter(g => g !== genre)
+    } else {
+      this.selectedGenres.push(genre)
+    }
+  },
+
+  toggleArtist(name) {
+    if (this.selectedArtists.includes(name)) {
+      this.selectedArtists = this.selectedArtists.filter(a => a !== name)
+    } else {
+      this.selectedArtists.push(name)
+    }
+  },
+
+  toggleVibe(vibe) {
+    if (this.selectedVibes.includes(vibe)) {
+      this.selectedVibes = this.selectedVibes.filter(v => v !== vibe)
+    } else {
+      this.selectedVibes.push(vibe)
+    }
+  },
+
+  removeItem(item) {
+    if (this.selectedGenres.includes(item.name)) {
+      this.selectedGenres = this.selectedGenres.filter(g => g !== item.name)
+    } else if (this.selectedArtists.includes(item.name)) {
+      this.selectedArtists = this.selectedArtists.filter(a => a !== item.name)
+    } else {
+      this.selectedVibes = this.selectedVibes.filter(v => v !== item.name)
+    }
+  },
+
+  nextStep() {
+    if (this.currentStep === 3) {
+      this.showSuccess = true
+    } else {
+      this.currentStep++
+    }
+  },
+
+  prevStep() {
+    if (this.currentStep > 1) this.currentStep--
+  },
+
+  goToStep(step) {
+    if (step < this.currentStep) this.currentStep = step
+  },
+
+  goBackFromSuccess() {
+    this.showSuccess = false
+  },
+
+  skipOnboarding() {
+    if (confirm('Tem certeza que deseja pular?')) {
+      this.finishOnboarding()
+    }
+  },
+
+  finishOnboarding() {
+    console.log('Finalizado:', {
+      genres: this.selectedGenres,
+      artists: this.selectedArtists,
+      vibes: this.selectedVibes
+    })
   }
 }
+}
+
 </script>
 
 <style>

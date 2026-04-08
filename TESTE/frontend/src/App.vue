@@ -2,16 +2,14 @@
 
 <div class="app">
 
-  <div>
-    <Navbar/>
-  </div>
-
-  <!-- SIDEBAR -->
   <Sidebar />
 
-  <!-- CONTEÚDO DAS PÁGINAS -->
-  <div class="content">
-    <router-view />
+  <div class="main">
+    <Navbar/>
+
+    <div class="content">
+      <router-view />
+    </div>
   </div>
 
 </div>
@@ -40,24 +38,23 @@ html, body, #app {
   height: 100%;
 }
 
-/* LAYOUT PRINCIPAL */
+/* layout geral */
 .app {
   display: flex;
-  min-height: 100vh;
-  background: #fff; /* fundo global */
+  height: 100vh; /* melhor que min-height */
 }
 
-/* ÁREA DA DIREITA */
+/* lado direito */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
-/* CONTEÚDO */
+/* conteúdo que rola */
 .content {
   flex: 1;
-
   overflow-y: auto;
 }
 </style>

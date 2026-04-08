@@ -82,19 +82,70 @@
         </div>
 
         <!-- Localização -->
-        <div class="input-group" :class="{ 'focused': focused === 'localizacao', 'filled': form.localizacao }">
-          <div class="input-wrapper">
-            <span class="input-icon">📍</span>
-            <input 
-              v-model="form.localizacao" 
-              type="text" 
-              @focus="focused = 'localizacao'"
-              @blur="focused = null"
-              placeholder=" "
-            />
-            <label>Localização</label>
-          </div>
-        </div>
+     <!-- CEP -->
+<div class="input-group">
+  <div class="input-wrapper">
+    <span class="input-icon">📮</span>
+    <input 
+      v-model="form.cep"
+      type="text"
+      maxlength="9"
+      @blur="buscarCEP"
+      placeholder=" "
+    />
+    <label>CEP</label>
+  </div>
+</div>
+
+<!-- Rua -->
+<div class="input-group">
+  <div class="input-wrapper">
+    <span class="input-icon">🏠</span>
+    <input v-model="form.rua" type="text" placeholder=" " />
+    <label>Rua</label>
+  </div>
+</div>
+
+<!-- Número -->
+<div class="input-group">
+  <div class="input-wrapper">
+    <span class="input-icon">🔢</span>
+    <input v-model="form.numero" @input="atualizarLocalizacao" type="text" placeholder=" " />
+    <label>Número</label>
+  </div>
+</div>
+<!-- Bairro -->
+<div class="input-group">
+  <div class="input-wrapper">
+    <span class="input-icon">📍</span>
+    <input v-model="form.bairro" type="text" placeholder=" " />
+    <label>Bairro</label>
+  </div>
+</div>
+
+<!-- Cidade -->
+<div class="input-group">
+  <div class="input-wrapper">
+    <span class="input-icon">🏙️</span>
+    <input v-model="form.cidade" type="text" placeholder=" " />
+    <label>Cidade</label>
+  </div>
+</div>
+
+<!-- Estado -->
+<div class="input-group">
+  <div class="input-wrapper">
+    <span class="input-icon">🗺️</span>
+    <input v-model="form.estado" type="text" placeholder=" " />
+    <label>Estado</label>
+  </div>
+</div>
+<div v-if="form.localizacao" class="location-preview">
+  📍 Sua localização será:
+  <strong>{{ form.localizacao }}</strong>
+</div>
+
+
 
         <!-- Cover Image URL -->
         <div class="input-group" :class="{ 'focused': focused === 'cover', 'filled': form.cover }">
@@ -157,9 +208,16 @@ export default {
       form: {
         username: "",
         bio: "",
-        localizacao: "",
         avatar: "",
-        cover: ""
+        cover: "",
+          // NOVO
+  cep: "",
+  rua: "",
+  numero: "",
+  bairro: "",
+  cidade: "",
+  estado: "",
+  localizacao: ""
       },
       loading: false,
       mensagem: "",
@@ -308,7 +366,34 @@ const response = await axios.put(
         this.loading = false
       }
     },
-    
+
+    async buscarCEP() {
+  const cep = this.form.cep.replace(/\D/g, '')
+
+  if (cep.length !== 8) return
+
+  try {
+    const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`)
+
+    if (res.data.erro) {
+      this.erro = "CEP não encontrado"
+      return
+    }
+
+    this.form.rua = res.data.logradouro
+    this.form.bairro = res.data.bairro
+    this.form.cidade = res.data.localidade
+    this.form.estado = res.data.uf
+
+    this.atualizarLocalizacao()
+
+  } catch (err) {
+    this.erro = "Erro ao buscar CEP"
+  }
+},
+atualizarLocalizacao() {
+  this.form.localizacao = `${this.form.rua}, ${this.form.numero} - ${this.form.bairro}, ${this.form.cidade} - ${this.form.estado}`
+}, 
     pularEtapa() {
       // Usar dados básicos e redirecionar
       if (this.usuarioTemp) {

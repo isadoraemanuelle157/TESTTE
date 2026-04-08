@@ -23,9 +23,17 @@ const createPlaylist = async (data, userId) => {
 }
 
 const getPlaylists = async (userId) => {
-  return await Playlist.find({ usuario: userId }) // 🔥 filtro por usuário
+  const playlists = await Playlist.find({ usuario: userId })
     .populate('musicas', 'nome duracao foto link')
     .sort({ createdAt: -1 })
+
+  // 🔥 Ajuste dos dados para o front
+  return playlists.map(p => ({
+    ...p.toObject(),
+    totalMusicas: p.musicas.length,
+    capa: p.capa || (p.musicas[0]?.foto || '/default-playlist.png'),
+    privacidade: p.publica ? 'Pública' : 'Privada'
+  }))
 }
 
 // 🔥 BUSCAR POR ID
