@@ -87,15 +87,16 @@
               <span class="stat-value">{{ formatNumber(estatisticas.playlists) }}</span>
               <span class="stat-label">Playlists</span>
             </div>
-            <div class="stat-item">
-  <span class="stat-value">{{ seguidoresList.length }}</span>
+        <div class="stat-item" @click="activeTab = 'followers'">
+  <span class="stat-value">{{ seguidoresList?.length || 0 }}</span>
   <span class="stat-label">Seguidores</span>
 </div>
 
-<div class="stat-item">
-  <span class="stat-value">{{ seguindoList.length }}</span>
+<div class="stat-item" @click="activeTab = 'following'">
+  <span class="stat-value">{{ seguindoList?.length || 0 }}</span>
   <span class="stat-label">Seguindo</span>
 </div>
+
             <div class="stat-item" v-if="estatisticas.ouvintesMensais">
               <span class="stat-value highlight">{{ formatNumber(estatisticas.ouvintesMensais) }}</span>
               <span class="stat-label">Ouvintes/mês</span>
@@ -293,7 +294,7 @@
           :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
         ></i>
 
-        <img :src="playlist.capa" class="playlist-thumb" />
+        <img :src="playlist.cover || playlist.capa"  class="playlist-thumb" />
 
         <div>
           <h4>{{ playlist.nome }}</h4>
@@ -373,7 +374,7 @@
   <div class="mini-list" v-if="favoritosRecentes.length > 0">
     <div
       v-for="(item, index) in favoritosRecentes"
-      :key="`${item.type}-${item.id}`"
+     :key="`${item.type}-${item.id || item._id}`"
       class="mini-item"
       @click="abrirFavorito(item)"
     >
@@ -527,7 +528,7 @@
             @click="openPlaylist(playlist)"
           >
             <div class="playlist-cover-large">
-              <img :src="playlist.cover" :alt="playlist.nome" />
+              <img :src="playlist.cover || playlist.capa"  :alt="playlist.nome" />
               <div class="playlist-overlay">
                 <button class="btn-play-playlist-large">
                   <i class="fa fa-play"></i>
@@ -621,26 +622,67 @@
 
       <!-- Tab: Seguidores -->
       <div v-if="activeTab === 'followers'" class="tab-content">
-        <div class="users-grid">
-          <div
-            v-for="user in seguidoresList"
-            :key="user.id"
-            class="user-card"
-            @click="goToProfile(user)"
-          >
-            <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
-            <h4>{{ user.nome }}</h4>
-            <p>@{{ user.username }}</p>
-            <button
-              class="btn-follow-small"
-              @click.stop="toggleFollowUser(user)"
-              :class="{ 'following': user.isFollowing }"
-            >
-              {{ user.isFollowing ? 'Seguindo' : 'Seguir' }}
-            </button>
-          </div>
-        </div>
-      </div>
+  <div class="users-grid" v-if="seguidoresList.length">
+    <div
+      v-for="user in seguidoresList"
+      :key="user._id"
+      class="user-card"
+      @click="goToProfile(user)"
+    >
+      <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
+      <h4>{{ user.nome }}</h4>
+      <p>@{{ user.username }}</p>
+
+      <button
+        v-if="String(user._id) !== String(getLoggedUserId())"
+        class="btn-follow-small"
+        @click.stop="toggleFollowUser(user)"
+        :class="{ 'following': user.isFollowing }"
+      >
+        {{ user.isFollowing ? 'Seguindo' : 'Seguir' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="empty-state large" v-else>
+    <div class="empty-icon large">
+      <i class="fa fa-users"></i>
+    </div>
+    <h4>Nenhum seguidor ainda</h4>
+    <p>Quando alguém seguir este perfil, aparecerá aqui</p>
+  </div>
+</div>
+<div v-if="activeTab === 'following'" class="tab-content">
+  <div class="users-grid" v-if="seguindoList.length">
+    <div
+      v-for="user in seguindoList"
+      :key="user._id"
+      class="user-card"
+      @click="goToProfile(user)"
+    >
+      <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
+      <h4>{{ user.nome }}</h4>
+      <p>@{{ user.username }}</p>
+
+      <button
+        v-if="String(user._id) !== String(getLoggedUserId())"
+        class="btn-follow-small following"
+        @click.stop="toggleFollowUser(user)"
+      >
+        Seguindo
+      </button>
+    </div>
+  </div>
+
+  <div class="empty-state large" v-else>
+    <div class="empty-icon large">
+      <i class="fa fa-user-plus"></i>
+    </div>
+    <h4>Não segue ninguém ainda</h4>
+    <p>Os usuários seguidos aparecerão aqui</p>
+  </div>
+</div>
+
     </div>
 
     <!-- Modal de Edição de Perfil -->
@@ -901,7 +943,7 @@
                 @click="addMusicToPlaylist(playlist)"
                 :class="{ 'selected': selectedPlaylist === playlist._id }"
               >
-                <img :src="playlist.cover" :alt="playlist.nome" />
+                <img :src="playlist.cover || playlist.capa"  :alt="playlist.nome" />
                 <div class="playlist-option-info">
                   <h4>{{ playlist.nome }}</h4>
                   <p>{{ playlist.musicas.length }} músicas</p>
@@ -971,13 +1013,14 @@ export default {
       activeTab: 'overview',
       seguindoList: [],
        openedPlaylist: null,
-      tabs: [
-        { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
-        { id: 'likes', label: 'Curtidas', icon: 'fa fa-heart', count: 0 },
-        { id: 'playlists', label: 'Playlists', icon: 'fa fa-list', count: 0 },
-        { id: 'history', label: 'Histórico', icon: 'fa fa-history', count: null },
-        { id: 'followers', label: 'Seguidores', icon: 'fa fa-users', count: 128 }
-      ],
+    tabs: [
+  { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
+  { id: 'likes', label: 'Curtidas', icon: 'fa fa-heart', count: 0 },
+  { id: 'playlists', label: 'Playlists', icon: 'fa fa-list', count: 0 },
+  { id: 'history', label: 'Histórico', icon: 'fa fa-history', count: null },
+  { id: 'followers', label: 'Seguidores', icon: 'fa fa-users', count: 0 },
+  { id: 'following', label: 'Seguindo', icon: 'fa fa-user-plus', count: 0 }
+],
      
       // Dados do usuário
       usuario: {
@@ -1213,17 +1256,26 @@ beforeUnmount() {
 },
 
   methods: {
+    
     carregarUsuarioLogado() {
       const storedUser = localStorage.getItem('usuario')
       const storedProfile = localStorage.getItem('usuario_perfil')
      
       if (storedUser) {
         const userData = JSON.parse(storedUser)
-        this.usuario = { ...this.usuario, ...userData }
-       
+        this.usuario = {
+  ...this.usuario,
+  ...userData,
+  id: userData.id || userData._id || this.usuario.id
+}
+     
         if (storedProfile) {
           const profileData = JSON.parse(storedProfile)
-          this.usuario = { ...this.usuario, ...profileData }
+      this.usuario = {
+  ...this.usuario,
+  ...profileData,
+  id: profileData.id || profileData._id || this.usuario.id
+}
         }
        
         // Atualizar counts das tabs
@@ -1234,39 +1286,76 @@ beforeUnmount() {
   this.$router.push('/login')
 }
     },
-    async carregarFollows() {
+    getLoggedUserId() {
+  return String(this.usuario?._id || this.usuario?.id || '')
+},
+
+getProfileUserId() {
+  return String(this.usuario?._id || this.usuario?.id || '')
+},
+
+setTabCount(tabId, count) {
+  const tab = this.tabs.find(t => t.id === tabId)
+  if (tab) tab.count = count
+},
+
+  async carregarFollows() {
   try {
     const token = localStorage.getItem("token")
-    const userId = this.usuario.id
+    const userId = this.getProfileUserId()
 
-    // 🔥 seguidores do usuário
+    if (!userId) return
+
+    // quem segue este perfil
     const resSeguidores = await axios.get(
-      `http://localhost:3002/follow/seguidores/${userId}?tipo=usuario`
+      `http://localhost:3002/follows/seguidores/${userId}?tipo=usuario`
     )
 
-    this.seguidoresList = resSeguidores.data
-
-    // 🔥 quem o usuário segue
+    // quem o usuário logado segue
     const resSeguindo = await axios.get(
-      `http://localhost:3002/follow/usuario/seguindo`,
+      `http://localhost:3002/follows/usuario/seguindo?tipo=usuario`,
       {
         headers: { Authorization: `Bearer ${token}` }
       }
     )
 
-    // 🔥 FILTRAR só usuários
-    this.seguindoList = resSeguindo.data.filter(f => f.tipo === 'usuario')
+    const seguindoIds = new Set(
+      (resSeguindo.data || [])
+        .filter(f => f.tipo === 'usuario' && f.seguindo_id)
+        .map(f => String(f.seguindo_id?._id || f.seguindo_id))
+    )
 
-    // 🔥 atualizar números
+    this.seguidoresList = (resSeguidores.data || [])
+      .filter(f => f.seguidor_id)
+      .map(f => ({
+        _id: String(f.seguidor_id._id || f.seguidor_id.id),
+        nome: f.seguidor_id.nome || 'Usuário',
+        username: f.seguidor_id.username || 'usuario',
+        avatar: f.seguidor_id.avatar || null,
+        isFollowing: seguindoIds.has(String(f.seguidor_id._id || f.seguidor_id.id))
+      }))
+
+    this.seguindoList = (resSeguindo.data || [])
+      .filter(f => f.tipo === 'usuario' && f.seguindo_id)
+      .map(f => ({
+        _id: String(f.seguindo_id._id || f.seguindo_id.id),
+        nome: f.seguindo_id.nome || 'Usuário',
+        username: f.seguindo_id.username || 'usuario',
+        avatar: f.seguindo_id.avatar || null,
+        isFollowing: true
+      }))
+
     this.estatisticas.seguidores = this.seguidoresList.length
     this.estatisticas.seguindo = this.seguindoList.length
 
-    this.tabs[4].count = this.seguidoresList.length
+    this.setTabCount('followers', this.seguidoresList.length)
+    this.setTabCount('following', this.seguindoList.length)
 
   } catch (error) {
     console.error("Erro ao carregar follows:", error)
   }
 },
+
     getAuthConfig() {
   const token = localStorage.getItem('token')
 
@@ -1861,18 +1950,64 @@ openEditModal() {
       }
     },
 
-    toggleFollow() {
-      this.isFollowing = !this.isFollowing
-      this.estatisticas.seguidores += this.isFollowing ? 1 : -1
-      this.showToast({
-        title: this.isFollowing ? "Seguindo!" : "Deixou de seguir",
-        message: this.isFollowing
-          ? `Você está seguindo ${this.usuario.nome}`
-          : `Você deixou de seguir ${this.usuario.nome}`,
-        type: "success",
-        icon: this.isFollowing ? "fa fa-user-plus" : "fa fa-user-times"
+   async toggleFollow() {
+  try {
+    const token = localStorage.getItem('token')
+    const targetId = this.getProfileUserId()
+
+    if (!token || !targetId) return
+    if (this.isOwnProfile) return
+
+    const tipo = 'usuario'
+
+    if (this.isFollowing) {
+      await axios.delete(`http://localhost:3002/follows/desseguir`, {
+        data: {
+          seguindo_id: targetId,
+          tipo
+        },
+        headers: { Authorization: `Bearer ${token}` }
       })
-    },
+
+      this.isFollowing = false
+      this.estatisticas.seguidores = Math.max(0, this.estatisticas.seguidores - 1)
+
+      this.showToast({
+        title: "Deixou de seguir",
+        message: `Você deixou de seguir ${this.usuario.nome}`,
+        type: "info",
+        icon: "fa fa-user-times"
+      })
+    } else {
+      await axios.post(`http://localhost:3002/follows/seguir`, {
+        seguindo_id: targetId,
+        tipo
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      this.isFollowing = true
+      this.estatisticas.seguidores += 1
+
+      this.showToast({
+        title: "Seguindo!",
+        message: `Você está seguindo ${this.usuario.nome}`,
+        type: "success",
+        icon: "fa fa-user-plus"
+      })
+    }
+
+    this.setTabCount('followers', this.estatisticas.seguidores)
+  } catch (error) {
+    console.error(error)
+    this.showToast({
+      title: "Erro",
+      message: error.response?.data?.message || "Não foi possível atualizar o follow",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
 
  shareProfile() {
   const profileUrl = `${window.location.origin}/perfil/${this.usuario.username || this.usuario.id}`
@@ -2111,17 +2246,84 @@ artist: m.cantores && m.cantores.length
       this.$router.push(`/perfil/${user.username || user.id}`)
     },
 
-    toggleFollowUser(user) {
-      user.isFollowing = !user.isFollowing
-      this.showToast({
-        title: user.isFollowing ? "Seguindo!" : "Deixou de seguir",
-        message: user.isFollowing
-          ? `Você está seguindo ${user.nome}`
-          : `Você deixou de seguir ${user.nome}`,
-        type: "success",
-        icon: user.isFollowing ? "fa fa-user-plus" : "fa fa-user-times"
+ async toggleFollowUser(user) {
+  try {
+    const token = localStorage.getItem("token")
+    const targetId = String(user._id || user.id)
+    const tipo = 'usuario'
+
+    if (!token || !targetId) return
+
+    if (String(targetId) === String(this.getLoggedUserId())) {
+      return
+    }
+
+    if (user.isFollowing) {
+      await axios.delete(`http://localhost:3002/follows/desseguir`, {
+        data: {
+          seguindo_id: targetId,
+          tipo
+        },
+        headers: { Authorization: `Bearer ${token}` }
       })
-    },
+
+      user.isFollowing = false
+      this.seguindoList = this.seguindoList.filter(u => String(u._id) !== targetId)
+
+      this.showToast({
+        title: "Deixou de seguir",
+        message: `Você deixou de seguir ${user.nome}`,
+        type: "info",
+        icon: "fa fa-user-times"
+      })
+    } else {
+      await axios.post(`http://localhost:3002/follows/seguir`, {
+        seguindo_id: targetId,
+        tipo
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      user.isFollowing = true
+
+      const jaExiste = this.seguindoList.some(u => String(u._id) === targetId)
+      if (!jaExiste) {
+        this.seguindoList.unshift({
+          _id: targetId,
+          nome: user.nome,
+          username: user.username,
+          avatar: user.avatar,
+          isFollowing: true
+        })
+      }
+
+      this.showToast({
+        title: "Agora seguindo",
+        message: `Você está seguindo ${user.nome}`,
+        type: "success",
+        icon: "fa fa-user-plus"
+      })
+    }
+
+    this.estatisticas.seguindo = this.seguindoList.length
+    this.setTabCount('following', this.seguindoList.length)
+
+    // sincroniza botão dos seguidores
+    this.seguidoresList = this.seguidoresList.map(follower => ({
+      ...follower,
+      isFollowing: String(follower._id) === targetId ? user.isFollowing : follower.isFollowing
+    }))
+
+  } catch (error) {
+    console.error(error)
+    this.showToast({
+      title: "Erro",
+      message: error.response?.data?.message || "Não foi possível atualizar o follow",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
 
     toggleSort() {
       this.sortDesc = !this.sortDesc

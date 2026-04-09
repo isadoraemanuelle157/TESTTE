@@ -6,6 +6,7 @@ const auth = require('../middleware/authMiddleware')
 
 // 🔥 PROTEGIDAS
 router.post('/seguir', auth, followController.seguir)
+router.get('/seguindo/:id', followController.seguindoPorId)
 router.delete('/desseguir', auth, followController.desseguir)
 
 router.get('/seguidores/:id', followController.seguidores)

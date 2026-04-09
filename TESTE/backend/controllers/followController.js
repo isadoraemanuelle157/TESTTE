@@ -10,12 +10,20 @@ const seguir = async (req, res) => {
 
     res.json({ message: 'Seguiu com sucesso', follow })
   } catch (error) {
+    console.error('ERRO FOLLOW:', error)
+
     if (error.code === 11000) {
-      return res.status(400).json({ message: 'Já está seguindo' })
+      return res.status(400).json({
+        message: 'Erro de duplicidade no banco',
+        keyPattern: error.keyPattern,
+        keyValue: error.keyValue
+      })
     }
+
     res.status(500).json({ error: error.message })
   }
 }
+
 // DESSEGUIR
 const desseguir = async (req, res) => {
   try {
@@ -45,8 +53,19 @@ const seguidores = async (req, res) => {
 const seguindo = async (req, res) => {
   try {
     const usuario_id = req.user.id
+    const { tipo } = req.query
 
-    const seguindo = await followService.getSeguindo(usuario_id)
+    const seguindo = await followService.getSeguindo(usuario_id, tipo)
+    res.json(seguindo)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const seguindoPorId = async (req, res) => {
+  try {
+    const { tipo } = req.query
+    const seguindo = await followService.getSeguindo(req.params.id, tipo)
     res.json(seguindo)
   } catch (error) {
     res.status(500).json({ error: error.message })
@@ -56,12 +75,14 @@ const seguindo = async (req, res) => {
 // TOTAL DE SEGUIDORES
 const total = async (req, res) => {
   try {
-    const total = await followService.contarSeguidores(req.params.id)
+    const { tipo } = req.query
+    const total = await followService.contarSeguidores(req.params.id, tipo)
     res.json({ total })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 }
+
 
 // VERIFICAR SE SEGUE
 const verificar = async (req, res) => {
@@ -82,6 +103,7 @@ module.exports = {
   desseguir,
   seguidores,
   seguindo,
+  seguindoPorId,
   total,
   verificar
 }
