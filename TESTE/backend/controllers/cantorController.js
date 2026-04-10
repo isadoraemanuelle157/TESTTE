@@ -13,6 +13,16 @@ const create = async (req, res) => {
   }
 }
 
+const search = async (req, res) => {
+  try {
+    const { q } = req.query
+    const cantores = await cantorService.searchCantores(q)
+    res.json(cantores)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 // LISTAR TODOS
 const list = async (req, res) => {
   try {
@@ -106,5 +116,6 @@ module.exports = {
   getByNome,
   update,
   remove,
-  addAlbum
+  addAlbum,
+  search
 }

@@ -754,49 +754,74 @@ export default {
         console.error('Erro ao carregar artistas:', error)
       }
     },
-    async searchAll(query) {
+ async searchAll(query) {
   this.isLoading = true
 
   try {
-    // 🔥 BUSCA LOCAL (SEU BACKEND)
-    const localPromise = fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`)
-      .then(r => r.json())
-
-    // 🔥 BUSCA DEEZER
-    const deezerPromise = Promise.all([
-      fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(query)}&limit=20`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}&limit=10`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/album?q=${encodeURIComponent(query)}&limit=10`).then(r => r.json())
+    // 🔥 BACKEND (SEU BANCO)
+    const [localMusicas, localCantores, localAlbuns] = await Promise.all([
+      fetch(`http://localhost:3002/musicas/search?q=${query}`).then(r => r.json()),
+      fetch(`http://localhost:3002/cantores/search?q=${query}`).then(r => r.json()),
+      fetch(`http://localhost:3002/albuns/search?q=${query}`).then(r => r.json())
     ])
 
-    const [localMusicas, [tracks, artists, albums]] = await Promise.all([
-      localPromise,
-      deezerPromise
+    // 🔥 DEEZER
+    const [tracks, artists, albums] = await Promise.all([
+      fetch(`${this.DEEZER_API}/search/track?q=${query}`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/artist?q=${query}`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/album?q=${query}`).then(r => r.json())
     ])
 
     let results = []
 
-    // 🔥 FORMATAR MUSICAS DO SEU BANCO
-    if (localMusicas && Array.isArray(localMusicas)) {
-      const formattedLocal = localMusicas.map(m => ({
+    // 🎵 MUSICAS LOCAIS
+    if (Array.isArray(localMusicas)) {
+      results.push(...localMusicas.map(m => ({
         id: m._id,
         title: m.nome,
-        artist: { name: m.cantores?.[0]?.nome || 'Artista' },
-        album: { title: m.albuns?.[0]?.nome || '' },
-        duration: 180,
-        preview: m.link,
+        artist: {
+          name: m.cantores?.map(c => c.nome).join(', ')
+        },
+        album: {
+          title: m.albuns?.[0]?.nome || '',
+          cover: m.albuns?.[0]?.foto || ''
+        },
         cover: m.foto,
+        preview: m.link,
         type: 'track',
-        source: 'local' // 🔥 IMPORTANTE
-      }))
-
-      results.push(...formattedLocal)
+        source: 'local'
+      })))
     }
 
-    // 🔥 DEEZER
+    // 🎤 CANTORES LOCAIS
+    if (Array.isArray(localCantores)) {
+      results.push(...localCantores.map(c => ({
+        id: c._id,
+        name: c.nome,
+        picture: c.foto,
+        type: 'artist',
+        source: 'local'
+      })))
+    }
+
+    // 💿 ÁLBUNS LOCAIS
+    if (Array.isArray(localAlbuns)) {
+      results.push(...localAlbuns.map(a => ({
+        id: a._id,
+        title: a.nome,
+        artist: {
+          name: a.cantor?.nome || ''
+        },
+        cover: a.foto,
+        type: 'album',
+        source: 'local'
+      })))
+    }
+
+    // 🔥 DEEZER (mantém)
     if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
-    if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist' })))
-    if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album' })))
+    if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
+    if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
 
     this.searchResults = results
 
@@ -855,21 +880,28 @@ export default {
       return typeMap[item.type] || item.type
     },
 
-   getBestImage(item) {
-  // 🔥 músicas do seu banco
+  getBestImage(item) {
   if (item.source === 'local') {
-    return item.cover
+    if (item.type === 'track') {
+      return item.album?.cover || item.cover
+    }
+    if (item.type === 'artist') {
+      return item.picture
+    }
+    if (item.type === 'album') {
+      return item.cover
+    }
   }
 
-  // 🔥 Deezer
+  // Deezer
   if (item.type === 'track') {
-    return item.album?.cover_medium || item.album?.cover
+    return item.album?.cover_medium
   }
   if (item.type === 'artist') {
-    return item.picture_medium || item.picture
+    return item.picture_medium
   }
   if (item.type === 'album') {
-    return item.cover_medium || item.cover
+    return item.cover_medium
   }
 
   return ''

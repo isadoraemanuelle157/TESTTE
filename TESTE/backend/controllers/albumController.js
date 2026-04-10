@@ -10,6 +10,15 @@ const create = async (req, res) => {
   }
 }
 
+const search = async (req, res) => {
+  try {
+    const { q } = req.query
+    const albuns = await albumService.searchAlbuns(q)
+    res.json(albuns)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
 // LISTAR
 const list = async (req, res) => {
   try {
@@ -73,5 +82,6 @@ module.exports = {
   list,
   getById,
   update,
-  remove
+  remove,
+  search
 }

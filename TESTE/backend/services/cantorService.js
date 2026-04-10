@@ -17,6 +17,14 @@ const normalizeIds = (value) => {
     .filter(Boolean)
 }
 
+const searchCantores = async (query) => {
+  return await Cantor.find({
+    nome: { $regex: query, $options: 'i' }
+  })
+  .populate('albuns', 'nome foto')
+  .populate('musicas', 'nome')
+}
+
 const createCantor = async (data) => {
   const payload = {
     nome: data.nome?.trim(),
@@ -151,5 +159,6 @@ module.exports = {
   getCantorById,
   getCantorByNome,
   updateCantor,
-  deleteCantor
+  deleteCantor,
+  searchCantores
 }
