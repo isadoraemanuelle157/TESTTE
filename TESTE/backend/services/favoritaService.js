@@ -1,10 +1,12 @@
 const Favorita = require('../models/Favorita')
 
-const toggleFavorita = async (usuarioId, { musicaId, playlistId }) => {
+const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantorId }) => {
   const query = {
     usuario: usuarioId,
     ...(musicaId && { musica: musicaId }),
-    ...(playlistId && { playlist: playlistId })
+    ...(playlistId && { playlist: playlistId }),
+    ...(albumId && { album: albumId }),
+    ...(cantorId && { cantor: cantorId })
   }
 
   const existing = await Favorita.findOne(query)
@@ -21,10 +23,11 @@ const toggleFavorita = async (usuarioId, { musicaId, playlistId }) => {
 
 const getFavoritasByUser = async (usuarioId) => {
   return Favorita.find({ usuario: usuarioId })
-    .populate('playlist')
     .populate('musica')
+    .populate('playlist')
+    .populate('album')   // 🔥 novo
+    .populate('cantor')  // 🔥 novo
 }
-
 
 module.exports = {
   toggleFavorita,

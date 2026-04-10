@@ -128,6 +128,13 @@
         </svg>
         Playlists
       </button>
+      <button class="filter-tab" :class="{ active: filtroAtivo === 'album' }" @click="filtroAtivo = 'album'">
+  Álbuns
+</button>
+
+<button class="filter-tab" :class="{ active: filtroAtivo === 'cantor' }" @click="filtroAtivo = 'cantor'">
+  Artistas
+</button>
       <button class="filter-tab" :class="{ active: filtroAtivo === 'recentes' }" @click="filtroAtivo = 'recentes'">
         <svg viewBox="0 0 24 24" fill="currentColor" class="tab-icon">
           <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
@@ -174,7 +181,12 @@
     <!-- Lista -->
     <transition-group name="list" tag="div" class="lista" v-if="!loading && favoritasFiltradas.length > 0">
       <div v-for="item in favoritasFiltradas" :key="item.id" class="card"
-           @click="item.type === 'musica' ? play(item) : abrirPlaylist(item)">
+           @click="
+  item.type === 'musica' ? play(item) :
+  item.type === 'playlist' ? abrirPlaylist(item) :
+  item.type === 'album' ? abrirAlbum(item) :
+  abrirCantor(item)
+">
         <div class="cover-wrapper">
           <img :src="item.cover || '/api/placeholder/150/150'" class="cover" />
           <div class="cover-overlay" v-if="item.type === 'musica'">
@@ -295,6 +307,13 @@ export default {
     playlistsCount() {
       return this.favoritas.filter(f => f.type === 'playlist').length
     },
+    albunsCount() {
+  return this.favoritas.filter(f => f.type === 'album').length
+},
+cantoresCount() {
+  return this.favoritas.filter(f => f.type === 'cantor').length
+},
+
     favoritasFiltradas() {
       if (this.filtroAtivo === 'todos') return this.favoritas
       if (this.filtroAtivo === 'recentes') {
@@ -340,6 +359,7 @@ export default {
       if (diff < 604800) return `${Math.floor(diff / 86400)} dias atrás`
       return past.toLocaleDateString('pt-BR')
     },
+
     async carregarFavoritas() {
       this.loading = true
       try {
@@ -349,6 +369,7 @@ export default {
         })
         if (!res.ok) throw new Error('Erro ao carregar favoritas')
         const data = await res.json()
+
         this.favoritas = data.map(f => {
           if (f.musica) {
             return {
@@ -373,6 +394,30 @@ export default {
               addedAt: f.createdAt,
               type: "playlist"
             }
+            // 🔥 NOVO - ÁLBUM
+  if (f.album) {
+    return {
+      id: f.album._id,
+      title: f.album.nome,
+      subtitle: f.album.cantor?.nome || "Álbum",
+      cover: f.album.foto,
+      trackCount: f.album.musicas?.length || 0,
+      addedAt: f.createdAt,
+      type: "album"
+    }
+  }
+
+  // 🔥 NOVO - CANTOR
+  if (f.cantor) {
+    return {
+      id: f.cantor._id,
+      title: f.cantor.nome,
+      subtitle: "Artista",
+      cover: f.cantor.foto,
+      addedAt: f.createdAt,
+      type: "cantor"
+    }
+  }
           }
         }).filter(Boolean)
       } catch (err) {
@@ -422,6 +467,14 @@ export default {
     abrirPlaylist(item) {
       this.$router.push(`/playlist/${item.id}`)
     },
+    abrirAlbum(item) {
+  this.$router.push(`/album/${item.id}`)
+},
+
+abrirCantor(item) {
+  this.$router.push(`/cantor/${item.id}`)
+},
+
     tocarTudo() {
       const musicas = this.favoritas.filter(f => f.type === 'musica')
       if (musicas.length === 0) {
