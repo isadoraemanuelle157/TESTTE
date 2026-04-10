@@ -50,9 +50,9 @@ const getSeguindo = async (seguidor_id, tipo = null) => {
   }
 
   return await Follow.find(filtro)
-    .populate('seguindo_id', 'nome username avatar')
+    .populate('seguindo_id', 'nome username avatar foto generos')
+    .sort({ createdAt: -1 })
 }
-
 
 // CONTADOR
 const contarSeguidores = async (seguindo_id, tipo) => {

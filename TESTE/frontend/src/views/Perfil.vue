@@ -1299,51 +1299,66 @@ setTabCount(tabId, count) {
   if (tab) tab.count = count
 },
 
-  async carregarFollows() {
+async carregarFollows() {
   try {
     const token = localStorage.getItem("token")
     const userId = this.getProfileUserId()
 
-    if (!userId) return
+    if (!userId || !token) return
 
-    // quem segue este perfil
-    const resSeguidores = await axios.get(
-      `http://localhost:3002/follows/seguidores/${userId}?tipo=usuario`
-    )
+    const authConfig = {
+      headers: { Authorization: `Bearer ${token}` }
+    }
 
-    // quem o usuário logado segue
-    const resSeguindo = await axios.get(
-      `http://localhost:3002/follows/usuario/seguindo?tipo=usuario`,
-      {
-        headers: { Authorization: `Bearer ${token}` }
-      }
-    )
+    const [resSeguidores, resSeguindoUsuarios, resSeguindoCantores] = await Promise.all([
+      axios.get(`http://localhost:3002/follows/seguidores/${userId}?tipo=usuario`),
+      axios.get(`http://localhost:3002/follows/usuario/seguindo?tipo=usuario`, authConfig),
+      axios.get(`http://localhost:3002/follows/usuario/seguindo?tipo=cantor`, authConfig)
+    ])
 
-    const seguindoIds = new Set(
-      (resSeguindo.data || [])
-        .filter(f => f.tipo === 'usuario' && f.seguindo_id)
-        .map(f => String(f.seguindo_id?._id || f.seguindo_id))
+    const seguindoUsuarios = (resSeguindoUsuarios.data || [])
+      .filter(f => f.seguindo_id)
+      .map(f => ({
+        _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
+        nome: f.seguindo_id?.nome || 'Usuário',
+        username: f.seguindo_id?.username || 'usuario',
+        avatar: f.seguindo_id?.avatar || null,
+        tipo: 'usuario',
+        isFollowing: true
+      }))
+
+    const seguindoCantores = (resSeguindoCantores.data || [])
+      .filter(f => f.seguindo_id)
+      .map(f => ({
+        _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
+        nome: f.seguindo_id?.nome || 'Artista',
+        username: null,
+        avatar:
+          f.seguindo_id?.foto ||
+          f.seguindo_id?.avatar ||
+          'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
+        tipo: 'cantor',
+        isFollowing: true,
+        generos: f.seguindo_id?.generos || []
+      }))
+
+    const seguindoUsuariosIds = new Set(
+      seguindoUsuarios.map(u => String(u._id))
     )
 
     this.seguidoresList = (resSeguidores.data || [])
       .filter(f => f.seguidor_id)
       .map(f => ({
-        _id: String(f.seguidor_id._id || f.seguidor_id.id),
-        nome: f.seguidor_id.nome || 'Usuário',
-        username: f.seguidor_id.username || 'usuario',
-        avatar: f.seguidor_id.avatar || null,
-        isFollowing: seguindoIds.has(String(f.seguidor_id._id || f.seguidor_id.id))
+        _id: String(f.seguidor_id?._id || f.seguidor_id?.id),
+        nome: f.seguidor_id?.nome || 'Usuário',
+        username: f.seguidor_id?.username || 'usuario',
+        avatar: f.seguidor_id?.avatar || null,
+        tipo: 'usuario',
+        isFollowing: seguindoUsuariosIds.has(String(f.seguidor_id?._id || f.seguidor_id?.id))
       }))
 
-    this.seguindoList = (resSeguindo.data || [])
-      .filter(f => f.tipo === 'usuario' && f.seguindo_id)
-      .map(f => ({
-        _id: String(f.seguindo_id._id || f.seguindo_id.id),
-        nome: f.seguindo_id.nome || 'Usuário',
-        username: f.seguindo_id.username || 'usuario',
-        avatar: f.seguindo_id.avatar || null,
-        isFollowing: true
-      }))
+    // junta usuários + artistas na mesma aba "Seguindo"
+    this.seguindoList = [...seguindoUsuarios, ...seguindoCantores]
 
     this.estatisticas.seguidores = this.seguidoresList.length
     this.estatisticas.seguindo = this.seguindoList.length
@@ -2242,19 +2257,24 @@ artist: m.cantores && m.cantores.length
       this.$router.push(`/artista/${artista.id}`)
     },
 
-    goToProfile(user) {
-      this.$router.push(`/perfil/${user.username || user.id}`)
-    },
+  goToProfile(user) {
+  if (user.tipo === 'cantor') {
+    this.$router.push(`/cantor/${user._id}`)
+    return
+  }
+
+  this.$router.push(`/perfil/${user.username || user.id || user._id}`)
+},
 
  async toggleFollowUser(user) {
   try {
     const token = localStorage.getItem("token")
     const targetId = String(user._id || user.id)
-    const tipo = 'usuario'
+    const tipo = user.tipo || 'usuario'
 
     if (!token || !targetId) return
 
-    if (String(targetId) === String(this.getLoggedUserId())) {
+    if (tipo === 'usuario' && String(targetId) === String(this.getLoggedUserId())) {
       return
     }
 
@@ -2268,7 +2288,10 @@ artist: m.cantores && m.cantores.length
       })
 
       user.isFollowing = false
-      this.seguindoList = this.seguindoList.filter(u => String(u._id) !== targetId)
+
+      this.seguindoList = this.seguindoList.filter(
+        item => !(String(item._id) === targetId && item.tipo === tipo)
+      )
 
       this.showToast({
         title: "Deixou de seguir",
@@ -2286,13 +2309,17 @@ artist: m.cantores && m.cantores.length
 
       user.isFollowing = true
 
-      const jaExiste = this.seguindoList.some(u => String(u._id) === targetId)
+      const jaExiste = this.seguindoList.some(
+        item => String(item._id) === targetId && item.tipo === tipo
+      )
+
       if (!jaExiste) {
         this.seguindoList.unshift({
           _id: targetId,
           nome: user.nome,
-          username: user.username,
-          avatar: user.avatar,
+          username: user.username || null,
+          avatar: user.avatar || null,
+          tipo,
           isFollowing: true
         })
       }
@@ -2308,11 +2335,13 @@ artist: m.cantores && m.cantores.length
     this.estatisticas.seguindo = this.seguindoList.length
     this.setTabCount('following', this.seguindoList.length)
 
-    // sincroniza botão dos seguidores
-    this.seguidoresList = this.seguidoresList.map(follower => ({
-      ...follower,
-      isFollowing: String(follower._id) === targetId ? user.isFollowing : follower.isFollowing
-    }))
+    // sincroniza apenas seguidores de usuário
+    if (tipo === 'usuario') {
+      this.seguidoresList = this.seguidoresList.map(follower => ({
+        ...follower,
+        isFollowing: String(follower._id) === targetId ? user.isFollowing : follower.isFollowing
+      }))
+    }
 
   } catch (error) {
     console.error(error)
