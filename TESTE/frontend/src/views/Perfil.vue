@@ -1447,6 +1447,17 @@ abrirFavorito(item) {
 
   if (item.type === 'playlist') {
     this.openPlaylist({ _id: item.id })
+    return
+  }
+
+  if (item.type === 'album') {
+    this.$router.push(`/album/${item.id}`)
+    return
+  }
+
+  if (item.type === 'cantor') {
+    this.$router.push(`/cantor/${item.id}`)
+    return
   }
 },
 
@@ -1583,7 +1594,8 @@ async carregarFavoritos() {
     const data = await res.json()
 
     this.favoritos = data.map(f => {
-      if (f.musica) {
+
+if (f.musica) {
         return {
           id: f.musica._id,
           type: "musica",
@@ -1597,7 +1609,7 @@ async carregarFavoritos() {
           dataFavoritado: f.createdAt
         }
       }
-
+ // 📀 PLAYLIST
       if (f.playlist) {
         return {
           id: f.playlist._id,
@@ -1607,6 +1619,30 @@ async carregarFavoritos() {
           cover: f.playlist.capa || f.playlist.cover || "https://via.placeholder.com/150",
           musicas: f.playlist.quantidadeMusicas || f.playlist.musicas?.length || 0,
           duracaoTotal: f.playlist.duracaoTotal || "0 min",
+          dataFavoritado: f.createdAt
+        }
+      }
+       // 💿 ÁLBUM (NOVO)
+      if (f.album) {
+        return {
+          id: f.album._id,
+          type: "album",
+          nome: f.album.nome,
+          artist: f.album.cantor?.nome || "Álbum",
+          cover: f.album.foto,
+          musicas: f.album.musicas?.length || 0,
+          dataFavoritado: f.createdAt
+        }
+      }
+
+      // 🎤 CANTOR (NOVO)
+      if (f.cantor) {
+        return {
+          id: f.cantor._id,
+          type: "cantor",
+          nome: f.cantor.nome,
+          artist: "Artista",
+          cover: f.cantor.foto,
           dataFavoritado: f.createdAt
         }
       }

@@ -389,7 +389,7 @@
               :key="result.id || index"
               class="result-card"
             >
-              <div class="result-image" @click="playTrack(result)">
+              <div class="result-image" @click="handleResultClick(result)">
                 <img :src="getBestImage(result)" :alt="getResultTitle(result)">
                 <div class="result-overlay">
                   <i class="fa fa-play"></i>
@@ -397,18 +397,40 @@
                 <span class="result-type">{{ getResultType(result) }}</span>
               </div>
               
-              <!-- Botão de curtir no resultado da busca -->
-              <button 
-                v-if="result.type === 'track'"
-                class="btn-like-result"
-                @click.stop="toggleLikeTrack(result)"
-                :class="{ liked: isTrackLiked(result.id) }"
-                :title="isTrackLiked(result.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
-              >
-                <i :class="isTrackLiked(result.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-              </button>
+            <!-- Música = coração -->
+<button 
+  v-if="result.type === 'track'"
+  class="btn-like-result"
+  @click.stop="toggleLikeTrack(result)"
+  :class="{ liked: isTrackLiked(result.id) }"
+  :title="isTrackLiked(result.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
+>
+  <i :class="isTrackLiked(result.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+</button>
+
+<!-- Álbum = estrela -->
+<button 
+  v-else-if="result.type === 'album' && result.source === 'local'"
+  class="btn-like-result"
+  @click.stop="toggleFavoriteItem(result)"
+  :class="{ liked: isAlbumFavorited(result.id) }"
+  :title="isAlbumFavorited(result.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
+>
+  <i :class="isAlbumFavorited(result.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+</button>
+
+<!-- Artista = estrela -->
+<button 
+  v-else-if="result.type === 'artist' && result.source === 'local'"
+  class="btn-like-result"
+  @click.stop="toggleFavoriteItem(result)"
+  :class="{ liked: isArtistFavorited(result.id) }"
+  :title="isArtistFavorited(result.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
+>
+  <i :class="isArtistFavorited(result.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+</button>
               
-              <div class="result-info" @click="playTrack(result)">
+              <div class="result-info" @click="handleResultClick(result)">
                 <h4>{{ getResultTitle(result) }}</h4>
                 <p>{{ getResultSubtitle(result) }}</p>
               </div>
@@ -454,6 +476,8 @@ export default {
       
       // Curtidas (array de IDs de músicas curtidas)
       likedTracks: [],
+      favoriteAlbums: [],
+      favoriteArtists: [],
       
       // Data
       searchHistory: JSON.parse(localStorage.getItem('searchHistory')) || [],
@@ -626,7 +650,7 @@ export default {
         if (!groups[type]) {
           groups[type] = {
             type: type,
-            typeClass: type.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-'),
+            typeClass: type.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, '-'),
             items: []
           }
         }
@@ -652,6 +676,8 @@ export default {
   mounted() {
     document.addEventListener('click', this.handleClickOutside)
     this.loadInitialData()
+    this.loadLikedTracks()
+    this.loadFavoritas()
   },
 
   beforeUnmount() {
@@ -662,61 +688,169 @@ export default {
     // ===== SISTEMA DE CURTIDAS =====
     
     // Carregar músicas curtidas do localStorage
-   async loadLikedTracks() {
-  try {
-    const token = localStorage.getItem("token")
+    async loadLikedTracks() {
+      try {
+        const token = localStorage.getItem("token")
 
-    const res = await fetch(`http://localhost:3002/curtidas`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+        const res = await fetch(`http://localhost:3002/curtidas`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const data = await res.json()
+
+        // salvar só os IDs das músicas
+        this.likedTracks = data.map(c => c.musica?._id || c.musica?.id)
+
+      } catch (err) {
+        console.error(err)
       }
-    })
+    },
+    
+    async loadFavoritas() {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) return
 
-    const data = await res.json()
+        const res = await fetch(`http://localhost:3002/favoritas`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-    // 🔥 salvar só os IDs das músicas
-    this.likedTracks = data.map(c => c.musica?._id || c.musica?.id)
+        const data = await res.json()
 
-  } catch (err) {
-    console.error(err)
-  }
-},
+        this.favoriteAlbums = data
+          .filter(f => f.album && f.album._id)
+          .map(f => String(f.album._id))
+
+        this.favoriteArtists = data
+          .filter(f => f.cantor && f.cantor._id)
+          .map(f => String(f.cantor._id))
+
+      } catch (err) {
+        console.error("Erro ao carregar favoritas:", err)
+      }
+    },
+
+    isAlbumFavorited(albumId) {
+      return this.favoriteAlbums.includes(String(albumId))
+    },
+
+    isArtistFavorited(artistId) {
+      return this.favoriteArtists.includes(String(artistId))
+    },
+
+    async toggleFavoriteItem(item) {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.showToast("Faça login para favoritar", "info")
+          return
+        }
+
+        // só favoritar itens locais
+        if (item.source !== 'local') {
+          this.showToast("Só é possível favoritar artistas e álbuns cadastrados no sistema", "info")
+          return
+        }
+
+        const tipo = item.type === 'album' ? 'album' : 'cantor'
+
+        const res = await fetch(`http://localhost:3002/favoritas/${String(item.id)}/favoritar`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ tipo })
+        })
+
+        const data = await res.json()
+
+        if (item.type === 'album') {
+          if (data.favorited) {
+            if (!this.favoriteAlbums.includes(String(item.id))) {
+              this.favoriteAlbums.push(String(item.id))
+            }
+            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+          } else {
+            this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(item.id))
+            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+          }
+        }
+
+        if (item.type === 'artist') {
+          if (data.favorited) {
+            if (!this.favoriteArtists.includes(String(item.id))) {
+              this.favoriteArtists.push(String(item.id))
+            }
+            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+          } else {
+            this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(item.id))
+            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+          }
+        }
+
+        // Dispara evento para atualizar outras páginas
+        window.dispatchEvent(new Event('favoritas-updated'))
+
+      } catch (err) {
+        console.error(err)
+        this.showToast("Erro ao favoritar item", "error")
+      }
+    },
+
+    handleResultClick(result) {
+      if (result.type === 'track') {
+        return this.playTrack(result)
+      }
+
+      if (result.type === 'album' && result.source === 'local') {
+        return this.$router.push(`/album/${result.id}`)
+      }
+
+      if (result.type === 'artist' && result.source === 'local') {
+        return this.$router.push(`/cantor/${result.id}`)
+      }
+    },
     
     // Verificar se uma música está curtida
-  isTrackLiked(trackId) {
-  return this.likedTracks.some(id => String(id) === String(trackId))
-},
+    isTrackLiked(trackId) {
+      return this.likedTracks.some(id => String(id) === String(trackId))
+    },
+    
     // Curtir/descurtir uma música
-   async toggleLikeTrack(track) {
-  try {
-    const token = localStorage.getItem("token")
+    async toggleLikeTrack(track) {
+      try {
+        const token = localStorage.getItem("token")
 
-    const res = await fetch(
-      `http://localhost:3002/musicas/${track.id}/curtir`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
+        const res = await fetch(
+          `http://localhost:3002/musicas/${track.id}/curtir`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+
+        const data = await res.json()
+
+        if (data.liked) {
+          this.likedTracks.push(track.id)
+          this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+        } else {
+          this.likedTracks = this.likedTracks.filter(id => id != track.id)
+          this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
         }
+
+      } catch (err) {
+        console.error(err)
       }
-    )
-
-    const data = await res.json()
-
-    if (data.liked) {
-      this.likedTracks.push(track.id)
-
-      this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
-    } else {
-      this.likedTracks = this.likedTracks.filter(id => id != track.id)
-
-      this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
-    }
-
-  } catch (err) {
-    console.error(err)
-  }
-},
+    },
+    
     // Formatar duração
     formatDuration(seconds) {
       if (!seconds) return "3:00"
@@ -754,84 +888,85 @@ export default {
         console.error('Erro ao carregar artistas:', error)
       }
     },
- async searchAll(query) {
-  this.isLoading = true
+    
+    async searchAll(query) {
+      this.isLoading = true
 
-  try {
-    // 🔥 BACKEND (SEU BANCO)
-    const [localMusicas, localCantores, localAlbuns] = await Promise.all([
-      fetch(`http://localhost:3002/musicas/search?q=${query}`).then(r => r.json()),
-      fetch(`http://localhost:3002/cantores/search?q=${query}`).then(r => r.json()),
-      fetch(`http://localhost:3002/albuns/search?q=${query}`).then(r => r.json())
-    ])
+      try {
+        // BACKEND (SEU BANCO)
+        const [localMusicas, localCantores, localAlbuns] = await Promise.all([
+          fetch(`http://localhost:3002/musicas/search?q=${query}`).then(r => r.json()),
+          fetch(`http://localhost:3002/cantores/search?q=${query}`).then(r => r.json()),
+          fetch(`http://localhost:3002/albuns/search?q=${query}`).then(r => r.json())
+        ])
 
-    // 🔥 DEEZER
-    const [tracks, artists, albums] = await Promise.all([
-      fetch(`${this.DEEZER_API}/search/track?q=${query}`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/artist?q=${query}`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/album?q=${query}`).then(r => r.json())
-    ])
+        // DEEZER
+        const [tracks, artists, albums] = await Promise.all([
+          fetch(`${this.DEEZER_API}/search/track?q=${query}`).then(r => r.json()),
+          fetch(`${this.DEEZER_API}/search/artist?q=${query}`).then(r => r.json()),
+          fetch(`${this.DEEZER_API}/search/album?q=${query}`).then(r => r.json())
+        ])
 
-    let results = []
+        let results = []
 
-    // 🎵 MUSICAS LOCAIS
-    if (Array.isArray(localMusicas)) {
-      results.push(...localMusicas.map(m => ({
-        id: m._id,
-        title: m.nome,
-        artist: {
-          name: m.cantores?.map(c => c.nome).join(', ')
-        },
-        album: {
-          title: m.albuns?.[0]?.nome || '',
-          cover: m.albuns?.[0]?.foto || ''
-        },
-        cover: m.foto,
-        preview: m.link,
-        type: 'track',
-        source: 'local'
-      })))
-    }
+        // MUSICAS LOCAIS
+        if (Array.isArray(localMusicas)) {
+          results.push(...localMusicas.map(m => ({
+            id: m._id,
+            title: m.nome,
+            artist: {
+              name: m.cantores?.map(c => c.nome).join(', ')
+            },
+            album: {
+              title: m.albuns?.[0]?.nome || '',
+              cover: m.albuns?.[0]?.foto || ''
+            },
+            cover: m.foto,
+            preview: m.link,
+            type: 'track',
+            source: 'local'
+          })))
+        }
 
-    // 🎤 CANTORES LOCAIS
-    if (Array.isArray(localCantores)) {
-      results.push(...localCantores.map(c => ({
-        id: c._id,
-        name: c.nome,
-        picture: c.foto,
-        type: 'artist',
-        source: 'local'
-      })))
-    }
+        // CANTORES LOCAIS
+        if (Array.isArray(localCantores)) {
+          results.push(...localCantores.map(c => ({
+            id: c._id,
+            name: c.nome,
+            picture: c.foto,
+            type: 'artist',
+            source: 'local'
+          })))
+        }
 
-    // 💿 ÁLBUNS LOCAIS
-    if (Array.isArray(localAlbuns)) {
-      results.push(...localAlbuns.map(a => ({
-        id: a._id,
-        title: a.nome,
-        artist: {
-          name: a.cantor?.nome || ''
-        },
-        cover: a.foto,
-        type: 'album',
-        source: 'local'
-      })))
-    }
+        // ÁLBUNS LOCAIS
+        if (Array.isArray(localAlbuns)) {
+          results.push(...localAlbuns.map(a => ({
+            id: a._id,
+            title: a.nome,
+            artist: {
+              name: a.cantor?.nome || ''
+            },
+            cover: a.foto,
+            type: 'album',
+            source: 'local'
+          })))
+        }
 
-    // 🔥 DEEZER (mantém)
-    if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
-    if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
-    if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
+        // DEEZER (mantém)
+        if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
+        if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
+        if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
 
-    this.searchResults = results
+        this.searchResults = results
 
-  } catch (err) {
-    console.error(err)
-    this.searchResults = []
-  } finally {
-    this.isLoading = false
-  }
-},
+      } catch (err) {
+        console.error(err)
+        this.searchResults = []
+      } finally {
+        this.isLoading = false
+      }
+    },
 
     async searchDeezer(query) {
       this.isLoading = true
@@ -880,32 +1015,32 @@ export default {
       return typeMap[item.type] || item.type
     },
 
-  getBestImage(item) {
-  if (item.source === 'local') {
-    if (item.type === 'track') {
-      return item.album?.cover || item.cover
-    }
-    if (item.type === 'artist') {
-      return item.picture
-    }
-    if (item.type === 'album') {
-      return item.cover
-    }
-  }
+    getBestImage(item) {
+      if (item.source === 'local') {
+        if (item.type === 'track') {
+          return item.album?.cover || item.cover
+        }
+        if (item.type === 'artist') {
+          return item.picture
+        }
+        if (item.type === 'album') {
+          return item.cover
+        }
+      }
 
-  // Deezer
-  if (item.type === 'track') {
-    return item.album?.cover_medium
-  }
-  if (item.type === 'artist') {
-    return item.picture_medium
-  }
-  if (item.type === 'album') {
-    return item.cover_medium
-  }
+      // Deezer
+      if (item.type === 'track') {
+        return item.album?.cover_medium
+      }
+      if (item.type === 'artist') {
+        return item.picture_medium
+      }
+      if (item.type === 'album') {
+        return item.cover_medium
+      }
 
-  return ''
-},
+      return ''
+    },
 
     getIconForType(type) {
       const icons = {
@@ -992,7 +1127,6 @@ export default {
       localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory))
       
       await this.searchAll(this.searchQuery)
-
     },
 
     searchAndGo(term) {
@@ -1033,17 +1167,17 @@ export default {
       }))
     },
 
-  convertToPlayerFormat(track) {
-  return {
-    id: track.id,
-    title: this.getResultTitle(track),
-    artist: track.artist?.name || 'Artista desconhecido',
-    cover: this.getBestImage(track),
-    url: track.preview || track.link, // 🔥 local usa link
-    duration: track.duration || 30,
-    type: track.type || 'search'
-  }
-},
+    convertToPlayerFormat(track) {
+      return {
+        id: track.id,
+        title: this.getResultTitle(track),
+        artist: track.artist?.name || 'Artista desconhecido',
+        cover: this.getBestImage(track),
+        url: track.preview || track.link,
+        duration: track.duration || 30,
+        type: track.type || 'search'
+      }
+    },
     
     // ===== TOAST =====
     showToast(message, type = "success") {

@@ -179,9 +179,9 @@ export default {
       ultimoIndiceRemovido: null,
       activeMenuIndex: null,
       showPlaylistModal: false,
-  playlists: [],
-  musicaSelecionada: null,
-   usuarioId: null,
+      playlists: [],
+      musicaSelecionada: null,
+      usuarioId: null,
       toast: {
         show: false,
         title: "",
@@ -195,12 +195,12 @@ export default {
 
   mounted() {
     const user = JSON.parse(localStorage.getItem("usuario"))
-this.usuarioId = user?._id || user?.id
+    this.usuarioId = user?._id || user?.id
 
-  this.carregarCurtidas()
-  window.addEventListener('focus', this.carregarCurtidas)
-  document.addEventListener('click', this.handleClickOutside)
-},
+    this.carregarCurtidas()
+    window.addEventListener('focus', this.carregarCurtidas)
+    document.addEventListener('click', this.handleClickOutside)
+  },
 
   beforeUnmount() {
     window.removeEventListener('focus', this.carregarCurtidas)
@@ -209,39 +209,38 @@ this.usuarioId = user?._id || user?.id
   },
 
   methods: {
-  async carregarCurtidas() {
-  try {
-    const token = localStorage.getItem("token")
+    async carregarCurtidas() {
+      try {
+        const token = localStorage.getItem("token")
 
-    const res = await fetch(`http://localhost:3002/curtidas`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+        const res = await fetch(`http://localhost:3002/curtidas`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        if (!res.ok) {
+          const text = await res.text()
+          console.error("Erro API:", text)
+          return
+        }
+
+        const data = await res.json()
+
+        // adapta pro formato do seu front
+        this.musicas = data.map(c => ({
+          id: c.musica?._id,
+          title: c.musica?.nome,
+          artist: c.musica?.cantores?.[0]?.nome || 'Artista',
+          cover: c.musica?.foto,
+          url: c.musica?.link,
+          duration: 180
+        }))
+
+      } catch (err) {
+        console.error(err)
       }
-    })
-
-    if (!res.ok) {
-      const text = await res.text()
-      console.error("Erro API:", text)
-      return
-    }
-
-    const data = await res.json()
-
-    // 🔥 adapta pro formato do seu front
- this.musicas = data.map(c => ({
-  id: c.musica?._id,
-  title: c.musica?.nome,
-  artist: c.musica?.cantores?.[0]?.nome || 'Artista',
-  cover: c.musica?.foto,
-  url: c.musica?.link,
-  duration: 180
-}))
-
-
-  } catch (err) {
-    console.error(err)
-  }
-},
+    },
     
     handleStorageChange(e) {
       if (e.key === 'curtidas') {
@@ -279,119 +278,128 @@ this.usuarioId = user?._id || user?.id
       return {}
     },
 
-   async adicionarAPlaylist(musica) {
-  this.closeMenu()
-  this.musicaSelecionada = musica
-  this.showPlaylistModal = true
+    async adicionarAPlaylist(musica) {
+      this.closeMenu()
+      this.musicaSelecionada = musica
+      this.showPlaylistModal = true
 
-  try {
-   const token = localStorage.getItem("token")
+      try {
+        const token = localStorage.getItem("token")
 
-const res = await fetch(`http://localhost:3002/playlists`, {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-})
+        const res = await fetch(`http://localhost:3002/playlists`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-    const data = await res.json()
-    this.playlists = data
-  } catch (err) {
-    console.error(err)
-  }
-},
-async adicionarNaPlaylist(playlistId) {
-  try {
- const token = localStorage.getItem("token")
-
-await fetch(`http://localhost:3002/playlists/${playlistId}/musicas/${this.musicaSelecionada.id}`, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-})
-
-    this.showToast({
-      title: "Adicionado!",
-      message: `"${this.musicaSelecionada.title}" foi adicionada à playlist`,
-      type: "success",
-      icon: "fa fa-check"
-    })
-
-    this.showPlaylistModal = false
-
-  } catch (err) {
-    console.error(err)
-  }
-},
-
-   async favoritarMusica(musica) {
-  this.closeMenu()
-
-  try {
-    const token = localStorage.getItem("token")
-
-    const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        tipo: "musica"
-      })
-    })
-
-    if (!res.ok) throw new Error("Erro ao favoritar")
-
-    this.showToast({
-      title: "⭐ Favoritada!",
-      message: `"${musica.title}" adicionada aos favoritos`,
-      type: "success",
-      icon: "fa fa-star"
-    })
-
-    // 🔥 REDIRECIONA PRA FAVORITAS
-    this.$router.push('/favoritas')
-    window.dispatchEvent(new Event('likes-updated'))
-
-  } catch (err) {
-    console.error(err)
-
-    this.showToast({
-      title: "Erro",
-      message: "Não foi possível favoritar",
-      type: "error",
-      icon: "fa fa-times"
-    })
-  }
-},
-
-async removerCurtida(musica) {
-  try {
-    const token = localStorage.getItem("token")
-
-   await fetch(`http://localhost:3002/musicas/${musica.id}/curtir`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`
+        const data = await res.json()
+        this.playlists = data
+      } catch (err) {
+        console.error(err)
       }
-    })
+    },
+    
+    async adicionarNaPlaylist(playlistId) {
+      try {
+        const token = localStorage.getItem("token")
 
-    // remove do front
-    this.musicas = this.musicas.filter(m => m.id !== musica.id)
+        await fetch(`http://localhost:3002/playlists/${playlistId}/musicas/${this.musicaSelecionada.id}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-    this.showToast({
-      title: "Removida dos curtidos",
-      message: `"${musica.title}" foi removida`,
-      type: "info",
-      icon: "fa fa-heart-broken"
-    })
-    window.dispatchEvent(new Event('likes-updated'))
+        this.showToast({
+          title: "Adicionado!",
+          message: `"${this.musicaSelecionada.title}" foi adicionada à playlist`,
+          type: "success",
+          icon: "fa fa-check"
+        })
 
-  } catch (err) {
-    console.error(err)
-  }
-},
+        this.showPlaylistModal = false
+
+      } catch (err) {
+        console.error(err)
+      }
+    },
+
+    async favoritarMusica(musica) {
+      this.closeMenu()
+
+      try {
+        const token = localStorage.getItem("token")
+
+        const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            tipo: "musica"
+          })
+        })
+
+        if (!res.ok) throw new Error("Erro ao favoritar")
+
+        const data = await res.json()
+
+        if (data.favorited) {
+          this.showToast({
+            title: "⭐ Favoritada!",
+            message: `"${musica.title}" adicionada aos favoritos`,
+            type: "success",
+            icon: "fa fa-star"
+          })
+          // Dispara evento para atualizar a página de favoritas
+          window.dispatchEvent(new Event('favoritas-updated'))
+        } else {
+          this.showToast({
+            title: "Removida",
+            message: `"${musica.title}" removida dos favoritos`,
+            type: "info",
+            icon: "fa fa-star-o"
+          })
+        }
+
+      } catch (err) {
+        console.error(err)
+        this.showToast({
+          title: "Erro",
+          message: "Não foi possível favoritar",
+          type: "error",
+          icon: "fa fa-times"
+        })
+      }
+    },
+
+    async removerCurtida(musica) {
+      try {
+        const token = localStorage.getItem("token")
+
+        await fetch(`http://localhost:3002/musicas/${musica.id}/curtir`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        // remove do front
+        this.musicas = this.musicas.filter(m => m.id !== musica.id)
+
+        this.showToast({
+          title: "Removida dos curtidos",
+          message: `"${musica.title}" foi removida`,
+          type: "info",
+          icon: "fa fa-heart-broken"
+        })
+        window.dispatchEvent(new Event('likes-updated'))
+
+      } catch (err) {
+        console.error(err)
+      }
+    },
 
     desfazerRemocao() {
       if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
