@@ -487,12 +487,18 @@ export default {
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
 .curtidas {
-margin-top:28px;
-  margin-left: 260px;
-  padding: 40px;
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+
+  /* 🔥 ocupa toda a tela */
+  margin: 0;
+  padding: 30px 60px;
+
+  box-sizing: border-box;
+
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
 }
 

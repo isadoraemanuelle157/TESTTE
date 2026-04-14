@@ -2551,15 +2551,26 @@ artist: m.cantores && m.cantores.length
 
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+* {
+  box-sizing: border-box;
+}
 
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
 .perfil {
-  margin-left: 260px;
+ width: 100%;
   min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  padding-bottom: 100px;
+    padding-bottom: 100px;
+  box-sizing: border-box;
 }
+
 .playlist-list {
   display: flex;
   flex-direction: column;

@@ -1204,22 +1204,26 @@ export default {
 
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
-
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
 .search-page {
-  min-height: 100vh;
+   min-height: 100vh;
+  width: 100%;
+  margin: 0;
   color: #fff;
   font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  margin-left: 240px;
-  width: calc(100% - 240px);
   background: linear-gradient(180deg, #050508 0%, #0a0a1a 30%, #0a1a3f 100%);
   padding: 24px 0 120px 0;
+
   display: flex;
   justify-content: center;
 }
 
 .search-container {
   width: 100%;
-  max-width: 1000px;
+  max-width: 1400px;
   padding: 0 32px;
 }
 

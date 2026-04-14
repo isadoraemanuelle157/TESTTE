@@ -1425,18 +1425,19 @@ export default {
 
 /* ========== CORREÇÃO DO ESPAÇO À DIREITA ========== */
 .playlist-container {
-  min-height: 100vh;
+   min-height: 100%;
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   padding: 32px;
-  width: calc(100% - 260px);
-  margin-left: 260px;
-  margin-top: 35px;
+   width: 100%;
+    margin-left: 0;
+  margin-top: 1px;
   box-sizing: border-box;
   position: relative;
-  /* Garante que não ultrapasse a viewport */
+    max-width: 100%;
   overflow-x: hidden;
+ padding: 32px;
 }
 
 /* ========== MODO DE EDIÇÃO APRIMORADO ========== */
