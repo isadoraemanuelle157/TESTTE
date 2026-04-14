@@ -1,4 +1,6 @@
 const Follow = require('../models/Follow')
+const Usuario = require('../models/Usuario')
+const Cantor = require('../models/Cantor')
 const mongoose = require('mongoose')
 
 // SEGUIR (GENÉRICO)
@@ -14,14 +16,27 @@ const seguir = async (seguidor_id, seguindo_id, tipo) => {
 
   if (existe) return existe
 
-  return await Follow.create({
+  const follow = await Follow.create({
     seguidor_id,
     seguindo_id,
     tipo: tipoFormatado,
     tipoRef
   })
-}
 
+  // 🔥 ATUALIZA USUARIO
+  if (tipoFormatado === 'cantor') {
+    await Usuario.findByIdAndUpdate(seguidor_id, {
+      $addToSet: { seguindo: seguindo_id }
+    })
+
+    // 🔥 ATUALIZA CANTOR
+    await Cantor.findByIdAndUpdate(seguindo_id, {
+      $addToSet: { seguidores: seguidor_id }
+    })
+  }
+
+  return follow
+}
 // DESSEGUIR
 const desseguir = async (seguidor_id, seguindo_id, tipo) => {
   const deleted = await Follow.findOneAndDelete({
@@ -30,7 +45,15 @@ const desseguir = async (seguidor_id, seguindo_id, tipo) => {
     tipo: tipo.toLowerCase()
   })
 
-  console.log('REMOVIDO:', deleted)
+  if (tipo.toLowerCase() === 'cantor') {
+    await Usuario.findByIdAndUpdate(seguidor_id, {
+      $pull: { seguindo: seguindo_id }
+    })
+
+    await Cantor.findByIdAndUpdate(seguindo_id, {
+      $pull: { seguidores: seguidor_id }
+    })
+  }
 
   return deleted
 }

@@ -183,18 +183,18 @@ export default {
         timeout: null
       },
       artists: [],
-      followedArtists: new Set(), // Usar Set para melhor performance
+      followedArtists: [],
       // API Configuration
       DEEZER_API: 'https://api.deezer.com',
       CORS_PROXY: 'https://corsproxy.io/?'
     };
   },
 
-  mounted() {
-    this.loadFollowedArtists();
-    this.loadArtists();
-    window.addEventListener('resize', this.checkArrows);
-  },
+async mounted() {
+  await this.loadFollowedArtists()
+  await this.loadArtists()
+  window.addEventListener('resize', this.checkArrows)
+},
 
   beforeUnmount() {
     window.removeEventListener('resize', this.checkArrows);
@@ -217,7 +217,7 @@ export default {
       picture: cantor.foto || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
       picture_medium: cantor.foto,
       picture_big: cantor.foto,
-      nb_fan: cantor.musicas?.length * 1000 || 0, // fake popularity
+      nb_fan: cantor.totalSeguidores || 0,
       source: 'db', // 🔥 importante para diferenciar
       generos: cantor.generos || []
     }))
@@ -227,6 +227,28 @@ export default {
     return []
   }
 },
+
+setFollowingState(artistId, shouldFollow) {
+  const id = String(artistId)
+
+  if (shouldFollow) {
+    if (!this.followedArtists.includes(id)) {
+      this.followedArtists = [...this.followedArtists, id]
+    }
+  } else {
+    this.followedArtists = this.followedArtists.filter(item => String(item) !== id)
+  }
+},
+
+updateArtistInList(artistId, newData = {}) {
+  const id = String(artistId)
+  this.artists = this.artists.map(artist =>
+    String(artist.id) === id
+      ? { ...artist, ...newData }
+      : artist
+  )
+},
+
 updateFollowersCount(artist, isNowFollowing) {
   if (!artist.nb_fan) artist.nb_fan = 0;
 
@@ -269,11 +291,7 @@ async getFollowersCount(artist) {
 
     // 🔥 3. JUNTAR OS DOIS
     this.artists = [...dbArtists, ...deezerArtists]
-this.artists.forEach(a => {
-  if (a.source === 'db') {
-    this.getFollowersCount(a)
-  }
-})
+
     this.subtitle = `Artistas do sistema + Top globais`
 
     this.$nextTick(() => {
@@ -286,6 +304,17 @@ this.artists.forEach(a => {
   } finally {
     this.isLoading = false
   }
+},
+normalizeMongoId(value) {
+  if (!value) return null
+
+  if (typeof value === 'string') return value
+
+  if (typeof value === 'object') {
+    return value._id ? String(value._id) : String(value)
+  }
+
+  return String(value)
 },
     
     async loadGenreArtists() {
@@ -400,79 +429,68 @@ this.artists.forEach(a => {
 
     // ============ FOLLOW SYSTEM ============
     
-  async toggleFollow(artist) {
+ async toggleFollow(artist) {
   try {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token")
 
     if (!token) {
-      this.showToast('Faça login para seguir artistas', 'error');
-      return;
+      this.showToast('Faça login para seguir artistas', 'error')
+      return
     }
 
     if (artist.source !== 'db') {
-      this.showToast('Só é possível seguir artistas do sistema', 'info');
-      return;
+      this.showToast('Só é possível seguir artistas do sistema', 'info')
+      return
     }
 
-    const artistId = String(artist.id);
-    const tipo = 'cantor';
-    const isFollowing = this.isFollowing(artistId);
+    const artistId = String(artist.id)
+    const currentlyFollowing = this.isFollowing(artistId)
 
-    if (isFollowing) {
-      const res = await fetch('http://localhost:3002/follows/desseguir', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          seguindo_id: artistId,
-          tipo
-        })
-      });
+    const url = currentlyFollowing
+      ? 'http://localhost:3002/follows/desseguir'
+      : 'http://localhost:3002/follows/seguir'
 
-      const data = await res.json();
+    const method = currentlyFollowing ? 'DELETE' : 'POST'
 
-      if (!res.ok) {
-        throw new Error(data.message || 'Erro ao desseguir');
-      }
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        seguindo_id: artistId,
+        tipo: 'cantor'
+      })
+    })
 
-      this.followedArtists.delete(artistId);
-      this.updateFollowersCount(artist, false);
-      this.showToast(`Deixou de seguir ${artist.name}`, 'info');
-    } else {
-      const res = await fetch('http://localhost:3002/follows/seguir', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          seguindo_id: artistId,
-          tipo
-        })
-      });
+    const data = await res.json()
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Erro ao seguir');
-      }
-
-      this.followedArtists.add(artistId);
-      this.updateFollowersCount(artist, true);
-      this.showToast(`Você seguiu ${artist.name}`, 'success');
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao seguir')
     }
 
-    await this.loadFollowedArtists();
+    // 🔥 ATUALIZA FRONT NA HORA (IMPORTANTE)
+    this.setFollowingState(artistId, !currentlyFollowing)
+
+    // 🔥 atualiza contador visual (opcional)
+    this.updateFollowersCount(artist, !currentlyFollowing)
+
+    this.showToast(
+      currentlyFollowing
+        ? `Você deixou de seguir ${artist.name}`
+        : `Agora você segue ${artist.name}`,
+      currentlyFollowing ? 'info' : 'success'
+    )
+
   } catch (error) {
-    console.error(error);
-    this.showToast(error.message || 'Erro ao seguir artista', 'error');
+    console.error(error)
+    this.showToast(error.message, 'error')
   }
 },
 
-  isFollowing(artistId) {
-  return this.followedArtists.has(String(artistId));
+isFollowing(artistId) {
+  return this.followedArtists.some(id => String(id) === String(artistId))
 },
 
     showToast(message, type = 'success') {
@@ -489,31 +507,40 @@ this.artists.forEach(a => {
       }, 3000);
     },
 
-    saveFollowedArtists() {
-      localStorage.setItem('followedArtists', JSON.stringify([...this.followedArtists]));
-    },
+ saveFollowedArtists() {
+  localStorage.setItem('followedArtists', JSON.stringify(this.followedArtists))
+},
 
- async loadFollowedArtists() {
+async loadFollowedArtists() {
   try {
-    const token = localStorage.getItem('token')
-    if (!token) return
+    const token = localStorage.getItem("token")
 
-    const res = await fetch('http://localhost:3002/follows/usuario/seguindo', {
-      headers: {
-        Authorization: `Bearer ${token}`
+    if (!token) {
+      this.followedArtists = []
+      return
+    }
+
+    const res = await fetch(
+      'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
-    })
+    )
 
     const data = await res.json()
 
-  this.followedArtists = new Set(
-  data.map(f => (f.seguindo_id?._id || f.seguindo_id).toString())
-)
+    // 🔥 agora vem da tabela Follow
+    this.followedArtists = data.map(f => 
+      String(f.seguindo_id?._id || f.seguindo_id)
+    )
+
   } catch (error) {
     console.error('Erro ao carregar seguindo:', error)
+    this.followedArtists = []
   }
 },
-
     // ============ NAVIGATION ============
     
     goToArtist(artist) {

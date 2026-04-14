@@ -97,6 +97,8 @@
   <span class="stat-label">Seguindo</span>
 </div>
 
+
+
             <div class="stat-item" v-if="estatisticas.ouvintesMensais">
               <span class="stat-value highlight">{{ formatNumber(estatisticas.ouvintesMensais) }}</span>
               <span class="stat-label">Ouvintes/mês</span>
@@ -502,6 +504,7 @@
                   <i class="fa fa-ellipsis-v"></i>
                 </button>
               </div>
+          
             </div>
           </div>
          
@@ -682,7 +685,72 @@
     <p>Os usuários seguidos aparecerão aqui</p>
   </div>
 </div>
+<!-- Tab: Favoritos -->
+<div v-if="activeTab === 'favorites'" class="tab-content">
+  <div class="content-section">
+    
+    <div class="section-header">
+      <div class="header-title">
+        <h3><i class="fa fa-star"></i> Seus Favoritos</h3>
+        <span class="count-badge">
+          {{ favoritosRecentes.length }} itens
+        </span>
+      </div>
+    </div>
 
+    <div class="music-list-detailed" v-if="favoritosRecentes.length > 0">
+      
+      <div
+        v-for="(item, index) in favoritosRecentes"
+        :key="`${item.type}-${item.id || item._id}`"
+        class="music-row"
+        @dblclick="abrirFavorito(item)"
+      >
+        <!-- Número -->
+        <span class="row-number">{{ index + 1 }}</span>
+
+        <!-- Capa -->
+        <img :src="item.cover" :alt="item.nome" />
+
+        <!-- Info -->
+        <div class="row-info">
+          <h4>{{ item.nome }}</h4>
+
+          <p v-if="item.type === 'musica'">
+            {{ item.artist }}
+          </p>
+
+          <p v-else>
+            {{ item.musicas || 0 }} músicas • {{ item.duracaoTotal || '0 min' }}
+          </p>
+        </div>
+
+        <!-- Tipo -->
+        <span class="row-album">
+          {{ item.type === 'musica' ? 'Música' : 'Playlist' }}
+        </span>
+
+        <!-- Ações -->
+        <div class="row-actions">
+          <button @click.stop="abrirFavorito(item)">
+            <i :class="item.type === 'musica' ? 'fa fa-play' : 'fa fa-list'"></i>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Vazio -->
+    <div class="empty-state large" v-else>
+      <div class="empty-icon large">
+        <i class="fa fa-star-o"></i>
+      </div>
+      <h4>Nenhum favorito ainda</h4>
+      <p>Adicione músicas ou playlists aos favoritos</p>
+    </div>
+
+  </div>
+</div>
     </div>
 
     <!-- Modal de Edição de Perfil -->
@@ -1019,7 +1087,8 @@ export default {
   { id: 'playlists', label: 'Playlists', icon: 'fa fa-list', count: 0 },
   { id: 'history', label: 'Histórico', icon: 'fa fa-history', count: null },
   { id: 'followers', label: 'Seguidores', icon: 'fa fa-users', count: 0 },
-  { id: 'following', label: 'Seguindo', icon: 'fa fa-user-plus', count: 0 }
+  { id: 'following', label: 'Seguindo', icon: 'fa fa-user-plus', count: 0 },
+  { id: 'favorites', label: 'Favoritos', icon: 'fa fa-star', count: 0 }
 ],
      
       // Dados do usuário
@@ -1282,6 +1351,7 @@ beforeUnmount() {
         this.tabs[1].count = this.estatisticas.musicasCurtidas
         this.tabs[2].count = this.estatisticas.playlists
         this.tabs[4].count = this.estatisticas.seguidores
+        this.tabs[5].count = this.estatisticas.favoritos
       } else {
   this.$router.push('/login')
 }
@@ -1653,6 +1723,8 @@ if (f.musica) {
     this.favoritosRecentes = [...this.favoritos]
       .sort((a, b) => new Date(b.dataFavoritado) - new Date(a.dataFavoritado))
       .slice(0, 6)
+
+        this.setTabCount('favorites', this.favoritos.length)
 
   } catch (error) {
     console.error(error)

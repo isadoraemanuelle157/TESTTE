@@ -104,6 +104,17 @@
             <h3 class="artist-name">{{ cantor.nome }}</h3>
             <p class="artist-meta">
               <span class="verified-badge soundup-gradient" v-if="hoveredCard === cantor._id">✓</span>
+               <span>
+  👥 {{
+    cantor.seguidoresFormatado ||
+    formatarSeguidores(
+      (cantor.totalSeguidores ?? cantor.seguidoresBase ?? 0) +
+      (Array.isArray(cantor.seguidores) ? cantor.seguidores.length : 0)
+    )
+  }} fãs
+</span>
+
+
               <span v-if="cantor.albuns && cantor.albuns.length > 0">
                 {{ cantor.albuns.length }} álbum(ns) • 
               </span>
@@ -226,6 +237,14 @@
                       @input="previewFoto = null"
                     />
                   </div>
+                   <div class="input-group">
+    <label>Seguidores/Fãs iniciais</label>
+    <input 
+      v-model="form.seguidoresBase"
+      type="text"
+      placeholder="Ex: 10k, 100k, 2500"
+    />
+  </div>
                 </div>
               </div>
                 
@@ -717,6 +736,7 @@ export default {
       cantores: [],
       generos: [],
       musicas: [],
+        usuarioLogadoId: localStorage.getItem('usuarioId') || '',
       loading: true,
       hoveredCard: null,
       
@@ -729,7 +749,8 @@ export default {
         foto: '',
         albuns: [],
         generos: [],
-        musicas: []
+        musicas: [],
+          seguidoresBase: ''
       },
       previewFoto: null,
       arquivoSelecionado: null,
@@ -792,6 +813,18 @@ export default {
     return this.albunsDisponiveis.filter(a => a.nome.toLowerCase().includes(s))
   },
 
+  normalizeMongoId(value) {
+  if (!value) return null
+
+  if (typeof value === 'string') return value
+
+  if (typeof value === 'object') {
+    return value._id ? String(value._id) : String(value)
+  }
+
+  return String(value)
+},
+
   filteredMusicas() {
     if (!this.searchMusicas) return this.musicas
     const s = this.searchMusicas.toLowerCase()
@@ -824,6 +857,68 @@ export default {
         this.dropdownOpen = null
       }
     },
+formatarSeguidores(total) {
+  if (!total) return '0'
+  if (total >= 1000000) {
+    const valor = total / 1000000
+    return `${Number.isInteger(valor) ? valor : valor.toFixed(1).replace('.', ',')}M`
+  }
+  if (total >= 1000) {
+    const valor = total / 1000
+    return `${Number.isInteger(valor) ? valor : valor.toFixed(1).replace('.', ',')}k`
+  }
+  return String(total)
+},
+
+usuarioSegueCantor(cantor) {
+  if (!this.usuarioLogadoId || !Array.isArray(cantor.seguidores)) return false
+
+  return cantor.seguidores.some(s => {
+    const id = this.normalizeMongoId(s)
+    return String(id) === String(this.usuarioLogadoId)
+  })
+},
+
+async toggleSeguirCantor(cantor) {
+  try {
+    const token = localStorage.getItem('token')
+
+    if (!this.usuarioLogadoId || !token) {
+      this.mostrarToast('Faça login para seguir artistas', 'error', '⚠️')
+      return
+    }
+
+    const jaSegue = this.usuarioSegueCantor(cantor)
+    const endpoint = jaSegue ? 'deixar-seguir' : 'seguir'
+
+    const response = await fetch(`http://localhost:3002/cantores/${cantor._id}/${endpoint}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Erro ao atualizar follow')
+    }
+
+    const index = this.cantores.findIndex(c => c._id === cantor._id)
+    if (index !== -1) {
+      this.cantores[index] = result.cantor
+    }
+
+    this.mostrarToast(
+      jaSegue ? 'Você deixou de seguir este artista' : 'Agora você segue este artista',
+      'success',
+      '🎤'
+    )
+  } catch (error) {
+    this.mostrarToast(error.message || 'Erro ao seguir cantor', 'error', '❌')
+  }
+},
 
     getGeneroNome(id) {
       return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
@@ -1141,7 +1236,8 @@ fecharModalMusica() {
     ? this.form.musicas
         .map(m => typeof m === 'object' ? m._id : m)
         .filter(Boolean)
-    : []
+    : [],
+      seguidoresBase: this.form.seguidoresBase
 }
 
 
@@ -1304,16 +1400,15 @@ fecharModalMusica() {
       } catch (e) {
         console.error('Erro ao carregar álbuns:', e)
       }
-      
-      this.form = { 
-        nome: cantor.nome, 
-        foto: cantor.foto || '',
-        albuns: albuns,
-        generos: cantor.generos?.map(g => g._id) || [],
-        musicas: cantor.musicas?.map(m => 
-  typeof m === 'object' ? m._id : m
-) || []
-      }
+     this.form = { 
+  nome: cantor.nome, 
+  foto: cantor.foto || '',
+  albuns: albuns,
+  generos: cantor.generos?.map(g => g._id) || [],
+  musicas: cantor.musicas?.map(m => typeof m === 'object' ? m._id : m) || [],
+  seguidoresBase: cantor.seguidoresBase ?? ''
+}
+
       this.previewFoto = null
       this.arquivoSelecionado = null
       this.showModal = true
@@ -1324,20 +1419,21 @@ fecharModalMusica() {
       this.resetForm()
     },
 
-    resetForm() {
-      this.form = { 
-        nome: '', 
-        foto: '',
-        albuns: [],
-        generos: [],
-        musicas: []
-      }
-      this.previewFoto = null
-      this.arquivoSelecionado = null
-      this.dropdownOpen = null
-      this.searchGeneros = ''
-      this.searchMusicas = ''
-    },
+  resetForm() {
+  this.form = { 
+    nome: '', 
+    foto: '',
+    albuns: [],
+    generos: [],
+    musicas: [],
+    seguidoresBase: ''
+  }
+  this.previewFoto = null
+  this.arquivoSelecionado = null
+  this.dropdownOpen = null
+  this.searchGeneros = ''
+  this.searchMusicas = ''
+},
 
     confirmarExclusao(cantor) {
       this.cantorParaExcluir = cantor
@@ -1544,6 +1640,23 @@ fecharModalMusica() {
 .btn-soundup.large {
   padding: 1rem 2.5rem;
   font-size: 1rem;
+}
+.btn-follow {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.12);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-follow:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  transform: translateY(-1px);
 }
 
 .btn-icon {
