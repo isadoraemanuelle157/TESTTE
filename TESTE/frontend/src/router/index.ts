@@ -32,6 +32,7 @@ import Perfil from '@/views/Perfil.vue'
 import Favoritas from '@/views/Favoritas.vue'
 import FeitoParaVoce from '@/components/FeitoParaVoce.vue'
 import Vibe from '@/banco/Vibe.vue'
+// import SalasMusicais from '@/components/SalasMusicais.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -116,6 +117,11 @@ const router = createRouter({
       name: 'salademusica',
       component: SaladeMusica,
     },
+    //  {
+    //   path: '/salasmusicais',
+    //   name: 'salasmusicais',
+    //   component: SalasMusicais,
+    // },
     {
       path: '/matchmusical',
       name: 'matchmusical',

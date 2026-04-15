@@ -236,14 +236,12 @@ export default {
     const isSearchFocused = ref(false)
     const searchQuery = ref('')
 
-
     // Estados do usuário
     const isLoggedIn = ref(false)
     const userName = ref('')
     const userEmail = ref('')
     const userAvatar = ref(null)
     const userId = ref(null)
-
 
     // Notificações mock
     const notificationCount = ref(3)
@@ -413,12 +411,44 @@ export default {
       }
     }
 
+// Ouvir evento de logout
+const handleUserLoggedOut = () => {
+  isLoggedIn.value = false
+  userName.value = ''
+  userEmail.value = ''
+  userAvatar.value = null
+  userId.value = null
+  showUserMenu.value = false
+}
 
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+  document.addEventListener('click', handleClickOutside)
+ 
+  // Carregar dados do usuário ao montar
+  loadUserData()
+ 
+  // Ouvir eventos de login/logout de outros componentes
+  window.addEventListener('user-logged-in', handleUserLoggedIn)
+  window.addEventListener('user-logged-out', handleUserLoggedOut)  // ← NOVO
+ 
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'usuario' || e.key === 'isLoggedIn') {
+      loadUserData()
+    }
+  })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('user-logged-in', handleUserLoggedIn)
+  window.removeEventListener('user-logged-out', handleUserLoggedOut)  // ← NOVO
+})
     // Ouvir eventos de login/registro
     const handleUserLoggedIn = (event) => {
       loadUserData()
     }
-
 
     onMounted(() => {
       window.addEventListener('scroll', handleScroll)

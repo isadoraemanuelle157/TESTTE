@@ -375,7 +375,8 @@
 
   <div class="mini-list" v-if="favoritosRecentes.length > 0">
     <div
-      v-for="(item, index) in favoritosRecentes"
+      
+      v-for="(item, index) in favoritosRecentes.filter(f => f.type !== 'cantor')"
      :key="`${item.type}-${item.id || item._id}`"
       class="mini-item"
       @click="abrirFavorito(item)"
@@ -717,23 +718,45 @@
           <h4>{{ item.nome }}</h4>
 
           <p v-if="item.type === 'musica'">
-            {{ item.artist }}
-          </p>
+  {{ item.artist }}
+</p>
 
-          <p v-else>
-            {{ item.musicas || 0 }} músicas • {{ item.duracaoTotal || '0 min' }}
-          </p>
+<p v-else-if="item.type === 'playlist'">
+  {{ item.musicas || 0 }} músicas • {{ item.duracaoTotal || '0 min' }}
+</p>
+
+<p v-else-if="item.type === 'album'">
+  {{ item.artist }} • {{ item.ano || '' }}
+</p>
+
+<p v-else-if="item.type === 'cantor'">
+  Artista favorito
+</p>
+
+<p v-else>
+  {{ item.descricao || 'Item favorito' }}
+</p>
         </div>
 
         <!-- Tipo -->
-        <span class="row-album">
-          {{ item.type === 'musica' ? 'Música' : 'Playlist' }}
-        </span>
-
+  <span class="row-album">
+  {{
+    item.type === 'musica' ? 'Música' :
+    item.type === 'playlist' ? 'Playlist' :
+    item.type === 'album' ? 'Álbum' :
+    item.type === 'cantor' ? 'Artista' :
+    'Outro'
+  }}
+</span>
         <!-- Ações -->
         <div class="row-actions">
           <button @click.stop="abrirFavorito(item)">
-            <i :class="item.type === 'musica' ? 'fa fa-play' : 'fa fa-list'"></i>
+        <i :class="{
+  'fa fa-play': item.type === 'musica',
+  'fa fa-list': item.type === 'playlist',
+  'fa fa-book': item.type === 'album',
+  'fa fa-microphone': item.type === 'cantor'
+}"></i>
           </button>
         </div>
       </div>
@@ -1090,7 +1113,6 @@ export default {
   { id: 'following', label: 'Seguindo', icon: 'fa fa-user-plus', count: 0 },
   { id: 'favorites', label: 'Favoritos', icon: 'fa fa-star', count: 0 }
 ],
-     
       // Dados do usuário
       usuario: {
         id: null,
@@ -1692,6 +1714,17 @@ if (f.musica) {
           dataFavoritado: f.createdAt
         }
       }
+      // 🎤 CANTOR (coloca ANTES de album)
+if (f.cantor && f.cantor._id) {
+  return {
+    id: f.cantor._id,
+    type: "cantor",
+    nome: f.cantor.nome,
+    artist: "Artista",
+    cover: f.cantor.foto,
+    dataFavoritado: f.createdAt
+  }
+}
        // 💿 ÁLBUM (NOVO)
       if (f.album) {
         return {
@@ -1705,20 +1738,18 @@ if (f.musica) {
         }
       }
 
-      // 🎤 CANTOR (NOVO)
-      if (f.cantor) {
-        return {
-          id: f.cantor._id,
-          type: "cantor",
-          nome: f.cantor.nome,
-          artist: "Artista",
-          cover: f.cantor.foto,
-          dataFavoritado: f.createdAt
-        }
-      }
 
       return null
     }).filter(Boolean)
+    // 🎤 separar artistas favoritos
+this.artistasFavoritos = this.favoritos
+  .filter(f => f.type === 'cantor')
+  .map(a => ({
+    id: a.id,
+    name: a.nome,
+    image: a.cover,
+    addedAt: a.dataFavoritado
+  }))
 
     this.favoritosRecentes = [...this.favoritos]
       .sort((a, b) => new Date(b.dataFavoritado) - new Date(a.dataFavoritado))
@@ -1734,14 +1765,7 @@ if (f.musica) {
 },
    
     carregarArtistas() {
-      this.artistasFavoritos = [
-        { id: 1, name: "Queen", plays: 5234, image: "https://ui-avatars.com/api/?name=Queen&background=e91e63&color=fff" },
-        { id: 2, name: "The Beatles", plays: 4891, image: "https://ui-avatars.com/api/?name=Beatles&background=2196f3&color=fff" },
-        { id: 3, name: "Pink Floyd", plays: 3654, image: "https://ui-avatars.com/api/?name=Pink+Floyd&background=9c27b0&color=fff" },
-        { id: 4, name: "Led Zeppelin", plays: 2987, image: "https://ui-avatars.com/api/?name=Led+Zeppelin&background=ff9800&color=fff" },
-        { id: 5, name: "Nirvana", plays: 2456, image: "https://ui-avatars.com/api/?name=Nirvana&background=4caf50&color=fff" },
-        { id: 6, name: "Arctic Monkeys", plays: 1987, image: "https://ui-avatars.com/api/?name=Arctic+Monkeys&background=00bcd4&color=fff" }
-      ]
+   
     },
    
     carregarAtividades() {
@@ -2029,49 +2053,57 @@ openEditModal() {
       this.showDeleteModal = false
     },
 
-    async executeDeleteAccount() {
-      if (this.deleteConfirmText !== this.usuario.username) {
-        this.deleteError = 'Nome de usuário não confere'
-        return
-      }
-     
-      if (!this.deletePassword) {
-        this.deleteError = 'Digite sua senha'
-        return
-      }
-     
-      this.deleting = true
-     
-      try {
-       await axios.delete(`http://localhost:3002/usuarios/${this.usuario.id}`, {
-  data: { senha: this.deletePassword },
-  ...this.getAuthConfig()
-})
-       
-        // Limpar dados locais
-        localStorage.removeItem('usuario')
-        localStorage.removeItem('usuario_perfil')
-        localStorage.removeItem('isLoggedIn')
-        localStorage.removeItem('curtidas')
-        localStorage.removeItem('playlists')
-        localStorage.removeItem('historico')
-       
-        this.showToast({
-          title: "Conta excluída",
-          message: "Sua conta foi permanentemente removida",
-          type: "success",
-          icon: "fa fa-check-circle"
-        })
-       
-        setTimeout(() => {
-          this.$router.push('/')
-        }, 2000)
-       
-      } catch (error) {
-        this.deleting = false
-        this.deleteError = error.response?.data?.error || 'Senha incorreta ou erro ao excluir'
-      }
-    },
+   async executeDeleteAccount() {
+  if (this.deleteConfirmText !== this.usuario.username) {
+    this.deleteError = 'Nome de usuário não confere'
+    return
+  }
+ 
+  if (!this.deletePassword) {
+    this.deleteError = 'Digite sua senha'
+    return
+  }
+ 
+  this.deleting = true
+ 
+  try {
+    await axios.delete(`http://localhost:3002/usuarios/${this.usuario.id}`, {
+      data: { senha: this.deletePassword },
+      ...this.getAuthConfig()
+    })
+   
+    // ✅ LIMPAR TUDO DO LOCALSTORAGE
+    localStorage.removeItem('usuario')
+    localStorage.removeItem('usuario_perfil')
+    localStorage.removeItem('isLoggedIn')
+    localStorage.removeItem('token')
+    localStorage.removeItem('curtidas')
+    localStorage.removeItem('playlists')
+    localStorage.removeItem('historico')
+    
+    // ✅ DISPARAR EVENTO PARA ATUALIZAR NAVBAR IMEDIATAMENTE
+    window.dispatchEvent(new CustomEvent('user-logged-out'))
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'isLoggedIn',
+      newValue: null,
+      oldValue: 'true'
+    }))
+   
+    this.showToast({
+      title: "Conta excluída",
+      message: "Sua conta foi permanentemente removida",
+      type: "success",
+      icon: "fa fa-check-circle"
+    })
+   
+    // ✅ REDIRECIONAR IMEDIATAMENTE
+    this.$router.push('/login')
+   
+  } catch (error) {
+    this.deleting = false
+    this.deleteError = error.response?.data?.error || 'Senha incorreta ou erro ao excluir'
+  }
+},
 
    async toggleFollow() {
   try {
