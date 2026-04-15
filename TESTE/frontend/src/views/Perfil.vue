@@ -2630,7 +2630,7 @@ html, body {
 .cover-image {
   position: relative;
   width: 100%;
-  height: 320px;
+  height: 460px;
   border-radius: 20px 20px 0 0;
   overflow: hidden;
 }
@@ -2650,7 +2650,7 @@ html, body {
 .cover-actions {
   position: absolute;
   right: 16px;
-  bottom: 96px; /* sobe o botão acima da área sobreposta */
+  bottom: 20px; /* sobe o botão acima da área sobreposta */
   z-index: 30;
   pointer-events: auto;
 }
@@ -2691,7 +2691,7 @@ html, body {
   align-items: flex-end;
   gap: 32px;
   padding: 0 40px;
-  margin-top: -80px;
+  margin-top: 20px;
   position: relative;
   z-index: 10;
 }
