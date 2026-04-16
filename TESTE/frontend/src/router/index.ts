@@ -32,6 +32,7 @@ import Perfil from '@/views/Perfil.vue'
 import Favoritas from '@/views/Favoritas.vue'
 import FeitoParaVoce from '@/components/FeitoParaVoce.vue'
 import Vibe from '@/banco/Vibe.vue'
+import SelecionarAvatar from '@/components/SelecionarAvatar.vue'
 // import SalasMusicais from '@/components/SalasMusicais.vue'
 
 const router = createRouter({
@@ -146,6 +147,11 @@ const router = createRouter({
       path: '/perfil',
       name: 'perfil',
       component: Perfil,
+    },
+      {
+      path: '/selecionaravatar',
+      name: 'selecionaravatar',
+      component: SelecionarAvatar,
     },
      {
       path: '/tabelausuario',

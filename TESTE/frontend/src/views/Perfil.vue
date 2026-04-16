@@ -6,15 +6,25 @@
  <div class="cover-image" :style="coverStyle">
   <div class="cover-gradient"></div>
 
-  <div class="cover-actions" v-if="isOwnProfile">
-    <button
-      type="button"
-      class="btn-cover-action"
-      @click.stop.prevent="triggerCoverUpload"
-    >
-      <i class="fa fa-camera"></i> Alterar capa
-    </button>
-  </div>
+<div class="cover-actions" v-if="isOwnProfile">
+  <button
+    type="button"
+    class="btn-cover-action"
+    @click.stop.prevent="triggerCoverUpload"
+  >
+    <i class="fa fa-camera"></i> Alterar capa
+  </button>
+
+  <button
+    v-if="hasCustomCover"
+    type="button"
+    class="btn-cover-action btn-cover-remove"
+    @click.stop.prevent="removeCover"
+  >
+    <i class="fa fa-trash"></i> Remover capa
+  </button>
+</div>
+
 
   <input
     type="file"
@@ -27,26 +37,55 @@
      
       <div class="profile-info-container">
         <div class="avatar-section">
-          <div class="avatar-wrapper" :class="{ 'online': isOnline }">
-            <img :src="usuario.avatar || defaultAvatar" :alt="usuario.nome" class="avatar" @error="handleAvatarError" />
-            <div class="avatar-status" v-if="isOwnProfile"></div>
-          <button
-  type="button"
-  class="btn-edit-avatar"
-  @click="triggerAvatarUpload"
-  v-if="isOwnProfile"
->
-  <i class="fa fa-camera"></i>
-</button>
+   <div class="avatar-wrapper" :class="{ 'online': isOnline }">
+  <!-- Se tem avatar customizado -->
+  <img 
+    v-if="usuario.avatar && !isDefaultAvatar" 
+    :src="usuario.avatar" 
+    :alt="usuario.nome" 
+    class="avatar" 
+    @error="handleAvatarError" 
+  />
+  
+  <!-- Se não tem avatar - mostra iniciais geradas -->
+  <div 
+    v-else 
+    class="avatar generated-avatar" 
+    :style="generatedAvatarStyle"
+  >
+    {{ userInitials }}
+  </div>
 
-            <input
-              type="file"
-              ref="avatarInput"
-              accept="image/*"
-              @change="handleAvatarChange"
-              style="display: none"
-            />
-          </div>
+  <div class="avatar-status" v-if="isOwnProfile"></div>
+
+  <button
+    type="button"
+    class="btn-edit-avatar"
+    @click="triggerAvatarUpload"
+    v-if="isOwnProfile"
+  >
+    <i class="fa fa-camera"></i>
+  </button>
+
+  <button
+    v-if="isOwnProfile && hasCustomAvatar"
+    type="button"
+    class="btn-remove-avatar"
+    @click.stop.prevent="removeAvatar"
+    title="Remover foto de perfil"
+  >
+    <i class="fa fa-trash"></i>
+  </button>
+
+  <input
+    type="file"
+    ref="avatarInput"
+    accept="image/*"
+    @change="handleAvatarChange"
+    style="display: none"
+  />
+</div>
+
         </div>
        
         <div class="user-details">
@@ -793,13 +832,53 @@
           <div class="modal-body">
             <!-- Preview do Perfil -->
             <div class="profile-preview">
-              <div class="preview-cover" :style="previewCoverStyle">
-                <div class="preview-cover-overlay">
-                  <button class="btn-change-cover" @click="triggerCoverUpload">
-                    <i class="fa fa-camera"></i> Alterar capa
-                  </button>
-                </div>
-              </div>
+             <div class="preview-cover" :style="previewCoverStyle">
+  <div class="preview-cover-overlay">
+    <div class="preview-media-actions">
+      <button type="button" class="btn-change-cover" @click="triggerCoverUpload">
+        <i class="fa fa-camera"></i> Alterar capa
+      </button>
+
+      <button
+        v-if="previewHasCover"
+        type="button"
+        class="btn-remove-cover"
+        @click="removeCoverFromEdit"
+      >
+        <i class="fa fa-trash"></i> Remover capa
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="preview-avatar-wrapper">
+  <img
+    v-if="editForm.avatar && !isAvatarGenerated(editForm.avatar)"
+    :src="editForm.avatar"
+    class="preview-avatar"
+  />
+  <div
+    v-else
+    class="preview-avatar generated-avatar"
+    :style="generatedAvatarStyle"
+  >
+    {{ userInitials }}
+  </div>
+
+  <button type="button" class="btn-change-avatar" @click="triggerAvatarUpload">
+    <i class="fa fa-camera"></i>
+  </button>
+
+  <button
+    v-if="previewHasAvatar"
+    type="button"
+    class="btn-remove-preview-avatar"
+    @click="removeAvatarFromEdit"
+  >
+    <i class="fa fa-trash"></i>
+  </button>
+</div>
+
               <div class="preview-avatar-wrapper">
                 <img :src="editForm.avatar || defaultAvatar" class="preview-avatar" />
                 <button class="btn-change-avatar" @click="triggerAvatarUpload">
@@ -1071,7 +1150,31 @@
         </button>
       </div>
     </transition>
+    <!-- Modal de Seleção de Avatar -->
+<transition name="modal">
+  <div v-if="showAvatarSelector" class="modal-overlay" @click.self="closeAvatarSelector">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
+        <button class="btn-close" @click="closeAvatarSelector">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <AvatarSelector
+          :user-name="usuario.nome"
+          :current-avatar="usuario.avatar"
+          :user-id="usuario.id"
+          @select="onAvatarSelect"
+          @upload="onAvatarUpload"
+        />
+      </div>
+    </div>
   </div>
+</transition>
+  </div>
+  
 </template>
 
 <script>
@@ -1104,6 +1207,8 @@ export default {
       activeTab: 'overview',
       seguindoList: [],
        openedPlaylist: null,
+       showAvatarSelector: false,
+    defaultAvatar: null,
     tabs: [
   { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
   { id: 'likes', label: 'Curtidas', icon: 'fa fa-heart', count: 0 },
@@ -1225,6 +1330,72 @@ topTrack: null,
         background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
       }
 },
+hasCustomAvatar() {
+  return !!this.usuario.avatar && !this.isDefaultAvatar
+},
+
+hasCustomCover() {
+  return !!this.usuario.cover
+},
+
+previewHasAvatar() {
+  return !!this.editForm.avatar
+},
+
+previewHasCover() {
+  return !!this.editForm.cover
+},
+
+userInitials() {
+    if (!this.usuario.nome) return 'U'
+    return this.usuario.nome
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  },
+  
+  // Gera uma cor consistente baseada no ID do usuário
+  userColorIndex() {
+    const str = this.usuario.id || this.usuario.nome || 'default'
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    return Math.abs(hash) % 12
+  },
+  
+  generatedAvatarStyle() {
+    const gradients = [
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+      'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+      'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+      'linear-gradient(135deg, #fc466b 0%, #3f5efb 100%)'
+    ]
+    
+    const textColors = ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff', 
+                        '#333', '#333', '#333', '#fff', '#fff', '#fff']
+    
+    return {
+      background: gradients[this.userColorIndex],
+      color: textColors[this.userColorIndex]
+    }
+  },
+  
+  isDefaultAvatar() {
+    return !this.usuario.avatar || 
+           this.usuario.avatar.includes('ui-avatars.com') ||
+           this.usuario.avatar.includes('data:image/svg+xml')
+  },
    
 previewCoverStyle() {
   const cover = this.editForm.cover || this.usuario.cover
@@ -1473,6 +1644,160 @@ async carregarFollows() {
     }
   }
 },
+isAvatarGenerated(value) {
+  if (!value) return true
+  return String(value).includes('ui-avatars.com') || String(value).includes('data:image/svg+xml')
+},
+
+async updateProfileMediaField(field, value, successTitle, successMessage) {
+  try {
+    if (!this.usuario?.id) {
+      throw new Error("Usuário não identificado")
+    }
+
+    const response = await axios.put(
+      `http://localhost:3002/usuarios/${this.usuario.id}`,
+      { [field]: value },
+      this.getAuthConfig()
+    )
+
+    const updatedUser = response.data?.user
+      ? { ...this.usuario, ...response.data.user }
+      : { ...this.usuario, [field]: value }
+
+    this.usuario = updatedUser
+
+    if (this.showEditModal) {
+      this.editForm[field] = value
+    }
+
+    this.persistUsuario(this.usuario)
+
+    this.showToast({
+      title: successTitle,
+      message: successMessage,
+      type: "success",
+      icon: "fa fa-check-circle"
+    })
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: error.response?.data?.error || `Não foi possível remover ${field === 'avatar' ? 'a foto' : 'a capa'}`,
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
+
+async removeAvatar() {
+  if (!this.hasCustomAvatar) return
+
+  const confirmed = window.confirm("Deseja remover sua foto de perfil da conta?")
+  if (!confirmed) return
+
+  await this.updateProfileMediaField(
+    'avatar',
+    null,
+    "Foto removida",
+    "Sua foto de perfil foi removida da conta"
+  )
+},
+
+async removeCover() {
+  if (!this.hasCustomCover) return
+
+  const confirmed = window.confirm("Deseja remover o banner/capa da conta?")
+  if (!confirmed) return
+
+  await this.updateProfileMediaField(
+    'cover',
+    null,
+    "Capa removida",
+    "Seu banner foi removido da conta"
+  )
+},
+
+removeAvatarFromEdit() {
+  this.editForm.avatar = null
+
+  this.showToast({
+    title: "Foto removida do preview",
+    message: "Clique em salvar para remover da conta",
+    type: "info",
+    icon: "fa fa-user-circle"
+  })
+},
+
+removeCoverFromEdit() {
+  this.editForm.cover = null
+
+  this.showToast({
+    title: "Capa removida do preview",
+    message: "Clique em salvar para remover da conta",
+    type: "info",
+    icon: "fa fa-image"
+  })
+},
+
+openAvatarSelector() {
+    this.showAvatarSelector = true
+  },
+  
+  closeAvatarSelector() {
+    this.showAvatarSelector = false
+  },
+  
+  async onAvatarSelect(avatarUrl) {
+    this.editForm.avatar = avatarUrl
+    this.usuario.avatar = avatarUrl
+    
+    // Salva automaticamente
+    try {
+      await this.saveProfile()
+      this.showToast({
+        title: "Avatar atualizado! 🎨",
+        message: "Sua foto de perfil foi alterada com sucesso",
+        type: "success",
+        icon: "fa fa-check-circle"
+      })
+    } catch (error) {
+      this.showToast({
+        title: "Erro",
+        message: "Não foi possível salvar o avatar",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      })
+    }
+    
+    this.closeAvatarSelector()
+  },
+  
+  async onAvatarUpload(file) {
+    try {
+      const compressedImage = await this.compressImage(file, {
+        maxWidth: 512,
+        maxHeight: 512,
+        quality: 0.78,
+        mimeType: 'image/jpeg'
+      })
+      
+      await this.onAvatarSelect(compressedImage)
+    } catch (error) {
+      this.showToast({
+        title: "Erro",
+        message: "Não foi possível processar a imagem",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      })
+    }
+  },
+  
+  // Atualize o handleAvatarError
+  handleAvatarError() {
+    // Em vez de usar uma imagem externa, gera iniciais localmente
+    this.usuario.avatar = null
+  },
+
 async handleCoverChange(event) {
   const file = event.target.files?.[0]
   if (!file) return
@@ -2703,7 +3028,26 @@ html, body {
     position: relative;
   z-index: 31;
 }
+/* Avatar Gerado */
+.avatar.generated-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72px;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  background-size: cover;
+}
 
+/* Modal do Avatar Selector */
+.modal-content .modal-body {
+  padding: 0;
+}
+
+/* Ajuste para o preview no modal de edição */
+.preview-avatar.generated-avatar {
+  font-size: 48px;
+}
 .btn-cover-action:hover {
   background: rgba(0, 0, 0, 0.72);
   transform: translateY(-1px);
@@ -2937,6 +3281,80 @@ html, body {
   display: flex;
   gap: 12px;
   padding-bottom: 16px;
+}
+.btn-cover-remove {
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fff;
+}
+
+.btn-cover-remove:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.btn-remove-avatar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid #0f172a;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+}
+
+.btn-remove-avatar:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
+}
+
+.preview-media-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-remove-cover {
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.btn-remove-cover:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
+.btn-remove-preview-avatar {
+  position: absolute;
+  top: 0;
+  left: 72px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #1e293b;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary {
