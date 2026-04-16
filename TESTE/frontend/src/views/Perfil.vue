@@ -14,15 +14,6 @@
   >
     <i class="fa fa-camera"></i> Alterar capa
   </button>
-
-  <button
-    v-if="hasCustomCover"
-    type="button"
-    class="btn-cover-action btn-cover-remove"
-    @click.stop.prevent="removeCover"
-  >
-    <i class="fa fa-trash"></i> Remover capa
-  </button>
 </div>
 
 
@@ -65,16 +56,6 @@
     v-if="isOwnProfile"
   >
     <i class="fa fa-camera"></i>
-  </button>
-
-  <button
-    v-if="isOwnProfile && hasCustomAvatar"
-    type="button"
-    class="btn-remove-avatar"
-    @click.stop.prevent="removeAvatar"
-    title="Remover foto de perfil"
-  >
-    <i class="fa fa-trash"></i>
   </button>
 
   <input
@@ -879,12 +860,6 @@
   </button>
 </div>
 
-              <div class="preview-avatar-wrapper">
-                <img :src="editForm.avatar || defaultAvatar" class="preview-avatar" />
-                <button class="btn-change-avatar" @click="triggerAvatarUpload">
-                  <i class="fa fa-camera"></i>
-                </button>
-              </div>
             </div>
 
             <!-- Formulário -->
