@@ -120,11 +120,30 @@ const deleteUser = async (id) => {
   return formatUser(user)
 }
 
+// Adicione esta função no usuarioservice.js
+const searchUsers = async (query) => {
+  if (!query || query.trim() === '') return []
+  
+  const regex = new RegExp(query, 'i') // case-insensitive
+  
+  const users = await Usuario.find({
+    $or: [
+      { nome: { $regex: regex } },
+      { username: { $regex: regex } },
+      { email: { $regex: regex } }
+    ]
+  }, '-senha').limit(10)
+  
+  return users.map(formatUser)
+}
+
+// Exporte no module.exports
 module.exports = {
   createUser,
   loginUser,
   getUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  searchUsers 
 }

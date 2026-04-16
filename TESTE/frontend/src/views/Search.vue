@@ -555,7 +555,7 @@ export default {
       },
       
       // Filters
-      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns'],
+      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários'],
       
       // Quick Categories (visíveis na linha)
       quickCategories: [
@@ -627,7 +627,8 @@ export default {
       const typeMap = {
         'Músicas': 'track',
         'Artistas': 'artist', 
-        'Álbuns': 'album'
+        'Álbuns': 'album',
+        'Usuários': 'user'
       }
       
       const filterType = typeMap[this.activeFilter]
@@ -814,6 +815,10 @@ export default {
       if (result.type === 'artist' && result.source === 'local') {
         return this.$router.push(`/cantor/${result.id}`)
       }
+        // ← NOVO: navegação para perfil de usuário
+  if (result.type === 'user') {
+    return this.$router.push(`/usuario/${result.id}`)
+  }
     },
     
     // Verificar se uma música está curtida
@@ -890,83 +895,97 @@ export default {
     },
     
     async searchAll(query) {
-      this.isLoading = true
+  this.isLoading = true
 
-      try {
-        // BACKEND (SEU BANCO)
-        const [localMusicas, localCantores, localAlbuns] = await Promise.all([
-          fetch(`http://localhost:3002/musicas/search?q=${query}`).then(r => r.json()),
-          fetch(`http://localhost:3002/cantores/search?q=${query}`).then(r => r.json()),
-          fetch(`http://localhost:3002/albuns/search?q=${query}`).then(r => r.json())
-        ])
+  try {
+    // BACKEND (SEU BANCO) - incluindo usuários agora
+    const [localMusicas, localCantores, localAlbuns, localUsuarios] = await Promise.all([
+      fetch(`http://localhost:3002/musicas/search?q=${query}`).then(r => r.json()),
+      fetch(`http://localhost:3002/cantores/search?q=${query}`).then(r => r.json()),
+      fetch(`http://localhost:3002/albuns/search?q=${query}`).then(r => r.json()),
+      fetch(`http://localhost:3002/usuarios/search?q=${query}`).then(r => r.json()) // ← NOVO
+    ])
 
-        // DEEZER
-        const [tracks, artists, albums] = await Promise.all([
-          fetch(`${this.DEEZER_API}/search/track?q=${query}`).then(r => r.json()),
-          fetch(`${this.DEEZER_API}/search/artist?q=${query}`).then(r => r.json()),
-          fetch(`${this.DEEZER_API}/search/album?q=${query}`).then(r => r.json())
-        ])
+    // DEEZER
+    const [tracks, artists, albums] = await Promise.all([
+      fetch(`${this.DEEZER_API}/search/track?q=${query}`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/artist?q=${query}`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/album?q=${query}`).then(r => r.json())
+    ])
 
-        let results = []
+    let results = []
 
-        // MUSICAS LOCAIS
-        if (Array.isArray(localMusicas)) {
-          results.push(...localMusicas.map(m => ({
-            id: m._id,
-            title: m.nome,
-            artist: {
-              name: m.cantores?.map(c => c.nome).join(', ')
-            },
-            album: {
-              title: m.albuns?.[0]?.nome || '',
-              cover: m.albuns?.[0]?.foto || ''
-            },
-            cover: m.foto,
-            preview: m.link,
-            type: 'track',
-            source: 'local'
-          })))
-        }
+    // USUÁRIOS LOCAIS (NOVO)
+    if (Array.isArray(localUsuarios)) {
+      results.push(...localUsuarios.map(u => ({
+        id: u.id,
+        name: u.nome,
+        username: u.username,
+        picture: u.avatar,
+        bio: u.bio,
+        type: 'user', // ← tipo novo
+        source: 'local'
+      })))
+    }
 
-        // CANTORES LOCAIS
-        if (Array.isArray(localCantores)) {
-          results.push(...localCantores.map(c => ({
-            id: c._id,
-            name: c.nome,
-            picture: c.foto,
-            type: 'artist',
-            source: 'local'
-          })))
-        }
+    // MUSICAS LOCAIS (mantém igual)
+    if (Array.isArray(localMusicas)) {
+      results.push(...localMusicas.map(m => ({
+        id: m._id,
+        title: m.nome,
+        artist: {
+          name: m.cantores?.map(c => c.nome).join(', ')
+        },
+        album: {
+          title: m.albuns?.[0]?.nome || '',
+          cover: m.albuns?.[0]?.foto || ''
+        },
+        cover: m.foto,
+        preview: m.link,
+        type: 'track',
+        source: 'local'
+      })))
+    }
 
-        // ÁLBUNS LOCAIS
-        if (Array.isArray(localAlbuns)) {
-          results.push(...localAlbuns.map(a => ({
-            id: a._id,
-            title: a.nome,
-            artist: {
-              name: a.cantor?.nome || ''
-            },
-            cover: a.foto,
-            type: 'album',
-            source: 'local'
-          })))
-        }
+    // CANTORES LOCAIS (mantém igual)
+    if (Array.isArray(localCantores)) {
+      results.push(...localCantores.map(c => ({
+        id: c._id,
+        name: c.nome,
+        picture: c.foto,
+        type: 'artist',
+        source: 'local'
+      })))
+    }
 
-        // DEEZER (mantém)
-        if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
-        if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
-        if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
+    // ÁLBUNS LOCAIS (mantém igual)
+    if (Array.isArray(localAlbuns)) {
+      results.push(...localAlbuns.map(a => ({
+        id: a._id,
+        title: a.nome,
+        artist: {
+          name: a.cantor?.nome || ''
+        },
+        cover: a.foto,
+        type: 'album',
+        source: 'local'
+      })))
+    }
 
-        this.searchResults = results
+    // DEEZER (mantém igual)
+    if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
+    if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
+    if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
 
-      } catch (err) {
-        console.error(err)
-        this.searchResults = []
-      } finally {
-        this.isLoading = false
-      }
-    },
+    this.searchResults = results
+
+  } catch (err) {
+    console.error(err)
+    this.searchResults = []
+  } finally {
+    this.isLoading = false
+  }
+},
 
     async searchDeezer(query) {
       this.isLoading = true
@@ -996,6 +1015,7 @@ export default {
       if (item.type === 'track') return item.title
       if (item.type === 'artist') return item.name
       if (item.type === 'album') return item.title
+      if (item.type === 'user') return item.name || item.username
       return item.name || item.title || 'Desconhecido'
     },
 
@@ -1003,14 +1023,16 @@ export default {
       if (item.type === 'track') return item.artist?.name || 'Artista desconhecido'
       if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
       if (item.type === 'album') return item.artist?.name || 'Artista desconhecido'
-      return ''
-    },
+       if (item.type === 'user') return `@${item.username}${item.bio ? ' • ' + item.bio.substring(0, 30) + '...' : ''}` // ← NOVO
+  return ''
+},
 
     getResultType(item) {
       const typeMap = {
         'track': 'Música',
         'artist': 'Artista',
-        'album': 'Álbum'
+        'album': 'Álbum',
+         'user': 'Usuário'
       }
       return typeMap[item.type] || item.type
     },
@@ -1025,7 +1047,10 @@ export default {
         }
         if (item.type === 'album') {
           return item.cover
-        }
+           }
+    if (item.type === 'user') {
+      return item.picture || item.avatar || '/default-avatar.png' // ← NOVO
+    }
       }
 
       // Deezer
@@ -1046,7 +1071,8 @@ export default {
       const icons = {
         'Artista': 'fa fa-user',
         'Música': 'fa fa-music',
-        'Álbum': 'fa fa-circle'
+        'Álbum': 'fa fa-circle',
+        'Usuário': 'fa fa-user-circle'
       }
       return icons[type] || 'fa fa-music'
     },
@@ -1208,6 +1234,7 @@ html, body, #app {
   height: 100%;
   margin: 0;
 }
+
 .search-page {
    min-height: 100vh;
   width: 100%;
