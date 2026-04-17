@@ -82,70 +82,68 @@
         </div>
 
         <!-- Localização -->
-     <!-- CEP -->
-<div class="input-group">
-  <div class="input-wrapper">
-    <span class="input-icon">📮</span>
-    <input 
-      v-model="form.cep"
-      type="text"
-      maxlength="9"
-      @blur="buscarCEP"
-      placeholder=" "
-    />
-    <label>CEP</label>
-  </div>
-</div>
+        <!-- CEP -->
+        <div class="input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">📮</span>
+            <input 
+              v-model="form.cep"
+              type="text"
+              maxlength="9"
+              @blur="buscarCEP"
+              placeholder=" "
+            />
+            <label>CEP</label>
+          </div>
+        </div>
 
-<!-- Rua -->
-<div class="input-group">
-  <div class="input-wrapper">
-    <span class="input-icon">🏠</span>
-    <input v-model="form.rua" type="text" placeholder=" " />
-    <label>Rua</label>
-  </div>
-</div>
+        <!-- Rua -->
+        <div class="input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">🏠</span>
+            <input v-model="form.rua" type="text" placeholder=" " />
+            <label>Rua</label>
+          </div>
+        </div>
 
-<!-- Número -->
-<div class="input-group">
-  <div class="input-wrapper">
-    <span class="input-icon">🔢</span>
-    <input v-model="form.numero" @input="atualizarLocalizacao" type="text" placeholder=" " />
-    <label>Número</label>
-  </div>
-</div>
-<!-- Bairro -->
-<div class="input-group">
-  <div class="input-wrapper">
-    <span class="input-icon">📍</span>
-    <input v-model="form.bairro" type="text" placeholder=" " />
-    <label>Bairro</label>
-  </div>
-</div>
+        <!-- Número -->
+        <div class="input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">🔢</span>
+            <input v-model="form.numero" @input="atualizarLocalizacao" type="text" placeholder=" " />
+            <label>Número</label>
+          </div>
+        </div>
+        <!-- Bairro -->
+        <div class="input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">📍</span>
+            <input v-model="form.bairro" type="text" placeholder=" " />
+            <label>Bairro</label>
+          </div>
+        </div>
 
-<!-- Cidade -->
-<div class="input-group">
-  <div class="input-wrapper">
-    <span class="input-icon">🏙️</span>
-    <input v-model="form.cidade" type="text" placeholder=" " />
-    <label>Cidade</label>
-  </div>
-</div>
+        <!-- Cidade -->
+        <div class="input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">🏙️</span>
+            <input v-model="form.cidade" type="text" placeholder=" " />
+            <label>Cidade</label>
+          </div>
+        </div>
 
-<!-- Estado -->
-<div class="input-group">
-  <div class="input-wrapper">
-    <span class="input-icon">🗺️</span>
-    <input v-model="form.estado" type="text" placeholder=" " />
-    <label>Estado</label>
-  </div>
-</div>
-<div v-if="form.localizacao" class="location-preview">
-  📍 Sua localização será:
-  <strong>{{ form.localizacao }}</strong>
-</div>
-
-
+        <!-- Estado -->
+        <div class="input-group">
+          <div class="input-wrapper">
+            <span class="input-icon">🗺️</span>
+            <input v-model="form.estado" type="text" placeholder=" " />
+            <label>Estado</label>
+          </div>
+        </div>
+        <div v-if="form.localizacao" class="location-preview">
+          📍 Sua localização será:
+          <strong>{{ form.localizacao }}</strong>
+        </div>
 
         <!-- Cover Image URL -->
         <div class="input-group" :class="{ 'focused': focused === 'cover', 'filled': form.cover }">
@@ -210,14 +208,14 @@ export default {
         bio: "",
         avatar: "",
         cover: "",
-          // NOVO
-  cep: "",
-  rua: "",
-  numero: "",
-  bairro: "",
-  cidade: "",
-  estado: "",
-  localizacao: ""
+        // NOVO
+        cep: "",
+        rua: "",
+        numero: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+        localizacao: ""
       },
       loading: false,
       mensagem: "",
@@ -319,22 +317,22 @@ export default {
 
       try {
         // Atualizar usuário no backend com dados completos
-      const token = localStorage.getItem("token")
+        const token = localStorage.getItem("token")
 
-const response = await axios.put(
-  `http://localhost:3002/usuarios/${this.userId}`,
-  {
-    username: this.form.username,
-    bio: this.form.bio,
-    localizacao: this.form.localizacao,
-    avatar: this.form.avatar,
-    cover: this.form.cover
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  }
+        const response = await axios.put(
+          `http://localhost:3002/usuarios/${this.userId}`,
+          {
+            username: this.form.username,
+            bio: this.form.bio,
+            localizacao: this.form.localizacao,
+            avatar: this.form.avatar,
+            cover: this.form.cover
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
         )
 
         const userDataCompleto = response.data.user
@@ -354,9 +352,9 @@ const response = await axios.put(
 
         this.mensagem = "Perfil completo! Redirecionando..."
         
-        // Redirecionar para o perfil após 1.5 segundos
+        // ✅ ALTERAÇÃO: Redirecionar para "Feito Para Você" em vez do perfil
         setTimeout(() => {
-          this.$router.push("/perfil")
+          this.$router.push("/feitoparavoce")
         }, 1500)
 
       } catch (err) {
@@ -368,32 +366,34 @@ const response = await axios.put(
     },
 
     async buscarCEP() {
-  const cep = this.form.cep.replace(/\D/g, '')
+      const cep = this.form.cep.replace(/\D/g, '')
 
-  if (cep.length !== 8) return
+      if (cep.length !== 8) return
 
-  try {
-    const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`)
+      try {
+        const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`)
 
-    if (res.data.erro) {
-      this.erro = "CEP não encontrado"
-      return
-    }
+        if (res.data.erro) {
+          this.erro = "CEP não encontrado"
+          return
+        }
 
-    this.form.rua = res.data.logradouro
-    this.form.bairro = res.data.bairro
-    this.form.cidade = res.data.localidade
-    this.form.estado = res.data.uf
+        this.form.rua = res.data.logradouro
+        this.form.bairro = res.data.bairro
+        this.form.cidade = res.data.localidade
+        this.form.estado = res.data.uf
 
-    this.atualizarLocalizacao()
+        this.atualizarLocalizacao()
 
-  } catch (err) {
-    this.erro = "Erro ao buscar CEP"
-  }
-},
-atualizarLocalizacao() {
-  this.form.localizacao = `${this.form.rua}, ${this.form.numero} - ${this.form.bairro}, ${this.form.cidade} - ${this.form.estado}`
-}, 
+      } catch (err) {
+        this.erro = "Erro ao buscar CEP"
+      }
+    },
+    
+    atualizarLocalizacao() {
+      this.form.localizacao = `${this.form.rua}, ${this.form.numero} - ${this.form.bairro}, ${this.form.cidade} - ${this.form.estado}`
+    }, 
+    
     pularEtapa() {
       // Usar dados básicos e redirecionar
       if (this.usuarioTemp) {
@@ -407,7 +407,8 @@ atualizarLocalizacao() {
         }))
       }
       
-      this.$router.push("/perfil")
+      // ✅ ALTERAÇÃO: Redirecionar para "Feito Para Você" também ao pular
+      this.$router.push("/feitoparavoce")
     }
   }
 }

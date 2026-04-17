@@ -302,6 +302,7 @@
 
 <script>
 export default {
+  name: "Onboarding",
   data() {
     return {
       currentStep: 1,
@@ -310,18 +311,16 @@ export default {
       selectedVibes: [],
       showSuccess: false,
 
-    genres: [],
-
-     artists: [],
-
-    vibes: []
+      genres: [],
+      artists: [],
+      vibes: []
     }
   },
   mounted() {
-  this.loadGeneros()
-  this.loadCantores()
-  this.loadVibes()
-},
+    this.loadGeneros()
+    this.loadCantores()
+    this.loadVibes()
+  },
 
   computed: {
     genreProgress() {
@@ -364,186 +363,197 @@ export default {
   },
 
   methods: {
-  async loadGeneros() {
-    try {
-      const res = await fetch("http://localhost:3002/generos")
-      const data = await res.json()
+    async loadGeneros() {
+      try {
+        const res = await fetch("http://localhost:3002/generos")
+        const data = await res.json()
 
-      this.genres = data.map((g, index) => ({
-        name: g.nome,
-        emoji: this.getEmoji(g.nome),
-        color: this.getColor(index),
-        gradient: this.getGradient(index)
-      }))
+        this.genres = data.map((g, index) => ({
+          name: g.nome,
+          emoji: this.getEmoji(g.nome),
+          color: this.getColor(index),
+          gradient: this.getGradient(index)
+        }))
 
-    } catch (err) {
-      console.error("Erro ao carregar gêneros:", err)
+      } catch (err) {
+        console.error("Erro ao carregar gêneros:", err)
+      }
+    },
+    
+    async loadCantores() {
+      try {
+        const res = await fetch("http://localhost:3002/cantores")
+        const data = await res.json()
+
+        // 🔥 transformar dados do banco para UI
+        this.artists = data.map((c, index) => ({
+          name: c.nome,
+          photo: c.foto || `https://i.pravatar.cc/400?img=${index + 1}`,
+
+          // pegar gênero (se existir)
+          genre: c.generos?.length
+            ? c.generos.map(g => g.nome).join(", ")
+            : "Sem gênero",
+
+          // fake de popularidade (ou você pode criar no banco depois)
+          popularity: Math.floor(Math.random() * 20) + 80
+        }))
+
+      } catch (err) {
+        console.error("Erro ao carregar cantores:", err)
+      }
+    },
+    
+    async loadVibes() {
+      try {
+        const res = await fetch("http://localhost:3002/vibes")
+        const data = await res.json()
+
+        this.vibes = data.map(v => ({
+          name: v.nome,
+          emoji: v.emoji || "🎵",
+          gradient: v.gradient || "linear-gradient(135deg, #667eea, #764ba2)",
+          description: v.descricao,
+          tags: v.tags || []
+        }))
+
+      } catch (err) {
+        console.error("Erro ao carregar vibes:", err)
+      }
+    },
+
+    getEmoji(nome) {
+      if (!nome) return "🎶"
+
+      const normalizado = nome
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove acentos
+        .replace(/\s+/g, "")
+      
+      const map = {
+        pop: "🎵",
+        rock: "🎸",
+        funk: "💃",
+        hiphop: "🎤",
+        eletronica: "🎹",
+        gospel: "🙏",
+        samba: "🥁",
+        sertanejo: "🌾",
+        mpb: "🇧🇷"
+      }
+
+      return map[normalizado] || "🎶"
+    },
+
+    getColor(index) {
+      const colors = [
+        "#E91E63", "#F44336", "#FF9800", "#00BCD4",
+        "#9C27B0", "#4CAF50", "#FFC107", "#3F51B5"
+      ]
+      return colors[index % colors.length]
+    },
+
+    getGradient(index) {
+      const gradients = [
+        "linear-gradient(135deg, #E91E63 0%, #F48FB1 100%)",
+        "linear-gradient(135deg, #F44336 0%, #EF5350 100%)",
+        "linear-gradient(135deg, #FF9800 0%, #FFB74D 100%)",
+        "linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%)",
+        "linear-gradient(135deg, #9C27B0 0%, #CE93D8 100%)",
+        "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)"
+      ]
+      return gradients[index % gradients.length]
+    },
+
+    getBgStyle(step) {
+      const gradients = {
+        1: 'radial-gradient(circle at 20% 50%, rgba(233, 30, 99, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 152, 0, 0.1) 0%, transparent 50%)',
+        2: 'radial-gradient(circle at 50% 50%, rgba(29, 185, 84, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%)',
+        3: 'radial-gradient(circle at 80% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%)'
+      }
+      return { background: gradients[step] }
+    },
+
+    toggleGenre(genre) {
+      if (this.selectedGenres.includes(genre)) {
+        this.selectedGenres = this.selectedGenres.filter(g => g !== genre)
+      } else {
+        this.selectedGenres.push(genre)
+      }
+    },
+
+    toggleArtist(name) {
+      if (this.selectedArtists.includes(name)) {
+        this.selectedArtists = this.selectedArtists.filter(a => a !== name)
+      } else {
+        this.selectedArtists.push(name)
+      }
+    },
+
+    toggleVibe(vibe) {
+      if (this.selectedVibes.includes(vibe)) {
+        this.selectedVibes = this.selectedVibes.filter(v => v !== vibe)
+      } else {
+        this.selectedVibes.push(vibe)
+      }
+    },
+
+    removeItem(item) {
+      if (this.selectedGenres.includes(item.name)) {
+        this.selectedGenres = this.selectedGenres.filter(g => g !== item.name)
+      } else if (this.selectedArtists.includes(item.name)) {
+        this.selectedArtists = this.selectedArtists.filter(a => a !== item.name)
+      } else {
+        this.selectedVibes = this.selectedVibes.filter(v => v !== item.name)
+      }
+    },
+
+    nextStep() {
+      if (this.currentStep === 3) {
+        this.showSuccess = true
+      } else {
+        this.currentStep++
+      }
+    },
+
+    prevStep() {
+      if (this.currentStep > 1) this.currentStep--
+    },
+
+    goToStep(step) {
+      if (step < this.currentStep) this.currentStep = step
+    },
+
+    goBackFromSuccess() {
+      this.showSuccess = false
+    },
+
+    skipOnboarding() {
+      if (confirm('Tem certeza que deseja pular?')) {
+        this.finishOnboarding()
+      }
+    },
+
+    finishOnboarding() {
+      // ✅ ALTERAÇÃO: Salvar preferências e redirecionar para o Dashboard
+      const preferences = {
+        genres: this.selectedGenres,
+        artists: this.selectedArtists,
+        vibes: this.selectedVibes,
+        completedAt: new Date().toISOString()
+      }
+      
+      // Salvar no localStorage para uso futuro
+      localStorage.setItem('user_preferences', JSON.stringify(preferences))
+      
+      console.log('Onboarding finalizado:', preferences)
+      
+      // Redirecionar para o Dashboard
+      this.$router.push("/dashboard")
     }
-  },
-  async loadCantores() {
-  try {
-    const res = await fetch("http://localhost:3002/cantores")
-    const data = await res.json()
-
-    // 🔥 transformar dados do banco para UI
-    this.artists = data.map((c, index) => ({
-      name: c.nome,
-      photo: c.foto || `https://i.pravatar.cc/400?img=${index + 1}`,
-
-      // pegar gênero (se existir)
-      genre: c.generos?.length
-        ? c.generos.map(g => g.nome).join(", ")
-        : "Sem gênero",
-
-      // fake de popularidade (ou você pode criar no banco depois)
-      popularity: Math.floor(Math.random() * 20) + 80
-    }))
-
-  } catch (err) {
-    console.error("Erro ao carregar cantores:", err)
-  }
-},
-async loadVibes() {
-  try {
-    const res = await fetch("http://localhost:3002/vibes")
-    const data = await res.json()
-
-    this.vibes = data.map(v => ({
-      name: v.nome,
-      emoji: v.emoji || "🎵",
-      gradient: v.gradient || "linear-gradient(135deg, #667eea, #764ba2)",
-      description: v.descricao,
-      tags: v.tags || []
-    }))
-
-  } catch (err) {
-    console.error("Erro ao carregar vibes:", err)
-  }
-},
-
-getEmoji(nome) {
-  if (!nome) return "🎶"
-
-const normalizado = nome
-  .toLowerCase()
-  .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g, "") // remove acentos
-  .replace(/\s+/g, "")
-  
-  const map = {
-    pop: "🎵",
-    rock: "🎸",
-    funk: "💃",
-    hiphop: "🎤",
-    eletronica: "🎹",
-    gospel: "🙏",
-    samba: "🥁",
-    sertanejo: "🌾",
-    mpb: "🇧🇷"
-  }
-
-  return map[normalizado] || "🎶"
-},
-
-  getColor(index) {
-    const colors = [
-      "#E91E63", "#F44336", "#FF9800", "#00BCD4",
-      "#9C27B0", "#4CAF50", "#FFC107", "#3F51B5"
-    ]
-    return colors[index % colors.length]
-  },
-
-  getGradient(index) {
-    const gradients = [
-      "linear-gradient(135deg, #E91E63 0%, #F48FB1 100%)",
-      "linear-gradient(135deg, #F44336 0%, #EF5350 100%)",
-      "linear-gradient(135deg, #FF9800 0%, #FFB74D 100%)",
-      "linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%)",
-      "linear-gradient(135deg, #9C27B0 0%, #CE93D8 100%)",
-      "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)"
-    ]
-    return gradients[index % gradients.length]
-  },
-
-  getBgStyle(step) {
-    const gradients = {
-      1: 'radial-gradient(circle at 20% 50%, rgba(233, 30, 99, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 152, 0, 0.1) 0%, transparent 50%)',
-      2: 'radial-gradient(circle at 50% 50%, rgba(29, 185, 84, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%)',
-      3: 'radial-gradient(circle at 80% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(240, 147, 251, 0.1) 0%, transparent 50%)'
-    }
-    return { background: gradients[step] }
-  },
-
-  toggleGenre(genre) {
-    if (this.selectedGenres.includes(genre)) {
-      this.selectedGenres = this.selectedGenres.filter(g => g !== genre)
-    } else {
-      this.selectedGenres.push(genre)
-    }
-  },
-
-  toggleArtist(name) {
-    if (this.selectedArtists.includes(name)) {
-      this.selectedArtists = this.selectedArtists.filter(a => a !== name)
-    } else {
-      this.selectedArtists.push(name)
-    }
-  },
-
-  toggleVibe(vibe) {
-    if (this.selectedVibes.includes(vibe)) {
-      this.selectedVibes = this.selectedVibes.filter(v => v !== vibe)
-    } else {
-      this.selectedVibes.push(vibe)
-    }
-  },
-
-  removeItem(item) {
-    if (this.selectedGenres.includes(item.name)) {
-      this.selectedGenres = this.selectedGenres.filter(g => g !== item.name)
-    } else if (this.selectedArtists.includes(item.name)) {
-      this.selectedArtists = this.selectedArtists.filter(a => a !== item.name)
-    } else {
-      this.selectedVibes = this.selectedVibes.filter(v => v !== item.name)
-    }
-  },
-
-  nextStep() {
-    if (this.currentStep === 3) {
-      this.showSuccess = true
-    } else {
-      this.currentStep++
-    }
-  },
-
-  prevStep() {
-    if (this.currentStep > 1) this.currentStep--
-  },
-
-  goToStep(step) {
-    if (step < this.currentStep) this.currentStep = step
-  },
-
-  goBackFromSuccess() {
-    this.showSuccess = false
-  },
-
-  skipOnboarding() {
-    if (confirm('Tem certeza que deseja pular?')) {
-      this.finishOnboarding()
-    }
-  },
-
-  finishOnboarding() {
-    console.log('Finalizado:', {
-      genres: this.selectedGenres,
-      artists: this.selectedArtists,
-      vibes: this.selectedVibes
-    })
   }
 }
-}
-
 </script>
 
 <style>

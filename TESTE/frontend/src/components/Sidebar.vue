@@ -2,7 +2,9 @@
   <aside class="sidebar" :class="{ 'open': isOpen }">
     <div class="sidebar-content">
       <!-- Botão fechar (X) dentro do sidebar -->
-    
+      <button class="close-btn" @click="$emit('close')" v-if="isOpen">
+        <i class="fa fa-times"></i>
+      </button>
 
       <div>
         <!-- Logo FODA -->
@@ -45,13 +47,16 @@
           <div class="line-right"></div>
         </div>
 
+ 
+
         <!-- Navegação -->
         <nav>
           <ul>
+            <!-- 🔥 MUDADO: Home vai para /dashboard quando logado -->
             <li>
-              <router-link to="/" class="nav-link" @click="$emit('close')">
+              <router-link :to="isLoggedIn ? '/dashboard' : '/'" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-home"></i>
-                <span>Home</span>
+                <span>{{ isLoggedIn ? 'Dashboard' : 'Home' }}</span>
               </router-link>
             </li>
 
@@ -62,21 +67,21 @@
               </router-link>
             </li>
 
-            <li>
+            <li v-if="isLoggedIn">
               <router-link to="/curtidas" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-heart"></i>
                 <span>Curtidas</span>
               </router-link>
             </li>
 
-            <li>
+            <li v-if="isLoggedIn">
               <router-link to="/favoritas" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-star"></i>
                 <span>Favoritas</span>
               </router-link>
             </li>
 
-            <li>
+            <li v-if="isLoggedIn">
               <router-link to="/playlist" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-list-ul"></i>
                 <span>Playlists</span>
@@ -131,6 +136,7 @@
                 <span>Match Musical</span>
               </router-link>
             </li>
+
           </ul>
         </nav>
       </div>
@@ -149,7 +155,104 @@ export default {
     }
   },
 
-  emits: ['close']
+  emits: ['close', 'logout'],
+
+  data() {
+    return {
+      isLoggedIn: false,
+      currentUser: {
+        firstName: 'Usuário',
+        avatar: 'https://i.pravatar.cc/150?img=11',
+        plan: 'Free'
+      }
+    }
+  },
+
+  mounted() {
+    this.checkAuthStatus()
+    
+    // Escuta eventos de login/logout
+    window.addEventListener('user-logged-in', this.handleLogin)
+    window.addEventListener('user-logged-out', this.handleLogout)
+    window.addEventListener('storage', this.checkAuthStatus)
+  },
+
+  beforeDestroy() {
+    window.removeEventListener('user-logged-in', this.handleLogin)
+    window.removeEventListener('user-logged-out', this.handleLogout)
+    window.removeEventListener('storage', this.checkAuthStatus)
+  },
+
+  methods: {
+    checkAuthStatus() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
+      this.isLoggedIn = isLoggedIn
+      
+      if (isLoggedIn) {
+        this.loadUserData()
+      }
+    },
+
+    loadUserData() {
+      const storedUser = localStorage.getItem('usuario')
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          this.currentUser = {
+            firstName: userData.nome ? userData.nome.split(' ')[0] : userData.firstName || 'Usuário',
+            avatar: userData.avatar || userData.foto || 'https://i.pravatar.cc/150?img=11',
+            plan: userData.plano || userData.plan || 'Free'
+          }
+        } catch (e) {
+          console.error('Erro ao carregar usuário:', e)
+        }
+      }
+    },
+
+    handleLogin(e) {
+      this.isLoggedIn = true
+      if (e.detail) {
+        this.currentUser = {
+          firstName: e.detail.nome ? e.detail.nome.split(' ')[0] : e.detail.firstName || 'Usuário',
+          avatar: e.detail.avatar || e.detail.foto || 'https://i.pravatar.cc/150?img=11',
+          plan: e.detail.plano || e.detail.plan || 'Free'
+        }
+      }
+    },
+
+    handleLogout() {
+      this.isLoggedIn = false
+      this.currentUser = {
+        firstName: 'Usuário',
+        avatar: 'https://i.pravatar.cc/150?img=11',
+        plan: 'Free'
+      }
+    },
+
+    logout() {
+      // Limpar todos os dados do localStorage
+      localStorage.removeItem('usuario')
+      localStorage.removeItem('usuario_perfil')
+      localStorage.removeItem('token')
+      localStorage.removeItem('isLoggedIn')
+      
+      // Disparar evento de logout
+      window.dispatchEvent(new CustomEvent('user-logged-out'))
+      
+      // Emitir evento para o componente pai
+      this.$emit('logout')
+      
+      // Fechar sidebar no mobile
+      this.$emit('close')
+      
+      // Redirecionar para home
+      this.$router.push('/')
+    },
+
+    handleAvatarError(e) {
+      e.target.src = 'https://i.pravatar.cc/150?img=11'
+    }
+  }
 }
 </script>
 
@@ -226,7 +329,138 @@ export default {
   justify-content: center;
 }
 
-/* ... (todo o resto do CSS do logo permanece igual) ... */
+.logo-orbit {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: orbit 3s linear infinite;
+}
+
+.ring-1 {
+  width: 100%;
+  height: 100%;
+  border-top-color: #2563eb;
+  border-right-color: #2563eb;
+  animation-duration: 3s;
+}
+
+.ring-2 {
+  width: 75%;
+  height: 75%;
+  top: 12.5%;
+  left: 12.5%;
+  border-bottom-color: #7c3aed;
+  border-left-color: #7c3aed;
+  animation-duration: 2s;
+  animation-direction: reverse;
+}
+
+.ring-3 {
+  width: 50%;
+  height: 50%;
+  top: 25%;
+  left: 25%;
+  border-top-color: #ec4899;
+  border-right-color: #ec4899;
+  animation-duration: 1.5s;
+}
+
+@keyframes orbit {
+  to { transform: rotate(360deg); }
+}
+
+.logo-core {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 0 30px rgba(37, 99, 235, 0.5);
+}
+
+.pulse-waves {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.pulse-waves span {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.3);
+  animation: pulse-wave 2s ease-out infinite;
+}
+
+.pulse-waves span:nth-child(1) { animation-delay: 0s; }
+.pulse-waves span:nth-child(2) { animation-delay: 0.5s; }
+.pulse-waves span:nth-child(3) { animation-delay: 1s; }
+
+@keyframes pulse-wave {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.logo-icon {
+  position: relative;
+  color: #fff;
+  font-size: 28px;
+  z-index: 3;
+}
+
+.sound-bars {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.sound-bars span {
+  width: 3px;
+  background: #fff;
+  border-radius: 1px;
+  animation: sound-bar 1s ease-in-out infinite;
+}
+
+.sound-bars span:nth-child(1) { height: 8px; animation-delay: 0s; }
+.sound-bars span:nth-child(2) { height: 12px; animation-delay: 0.2s; }
+.sound-bars span:nth-child(3) { height: 6px; animation-delay: 0.4s; }
+.sound-bars span:nth-child(4) { height: 10px; animation-delay: 0.6s; }
+
+@keyframes sound-bar {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.5); }
+}
+
+.logo-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.4), transparent 70%);
+  filter: blur(20px);
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
 
 /* ========== TEXTO DA LOGO ========== */
 .logo-text {
@@ -242,7 +476,102 @@ export default {
   gap: 1px;
 }
 
-/* ... (resto do CSS permanece igual) ... */
+.letter {
+  display: inline-block;
+  animation: letter-glow 2s ease-in-out infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes letter-glow {
+  0%, 100% { text-shadow: 0 0 5px rgba(37, 99, 235, 0.5); }
+  50% { text-shadow: 0 0 20px rgba(37, 99, 235, 0.8), 0 0 40px rgba(124, 58, 237, 0.4); }
+}
+
+/* ========== DIVIDER ========== */
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 0 20px 24px;
+}
+
+.line-left, .line-right {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5));
+}
+
+.line-right {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.5), transparent);
+}
+
+.center-pulse {
+  width: 8px;
+  height: 8px;
+  background: #2563eb;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.8);
+  animation: center-pulse 2s ease-in-out infinite;
+}
+
+@keyframes center-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.5; }
+}
+
+/* ========== USER SECTION (NOVO) ========== */
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  margin: 0 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(29, 185, 84, 0.5);
+  box-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
+  flex-shrink: 0;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-name {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-plan {
+  color: #1db954;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
 
 /* ========== NAVEGAÇÃO ========== */
 .sidebar ul {
@@ -265,6 +594,11 @@ export default {
   overflow: hidden;
   font-size: 14px;
   font-weight: 500;
+  background: none;
+  border: none;
+  width: calc(100% - 24px);
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .nav-link:hover {
@@ -323,6 +657,26 @@ export default {
   transition: all 0.3s ease;
 }
 
+/* ========== LOGOUT ITEM (NOVO) ========== */
+.logout-item {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logout-link {
+  color: #ff4757 !important;
+}
+
+.logout-link:hover {
+  background: rgba(255, 71, 87, 0.15) !important;
+  color: #ff6b7a !important;
+}
+
+.logout-link:hover i {
+  color: #ff4757 !important;
+}
+
 /* Scrollbar estilizada */
 .sidebar-content::-webkit-scrollbar {
   width: 6px;
@@ -344,7 +698,7 @@ export default {
 /* ========== RESPONSIVIDADE ========== */
 @media (max-width: 768px) {
   .sidebar {
-    width: 280px; /* Um pouco maior no mobile */
+    width: 280px;
   }
 
   .close-btn {
@@ -357,7 +711,7 @@ export default {
   .logo-container {
     width: 80px;
     height: 80px;
-    margin-top: 20px; /* Espaço para o botão fechar */
+    margin-top: 20px;
   }
 
   .logo-core {
@@ -371,6 +725,10 @@ export default {
 
   .logo-text {
     font-size: 20px;
+  }
+  
+  .user-section {
+    padding: 12px 16px;
   }
 }
 </style>

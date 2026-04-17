@@ -217,13 +217,13 @@ export default {
           this.form
         )
 
-       const userData = response.data.user
-const token = response.data.token
+        const userData = response.data.user
+        const token = response.data.token
 
-localStorage.setItem("usuario", JSON.stringify(userData))
-localStorage.setItem("usuario_perfil", JSON.stringify(userData))
-localStorage.setItem("token", token)
-localStorage.setItem("isLoggedIn", "true")
+        localStorage.setItem("usuario", JSON.stringify(userData))
+        localStorage.setItem("usuario_perfil", JSON.stringify(userData))
+        localStorage.setItem("token", token)
+        localStorage.setItem("isLoggedIn", "true")
 
         // Disparar evento para atualizar navbar
         window.dispatchEvent(new CustomEvent('user-logged-in', {
@@ -232,8 +232,9 @@ localStorage.setItem("isLoggedIn", "true")
 
         this.mensagem = "Login realizado! Redirecionando..."
         
+        // 🔥 REDIRECIONA PARA DASHBOARD APÓS LOGIN
         setTimeout(() => {
-          this.$router.push("/perfil")
+          this.$router.push("/dashboard")
         }, 1500)
 
       } catch (err) {

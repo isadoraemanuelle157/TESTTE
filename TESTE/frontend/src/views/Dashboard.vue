@@ -1,6 +1,8 @@
 <template>
   <div class="home">
     <div class="home-content">
+     
+
       <!-- WELCOME SECTION COM HORÁRIO -->
       <section class="welcome-section">
         <div class="welcome-content">
@@ -202,7 +204,7 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Suas Playlists -->
+      <!-- SEÇÃO: Suas Playlists (CONECTADA À API REAL) -->
       <section class="section" v-if="userPlaylists.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
@@ -226,11 +228,11 @@
             v-for="(playlist, index) in userPlaylists.slice(0, 5)"
             :key="'user-playlist-'+playlist.id"
             class="music-card playlist-card user-playlist"
-            @click="playPlaylist(playlist)"
+            @click="openPlaylist(playlist)"
             :class="{ 'active': isCurrentPlaylist(playlist) }"
           >
             <div class="card-image">
-              <img :src="playlist.cover" @error="handleImageError" alt="Playlist" />
+              <img :src="playlist.cover || defaultPlaylistCover" @error="handleImageError" alt="Playlist" />
               <div class="play-button-overlay">
                 <i class="fa fa-play-circle"></i>
               </div>
@@ -243,7 +245,7 @@
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ playlist.title }}</h3>
-              <p class="card-artist">Por {{ currentUser.name }} • {{ playlist.tracks }} músicas</p>
+              <p class="card-artist">Por {{ currentUser.name }} • {{ playlist.songs?.length || 0 }} músicas</p>
             </div>
           </div>
          
@@ -257,6 +259,35 @@
               <p class="create-subtitle">Adicione suas músicas favoritas</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- ESTADO VAZIO: Sem Playlists -->
+      <section class="section" v-else-if="!loadingPlaylists">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title">
+              <i class="fa fa-folder-open section-icon playlist"></i>
+              Suas Playlists
+            </h2>
+            <span class="section-subtitle">0 criadas por você</span>
+          </div>
+          <button class="btn-create" @click="createPlaylist">
+            <i class="fa fa-plus"></i> Criar Nova
+          </button>
+        </div>
+        <div class="empty-playlists">
+          <div class="empty-illustration">
+            <i class="fa fa-music"></i>
+            <div class="sound-waves">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <h3>Você ainda não tem playlists</h3>
+          <p>Crie sua primeira playlist e organize suas músicas favoritas</p>
+          <button class="btn-primary" @click="createPlaylist">
+            <i class="fa fa-plus"></i> Criar Playlist
+          </button>
         </div>
       </section>
 
@@ -509,12 +540,13 @@
 
 <script>
 export default {
-  name: "HomeDashboard",
+  name: "Dashboard",
 
   data() {
     return {
       // API Configuration
       DEEZER_API: 'https://api.allorigins.win/raw?url=https://api.deezer.com',
+      API_BASE_URL: 'http://localhost:3002', // 🔥 URL do seu backend
      
       // User State - Carrega do localStorage se disponível
       currentUser: {
@@ -531,7 +563,7 @@ export default {
       userStats: {
         hoursListened: 127,
         likedSongs: 342,
-        playlists: 12,
+        playlists: 0, // 🔥 Será atualizado com dados reais
         streak: 15
       },
      
@@ -547,6 +579,7 @@ export default {
       currentAlbum: null,
       currentArtist: null,
       loading: false,
+      loadingPlaylists: false, // 🔥 Loading específico para playlists
       loadingMoreTracks: false,
       showAllRecentTracks: false,
       showAllPersonalContent: false,
@@ -568,7 +601,10 @@ export default {
       continueListening: [],
       madeForYou: [],
       recentlyPlayed: [],
+     
+      // 🔥 Playlists reais do usuário (conectadas à API)
       userPlaylists: [],
+      defaultPlaylistCover: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjE1MCIgeT0iMTcwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4=',
      
       // Hero Section
       heroGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -599,18 +635,28 @@ export default {
   },
 
   mounted() {
+    // Verifica autenticação primeiro
+    this.checkAuth()
+   
     // Carrega dados do usuário do localStorage se existir
     this.loadUserFromStorage()
     this.updateGreeting()
     window.addEventListener('player-update', this.handlePlayerUpdate)
+   
+    // 🔥 Carrega playlists reais do backend
+    this.loadUserPlaylists()
     this.loadAllData()
    
     // Atualizar saudação a cada minuto
     setInterval(this.updateGreeting, 60000)
+   
+    // 🔥 Escuta eventos de atualização de playlists
+    window.addEventListener('playlist-updated', this.loadUserPlaylists)
   },
 
   beforeDestroy() {
     window.removeEventListener('player-update', this.handlePlayerUpdate)
+    window.removeEventListener('playlist-updated', this.loadUserPlaylists)
     if (this.$refs.audioPlayer) {
       this.$refs.audioPlayer.pause()
     }
@@ -620,6 +666,101 @@ export default {
   },
 
   methods: {
+    // 🔥 NOVO: Carrega playlists reais do backend
+    async loadUserPlaylists() {
+      this.loadingPlaylists = true
+     
+      try {
+        const user = JSON.parse(localStorage.getItem('usuario'))
+        const userId = user?._id || user?.id
+
+        if (!userId) {
+          console.error('Usuário não autenticado')
+          return
+        }
+
+        const token = localStorage.getItem("token")
+       
+        const res = await fetch(`${this.API_BASE_URL}/playlists`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const data = await res.json()
+        const safeArray = Array.isArray(data) ? data : []
+
+        // 🔥 Mapeia as playlists do backend para o formato do componente
+        this.userPlaylists = safeArray.map(p => ({
+          id: p._id || p.id,
+          title: p.nome || p.title,
+          description: p.descricao || '',
+          cover: p.capa || p.image || null,
+          isPublic: p.publica !== undefined ? p.publica : p.isPublic,
+          songs: Array.isArray(p.musicas) ? p.musicas : (p.songs || []),
+          authorName: this.currentUser.name,
+          // Dados adicionais úteis
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt
+        }))
+
+        // 🔥 Atualiza o contador de playlists nas estatísticas
+        this.userStats.playlists = this.userPlaylists.length
+
+        console.log('✅ Playlists carregadas:', this.userPlaylists)
+
+      } catch (err) {
+        console.error('❌ Erro ao carregar playlists:', err)
+        this.showToast('Erro', 'Falha ao carregar suas playlists', 'error', 'fa fa-exclamation-circle')
+      } finally {
+        this.loadingPlaylists = false
+      }
+    },
+
+    // 🔥 NOVO: Abre uma playlist específica
+    openPlaylist(playlist) {
+      // Navega para a página da playlist ou emite evento
+      this.$router?.push({ path: '/playlist', query: { id: playlist.id } })
+        || this.showToast('Playlist', `Abrindo: ${playlist.title}`, 'info', 'fa fa-folder-open')
+    },
+
+    // 🔥 NOVO: Criar nova playlist (redireciona)
+    createPlaylist() {
+      this.$router?.push('/playlist')
+        || this.showToast('Criar Playlist', 'Redirecionando para criar playlist...', 'info', 'fa fa-plus')
+    },
+
+    // Verifica se usuário está logado
+    checkAuth() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn')
+      const token = localStorage.getItem('token')
+     
+      if (!isLoggedIn || !token) {
+        // Se não estiver logado, redireciona para home
+        this.$router.push('/')
+      }
+    },
+
+    // Logout - limpa dados e vai para home
+    logout() {
+      // Limpar todos os dados do localStorage
+      localStorage.removeItem('usuario')
+      localStorage.removeItem('usuario_perfil')
+      localStorage.removeItem('token')
+      localStorage.removeItem('isLoggedIn')
+     
+      // Disparar evento de logout
+      window.dispatchEvent(new CustomEvent('user-logged-out'))
+     
+      // Mostrar toast
+      this.showToast('Até logo!', 'Você saiu da conta', 'info', 'fa fa-sign-out')
+     
+      // Redirecionar para home após logout
+      setTimeout(() => {
+        this.$router.push('/')
+      }, 1000)
+    },
+   
     // ========== USER & UI ==========
    
     loadUserFromStorage() {
@@ -754,13 +895,8 @@ export default {
         { id: 206, title: "10%", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/206/250x250.jpg", playedAt: Date.now() - 21600000 }
       ]
 
-      this.userPlaylists = [
-        { id: 301, title: "Sertanejo Raiz", tracks: 45, cover: "https://e-cdns-images.dzcdn.net/images/cover/301/250x250.jpg", isPublic: true },
-        { id: 302, title: "Funk 2024", tracks: 32, cover: "https://e-cdns-images.dzcdn.net/images/cover/302/250x250.jpg", isPublic: false },
-        { id: 303, title: "MPB Classics", tracks: 28, cover: "https://e-cdns-images.dzcdn.net/images/cover/303/250x250.jpg", isPublic: true },
-        { id: 304, title: "Rock Nacional", tracks: 56, cover: "https://e-cdns-images.dzcdn.net/images/cover/304/250x250.jpg", isPublic: false }
-      ]
-
+      // 🔥 As playlists agora vêm da API real em loadUserPlaylists()
+      // Mantido apenas para fallback se necessário
       this.followedArtists = [
         { id: 401, name: "Marília Mendonça", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/401/250x250.jpg", isFollowing: true, hasNewRelease: true },
         { id: 402, name: "Maiara & Maraisa", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/402/250x250.jpg", isFollowing: true, hasNewRelease: false },
@@ -798,10 +934,6 @@ export default {
     playPlaylist(playlist) {
       this.currentPlaylist = playlist
       this.showToast('Playlist', `Tocando: ${playlist.title}`, 'success', 'fa fa-list')
-    },
-
-    createPlaylist() {
-      this.showToast('Nova Playlist', 'Criar nova playlist em breve!', 'info', 'fa fa-plus')
     },
 
     toggleFollow(artist) {
@@ -1045,6 +1177,61 @@ export default {
 
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+
+/* ========== NOVO: Top Bar com User Info e Logout ========== */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(29, 185, 84, 0.5);
+  box-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
+}
+
+.user-name {
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 71, 87, 0.15);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  color: #ff4757;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 71, 87, 0.3);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.2);
+}
+
+.logout-btn i {
+  font-size: 14px;
+}
 
 /* ========== ANIMATIONS ========== */
 @keyframes slideIn {
@@ -2167,6 +2354,71 @@ export default {
   transform: rotate(15deg);
 }
 
+/* ========== ESTADO VAZIO DE PLAYLISTS ========== */
+.empty-playlists {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+  background: rgba(255,255,255,0.02);
+  border-radius: 16px;
+  border: 2px dashed rgba(255,255,255,0.1);
+}
+
+.empty-illustration {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 24px;
+}
+
+.empty-illustration i {
+  font-size: 64px;
+  opacity: 0.3;
+  position: relative;
+  z-index: 1;
+  color: #1db954;
+}
+
+.sound-waves {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.sound-waves span {
+  width: 4px;
+  background: #1db954;
+  border-radius: 2px;
+  animation: sound-wave 1s ease-in-out infinite;
+}
+
+.sound-waves span:nth-child(1) { height: 20px; animation-delay: 0s; }
+.sound-waves span:nth-child(2) { height: 30px; animation-delay: 0.2s; }
+.sound-waves span:nth-child(3) { height: 25px; animation-delay: 0.4s; }
+
+@keyframes sound-wave {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+.empty-playlists h3 {
+  font-size: 20px;
+  color: #f8fafc;
+  margin: 0 0 8px 0;
+}
+
+.empty-playlists p {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+}
+
+.empty-playlists .btn-primary {
+  display: inline-flex;
+}
+
 /* ========== LOADING & TOAST ========== */
 .loading-overlay {
   position: fixed;
@@ -2660,6 +2912,18 @@ export default {
  
   .quick-stats {
     grid-template-columns: 1fr;
+  }
+ 
+  /* NOVO: Ajustes para top bar no mobile */
+  .top-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+ 
+  .logout-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
