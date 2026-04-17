@@ -194,6 +194,7 @@ async mounted() {
   await this.loadFollowedArtists()
   await this.loadArtists()
   window.addEventListener('resize', this.checkArrows)
+  window.dispatchEvent(new Event('artists-updated'))
 },
 
   beforeUnmount() {

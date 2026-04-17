@@ -642,9 +642,11 @@ export default {
     this.loadUserFromStorage()
     this.updateGreeting()
     window.addEventListener('player-update', this.handlePlayerUpdate)
+      window.addEventListener('artists-updated', this.loadFollowedArtists)
    
     // 🔥 Carrega playlists reais do backend
     this.loadUserPlaylists()
+    this.loadFollowedArtists()
     this.loadAllData()
    
     // Atualizar saudação a cada minuto
@@ -741,6 +743,53 @@ export default {
       }
     },
 
+async loadFollowedArtists() {
+  try {
+    const token = localStorage.getItem("token")
+
+    if (!token) {
+      this.followedArtists = []
+      return
+    }
+
+    // 🔥 1. pega os follows
+    const res = await fetch(
+      'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    )
+
+    const follows = await res.json()
+
+    // 🔥 2. extrai IDs
+    const ids = follows.map(f =>
+      String(f.seguindo_id?._id || f.seguindo_id)
+    )
+
+    // 🔥 3. busca TODOS cantores do banco
+    const resCantores = await fetch('http://localhost:3002/cantores')
+    const cantores = await resCantores.json()
+
+    // 🔥 4. filtra só os que o usuário segue
+    this.followedArtists = cantores
+      .filter(c => ids.includes(String(c._id)))
+      .map(c => ({
+        id: c._id,
+        name: c.nome,
+        picture_medium: c.foto,
+        isFollowing: true,
+        hasNewRelease: false
+      }))
+
+  } catch (error) {
+    console.error('Erro ao carregar artistas seguidos:', error)
+    this.followedArtists = []
+  }
+},
+
     // Logout - limpa dados e vai para home
     logout() {
       // Limpar todos os dados do localStorage
@@ -802,7 +851,7 @@ export default {
     },
 
     goToArtists() {
-      this.$router?.push('/artists') || this.showToast('Artistas', 'Ver todos os artistas...', 'info')
+      this.$router?.push('/artistas') || this.showToast('Artistas', 'Ver todos os artistas...', 'info')
     },
 
     // ========== DATA LOADING ==========
@@ -895,15 +944,6 @@ export default {
         { id: 206, title: "10%", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/206/250x250.jpg", playedAt: Date.now() - 21600000 }
       ]
 
-      // 🔥 As playlists agora vêm da API real em loadUserPlaylists()
-      // Mantido apenas para fallback se necessário
-      this.followedArtists = [
-        { id: 401, name: "Marília Mendonça", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/401/250x250.jpg", isFollowing: true, hasNewRelease: true },
-        { id: 402, name: "Maiara & Maraisa", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/402/250x250.jpg", isFollowing: true, hasNewRelease: false },
-        { id: 403, name: "Henrique & Juliano", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/403/250x250.jpg", isFollowing: true, hasNewRelease: true },
-        { id: 404, name: "Jorge & Mateus", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/404/250x250.jpg", isFollowing: true, hasNewRelease: false },
-        { id: 405, name: "Gusttavo Lima", picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/405/250x250.jpg", isFollowing: true, hasNewRelease: false }
-      ]
     },
 
     generateRecommendations() {
