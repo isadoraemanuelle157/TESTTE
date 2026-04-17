@@ -1325,8 +1325,8 @@ async loadFollowedArtists() {
   min-height: 100vh;
   color: #fff;
   font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  margin-left: 240px;
-  width: calc(100% - 240px);
+   width: 100%;
+    margin-left: 0;
   background: linear-gradient(180deg, #050508 0%, #0a0a1a 30%, #0a1a3f 100%);
   padding: 24px 0 120px 0;
   display: flex;
