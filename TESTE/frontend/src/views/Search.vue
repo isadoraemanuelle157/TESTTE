@@ -220,26 +220,24 @@
                       </div>
                       
                       <!-- Tab: Moods -->
-                      <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
-                        <div class="mood-grid detailed">
-                          <div
-                            v-for="mood in detailedCategories.moods"
-                            :key="mood.name"
-                            class="mood-card-detailed"
-                            :style="{ background: mood.gradient }"
-                            @click="searchAndGo(mood.name); showCategoriesDropdown = false"
-                          >
-                            <i :class="mood.icon"></i>
-                            <div class="mood-info">
-                              <span class="mood-name">{{ mood.name }}</span>
-                              <span class="mood-desc">{{ mood.description }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                 
-                      
+                     <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
+  <div class="mood-grid detailed">
+    <div
+      v-for="vibe in vibes"
+      :key="vibe._id"
+      class="mood-card-detailed"
+      :style="{ background: vibe.gradient }"
+      @click="searchVibe(vibe)"
+    >
+      <span style="font-size: 24px">{{ vibe.emoji }}</span>
+      <div class="mood-info">
+        <span class="mood-name">{{ vibe.nome }}</span>
+        <span class="mood-desc">{{ vibe.descricao }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+                                 
                       <!-- Tab: Décadas -->
                       <div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
                         <div class="decade-timeline">
@@ -459,6 +457,7 @@ export default {
       likedTracks: [],
       favoriteAlbums: [],
       favoriteArtists: [],
+      vibes: [],
       
       // Data
       searchHistory: JSON.parse(localStorage.getItem('searchHistory')) || [],
@@ -659,6 +658,7 @@ export default {
     this.loadInitialData()
     this.loadLikedTracks()
     this.loadFavoritas()
+    this.loadVibes()
   },
 
   beforeUnmount() {
@@ -688,7 +688,24 @@ export default {
         console.error(err)
       }
     },
-    
+
+    async loadVibes() {
+  try {
+    const res = await fetch("http://localhost:3002/vibes")
+    const data = await res.json()
+
+    this.vibes = data
+  } catch (err) {
+    console.error("Erro ao carregar vibes:", err)
+  }
+},
+
+searchVibe(vibe) {
+  const query = vibe.tags.join(' ') || vibe.nome
+  this.searchQuery = query
+  this.performSearch()
+},
+
     async loadFavoritas() {
       try {
         const token = localStorage.getItem("token")
