@@ -8,6 +8,9 @@ const musicaSchema = new mongoose.Schema({
   letra: { type: String, required: true, trim: true },
   link: { type: String, required: true, trim: true },
 
+  ano: { type: Number }, // ex: 1998, 2005
+  decada: { type: String }, // ex: "Anos 90", "Anos 2000"
+
   generos: {
     type: [{
       type: mongoose.Schema.Types.ObjectId,

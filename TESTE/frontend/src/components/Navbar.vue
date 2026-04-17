@@ -206,10 +206,8 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
-
 export default {
   name: 'Navbar',
-
 
   props: {
     showBrand: {
@@ -222,31 +220,26 @@ export default {
     }
   },
 
-
   emits: ['login', 'register', 'logout', 'search'],
-
 
   setup(props, { emit }) {
     const router = useRouter()
-   
-    // Estados de UI
+
     const isScrolled = ref(false)
     const showNotifications = ref(false)
     const showUserMenu = ref(false)
     const isSearchFocused = ref(false)
     const searchQuery = ref('')
 
-    // Estados do usuário
     const isLoggedIn = ref(false)
     const userName = ref('')
     const userEmail = ref('')
     const userAvatar = ref(null)
     const userId = ref(null)
 
-    // Notificações mock
     const notificationCount = ref(3)
     const hasNewNotifications = computed(() => notificationCount.value > 0)
-   
+
     const notifications = ref([
       {
         title: 'Nova música adicionada à sua playlist',
@@ -271,22 +264,25 @@ export default {
       }
     ])
 
-
-    // Carregar dados do usuário do localStorage
     const loadUserData = () => {
       const storedUser = localStorage.getItem('usuario')
       const storedProfile = localStorage.getItem('usuario_perfil')
       const loggedIn = localStorage.getItem('isLoggedIn')
-     
-      if (loggedIn === 'true' && storedUser) {
-        const userData = JSON.parse(storedUser)
+
+      if (loggedIn === 'true' && (storedUser || storedProfile)) {
+        const userData = storedUser ? JSON.parse(storedUser) : {}
         const profileData = storedProfile ? JSON.parse(storedProfile) : {}
-       
+
+        const mergedUser = {
+          ...userData,
+          ...profileData
+        }
+
         isLoggedIn.value = true
-        userName.value = userData.nome || profileData.nome || 'Usuário'
-        userEmail.value = userData.email || profileData.email || ''
-        userAvatar.value = userData.avatar || profileData.avatar || null
-        userId.value = userData.id || userData._id || null
+        userName.value = mergedUser.nome || 'Usuário'
+        userEmail.value = mergedUser.email || ''
+        userAvatar.value = mergedUser.avatar || null
+        userId.value = mergedUser.id || mergedUser._id || null
       } else {
         isLoggedIn.value = false
         userName.value = ''
@@ -296,24 +292,19 @@ export default {
       }
     }
 
-
-    // Handlers
     const handleScroll = () => {
       isScrolled.value = window.scrollY > 20
     }
-
 
     const toggleNotifications = () => {
       showNotifications.value = !showNotifications.value
       showUserMenu.value = false
     }
 
-
     const toggleUserMenu = () => {
       showUserMenu.value = !showUserMenu.value
       showNotifications.value = false
     }
-
 
     const markAsRead = (index) => {
       if (!notifications.value[index].read) {
@@ -322,12 +313,10 @@ export default {
       }
     }
 
-
     const markAllRead = () => {
       notifications.value.forEach(n => n.read = true)
       notificationCount.value = 0
     }
-
 
     const handleSearch = () => {
       if (searchQuery.value.trim()) {
@@ -336,13 +325,11 @@ export default {
       }
     }
 
-
     const handleLogin = () => {
       showUserMenu.value = false
       emit('login')
       router.push('/login')
     }
-
 
     const handleRegister = () => {
       showUserMenu.value = false
@@ -350,59 +337,49 @@ export default {
       router.push('/registrar')
     }
 
-
     const handleLogout = () => {
-      // Limpar dados do localStorage
       localStorage.removeItem('usuario')
       localStorage.removeItem('usuario_perfil')
       localStorage.removeItem('isLoggedIn')
       localStorage.removeItem('token')
-     
-      // Atualizar estado
+
       isLoggedIn.value = false
       userName.value = ''
       userEmail.value = ''
       userAvatar.value = null
       userId.value = null
-     
+
       showUserMenu.value = false
+
+      window.dispatchEvent(new Event('user-logged-out'))
       emit('logout')
-     
-      // Redirecionar para login
       router.push('/login')
     }
-
 
     const goToProfile = () => {
       showUserMenu.value = false
       router.push('/perfil')
     }
 
-
     const goToSettings = () => {
       showUserMenu.value = false
       router.push('/settings')
     }
-
 
     const goToLibrary = () => {
       showUserMenu.value = false
       router.push('/favoritas')
     }
 
-
     const goToHelp = () => {
       showUserMenu.value = false
       router.push('/help')
     }
 
-
     const handleAvatarError = () => {
       userAvatar.value = null
     }
 
-
-    // Click outside to close dropdowns
     const handleClickOutside = (e) => {
       const nav = document.querySelector('.navbar')
       if (nav && !nav.contains(e.target)) {
@@ -411,69 +388,54 @@ export default {
       }
     }
 
-// Ouvir evento de logout
-const handleUserLoggedOut = () => {
-  isLoggedIn.value = false
-  userName.value = ''
-  userEmail.value = ''
-  userAvatar.value = null
-  userId.value = null
-  showUserMenu.value = false
-}
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll)
-  document.addEventListener('click', handleClickOutside)
- 
-  // Carregar dados do usuário ao montar
-  loadUserData()
- 
-  // Ouvir eventos de login/logout de outros componentes
-  window.addEventListener('user-logged-in', handleUserLoggedIn)
-  window.addEventListener('user-logged-out', handleUserLoggedOut)  // ← NOVO
- 
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'usuario' || e.key === 'isLoggedIn') {
+    const handleUserLoggedIn = () => {
       loadUserData()
     }
-  })
-})
 
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-  document.removeEventListener('click', handleClickOutside)
-  window.removeEventListener('user-logged-in', handleUserLoggedIn)
-  window.removeEventListener('user-logged-out', handleUserLoggedOut)  // ← NOVO
-})
-    // Ouvir eventos de login/registro
-    const handleUserLoggedIn = (event) => {
+    const handleUserLoggedOut = () => {
+      isLoggedIn.value = false
+      userName.value = ''
+      userEmail.value = ''
+      userAvatar.value = null
+      userId.value = null
+      showUserMenu.value = false
+    }
+
+    const handleProfileUpdated = () => {
       loadUserData()
+    }
+
+    const handleStorage = (e) => {
+      if (
+        e.key === 'usuario' ||
+        e.key === 'usuario_perfil' ||
+        e.key === 'isLoggedIn'
+      ) {
+        loadUserData()
+      }
     }
 
     onMounted(() => {
+      loadUserData()
+
       window.addEventListener('scroll', handleScroll)
       document.addEventListener('click', handleClickOutside)
-     
-      // Carregar dados do usuário ao montar
-      loadUserData()
-     
-      // Ouvir eventos de login de outros componentes
-      window.addEventListener('user-logged-in', handleUserLoggedIn)
-      window.addEventListener('storage', (e) => {
-        // Atualizar se outra aba modificou o localStorage
-        if (e.key === 'usuario' || e.key === 'isLoggedIn') {
-          loadUserData()
-        }
-      })
-    })
 
+      window.addEventListener('user-logged-in', handleUserLoggedIn)
+      window.addEventListener('user-logged-out', handleUserLoggedOut)
+      window.addEventListener('perfil-updated', handleProfileUpdated)
+      window.addEventListener('storage', handleStorage)
+    })
 
     onUnmounted(() => {
       window.removeEventListener('scroll', handleScroll)
       document.removeEventListener('click', handleClickOutside)
-      window.removeEventListener('user-logged-in', handleUserLoggedIn)
-    })
 
+      window.removeEventListener('user-logged-in', handleUserLoggedIn)
+      window.removeEventListener('user-logged-out', handleUserLoggedOut)
+      window.removeEventListener('perfil-updated', handleProfileUpdated)
+      window.removeEventListener('storage', handleStorage)
+    })
 
     return {
       isScrolled,

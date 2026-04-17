@@ -86,6 +86,20 @@
                   <label>Duração (ex: 3:45)</label>
                 </div>
 
+                <div class="input-group" :class="{ 'focused': focused === 'ano', 'filled': form.ano }">
+  <div class="input-icon">📅</div>
+  <input 
+    v-model="form.ano" 
+    type="number"
+    min="1900"
+    max="2100"
+    @focus="focused = 'ano'"
+    @blur="focused = null"
+    placeholder=" "
+  />
+  <label>Ano da música (ex: 2005)</label>
+</div>
+
                 <div class="input-group" :class="{ 'focused': focused === 'humor', 'filled': form.humor }">
                   <div class="input-icon">🎭</div>
                   <select 
@@ -429,6 +443,9 @@
                 <h3 class="music-title">{{ musica.nome }}</h3>
                 <div class="music-meta">
                   <span class="duration">⏱️ {{ musica.duracao }}</span>
+                  <span class="year">
+  📅 {{ musica.ano || '---' }} ({{ musica.decada || '-' }})
+</span>
                   <span class="mood">{{ musica.humor }}</span>
                   <span class="generos">🎶 {{ musica.generos?.map(g => g.nome).join(', ') || 'Sem gênero' }}</span>
                 </div>
@@ -561,6 +578,7 @@ export default {
         humor: "",
         letra: "",
         link: "",
+        ano: "",
         generos: [],    // 🔥 Array para múltiplos gêneros
         album: "",      // String única para álbum
         cantores: []    // 🔥 Array para múltiplos cantores
@@ -745,6 +763,7 @@ toggleCantor(id) {
   humor: this.form.humor,
   letra: this.form.letra,
   link: this.form.link,
+  ano: this.form.ano,
 
   generos: this.form.generos || [],
   album: this.form.album || null,

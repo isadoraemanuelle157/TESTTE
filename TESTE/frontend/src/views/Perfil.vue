@@ -49,22 +49,21 @@
               </div>
 
               <!-- Se tem avatar customizado -->
-              <img
-                v-if="usuario.avatar && !isDefaultAvatar"
-                :src="usuario.avatar"
-                :alt="usuario.nome"
-                class="avatar"
-                @error="handleAvatarError"
-              />
-             
-              <!-- Se não tem avatar - mostra iniciais geradas -->
-              <div
-                v-else
-                class="avatar generated-avatar"
-                :style="generatedAvatarStyle"
-              >
-                {{ userInitials }}
-              </div>
+            <img
+  v-if="usuario.avatar"
+  :src="usuario.avatar"
+  :alt="usuario.nome"
+  class="avatar"
+  @error="handleAvatarError"
+/>
+
+<div
+  v-else
+  class="avatar generated-avatar"
+  :style="generatedAvatarStyle"
+>
+  {{ userInitials }}
+</div>
 
               <div class="avatar-status" v-if="isOwnProfile"></div>
 
@@ -839,18 +838,19 @@
                 </div>
 
                 <div class="preview-avatar-wrapper">
-                  <img
-                    v-if="editForm.avatar && !isAvatarGenerated(editForm.avatar)"
-                    :src="editForm.avatar"
-                    class="preview-avatar"
-                  />
-                  <div
-                    v-else
-                    class="preview-avatar generated-avatar"
-                    :style="generatedAvatarStyle"
-                  >
-                    {{ userInitials }}
-                  </div>
+              <img
+  v-if="editForm.avatar"
+  :src="editForm.avatar"
+  class="preview-avatar"
+  @error="handleAvatarError"
+/>
+<div
+  v-else
+  class="preview-avatar generated-avatar"
+  :style="generatedAvatarStyle"
+>
+  {{ userInitials }}
+</div>
 
                   <button type="button" class="btn-change-avatar" @click="openAvatarEditorFlow">
   <i class="fa fa-camera"></i>
@@ -1190,32 +1190,54 @@
                   </div>
                 </div>
 
-                <!-- Avatares Artísticos (Dicebear) -->
-                <div v-if="activeAvatarTab === 'artistic'" class="avatar-option-group">
-                  <div class="avatar-grid">
-                    <div
-                      v-for="(avatar, index) in artisticAvatars"
-                      :key="index"
-                      class="avatar-grid-item"
-                      @click="selectArtisticAvatar(avatar)"
-                    >
-                      <img :src="avatar" alt="Avatar artístico" />
-                    </div>
-                  </div>
-                </div>
+                <!-- Avatares Artísticos -->
+<div v-if="activeAvatarTab === 'artistic'" class="avatar-option-group">
+  <div class="avatar-grid">
+    <div
+      v-for="(avatar, index) in artisticAvatars"
+      :key="`artistic-${index}`"
+      class="avatar-grid-item"
+      @click="selectArtisticAvatar(avatar)"
+    >
+      <img :src="avatar" alt="Avatar artístico" @error="handleGeneratedOptionError" />
+    </div>
 
-                <!-- Avatares Divertidos -->
-                <div v-if="activeAvatarTab === 'fun'" class="avatar-option-group">
-                  <div class="avatar-grid">
-                    <div
-                      v-for="(avatar, index) in funAvatars"
-                      :key="index"
-                      class="avatar-grid-item"
-                      @click="selectFunAvatar(avatar)"
-                    >
-                      <img :src="avatar" alt="Avatar divertido" />
-                    </div>
-                  </div>
+    <button
+      type="button"
+      class="avatar-grid-item avatar-grid-item--add"
+      @click="addCustomAvatarOption('artistic')"
+    >
+      <div class="add-avatar-content">
+        <i class="fa fa-plus"></i>
+        <span>Novo ícone</span>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- Avatares Divertidos -->
+<div v-if="activeAvatarTab === 'fun'" class="avatar-option-group">
+  <div class="avatar-grid">
+    <div
+      v-for="(avatar, index) in funAvatars"
+      :key="`fun-${index}`"
+      class="avatar-grid-item"
+      @click="selectFunAvatar(avatar)"
+    >
+      <img :src="avatar" alt="Avatar divertido" />
+    </div>
+
+    <button
+      type="button"
+      class="avatar-grid-item avatar-grid-item--add"
+      @click="addCustomAvatarOption('fun')"
+    >
+      <div class="add-avatar-content">
+        <i class="fa fa-plus"></i>
+        <span>Novo ícone</span>
+      </div>
+    </button>
+  </div>
                 </div>
               </div>
             </div>
@@ -1274,6 +1296,12 @@ export default {
      
       artisticAvatars: [],
       funAvatars: [],
+      artisticBaseIcons: ['♪', '♫', '★', '✦', '◆', '⚡', '♥', '☾'],
+funBaseIcons: ['😎', '🤖', '👻', '🦄', '🐼', '🐸', '🦊', '🐵', '😺', '🔥', '🌈', '🎵'],
+
+customArtisticIcons: [],
+customFunIcons: [],
+
      
       tabs: [
         { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
@@ -1305,7 +1333,7 @@ export default {
         isCreator: false
       },
      
-      defaultAvatar: "https://ui-avatars.com/api/?name=User&background=6366f1&color=fff",
+      // defaultAvatar: "https://ui-avatars.com/api/?name=User&background=6366f1&color=fff",
      
       // Estados
       isOwnProfile: true,
@@ -1399,9 +1427,9 @@ export default {
           }
     },
    
-    hasCustomAvatar() {
-      return !!this.usuario.avatar && !this.isDefaultAvatar
-    },
+  hasCustomAvatar() {
+  return !!this.usuario.avatar
+},
 
     hasCustomCover() {
       return !!this.usuario.cover
@@ -1459,11 +1487,9 @@ export default {
       }
     },
    
-    isDefaultAvatar() {
-      return !this.usuario.avatar ||
-             this.usuario.avatar.includes('ui-avatars.com') ||
-             this.usuario.avatar.includes('data:image/svg+xml')
-    },
+isDefaultAvatar() {
+  return !this.usuario.avatar
+},
    
     previewCoverStyle() {
       const cover = this.editForm.cover || this.usuario.cover
@@ -1555,34 +1581,39 @@ export default {
     }
   },
 
-  mounted() {
-    // Simular loading inicial
-    setTimeout(() => {
-      this.loading = false
-    }, 800)
+ mounted() {
+  setTimeout(() => {
+    this.loading = false
+  }, 800)
 
+this.carregarUsuarioLogado()
+this.loadCustomAvatarOptions()
+this.generateArtisticAvatars()
+this.generateFunAvatars()
+
+  this.carregarDados()
+  this.carregarCurtidas()
+  this.carregarFavoritos()
+  this.carregarArtistas()
+  this.carregarAtividades()
+  this.carregarFollows()
+
+  this.onPlaylistUpdated = () => this.carregarDados()
+  this.onLikesUpdated = () => this.carregarCurtidas()
+  this.onFavoritesUpdated = () => this.carregarFavoritos()
+  this.onPerfilUpdated = () => {
     this.carregarUsuarioLogado()
-    this.carregarDados()
-    this.carregarCurtidas()
-    this.carregarFavoritos()
-    this.carregarArtistas()
-    this.carregarAtividades()
-    this.carregarFollows()
     this.generateArtisticAvatars()
     this.generateFunAvatars()
+  }
 
-    this.onPlaylistUpdated = () => this.carregarDados()
-    this.onLikesUpdated = () => this.carregarCurtidas()
-    this.onFavoritesUpdated = () => this.carregarFavoritos()
-    this.onPerfilUpdated = () => this.carregarUsuarioLogado()
-
-    window.addEventListener('playlist-updated', this.onPlaylistUpdated)
-    window.addEventListener('likes-updated', this.onLikesUpdated)
-    window.addEventListener('favoritas-updated', this.onFavoritesUpdated)
-    window.addEventListener('perfil-updated', this.onPerfilUpdated)
-    window.addEventListener('focus', this.handleFocus)
-    window.addEventListener('storage', this.handleStorage)
-  },
+  window.addEventListener('playlist-updated', this.onPlaylistUpdated)
+  window.addEventListener('likes-updated', this.onLikesUpdated)
+  window.addEventListener('favoritas-updated', this.onFavoritesUpdated)
+  window.addEventListener('perfil-updated', this.onPerfilUpdated)
+  window.addEventListener('focus', this.handleFocus)
+  window.addEventListener('storage', this.handleStorage)
+},
 
   beforeUnmount() {
     if (this.toastTimeout) clearTimeout(this.toastTimeout)
@@ -1596,19 +1627,205 @@ export default {
   },
 
   methods: {
-    generateArtisticAvatars() {
-      const styles = ['adventurer', 'avataaars', 'big-ears', 'big-smile', 'bottts', 'croodles', 'fun-emoji', 'lorelei', 'micah', 'miniavs', 'open-peeps', 'personas', 'pixel-art']
-      this.artisticAvatars = styles.map(style =>
-        `https://api.dicebear.com/7.x/${style}/svg?seed=${this.usuario.username || 'user'}&backgroundColor=b6e3f4,c0aede,d1d4f9`
-      )
-    },
+generateArtisticAvatars() {
+  const palettes = [
+    ['#667eea', '#764ba2'],
+    ['#f093fb', '#f5576c'],
+    ['#4facfe', '#00f2fe'],
+    ['#43e97b', '#38f9d7'],
+    ['#fa709a', '#fee140'],
+    ['#30cfd0', '#330867'],
+    ['#11998e', '#38ef7d'],
+    ['#fc466b', '#3f5efb']
+  ]
 
-    generateFunAvatars() {
-      const seeds = ['Felix', 'Aneka', 'Salem', 'Bear', 'Bella', 'Coco', 'Leo', 'Loki', 'Lucy', 'Milo', 'Oreo', 'Oscar']
-      this.funAvatars = seeds.map(seed =>
-        `https://api.dicebear.com/7.x/fun-emoji/svg?seed=${seed}&backgroundColor=ffdfbf,c0aede,ffd5dc`
-      )
-    },
+  const icons = [...this.artisticBaseIcons, ...this.customArtisticIcons]
+
+  this.artisticAvatars = icons.map((iconSymbol, index) => {
+    const colors = palettes[index % palettes.length]
+
+    return this.makeAvatarSvg({
+      type: 'artistic',
+      seed: `${this.usuario.username || this.usuario.nome || 'user'}-${index}-${iconSymbol}`,
+      iconSymbol,
+      colorA: colors[0],
+      colorB: colors[1]
+    })
+  })
+},
+
+generateFunAvatars() {
+  const palettes = [
+    ['#ff9a9e', '#fecfef'],
+    ['#a18cd1', '#fbc2eb'],
+    ['#fad0c4', '#ffd1ff'],
+    ['#ffecd2', '#fcb69f'],
+    ['#84fab0', '#8fd3f4'],
+    ['#fccb90', '#d57eeb']
+  ]
+
+  const emojis = [...this.funBaseIcons, ...this.customFunIcons]
+
+  this.funAvatars = emojis.map((emoji, index) => {
+    const colors = palettes[index % palettes.length]
+
+    return this.makeAvatarSvg({
+      type: 'fun',
+      emoji,
+      colorA: colors[0],
+      colorB: colors[1]
+    })
+  })
+},
+
+makeAvatarSvg({
+  type = 'artistic',
+  seed = 'user',
+  emoji = '😎',
+  iconSymbol = '♪',
+  colorA = '#667eea',
+  colorB = '#764ba2'
+}) {
+  const initials = this.userInitials || 'U'
+  const hash = [...seed].reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+  const circle1X = 40 + (hash % 24)
+  const circle1Y = 46 + (hash % 20)
+  const circle2X = 210 - (hash % 18)
+  const circle2Y = 58 + (hash % 14)
+  const circle3X = 205 - (hash % 22)
+  const circle3Y = 210 - (hash % 18)
+
+  let content = ''
+
+  if (type === 'artistic') {
+    content = `
+      <circle cx="128" cy="128" r="74" fill="rgba(255,255,255,0.08)" />
+      <circle cx="128" cy="128" r="56" fill="rgba(255,255,255,0.14)" />
+      <text
+        x="128"
+        y="148"
+        text-anchor="middle"
+        font-size="82"
+        font-family="Segoe UI Symbol, Arial Unicode MS, sans-serif"
+        font-weight="700"
+        fill="#ffffff"
+      >
+        ${iconSymbol}
+      </text>
+      <circle cx="${circle1X}" cy="${circle1Y}" r="18" fill="rgba(255,255,255,0.18)" />
+      <circle cx="${circle2X}" cy="${circle2Y}" r="12" fill="rgba(255,255,255,0.15)" />
+      <circle cx="${circle3X}" cy="${circle3Y}" r="20" fill="rgba(255,255,255,0.10)" />
+    `
+  } else {
+    content = `
+      <text
+        x="128"
+        y="145"
+        text-anchor="middle"
+        font-size="82"
+        font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif"
+      >
+        ${emoji}
+      </text>
+      <circle cx="${circle1X}" cy="${circle1Y}" r="18" fill="rgba(255,255,255,0.18)" />
+      <circle cx="${circle2X}" cy="${circle2Y}" r="12" fill="rgba(255,255,255,0.16)" />
+      <circle cx="${circle3X}" cy="${circle3Y}" r="18" fill="rgba(255,255,255,0.12)" />
+    `
+  }
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${colorA}" />
+          <stop offset="100%" stop-color="${colorB}" />
+        </linearGradient>
+      </defs>
+
+      <rect width="256" height="256" rx="64" fill="url(#bg)" />
+      ${content}
+
+      ${
+        type === 'artistic'
+          ? `
+          <text
+            x="128"
+            y="228"
+            text-anchor="middle"
+            font-size="20"
+            font-weight="700"
+            fill="rgba(255,255,255,0.65)"
+            font-family="Arial, sans-serif"
+          >
+            ${initials}
+          </text>
+        `
+          : ''
+      }
+    </svg>
+  `
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+},
+loadCustomAvatarOptions() {
+  try {
+    this.customArtisticIcons = JSON.parse(localStorage.getItem('custom_artistic_icons') || '[]')
+    this.customFunIcons = JSON.parse(localStorage.getItem('custom_fun_icons') || '[]')
+  } catch (error) {
+    this.customArtisticIcons = []
+    this.customFunIcons = []
+  }
+},
+
+saveCustomAvatarOptions() {
+  localStorage.setItem('custom_artistic_icons', JSON.stringify(this.customArtisticIcons))
+  localStorage.setItem('custom_fun_icons', JSON.stringify(this.customFunIcons))
+},
+
+addCustomAvatarOption(type) {
+  if (type === 'artistic') {
+    const value = window.prompt('Digite um símbolo para o avatar artístico\nEx.: ♪ ★ ✦ ⚡ ♥ ☾')
+    if (!value) return
+
+    const icon = value.trim()
+    if (!icon) return
+
+    if (!this.customArtisticIcons.includes(icon)) {
+      this.customArtisticIcons.push(icon)
+      this.saveCustomAvatarOptions()
+      this.generateArtisticAvatars()
+
+      this.showToast({
+        title: "Ícone artístico adicionado",
+        message: `Novo ícone "${icon}" disponível na galeria`,
+        type: "success",
+        icon: "fa fa-plus-circle"
+      })
+    }
+
+    return
+  }
+
+  const value = window.prompt('Digite um emoji para o avatar divertido\nEx.: 😺 🚀 🎧 🎮 🎵')
+  if (!value) return
+
+  const emoji = value.trim()
+  if (!emoji) return
+
+  if (!this.customFunIcons.includes(emoji)) {
+    this.customFunIcons.push(emoji)
+    this.saveCustomAvatarOptions()
+    this.generateFunAvatars()
+
+    this.showToast({
+      title: "Emoji adicionado",
+      message: `Novo avatar divertido "${emoji}" disponível na galeria`,
+      type: "success",
+      icon: "fa fa-plus-circle"
+    })
+  }
+},
 
     viewStory() {
       this.showToast({
@@ -1618,6 +1835,10 @@ export default {
         icon: "fa fa-circle-o"
       })
     },
+
+handleGeneratedOptionError(event) {
+  event.target.src = this.defaultAvatar
+},
 
     carregarUsuarioLogado() {
       const storedUser = localStorage.getItem('usuario')
@@ -1747,15 +1968,8 @@ export default {
   })
 },
 
-   isAvatarGenerated(value) {
-  if (!value) return true
-  const avatar = String(value)
-
-  return (
-    avatar.includes('ui-avatars.com') ||
-    avatar.includes('data:image/svg+xml') ||
-    avatar.includes('api.dicebear.com')
-  )
+isAvatarGenerated(value) {
+  return !value
 },
 
     async updateProfileMediaField(field, value, successTitle, successMessage) {
@@ -1915,26 +2129,40 @@ selectFunAvatar(avatar) {
   }
 },
    
- onAvatarSelect(avatarUrl) {
-  if (!this.showEditModal) {
-    this.openEditModal()
+ async onAvatarSelect(avatarUrl) {
+  try {
+    if (!this.showEditModal) {
+      this.openEditModal()
+      await this.$nextTick()
+    }
+
+    this.editForm.avatar = avatarUrl || null
+
+    await this.updateProfileMediaField(
+      'avatar',
+      avatarUrl || null,
+      "Avatar atualizado",
+      "Sua foto de perfil foi atualizada com sucesso"
+    )
+
+    this.closeAvatarSelector()
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível atualizar o avatar",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
   }
-
-  this.editForm.avatar = avatarUrl
-
-  this.closeAvatarSelector()
-
-  this.showToast({
-    title: "Avatar selecionado",
-    message: "Confira no modal e clique em salvar alterações para aplicar",
-    type: "info",
-    icon: "fa fa-user-circle"
-  })
 },
-   
-    handleAvatarError() {
-      this.usuario.avatar = null
-    },
+
+ handleAvatarError() {
+  this.usuario.avatar = null
+  if (this.showEditModal) {
+    this.editForm.avatar = null
+  }
+  this.persistUsuario(this.usuario)
+},
 
     async handleCoverChange(event) {
       const file = event.target.files?.[0]
@@ -2055,11 +2283,14 @@ selectFunAvatar(avatar) {
       })
     },
 
-    persistUsuario(user) {
-      localStorage.setItem('usuario', JSON.stringify(user))
-      localStorage.setItem('usuario_perfil', JSON.stringify(user))
-      window.dispatchEvent(new Event('perfil-updated'))
-    },
+   persistUsuario(user) {
+  localStorage.setItem('usuario', JSON.stringify(user))
+  localStorage.setItem('usuario_perfil', JSON.stringify(user))
+
+  window.dispatchEvent(new CustomEvent('perfil-updated', {
+    detail: user
+  }))
+},
 
     handleFocus() {
       this.carregarCurtidas()
@@ -2067,11 +2298,13 @@ selectFunAvatar(avatar) {
       this.carregarFavoritos()
     },
 
-    handleStorage(e) {
-      if (e.key === 'usuario_perfil') {
-        this.carregarUsuarioLogado()
-      }
-    },
+   handleStorage(e) {
+  if (e.key === 'usuario_perfil') {
+    this.carregarUsuarioLogado()
+    this.generateArtisticAvatars()
+    this.generateFunAvatars()
+  }
+},
    
     async carregarDados() {
       const token = localStorage.getItem("token")
@@ -3394,6 +3627,36 @@ html, body {
 .user-stats {
   display: flex;
   gap: 32px;
+}
+.avatar-grid-item--add {
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.avatar-grid-item--add:hover {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.12);
+  transform: scale(1.05);
+}
+
+.add-avatar-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.add-avatar-content i {
+  font-size: 22px;
+  color: #ec4899;
 }
 
 .stat-item {

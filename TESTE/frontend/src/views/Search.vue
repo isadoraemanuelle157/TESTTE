@@ -238,26 +238,7 @@
                         </div>
                       </div>
                       
-                      <!-- Tab: Atividades -->
-                      <div v-if="activeCategoryTab === 'activities'" class="category-tab-content">
-                        <div class="activity-list">
-                          <div
-                            v-for="activity in detailedCategories.activities"
-                            :key="activity.name"
-                            class="activity-item"
-                            @click="searchAndGo(activity.name); showCategoriesDropdown = false"
-                          >
-                            <div class="activity-icon" :style="{ background: activity.color }">
-                              <i :class="activity.icon"></i>
-                            </div>
-                            <div class="activity-info">
-                              <span class="activity-name">{{ activity.name }}</span>
-                              <span class="activity-desc">{{ activity.description }}</span>
-                            </div>
-                            <i class="fa fa-chevron-right activity-arrow"></i>
-                          </div>
-                        </div>
-                      </div>
+                 
                       
                       <!-- Tab: Décadas -->
                       <div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
@@ -351,7 +332,7 @@
                 v-for="artist in popularArtistsReal.slice(0, 6)"
                 :key="artist.id"
                 class="artist-item"
-                @click="searchArtist(artist.name)"
+                @click="searchArtist(artist.name, artist.id)"
               >
                 <img :src="artist.picture_medium" :alt="artist.name">
                 <span class="artist-name">{{ artist.name }}</span>
@@ -488,8 +469,7 @@ export default {
       // Tabs de Categorias
       categoryTabs: [
         { id: 'genres', name: 'Gêneros', icon: 'fa fa-music' },
-        { id: 'moods', name: 'Estados de Espírito', icon: 'fa fa-smile-o' },
-        { id: 'activities', name: 'Atividades', icon: 'fa fa-bicycle' },
+        { id: 'moods', name: 'Atividades', icon: 'fa fa-smile-o' },
         { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' }
       ],
       
@@ -882,17 +862,24 @@ export default {
       }
     },
 
-    async loadPopularArtists() {
-      try {
-        const response = await fetch(`${this.DEEZER_API}/chart/0/artists?limit=10`)
-        const data = await response.json()
-        if (data.data) {
-          this.popularArtistsReal = data.data
-        }
-      } catch (error) {
-        console.error('Erro ao carregar artistas:', error)
-      }
-    },
+async loadPopularArtists() {
+  try {
+    const response = await fetch('http://localhost:3002/cantores')
+    const data = await response.json()
+
+    // 🔥 adaptar para o formato que o front espera
+    this.popularArtistsReal = data.map(cantor => ({
+      id: cantor._id,
+      name: cantor.nome,
+      picture_medium: cantor.foto,
+      nb_fan: cantor.totalSeguidores || 0,
+      source: 'local'
+    }))
+
+  } catch (error) {
+    console.error('Erro ao carregar artistas do banco:', error)
+  }
+},
     
     async searchAll(query) {
   this.isLoading = true
@@ -1160,10 +1147,14 @@ export default {
       this.performSearch()
     },
 
-    async searchArtist(artistName) {
-      this.searchQuery = artistName
-      await this.performSearch()
-    },
+  searchArtist(artistName, artistId) {
+  if (artistId) {
+    this.$router.push(`/cantor/${artistId}`)
+  } else {
+    this.searchQuery = artistName
+    this.performSearch()
+  }
+},
 
     clearSearch() {
       this.searchQuery = ''
