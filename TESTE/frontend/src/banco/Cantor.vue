@@ -11,27 +11,37 @@
 
     <!-- Header -->
     <header class="soundup-header">
-      <div class="header-content">
-        <div class="logo-section">
-          <div class="logo-icon soundup-gradient">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-              <path d="M12 6v6l4.5 2.7.75-1.23-3.75-2.22V6H12z"/>
-              <path d="M7 12c0-2.76 2.24-5 5-5v1.5c-1.93 0-3.5 1.57-3.5 3.5S10.07 15.5 12 15.5v1.5c-2.76 0-5-2.24-5-5z"/>
-              <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4v-1.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 10.5 12 10.5V8z"/>
-              <path d="M16 6l-1.41 1.41L16.17 9H9v2h7.17l-1.58 1.59L16 14l4-4-4-4z" transform="rotate(-45 16 10)"/>
-            </svg>
-          </div>
-          <div class="title-section">
-            <h1>Artistas</h1>
-            <p class="subtitle">Seus cantores favoritos</p>
-          </div>
-        </div>
-        <button @click="abrirModalCriar" class="btn-soundup">
-          <span class="btn-icon">+</span>
-          <span class="btn-text">Adicionar</span>
-        </button>
+    <div class="header-content">
+  <div class="logo-section">
+    <div class="logo-icon soundup-gradient">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+        <path d="M12 6v6l4.5 2.7.75-1.23-3.75-2.22V6H12z"/>
+        <path d="M7 12c0-2.76 2.24-5 5-5v1.5c-1.93 0-3.5 1.57-3.5 3.5S10.07 15.5 12 15.5v1.5c-2.76 0-5-2.24-5-5z"/>
+        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4v-1.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 10.5 12 10.5V8z"/>
+        <path d="M16 6l-1.41 1.41L16.17 9H9v2h7.17l-1.58 1.59L16 14l4-4-4-4z" transform="rotate(-45 16 10)"/>
+      </svg>
+    </div>
+
+    <div class="title-section">
+      <h1>Artistas</h1>
+      <p class="subtitle">Seus cantores favoritos</p>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <button type="button" class="btn-total-artists">
+      <span class="total-artists-icon">🎤</span>
+      <div class="total-artists-text">
+        <strong>{{ totalCantores }}</strong>
+        <small>
+          {{ totalCantores === 1 ? 'cantor adicionado' : 'cantores adicionados' }}
+        </small>
       </div>
+    </button>
+  </div>
+</div>
+
     </header>
 
     <!-- Loading State -->
@@ -86,12 +96,18 @@
               </div>
             </div>
             <div class="circle-overlay">
-              <button class="play-btn soundup-gradient" @click.stop="editarCantor(cantor)">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 17.25V6.75c0-.76.46-1.45 1.17-1.75.71-.3 1.53-.13 2.06.43l5.25 5.25 5.25-5.25c.53-.56 1.35-.73 2.06-.43.71.3 1.17.99 1.17 1.75v10.5c0 .76-.46 1.45-1.17 1.75-.71.3-1.53.13-2.06-.43L12 13.5l-5.25 5.25c-.53.56-1.35.73-2.06.43-.71-.3-1.17-.99-1.17-1.75z"/>
-                </svg>
-                <span class="edit-tooltip">Editar</span>
-              </button>
+            <button
+  type="button"
+  class="play-btn soundup-gradient"
+  @click.stop="editarCantor(cantor)"
+>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 20h9"/>
+    <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+  </svg>
+  <span class="edit-tooltip">Editar</span>
+</button>
+
             </div>
           </div>
           <div class="audio-wave" v-if="hoveredCard === cantor._id">
@@ -99,47 +115,67 @@
           </div>
         </div>
 
-        <div class="artist-info-row">
-          <div class="artist-info-text">
-            <h3 class="artist-name">{{ cantor.nome }}</h3>
-            <p class="artist-meta">
-              <span class="verified-badge soundup-gradient" v-if="hoveredCard === cantor._id">✓</span>
-               <span>
-  👥 {{
-    cantor.seguidoresFormatado ||
-    formatarSeguidores(
-      (cantor.totalSeguidores ?? cantor.seguidoresBase ?? 0) +
-      (Array.isArray(cantor.seguidores) ? cantor.seguidores.length : 0)
-    )
-  }} fãs
-</span>
+     <div class="artist-card-body">
+  <div class="artist-top-line">
+    <h3 class="artist-name">{{ cantor.nome }}</h3>
+    <span class="artist-status">Artista</span>
+  </div>
 
+  <div class="artist-chips">
+    <span class="artist-chip artist-chip-primary">
+      👥 {{
+        cantor.seguidoresFormatado ||
+        formatarSeguidores(
+          (cantor.totalSeguidores ?? cantor.seguidoresBase ?? 0) +
+          (Array.isArray(cantor.seguidores) ? cantor.seguidores.length : 0)
+        )
+      }} fãs
+    </span>
 
-              <span v-if="cantor.albuns && cantor.albuns.length > 0">
-                {{ cantor.albuns.length }} álbum(ns) • 
-              </span>
-              {{ formatarData(cantor.createdAt) }}
-               <span v-if="cantor.generos && cantor.generos.length">
-    🎵 {{ cantor.generos.map(g => g.nome).join(', ') }}
-  </span>
-            
-  <span v-if="cantor.musicas && cantor.musicas.length">
-    🎵 {{ cantor.musicas.map(m => m.nome) }}
-  </span>
+    <span v-if="cantor.albuns && cantor.albuns.length > 0" class="artist-chip">
+      💿 {{ cantor.albuns.length }} álbum(ns)
+    </span>
+
+    <span v-if="cantor.generos && cantor.generos.length" class="artist-chip">
+      🎸 {{
+        cantor.generos
+          .map(g => typeof g === 'object' ? g.nome : getGeneroNome(g))
+          .filter(Boolean)
+          .join(', ')
+      }}
+    </span>
+
+    <span v-if="cantor.musicas && cantor.musicas.length" class="artist-chip">
+      🎵 {{
+        cantor.musicas
+          .slice(0, 2)
+          .map(m => typeof m === 'object' ? m.nome : getMusicaNome(m))
+          .filter(Boolean)
+          .join(', ')
+      }}
+      <template v-if="cantor.musicas.length > 2">
+        +{{ cantor.musicas.length - 2 }}
+      </template>
+    </span>
+  </div>
+
+  <p class="artist-date">
+    Adicionado em {{ formatarData(cantor.createdAt) }}
   </p>
 
-          </div>
-          <button 
-            class="delete-btn-visible" 
-            @click.stop="confirmarExclusao(cantor)"
-            title="Excluir artista"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-          </button>
-        </div>
+  <div class="artist-actions">
+
+
+    <button
+      type="button"
+      class="card-action-btn delete"
+      @click.stop="confirmarExclusao(cantor)"
+    >
+      🗑️ Excluir
+    </button>
+  </div>
+</div>
+
       </div>
     </div>
 
@@ -800,8 +836,12 @@ export default {
     }
   },
 
-  computed: {
-    filteredGeneros() {
+computed: {
+  totalCantores() {
+    return this.cantores.length
+  },
+
+  filteredGeneros() {
     if (!this.searchGeneros) return this.generos
     const s = this.searchGeneros.toLowerCase()
     return this.generos.filter(g => g.nome.toLowerCase().includes(s))
@@ -812,18 +852,6 @@ export default {
     const s = this.searchAlbuns.toLowerCase()
     return this.albunsDisponiveis.filter(a => a.nome.toLowerCase().includes(s))
   },
-
-  normalizeMongoId(value) {
-  if (!value) return null
-
-  if (typeof value === 'string') return value
-
-  if (typeof value === 'object') {
-    return value._id ? String(value._id) : String(value)
-  }
-
-  return String(value)
-},
 
   filteredMusicas() {
     if (!this.searchMusicas) return this.musicas
@@ -851,6 +879,18 @@ export default {
     toggleDropdown(type) {
       this.dropdownOpen = this.dropdownOpen === type ? null : type
     },
+    normalizeMongoId(value) {
+  if (!value) return null
+
+  if (typeof value === 'string') return value
+
+  if (typeof value === 'object') {
+    return value._id ? String(value._id) : String(value)
+  }
+
+  return String(value)
+},
+
 
     handleClickOutside(e) {
       if (!e.target.closest('.dropdown-wrapper')) {
@@ -1387,39 +1427,60 @@ fecharModalMusica() {
       this.showModal = true
     },
 
-    async editarCantor(cantor) {
-      this.modoEdicao = true
-      this.cantorEditando = cantor
-      
-      let albuns = []
-      try {
-        const response = await fetch(`http://localhost:3002/albuns?cantor=${cantor._id}`)
-        if (response.ok) {
-          albuns = await response.json()
-        }
-      } catch (e) {
-        console.error('Erro ao carregar álbuns:', e)
-      }
-     this.form = { 
-  nome: cantor.nome, 
-  foto: cantor.foto || '',
-  albuns: albuns,
-  generos: cantor.generos?.map(g => g._id) || [],
-  musicas: cantor.musicas?.map(m => typeof m === 'object' ? m._id : m) || [],
-  seguidoresBase: cantor.seguidoresBase ?? ''
-}
+async editarCantor(cantor) {
+  try {
+    this.modoEdicao = true
+    this.showModal = true
 
-      this.previewFoto = null
-      this.arquivoSelecionado = null
-      this.showModal = true
-    },
+    // 🔥 BUSCA COMPLETA DO BACKEND
+    const response = await fetch(`http://localhost:3002/cantores/${cantor._id}`)
+    if (!response.ok) throw new Error('Erro ao buscar cantor')
+
+    const cantorCompleto = await response.json()
+    this.cantorEditando = cantorCompleto
+
+    // 🔥 NORMALIZAÇÃO CORRETA
+    this.form = {
+      nome: cantorCompleto.nome || '',
+      foto: cantorCompleto.foto || '',
+
+      generos: Array.isArray(cantorCompleto.generos)
+        ? cantorCompleto.generos.map(g => typeof g === 'object' ? g._id : g)
+        : [],
+
+      musicas: Array.isArray(cantorCompleto.musicas)
+        ? cantorCompleto.musicas.map(m => typeof m === 'object' ? m._id : m)
+        : [],
+
+      albuns: Array.isArray(cantorCompleto.albuns)
+        ? cantorCompleto.albuns.map(a => ({
+            _id: a._id,
+            nome: a.nome,
+            descricao: a.descricao || '',
+            foto: a.foto || ''
+          }))
+        : [],
+
+      seguidoresBase: cantorCompleto.seguidoresBase ?? ''
+    }
+
+    this.previewFoto = null
+    this.arquivoSelecionado = null
+    this.dropdownOpen = null
+
+  } catch (error) {
+    console.error(error)
+    this.mostrarToast('Erro ao carregar dados do artista', 'error', '❌')
+    this.showModal = false
+  }
+},
 
     fecharModal() {
       this.showModal = false
       this.resetForm()
     },
 
-  resetForm() {
+resetForm() {
   this.form = { 
     nome: '', 
     foto: '',
@@ -1433,6 +1494,7 @@ fecharModalMusica() {
   this.dropdownOpen = null
   this.searchGeneros = ''
   this.searchMusicas = ''
+  this.searchAlbuns = ''
 },
 
     confirmarExclusao(cantor) {
@@ -2623,6 +2685,207 @@ fecharModalMusica() {
   background: rgba(37, 99, 235, 0.2);
   border-color: #2563eb;
   color: white;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-total-artists {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(10, 26, 63, 0.75));
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+.total-artists-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  font-size: 1.1rem;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+}
+
+.total-artists-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.total-artists-text strong {
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.total-artists-text small {
+  color: #cbd5e1;
+  font-size: 0.75rem;
+}
+
+.artist-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.82), rgba(10, 10, 26, 0.92));
+  backdrop-filter: blur(14px);
+  border-radius: 22px;
+  padding: 1.25rem;
+  transition: all 0.35s ease;
+  cursor: pointer;
+  border: 1px solid rgba(96, 165, 250, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.artist-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.10),
+    transparent 35%,
+    transparent 70%,
+    rgba(37, 99, 235, 0.08)
+  );
+  pointer-events: none;
+}
+
+.artist-card:hover {
+  transform: translateY(-8px);
+  border-color: rgba(96, 165, 250, 0.35);
+  box-shadow: 0 18px 45px rgba(37, 99, 235, 0.18);
+}
+
+.artist-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+  z-index: 1;
+}
+
+.artist-top-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.artist-status {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.16);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  white-space: nowrap;
+}
+
+.artist-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0;
+  color: #fff;
+}
+
+.artist-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.artist-chip {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #dbeafe;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(96, 165, 250, 0.14);
+  max-width: 100%;
+}
+
+.artist-chip-primary {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.25), rgba(59, 130, 246, 0.22));
+  border-color: rgba(96, 165, 250, 0.28);
+  color: #fff;
+}
+
+.artist-date {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.artist-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  position: relative;
+  z-index: 3;
+}
+
+.card-action-btn {
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  z-index: 3;
+}
+
+.card-action-btn.edit {
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  box-shadow: 0 8px 22px rgba(37, 99, 235, 0.28);
+}
+
+.card-action-btn.edit:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+}
+
+.card-action-btn.delete {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.28);
+  border: 1px solid rgba(248, 113, 113, 0.18);
+}
+
+.card-action-btn.delete:hover {
+  transform: translateY(-2px);
+  background: rgba(220, 38, 38, 0.22);
+  color: #fff;
+}
+
+.play-btn svg {
+  width: 20px;
+  height: 20px;
+  transform: none;
 }
 
 /* Add Inline Button */

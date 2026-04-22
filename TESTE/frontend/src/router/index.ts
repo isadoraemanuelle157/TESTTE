@@ -19,12 +19,7 @@ import Generos from '@/banco/Generos.vue'
 import Musicas from '@/banco/Musicas.vue'
 import Albuns from '@/banco/Albuns.vue'
 import Cantor from '@/banco/Cantor.vue'
-import TabelaGenero from '@/banco/tabelas/TabelaGenero.vue'
-import TabelaMusica from '@/banco/tabelas/TabelaMusica.vue'
 import TabelaUsuario from '@/banco/tabelas/TabelaUsuario.vue'
-import MusicPlayer from '@/components/MusicPlayer.vue'
-import TabelaAlbum from '@/banco/tabelas/TabelaAlbum.vue'
-import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Registrar2 from '@/banco/Registrar2.vue'
 import Perfil from '@/views/Perfil.vue'
@@ -33,6 +28,7 @@ import FeitoParaVoce from '@/components/FeitoParaVoce.vue'
 import Vibe from '@/banco/Vibe.vue'
 import SelecionarAvatar from '@/components/SelecionarAvatar.vue'
 import PerfilUsuario from '@/views/PerfilUsuario.vue'
+import MusicPlayer from '@/components/MusicPlayer.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -167,30 +163,6 @@ const router = createRouter({
       path: '/tabelausuario',
       name: 'tabelausuario',
       component: TabelaUsuario,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
-    {
-      path: '/tabelagenero',
-      name: 'tabelagenero',
-      component: TabelaGenero,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
-    {
-      path: '/tabelamusica',
-      name: 'tabelamusica',
-      component: TabelaMusica,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
-    {
-      path: '/tabelaalbum',
-      name: 'tabelaalbum',
-      component: TabelaAlbum,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
-    {
-      path: '/tabelacantor',
-      name: 'tabelacantor',
-      component: TabelaCantor,
       meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {

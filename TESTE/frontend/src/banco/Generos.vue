@@ -13,7 +13,7 @@
       </div>
 
       <!-- Formulário Moderno -->
-      <div class="form-section">
+      <div class="form-section" ref="formSection">
         <div class="section-header">
           <div class="section-icon" :class="modoEdicao ? 'edit-mode' : 'create-mode'">
             {{ modoEdicao ? '✏️' : '➕' }}
@@ -613,7 +613,12 @@ export default {
       }
       this.modoEdicao = true
       this.limparMensagem()
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      this.$nextTick(() => {
+  this.$refs.formSection.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
+})
     },
 
     // Cancelar edição

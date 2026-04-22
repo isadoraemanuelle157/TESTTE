@@ -321,43 +321,145 @@
     </div>
 
     <!-- Modal de Edição -->
-    <div v-if="editingVibe" class="modal-overlay" @click.self="cancelEdit">
-      <div class="modal">
-        <div class="modal-header">
+<div v-if="editingVibe" class="modal-overlay" @click.self="cancelEdit">
+  <div class="modal modal-edit">
+    <div class="modal-header">
+      <div class="header-title">
+        <span class="header-icon">✏️</span>
+        <div>
           <h3>Editar Vibe</h3>
-          <button @click="cancelEdit" class="btn-close">×</button>
+          <p class="header-subtitle">Personalize sua vibe</p>
         </div>
-        <form @submit.prevent="updateVibe" class="edit-form">
-          <div class="form-group">
-            <label>Nome</label>
-            <input v-model="editingVibe.nome" type="text" required class="input-field" />
-          </div>
-          <div class="form-group">
-            <label>Emoji</label>
-            <input v-model="editingVibe.emoji" type="text" maxlength="2" class="input-field" />
-          </div>
-          <div class="form-group">
-            <label>Descrição</label>
-            <textarea v-model="editingVibe.descricao" rows="2" class="input-field"></textarea>
-          </div>
-          <div class="form-group">
-            <label>Tags (separadas por vírgula)</label>
-            <input 
-              v-model="editingTagsString" 
-              type="text" 
-              placeholder="tag1, tag2, tag3"
-              class="input-field" 
-            />
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="cancelEdit" class="btn-cancel">Cancelar</button>
-            <button type="submit" class="btn-save" :disabled="isUpdating">
-              {{ isUpdating ? 'Salvando...' : 'Salvar Alterações' }}
-            </button>
-          </div>
-        </form>
       </div>
+      <button @click="cancelEdit" class="btn-close">×</button>
     </div>
+    
+    <form @submit.prevent="updateVibe" class="edit-form">
+      <!-- 🔥 Preview ao vivo -->
+      <div class="edit-preview-section">
+        <div 
+          class="edit-preview-card"
+          :style="{ background: editingVibe.gradient || '#333' }"
+        >
+          <span class="edit-preview-emoji">{{ editingVibe.emoji || '🎵' }}</span>
+          <h4>{{ editingVibe.nome || 'Nome da vibe' }}</h4>
+        </div>
+      </div>
+
+      <!-- Nome -->
+      <div class="form-group">
+        <label><span class="label-icon">📝</span> Nome</label>
+        <input v-model="editingVibe.nome" type="text" required class="input-field" />
+      </div>
+      
+      <!-- Emoji com picker -->
+      <div class="form-group">
+        <label><span class="label-icon">😀</span> Emoji</label>
+        <div class="emoji-input-wrapper">
+          <input v-model="editingVibe.emoji" type="text" maxlength="4" class="input-field emoji-input" readonly />
+          <div class="emoji-preview-large">{{ editingVibe.emoji || '🎵' }}</div>
+          <button type="button" @click="toggleEditEmojiPicker" class="btn-emoji-picker" :class="{ active: showEditEmojiPicker }">
+            <span class="keyboard-icon">⌨️</span>
+          </button>
+        </div>
+
+        <!-- Emoji Picker (mesmo componente reutilizado) -->
+        <div v-if="showEditEmojiPicker" class="emoji-overlay" @click.self="closeEditEmojiPicker">
+          <div class="emoji-picker-premium">
+            <div class="picker-header">
+              <div class="picker-title">
+                <span class="picker-icon">😊</span>
+                <div class="picker-text">
+                  <h4>Escolha um Emoji</h4>
+                  <p>Clique para selecionar</p>
+                </div>
+              </div>
+              <button @click="closeEditEmojiPicker" class="btn-close-picker">×</button>
+            </div>
+            <div class="picker-search">
+              <input v-model="editEmojiSearch" type="text" placeholder="Buscar emoji..." class="search-input" />
+            </div>
+            <div class="picker-categories">
+              <button v-for="cat in emojiCategories" :key="cat.name" @click="editActiveCategory = cat.name" :class="{ active: editActiveCategory === cat.name }" class="category-tab">
+                <span class="cat-icon">{{ cat.icon }}</span>
+                <span class="cat-name">{{ cat.name }}</span>
+              </button>
+            </div>
+            <div class="picker-emojis-container">
+              <div class="emoji-grid-premium">
+                <button v-for="emoji in filteredEditEmojis" :key="emoji" @click="selectEditEmoji(emoji)" class="emoji-btn-premium" :class="{ selected: editingVibe.emoji === emoji }">
+                  {{ emoji }}
+                </button>
+              </div>
+            </div>
+            <div class="picker-footer">
+              <span class="selected-preview">{{ editingVibe.emoji || 'Nenhum' }}</span>
+              <button @click="closeEditEmojiPicker" class="btn-done">Concluir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Descrição -->
+      <div class="form-group">
+        <label><span class="label-icon">📄</span> Descrição</label>
+        <textarea v-model="editingVibe.descricao" rows="2" class="input-field"></textarea>
+      </div>
+
+      <!-- 🔥 NOVO: Editor de Gradiente -->
+      <div class="form-group">
+        <label><span class="label-icon">🎨</span> Cor do Gradiente</label>
+        
+        <div class="gradient-grid edit-gradient-grid">
+          <div v-for="(gradient, index) in presetGradients" :key="index" class="gradient-option" :class="{ active: editSelectedGradientIndex === index && !editingVibe.isCustomGradient }" :style="{ background: gradient }" @click="selectEditPresetGradient(index, gradient)">
+            <div v-if="editSelectedGradientIndex === index && !editingVibe.isCustomGradient" class="check-mark">✓</div>
+          </div>
+        </div>
+
+        <div class="custom-gradient">
+          <div class="custom-gradient-header">
+            <label class="sublabel">Personalize:</label>
+            <button type="button" @click="addEditColor" class="btn-add-color" :disabled="editCustomColors.length >= 5"><span>+</span></button>
+          </div>
+          <div class="color-stops">
+            <div v-for="(color, index) in editCustomColors" :key="index" class="color-stop">
+              <div class="color-picker-wrapper">
+                <input type="color" v-model="editCustomColors[index]" @input="updateEditCustomGradient" class="color-input" />
+                <div class="color-position">{{ getEditColorPosition(index) }}%</div>
+              </div>
+              <button v-if="editCustomColors.length > 2" @click="removeEditColor(index)" class="btn-remove-color">×</button>
+            </div>
+          </div>
+          <div class="custom-gradient-preview" :style="{ background: editCustomGradientString }" @click="selectEditCustomGradient" :class="{ active: editingVibe.isCustomGradient }">
+            <span v-if="editingVibe.isCustomGradient" class="check-mark">✓</span>
+            <span class="preview-text">Clique para selecionar</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Tags -->
+      <div class="form-group">
+        <label><span class="label-icon">🏷️</span> Tags</label>
+        <div class="tag-input-wrapper">
+          <input v-model="newEditTag" @keyup.enter.prevent="addEditTag" placeholder="Digite uma tag e pressione Enter" class="input-field" />
+          <button type="button" @click="addEditTag" class="btn-add-tag"><span>+</span></button>
+        </div>
+        <div class="tags-container" v-if="editingVibe.tags.length > 0">
+          <span v-for="(tag, index) in editingVibe.tags" :key="index" class="tag">
+            {{ tag }}<button @click="removeEditTag(index)" class="tag-remove">×</button>
+          </span>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" @click="cancelEdit" class="btn-cancel">Cancelar</button>
+        <button type="submit" class="btn-save" :disabled="isUpdating">
+          {{ isUpdating ? '⏳ Salvando...' : '💾 Salvar Alterações' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
     <!-- Modal de Confirmação de Exclusão -->
     <div v-if="deletingVibe" class="modal-overlay" @click.self="cancelDelete">
@@ -418,6 +520,11 @@ export default {
       
       // Emoji picker state
       showEmojiPicker: false,
+      editEmojiSearch: '',
+editActiveCategory: 'Recentes',
+editSelectedGradientIndex: -1,
+editCustomColors: ['#1db954', '#191414'],
+newEditTag: '',
       emojiSearch: '',
       activeCategory: 'Recentes',
       emojiCategories: [
@@ -461,6 +568,24 @@ export default {
       })
       return `linear-gradient(135deg, ${stops.join(', ')})`
     },
+
+    editCustomGradientString() {
+  if (this.editCustomColors.length === 2) {
+    return `linear-gradient(135deg, ${this.editCustomColors[0]} 0%, ${this.editCustomColors[1]} 100%)`
+  }
+  const step = 100 / (this.editCustomColors.length - 1)
+  const stops = this.editCustomColors.map((color, i) => `${color} ${Math.round(i * step)}%`)
+  return `linear-gradient(135deg, ${stops.join(', ')})`
+},
+
+filteredEditEmojis() {
+  const emojis = EMOJI_DATA[this.editActiveCategory] || []
+  if (!this.editEmojiSearch) return emojis
+  const search = this.editEmojiSearch.toLowerCase()
+  return Object.values(EMOJI_DATA).flat().filter(e => 
+    e.includes(search) || this.getEmojiName(e).includes(search)
+  )
+},
     
     filteredEmojis() {
       const emojis = EMOJI_DATA[this.activeCategory] || []
@@ -600,44 +725,137 @@ export default {
         console.error("Erro ao carregar vibes:", err)
       }
     },
+// ========== EMOJI PICKER EDIÇÃO ==========
+toggleEditEmojiPicker() {
+  this.showEditEmojiPicker = !this.showEditEmojiPicker
+  if (this.showEditEmojiPicker) {
+    this.editEmojiSearch = ''
+    this.editActiveCategory = 'Recentes'
+  }
+},
+closeEditEmojiPicker() {
+  this.showEditEmojiPicker = false
+},
+selectEditEmoji(emoji) {
+  this.editingVibe.emoji = emoji
+},
 
-    editVibe(vibe) {
-      this.editingVibe = { ...vibe }
-      this.editingTagsString = vibe.tags.join(', ')
-    },
+// ========== GRADIENT EDIÇÃO ==========
+selectEditPresetGradient(index, gradient) {
+  this.editSelectedGradientIndex = index
+  this.editingVibe.gradient = gradient
+  this.editingVibe.isCustomGradient = false
+},
+selectEditCustomGradient() {
+  this.editingVibe.isCustomGradient = true
+  this.editSelectedGradientIndex = -1
+  this.editingVibe.gradient = this.editCustomGradientString
+},
+updateEditCustomGradient() {
+  if (this.editingVibe.isCustomGradient) {
+    this.editingVibe.gradient = this.editCustomGradientString
+  }
+},
+addEditColor() {
+  if (this.editCustomColors.length < 5) {
+    this.editCustomColors.push('#ffffff')
+    this.updateEditCustomGradient()
+  }
+},
+removeEditColor(index) {
+  if (this.editCustomColors.length > 2) {
+    this.editCustomColors.splice(index, 1)
+    this.updateEditCustomGradient()
+  }
+},
+getEditColorPosition(index) {
+  if (this.editCustomColors.length === 1) return 0
+  return Math.round((index / (this.editCustomColors.length - 1)) * 100)
+},
 
-    cancelEdit() {
-      this.editingVibe = null
-      this.editingTagsString = ''
-    },
+// ========== TAGS EDIÇÃO ==========
+addEditTag() {
+  if (!this.newEditTag.trim()) return
+  if (!this.editingVibe.tags.includes(this.newEditTag.trim())) {
+    this.editingVibe.tags.push(this.newEditTag.trim())
+  }
+  this.newEditTag = ''
+},
+removeEditTag(index) {
+  this.editingVibe.tags.splice(index, 1)
+},
 
-    async updateVibe() {
-      this.isUpdating = true
-      try {
-        const updatedData = {
-          ...this.editingVibe,
-          tags: this.editingTagsString.split(',').map(t => t.trim()).filter(t => t)
-        }
+// ========== SUBSTITUIR editVibe ==========
+editVibe(vibe) {
+  this.editingVibe = { 
+    ...vibe,
+    tags: [...(vibe.tags || [])]
+  }
+  
+  const vibeGradient = vibe.gradient || ''
+  const presetIndex = this.presetGradients.findIndex(g => g === vibeGradient)
+  
+  if (presetIndex >= 0) {
+    this.editSelectedGradientIndex = presetIndex
+    this.editingVibe.isCustomGradient = false
+    this.editCustomColors = ['#1db954', '#191414']
+  } else if (vibeGradient.includes('linear-gradient')) {
+    this.editingVibe.isCustomGradient = true
+    this.editSelectedGradientIndex = -1
+    const colors = vibeGradient.match(/#[a-fA-F0-9]{6}/g)
+    this.editCustomColors = (colors && colors.length >= 2) ? [...colors] : ['#1db954', '#191414']
+  } else {
+    this.editSelectedGradientIndex = 0
+    this.editingVibe.isCustomGradient = false
+    this.editingVibe.gradient = this.presetGradients[0]
+    this.editCustomColors = ['#1db954', '#191414']
+  }
+  
+  this.newEditTag = ''
+},
 
-        const res = await fetch(`http://localhost:3002/vibes/${this.editingVibe._id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedData)
-        })
+// ========== SUBSTITUIR updateVibe ==========
+async updateVibe() {
+  this.isUpdating = true
+  try {
+    const finalGradient = this.editingVibe.isCustomGradient 
+      ? this.editCustomGradientString 
+      : this.editingVibe.gradient
 
-        if (!res.ok) throw new Error("Erro ao atualizar")
+    const res = await fetch(`http://localhost:3002/vibes/${this.editingVibe._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nome: this.editingVibe.nome,
+        emoji: this.editingVibe.emoji,
+        descricao: this.editingVibe.descricao,
+        gradient: finalGradient,
+        tags: this.editingVibe.tags
+      })
+    })
 
-        alert("Vibe atualizada! ✨")
-        this.cancelEdit()
-        await this.loadVibes()
+    if (!res.ok) throw new Error("Erro ao atualizar")
 
-      } catch (err) {
-        alert("Erro ao atualizar: " + err.message)
-      } finally {
-        this.isUpdating = false
-      }
-    },
+    alert("Vibe atualizada! ✨")
+    this.cancelEdit()
+    await this.loadVibes()
 
+  } catch (err) {
+    alert("Erro ao atualizar: " + err.message)
+  } finally {
+    this.isUpdating = false
+  }
+},
+
+// ========== SUBSTITUIR cancelEdit ==========
+cancelEdit() {
+  this.editingVibe = null
+  this.editingTagsString = ''
+  this.showEditEmojiPicker = false
+  this.editSelectedGradientIndex = -1
+  this.editCustomColors = ['#1db954', '#191414']
+  this.newEditTag = ''
+},
     confirmDelete(vibe) {
       this.deletingVibe = vibe
     },
@@ -1398,7 +1616,139 @@ export default {
   gap: 8px;
   margin-top: 12px;
 }
+/* ========== MODAL DE EDIÇÃO PREMIUM ========== */
+.modal-edit {
+  max-width: 560px;
+  width: 100%;
+}
 
+.modal-edit .modal-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.header-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.header-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.edit-preview-section {
+  margin-bottom: 24px;
+}
+
+.edit-preview-card {
+  width: 100%;
+  height: 120px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: previewPulse 2s infinite;
+}
+
+@keyframes previewPulse {
+  0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5); }
+}
+
+.edit-preview-emoji {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.edit-preview-card h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.edit-gradient-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .edit-gradient-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.modal-actions .btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #b3b3b3;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-actions .btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.modal-actions .btn-save {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.modal-actions .btn-save:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+.edit-form {
+  padding: 0 28px 28px;
+}
+
+.modal-edit .emoji-overlay {
+  z-index: 10000;
+}
 .tag {
   background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
   padding: 6px 12px;
@@ -1746,7 +2096,9 @@ export default {
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(5px);
   display: flex;
-  align-items: center;
+   align-items: flex-start;
+  overflow-y: auto;
+  padding: 24px 16px;
   justify-content: center;
   z-index: 1000;
   padding: 20px;

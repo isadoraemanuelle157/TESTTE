@@ -120,7 +120,10 @@ const updateAlbum = async (id, data) => {
   }
 
   // atualiza
-  const updated = await Album.findByIdAndUpdate(id, data, { new: true })
+const updated = await Album.findByIdAndUpdate(id, data, { new: true })
+  .populate('cantor', '_id nome')
+  .populate('musicas', '_id nome')
+  .populate('generos', '_id nome')
 
   // adiciona novos vínculos
   if (data.cantor) {

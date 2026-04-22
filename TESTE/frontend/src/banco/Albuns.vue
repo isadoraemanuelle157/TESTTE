@@ -41,7 +41,7 @@
       <!-- Main Stage -->
       <main class="main-stage">
         <!-- Form Panel -->
-        <section class="panel form-panel" :class="{ 'editing': modoEdicao }">
+        <section ref="formPanel" class="panel form-panel" :class="{ editing: modoEdicao }">
           <div class="panel-header">
             <div class="panel-badge">{{ modoEdicao ? '✏️' : '➕' }}</div>
             <h2>{{ modoEdicao ? 'Editar Álbum' : 'Novo Álbum' }}</h2>
@@ -52,14 +52,15 @@
             <div class="form-row">
               <div class="input-wrap" :class="{ 'active': focused === 'nome', 'filled': form.nome }">
                 <span class="input-emoji">🎵</span>
-                <input 
-                  v-model="form.nome" 
-                  type="text" 
-                  required
-                  @focus="focused = 'nome'"
-                  @blur="focused = null"
-                  placeholder=" "
-                />
+               <input 
+  ref="nomeInput"
+  v-model="form.nome" 
+  type="text" 
+  required
+  @focus="focused = 'nome'"
+  @blur="focused = null"
+  placeholder=" "
+/>
                 <label>Nome do álbum</label>
                 <div class="input-glow"></div>
               </div>
@@ -82,13 +83,13 @@
 
         <span v-else class="tag">
           {{ getCantorNome(form.cantor) }}
-          <button
-            type="button"
-            class="tag-remove"
-            @click.stop="removeCantor"
-          >
-            ×
-          </button>
+        <button
+  type="button"
+  class="tag-remove"
+  @click.stop="removeCantor"
+>
+  ×
+</button>
         </span>
       </div>
 
@@ -155,8 +156,7 @@
 
         <span v-for="id in form.musicas" :key="id" class="tag">
           {{ getMusicaNome(id) }}
-          <button @mousedown.stop="removeMusica(id)" class="tag-remove">×</button>
-
+          <button type="button" @mousedown.stop="removeMusica(id)" class="tag-remove">×</button>
 
         </span>
       </div>
@@ -395,12 +395,12 @@
               </div>
 
               <div class="album-actions">
-                <button class="action-btn edit" @click="editarAlbum(album)" title="Editar">
-                  ✏️
-                </button>
-                <button class="action-btn delete" @click="confirmarExclusao(album)" title="Excluir">
-                  🗑️
-                </button>
+             <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)" title="Editar">
+  ✏️
+</button>
+<button type="button" class="action-btn delete" @click.stop="confirmarExclusao(album)" title="Excluir">
+  🗑️
+</button>
               </div>
             </div>
           </div>
@@ -423,8 +423,8 @@
                 <p>{{ truncateDesc(album.descricao, 100) }}</p>
               </div>
               <div class="list-actions">
-                <button class="action-btn edit" @click="editarAlbum(album)">✏️</button>
-                <button class="action-btn delete" @click="confirmarExclusao(album)">🗑️</button>
+               <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)">✏️</button>
+<button type="button" class="action-btn delete" @click.stop="confirmarExclusao(album)">🗑️</button>
               </div>
             </div>
           </div>
@@ -518,9 +518,11 @@ export default {
   },
 
   computed: {
-    totalTracks() {
-      return this.albuns.length * 12
-    },
+totalTracks() {
+  return this.albuns.reduce((total, album) => {
+    return total + (Array.isArray(album.musicas) ? album.musicas.length : 0)
+  }, 0)
+},
 
     filteredCantores() {
       if (!this.searchCantores) return this.cantores
@@ -580,6 +582,15 @@ export default {
     }
   },
 
+  normalizeIds(list) {
+  if (!Array.isArray(list)) return []
+  return list.map(item => {
+    if (typeof item === 'string') return item
+    if (item && typeof item === 'object') return item._id || item.id
+    return item
+  }).filter(Boolean)
+},
+
     async carregarCantores() {
       try {
         const res = await fetch('http://localhost:3002/cantores')
@@ -615,6 +626,11 @@ export default {
         this.showToast('Erro ao carregar álbuns', 'error')
       }
     },
+
+    async carregarAlbumPorId(id) {
+  const res = await axios.get(`${API}/${id}`)
+  return res.data
+},
 
     getParticleStyle() {
       return {
@@ -672,104 +688,148 @@ export default {
       this.form.generos = this.form.generos.filter(g => g !== id)
     },
 
-    async salvarAlbum() {
-      this.saving = true
-      try {
-        const payload = {
-          nome: this.form.nome,
-          descricao: this.form.descricao,
-          foto: this.form.foto || this.defaultCover,
-          cantor: this.form.cantor,
-          musicas: this.form.musicas,
-          generos: this.form.generos
-        }
+  async salvarAlbum() {
+  this.saving = true
 
-        if (this.modoEdicao) {
-          await axios.put(`${API}/${this.form.id}`, payload)
-          this.showToast('Álbum atualizado!')
-        } else {
-          await axios.post(API, payload)
-          this.showToast('Álbum criado!')
-        }
+  try {
+    const payload = {
+      nome: this.form.nome?.trim(),
+      descricao: this.form.descricao?.trim(),
+      foto: this.form.foto?.trim() || this.defaultCover,
+      cantor: this.form.cantor || null,
+      musicas: Array.isArray(this.form.musicas) ? this.form.musicas : [],
+      generos: Array.isArray(this.form.generos) ? this.form.generos : []
+    }
 
-        this.reset()
-        this.carregarAlbuns()
-      } catch (err) {
-        this.showToast(err.response?.data?.error || 'Erro ao salvar', 'error')
-      } finally {
-        this.saving = false
-      }
-    },
+    if (!payload.nome || !payload.descricao || !payload.cantor) {
+      this.showToast('Preencha nome, descrição e cantor', 'error')
+      return
+    }
+
+    if (this.modoEdicao && this.form.id) {
+      await axios.put(`${API}/${this.form.id}`, payload)
+      await this.carregarAlbuns()
+      this.showToast('Álbum atualizado!')
+    } else {
+      await axios.post(API, payload)
+      await this.carregarAlbuns()
+      this.showToast('Álbum criado!')
+    }
+
+    this.reset()
+  } catch (err) {
+    this.showToast(err.response?.data?.error || 'Erro ao salvar', 'error')
+  } finally {
+    this.saving = false
+  }
+},
+
     selecionarCantor(cantor) {
   this.form.cantor = cantor._id
   this.dropdownOpen = null
   this.searchCantores = ''
 },
 
-    editarAlbum(album) {
-      this.form = {
-        id: album._id,
-        nome: album.nome,
-        descricao: album.descricao,
-        foto: album.foto,
-        cantor: album.cantor?._id || album.cantor || "",
-        musicas: album.musicas?.map(m => m._id || m) || [],
-        generos: album.generos?.map(g => g._id || g) || []
-      }
+  async editarAlbum(album) {
+  try {
+    const albumCompleto = await this.carregarAlbumPorId(album._id)
 
-      this.modoEdicao = true
-      this.scrollToForm()
-    },
+    this.form = {
+      id: albumCompleto._id,
+      nome: albumCompleto.nome || "",
+      descricao: albumCompleto.descricao || "",
+      foto: albumCompleto.foto === this.defaultCover ? "" : (albumCompleto.foto || ""),
+      cantor:
+        albumCompleto.cantor && typeof albumCompleto.cantor === 'object'
+          ? albumCompleto.cantor._id
+          : (albumCompleto.cantor || ""),
+      musicas: this.normalizeIds(albumCompleto.musicas),
+      generos: this.normalizeIds(albumCompleto.generos)
+    }
+
+    this.modoEdicao = true
+    this.dropdownOpen = null
+    this.imageError = false
+
+    await this.scrollToForm(true)
+  } catch (err) {
+    this.showToast('Erro ao carregar dados do álbum para edição', 'error')
+  }
+},
 
     confirmarExclusao(album) {
       this.albumParaExcluir = album
       this.showDeleteModal = true
     },
 
-    async excluirConfirmado() {
-      this.deleting = true
-      try {
-        await axios.delete(`${API}/${this.albumParaExcluir._id}`)
-        this.showToast('Álbum removido')
-        this.carregarAlbuns()
-      } catch {
-        this.showToast('Erro ao excluir', 'error')
-      } finally {
-        this.deleting = false
-        this.showDeleteModal = false
-      }
-    },
+   async excluirConfirmado() {
+  this.deleting = true
+
+  try {
+    const idExcluido = this.albumParaExcluir?._id
+
+    await axios.delete(`${API}/${idExcluido}`)
+
+    if (this.form.id === idExcluido) {
+      this.reset()
+    }
+
+    await this.carregarAlbuns()
+
+    this.showToast('Álbum removido')
+    this.showDeleteModal = false
+    this.albumParaExcluir = null
+  } catch (err) {
+    this.showToast(err.response?.data?.error || 'Erro ao excluir', 'error')
+  } finally {
+    this.deleting = false
+  }
+},
 
     truncateDesc(desc, limit = 60) {
       return desc?.length > limit ? desc.slice(0, limit) + '...' : desc
     },
 
-    scrollToForm() {
-      this.$nextTick(() => {
-        document.querySelector('.form-panel')
-          ?.scrollIntoView({ behavior: 'smooth' })
-      })
-    },
+async scrollToForm(focusInput = false) {
+  await this.$nextTick()
 
-    focusForm() {
-      document.querySelector('input')?.focus()
-    },
+  if (this.$refs.formPanel) {
+    const top = this.$refs.formPanel.getBoundingClientRect().top + window.pageYOffset - 20
+    window.scrollTo({
+      top,
+      behavior: 'smooth'
+    })
+  }
 
-    reset() {
-      this.form = {
-        id: null,
-        nome: "",
-        descricao: "",
-        foto: "",
-        cantor: "",
-        musicas: [],
-        generos: []
-      }
+  if (focusInput) {
+    setTimeout(() => {
+      this.$refs.nomeInput?.focus()
+    }, 350)
+  }
+},
 
-      this.modoEdicao = false
-      this.dropdownOpen = null
+focusForm() {
+  this.scrollToForm(true)
+},
 
-    },
+reset() {
+  this.form = {
+    id: null,
+    nome: "",
+    descricao: "",
+    foto: "",
+    cantor: "",
+    musicas: [],
+    generos: []
+  }
+
+  this.modoEdicao = false
+  this.dropdownOpen = null
+  this.searchCantores = ''
+  this.searchMusicas = ''
+  this.searchGeneros = ''
+  this.imageError = false
+},
 
     cancelarEdicao() {
       this.reset()

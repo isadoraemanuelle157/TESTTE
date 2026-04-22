@@ -104,15 +104,15 @@ const getCantorById = async (id) => {
   return await Cantor.findById(id)
     .populate('generos', '_id nome')
     .populate('musicas', '_id nome')
-    .populate({
-      path: 'albuns',
-      select: '_id nome musicas',
-      populate: {
-        path: 'musicas',
-        model: 'Musica',
-        select: '_id nome'
-      }
-    })
+.populate({
+  path: 'albuns',
+  select: '_id nome descricao foto musicas',
+  populate: {
+    path: 'musicas',
+    model: 'Musica',
+    select: '_id nome'
+  }
+})
 }
 
 const getCantorByNome = async (nome) => {
