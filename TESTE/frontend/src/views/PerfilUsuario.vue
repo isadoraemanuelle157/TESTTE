@@ -14,41 +14,20 @@
     </div>
 
     <!-- Perfil privado / Não encontrado -->
-<div v-else-if="isPrivateOrNotFound" class="private-profile">
-  <i :class="notFound ? 'fa fa-user-times' : 'fa fa-lock'"></i>
-  <h3>{{ notFound ? 'Usuário não encontrado' : 'Perfil privado' }}</h3>
+<!-- Não encontrado -->
+<div v-else-if="notFound" class="private-profile">
+  <i class="fa fa-user-times"></i>
+  <h3>Usuário não encontrado</h3>
+  <p>Este usuário não existe ou foi removido.</p>
 
-  <p v-if="notFound">
-    Este usuário não existe ou foi removido.
-  </p>
-
-  <p v-else-if="solicitacaoPendente">
-    Sua solicitação já foi enviada. Aguarde a aprovação para ver este perfil.
-  </p>
-
-  <p v-else>
-    Este usuário optou por manter o perfil privado.
-  </p>
-
-  <button
-    v-if="!notFound && !solicitacaoPendente"
-    class="btn-follow"
-    @click="solicitarSeguir"
-  >
-    <i class="fa fa-user-plus"></i> Solicitar para seguir
-  </button>
-
-  <button v-else-if="solicitacaoPendente" class="btn-follow following" disabled>
-    <i class="fa fa-clock-o"></i> Solicitação enviada
-  </button>
-
-  <button class="btn-secondary" @click="$router.back()">
+  <button class="btn-secondary btn-secondary-inline" @click="$router.back()">
     <i class="fa fa-arrow-left"></i> Voltar
   </button>
 </div>
 
-    <!-- Perfil público -->
-    <div v-else class="profile-content-wrapper">
+<!-- Perfil visível (público OU privado bloqueado) -->
+<div v-else class="profile-content-wrapper">
+
       <!-- Header do Perfil -->
       <div class="profile-header">
         <div class="cover-image" :style="coverStyle">
@@ -83,73 +62,71 @@
             <h1 class="user-name">{{ usuario.nome || 'Usuário' }}</h1>
             <p class="user-handle">@{{ usuario.username || 'usuario' }}</p>
            
-            <div class="user-meta" v-if="usuario.localizacao || usuario.membroDesde">
-              <span class="meta-item" v-if="usuario.localizacao">
-                <i class="fa fa-map-marker"></i> {{ usuario.localizacao }}
-              </span>
-              <span class="meta-item" v-if="usuario.membroDesde">
-                <i class="fa fa-calendar"></i> {{ formatDate(usuario.membroDesde) }}
-              </span>
-            </div>
-           
-            <p class="user-bio" v-if="usuario.bio">{{ usuario.bio }}</p>
+ <div class="user-private-info-wrapper" :class="{ locked: isLockedPrivateProfile }">
+        <!-- BIO SEMPRE VISÍVEL (estilo Instagram) -->
+        <p class="user-bio" v-if="usuario.bio"> {{ usuario.bio || 'Este usuário ainda não adicionou uma bio.' }}</p>
 
-            <!-- Gêneros favoritos -->
-            <div class="user-genres" v-if="usuario.generos && usuario.generos.length">
-              <span v-for="genre in usuario.generos.slice(0, 4)" :key="genre" class="genre-tag">
-                {{ genre }}
-              </span>
-            </div>
-           
-            <div class="user-stats">
-              <div 
-                class="stat-item" 
-                @click="handleStatClick('likes')"
-                :class="{ disabled: !canViewActivities }"
-              >
-                <span class="stat-value">{{ formatNumber(estatisticas.musicasCurtidas) }}</span>
-                <span class="stat-label">Curtidas</span>
-              </div>
+        <!-- Meta, gêneros e stats só aparecem se NÃO estiver bloqueado -->
+        <div class="user-meta" v-if="!isLockedPrivateProfile && (usuario.localizacao || usuario.membroDesde)">
+          <span class="meta-item" v-if="usuario.localizacao">
+            <i class="fa fa-map-marker"></i> {{ usuario.localizacao }}
+          </span>
+          <span class="meta-item" v-if="usuario.membroDesde">
+            <i class="fa fa-calendar"></i> {{ formatDate(usuario.membroDesde) }}
+          </span>
+        </div>
 
-              <div 
-                class="stat-item" 
-                @click="handleStatClick('playlists')"
-                :class="{ disabled: !canViewActivities }"
-              >
-                <span class="stat-value">{{ formatNumber(estatisticas.playlists) }}</span>
-                <span class="stat-label">Playlists</span>
-              </div>
+       <div class="user-genres" v-if="!isLockedPrivateProfile && usuario.generos && usuario.generos.length">
+          <span v-for="genre in usuario.generos.slice(0, 4)" :key="genre" class="genre-tag">
+            {{ genre }}
+          </span>
+        </div>
 
-              <div 
-                class="stat-item" 
-                @click="handleStatClick('followers')"
-                :class="{ disabled: !canViewActivities }"
-              >
-                <span class="stat-value">{{ formatNumber(seguidoresCount) }}</span>
-                <span class="stat-label">Seguidores</span>
-              </div>
-
-              <div 
-                class="stat-item" 
-                @click="handleStatClick('following')"
-                :class="{ disabled: !canViewActivities }"
-              >
-                <span class="stat-value">{{ formatNumber(seguindoCount) }}</span>
-                <span class="stat-label">Seguindo</span>
-              </div>
-            </div>
+<div class="user-stats">
+          <!-- Stats sempre visíveis, mas com "—" quando privado -->
+          <div class="stat-item" @click="handleStatClick('likes')">
+            <span class="stat-value">{{ isLockedPrivateProfile ? '—' : formatNumber(estatisticas.musicasCurtidas) }}</span>
+            <span class="stat-label">Curtidas</span>
           </div>
+          <div class="stat-item" @click="handleStatClick('playlists')">
+            <span class="stat-value">{{ isLockedPrivateProfile ? '—' : formatNumber(estatisticas.playlists) }}</span>
+            <span class="stat-label">Playlists</span>
+          </div>
+          <div class="stat-item" @click="handleStatClick('followers')">
+            <span class="stat-value">{{ isLockedPrivateProfile ? '—' : formatNumber(seguidoresCount) }}</span>
+            <span class="stat-label">Seguidores</span>
+          </div>
+          <div class="stat-item" @click="handleStatClick('following')">
+            <span class="stat-value">{{ isLockedPrivateProfile ? '—' : formatNumber(seguindoCount) }}</span>
+            <span class="stat-label">Seguindo</span>
+          </div>
+        </div>
+
+    <!-- Overlay de lock apenas quando privado -->
+        <div v-if="isLockedPrivateProfile" class="header-lock-overlay">
+          <i class="fa fa-lock"></i>
+          <span v-if="solicitacaoPendente">Solicitação enviada. Aguarde aprovação.</span>
+          <span v-else>Informações privadas</span>
+        </div>
+      </div>
+    </div>
          
           <div class="profile-actions">
-            <button 
-              class="btn-follow" 
-              @click="toggleFollow" 
-              :class="{ 'following': isFollowing }"
-              v-if="!isOwnProfile"
-            >
-              <i :class="isFollowing ? 'fa fa-check' : 'fa fa-plus'"></i>
-              {{ isFollowing ? 'Seguindo' : 'Seguir' }}
-            </button>
+          <button 
+  v-if="!isOwnProfile"
+  class="btn-follow"
+  @click="handleFollowAction"
+  :disabled="solicitacaoPendente"
+  :class="{
+    following: isFollowing,
+    pending: solicitacaoPendente,
+    private: isLockedPrivateProfile && !isFollowing && !solicitacaoPendente
+  }"
+>
+  <i :class="followButtonIcon"></i>
+  {{ followButtonText }}
+</button>
+
             <button class="btn-secondary" @click="shareProfile" title="Compartilhar">
               <i class="fa fa-share-alt"></i>
             </button>
@@ -567,19 +544,23 @@ solicitacaoPendente: false,
   return this.usuario?.perfilPrivado === true && this.usuario?.acessoLiberado === false
 },
  
-  canViewActivities() {
+canViewActivities() {
+  if (this.isLockedPrivateProfile) return false
   return this.permissions.curtidas || this.permissions.atividades
 },
 
 canViewPlaylists() {
+  if (this.isLockedPrivateProfile) return false
   return this.permissions.playlists
 },
 
 canViewFollows() {
+  if (this.isLockedPrivateProfile) return false
   return this.permissions.seguidores || this.permissions.seguindo
 },
 
 canViewContent() {
+  if (this.isLockedPrivateProfile) return false
   return (
     this.permissions.curtidas ||
     this.permissions.playlists ||
@@ -588,6 +569,29 @@ canViewContent() {
     this.permissions.seguindo
   )
 },
+
+isLockedPrivateProfile() {
+  return (
+    !this.notFound &&
+    !this.isOwnProfile &&
+    this.usuario?.perfilPrivado === true &&
+    this.usuario?.acessoLiberado !== true
+  )
+},
+
+followButtonText() {
+  if (this.solicitacaoPendente) return 'Solicitação enviada'
+  if (this.isFollowing) return 'Seguindo'
+  if (this.isLockedPrivateProfile) return 'Solicitar para seguir'
+  return 'Seguir'
+},
+
+followButtonIcon() {
+  if (this.solicitacaoPendente) return 'fa fa-clock-o'
+  if (this.isFollowing) return 'fa fa-check'
+  if (this.isLockedPrivateProfile) return 'fa fa-user-plus'
+  return 'fa fa-plus'
+},
     
     hasVisibleContent() {
       return (this.canViewActivities && this.musicasFavoritas.length > 0) ||
@@ -595,7 +599,9 @@ canViewContent() {
              (this.canViewActivities && this.atividadesRecentes.length > 0)
     },
     
- allTabs() {
+allTabs() {
+  const lockedByPrivate = this.isLockedPrivateProfile
+
   return [
     { 
       id: 'overview', 
@@ -609,28 +615,28 @@ canViewContent() {
       label: 'Curtidas', 
       icon: 'fa fa-heart', 
       count: this.estatisticas.musicasCurtidas, 
-      locked: !this.permissions.curtidas 
+      locked: lockedByPrivate || !this.permissions.curtidas
     },
     { 
       id: 'playlists', 
       label: 'Playlists', 
       icon: 'fa fa-list', 
       count: this.playlistsPublicas.length, 
-      locked: !this.permissions.playlists 
+      locked: lockedByPrivate || !this.permissions.playlists
     },
     { 
       id: 'followers', 
       label: 'Seguidores', 
       icon: 'fa fa-users', 
       count: this.seguidoresCount, 
-      locked: !this.permissions.seguidores 
+      locked: lockedByPrivate || !this.permissions.seguidores
     },
     { 
       id: 'following', 
       label: 'Seguindo', 
       icon: 'fa fa-user-plus', 
       count: this.seguindoCount, 
-      locked: !this.permissions.seguindo 
+      locked: lockedByPrivate || !this.permissions.seguindo
     }
   ]
 },
@@ -743,7 +749,17 @@ this.solicitacaoPendente = false
   this.activeTab = tab
 },
 
-  handleStatClick(type) {
+handleStatClick(type) {
+  if (this.isLockedPrivateProfile) {
+    this.showToast(
+      this.solicitacaoPendente
+        ? 'Solicitação enviada. Aguarde aprovação para ver este conteúdo'
+        : 'Este perfil é privado. Envie uma solicitação para seguir',
+      'info'
+    )
+    return
+  }
+
   const tabMap = {
     likes: 'likes',
     playlists: 'playlists',
@@ -765,6 +781,12 @@ this.solicitacaoPendente = false
 
   this.activeTab = tabMap[type]
 },
+
+handleFollowAction() {
+  if (this.solicitacaoPendente) return
+  this.toggleFollow()
+},
+
     getLoggedUserId() {
       const user = localStorage.getItem('usuario')
       return user ? JSON.parse(user).id : null
@@ -792,7 +814,7 @@ this.solicitacaoPendente = false
         : {}
     },
 
-    async carregarPerfil() {
+async carregarPerfil() {
   this.loading = true
 
   try {
@@ -810,21 +832,31 @@ this.solicitacaoPendente = false
       return
     }
 
-    // Se perfil privado e ainda não liberado, não tenta carregar resto
+    // Se perfil privado e ainda não liberado → só dados públicos (bio, avatar, nome)
     if (this.usuario.perfilPrivado && this.usuario.acessoLiberado === false) {
-      this.loading = false
-      return
+      this.permissions = {
+        perfil: true,
+        curtidas: false,
+        playlists: false,
+        atividades: false,
+        seguidores: false,
+        seguindo: false,
+        estatisticas: false
+      }
+      // ❌ NÃO chama nada aqui — mantém bio visível, resto bloqueado
+    } else {
+      // ✅ Só carrega o resto se tiver acesso liberado
+      await Promise.allSettled([
+        this.carregarEstatisticas(),
+        this.carregarFollows(),
+        this.carregarCurtidas(),
+        this.carregarPlaylists(),
+        this.carregarAtividades()
+      ])
     }
 
-    await Promise.allSettled([
-      this.carregarEstatisticas(),
-      this.carregarFollows(),
-      this.carregarCurtidas(),
-      this.carregarPlaylists(),
-      this.carregarAtividades()
-    ])
-
-    const allowedTabs = this.availableTabs.map(t => t.id)
+    // Garante que a tab ativa seja válida
+    const allowedTabs = this.allTabs.filter(t => !t.locked).map(t => t.id)
     if (!allowedTabs.includes(this.activeTab)) {
       this.activeTab = 'overview'
     }
@@ -973,12 +1005,11 @@ this.solicitacaoPendente = false
     this.atividadesRecentes = []
   }
 },
-    
+
 async toggleFollow() {
   try {
     const token = localStorage.getItem('token')
 
-    // 👉 SE JÁ ESTÁ SEGUINDO → UNFOLLOW
     if (this.isFollowing) {
       await axios.delete(
         `http://localhost:3002/follows/desseguir`,
@@ -992,13 +1023,13 @@ async toggleFollow() {
       )
 
       this.isFollowing = false
+      this.solicitacaoPendente = false
       this.seguidoresCount = Math.max(0, this.seguidoresCount - 1)
 
       this.showToast(`Você deixou de seguir ${this.usuario.nome}`, 'info')
       return
     }
 
-    // 👉 SE NÃO ESTÁ SEGUINDO → FOLLOW
     const res = await axios.post(
       `http://localhost:3002/follows/seguir`,
       {
@@ -1008,16 +1039,21 @@ async toggleFollow() {
       { headers: { Authorization: `Bearer ${token}` } }
     )
 
-    if (res.data.solicitado) {
+    if (res.data?.solicitado) {
       this.solicitacaoPendente = true
+      this.isFollowing = false
+
       this.showToast('Solicitação enviada! Aguarde aprovação.', 'success')
       return
     }
 
-    if (res.data.follow) {
+    if (res.data?.follow) {
       this.isFollowing = true
+      this.solicitacaoPendente = false
       this.seguidoresCount++
+
       this.showToast(`Agora seguindo ${this.usuario.nome}`, 'success')
+      await this.carregarPerfil()
     }
 
   } catch (error) {
@@ -1497,6 +1533,82 @@ async toggleFollow() {
   display: flex;
   gap: 12px;
   padding-bottom: 16px;
+}
+
+.user-private-info-wrapper {
+  position: relative;
+  border-radius: 16px;
+  min-height: 150px;
+}
+
+.user-bio {
+  position: relative;
+  z-index: 3;
+}
+
+.user-private-info-wrapper.locked {
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.user-private-info-wrapper.locked::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(51, 65, 85, 0.45) 0%, rgba(71, 85, 105, 0.25) 50%, rgba(51, 65, 85, 0.45) 100%);
+  filter: blur(10px);
+  opacity: 0.9;
+   z-index: 1;
+}
+
+.header-lock-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
+  border-radius: 16px;
+  text-align: center;
+  padding: 16px;
+}
+
+.header-lock-overlay i {
+  font-size: 26px;
+  color: #ef4444;
+}
+
+.header-lock-overlay span {
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-follow.pending {
+  background: transparent;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+}
+
+.btn-follow.private {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+
+.btn-secondary-inline {
+  width: auto;
+  height: auto;
+  border-radius: 20px;
+  padding: 10px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-follow {

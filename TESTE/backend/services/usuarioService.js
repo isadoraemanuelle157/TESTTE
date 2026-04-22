@@ -164,6 +164,19 @@ const getUserById = async (id, currentUserId) => {
   const formatted = formatUser(user)
   const isOwner = sameId(formatted.id, currentUserId)
 
+  // 🔓 BASE PÚBLICA (SEMPRE VEM) — inclui bio
+  const basePublic = {
+    id: formatted.id,
+    nome: formatted.nome,
+    username: formatted.username,
+    avatar: formatted.avatar,
+    cover: formatted.cover || null,
+    bio: formatted.bio || '',        // ← SEMPRE visível
+    membroDesde: formatted.membroDesde || null,
+    perfilPrivado: formatted.perfilPrivado
+  }
+
+  // 🔓 Se não é privado ou é dono → acesso total
   if (!formatted.perfilPrivado || isOwner) {
     return {
       ...formatted,
@@ -172,6 +185,7 @@ const getUserById = async (id, currentUserId) => {
     }
   }
 
+  // 🔍 Verifica se já segue
   const follow = await Follow.findOne({
     seguidor_id: currentUserId,
     seguindo_id: id,
@@ -186,21 +200,16 @@ const getUserById = async (id, currentUserId) => {
     }
   }
 
+  // ⏳ Verifica solicitação pendente
   const solicitacaoPendente = user.solicitacoesSeguir?.some(
     s => sameId(s.usuario, currentUserId) && s.status === 'pendente'
   )
 
+  // 🔒 PERFIL PRIVADO BLOQUEADO — bio já está no basePublic
   return {
-    id: formatted.id,
-    nome: formatted.nome,
-    username: formatted.username,
-    avatar: formatted.avatar,
-    cover: formatted.cover || null,
-    bio: formatted.bio || '',
-    perfilPrivado: true,
+    ...basePublic,
     acessoLiberado: false,
-    solicitacaoPendente: !!solicitacaoPendente,
-    membroDesde: formatted.membroDesde || null
+    solicitacaoPendente: !!solicitacaoPendente
   }
 }
 
