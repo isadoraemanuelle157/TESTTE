@@ -9,39 +9,10 @@
           <span class="brand-text">SoundUp</span>
         </div>
         
-        <!-- Histórico de Buscas -->
-        <div class="history-wrapper" ref="historyContainer">
-          <button 
-            v-if="searchHistory.length > 0" 
-            class="history-btn"
-            @click="showHistory = !showHistory"
-          >
-            <i class="fa fa-history"></i>
-            <span class="history-label">Histórico</span>
-            <span class="history-badge">{{ searchHistory.length }}</span>
-          </button>
-          
-          <div v-if="showHistory && searchHistory.length" class="history-dropdown">
-            <div class="history-header">
-              <span>Buscas Recentes</span>
-              <button @click="clearHistory" class="clear-btn">Limpar</button>
-            </div>
-            <div class="history-list">
-              <button
-                v-for="(item, index) in searchHistory.slice(0, 10)"
-                :key="index"
-                class="history-item"
-                @click="selectFromHistory(item)"
-              >
-                <i class="fa fa-search history-icon"></i>
-                {{ item }}
-              </button>
-            </div>
-          </div>
-        </div>
+        <!-- Botão de Histórico removido do header -->
       </header>
 
-      <!-- Barra de Busca Principal -->
+  <!-- Barra de Busca Principal -->
       <div class="search-main">
         <div class="search-box" :class="{ focused: isFocused }">
           <i class="fa fa-search search-icon"></i>
@@ -60,10 +31,43 @@
           </button>
         </div>
 
-        <!-- Sugestões -->
+        <!-- Sugestões / Histórico Dropdown -->
         <div v-if="showSuggestions" class="suggestions-box">
-          <!-- Recomendado (quando vazio) -->
-          <div v-if="searchQuery.length === 0" class="suggested-section">
+          
+          <!-- HISTÓRICO: quando input vazio e tem histórico -->
+          <div v-if="searchQuery.length === 0 && searchHistory.length > 0" class="history-section">
+            <div class="history-header-row">
+              <span class="history-title">
+                <i class="fa fa-history"></i>
+                Buscas Recentes
+              </span>
+              <button @click="clearHistory" class="clear-all-link">
+                Limpar tudo
+              </button>
+            </div>
+            <div class="history-list-items">
+              <div
+                v-for="(item, index) in searchHistory.slice(0, 10)"
+                :key="index"
+                class="history-list-item"
+              >
+                <div class="history-item-content" @click="selectFromHistory(item)">
+                  <i class="fa fa-search history-icon"></i>
+                  <span class="history-text">{{ item }}</span>
+                </div>
+                <button 
+                  class="history-delete-btn" 
+                  @click.stop="removeHistoryItem(item)"
+                  title="Remover do histórico"
+                >
+                  <i class="fa fa-times"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RECOMENDADO: quando vazio e sem histórico -->
+          <div v-else-if="searchQuery.length === 0 && searchHistory.length === 0" class="suggested-section">
             <div class="suggested-header">
               <i class="fa fa-star"></i>
               <span>Recomendado para você</span>
@@ -84,7 +88,7 @@
             </div>
           </div>
 
-          <!-- Resultados agrupados -->
+          <!-- RESULTADOS AGRUPADOS: quando tem texto -->
           <div v-else-if="groupedSuggestions.length > 0" class="grouped-results">
             <div
               v-for="group in groupedSuggestions"
@@ -93,12 +97,12 @@
             >
               <div class="group-label">{{ group.type }}</div>
               <div class="group-items">
-                <div
-                  v-for="(item, idx) in group.items"
-                  :key="idx"
-                  class="group-item"
-                  @click="selectSuggestion(item.name)"
-                >
+               <div
+  v-for="(item, idx) in group.items"
+  :key="idx"
+  class="group-item"
+  @click="selectSuggestion(item.name, item)"
+>
                   <img v-if="item.image" :src="item.image" class="item-thumb">
                   <div v-else class="item-thumb-placeholder" :class="group.typeClass">
                     <i :class="getIconForType(group.type)"></i>
@@ -114,6 +118,7 @@
         </div>
       </div>
 
+      <!-- Resto do template permanece igual... -->
       <!-- Conteúdo Principal -->
       <main class="search-content">
         
@@ -169,55 +174,61 @@
                     <div class="categories-content">
                       <!-- Tab: Gêneros -->
                       <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
-                        <div class="category-section">
-                          <h4>Populares</h4>
-                          <div class="category-tags detailed">
-                            <button
-                              v-for="genre in detailedCategories.genres.popular"
-                              :key="genre.name"
-                              class="tag-btn detailed"
-                              :style="{ borderColor: genre.color, color: genre.color }"
-                              @click="searchAndGo(genre.name); showCategoriesDropdown = false"
-                            >
-                              <i :class="genre.icon"></i>
-                              <span>{{ genre.name }}</span>
-                              <small v-if="genre.count">{{ genre.count }}</small>
-                            </button>
-                          </div>
-                        </div>
+                   <div class="category-section">
+  <h4>Populares</h4>
+  <div v-if="generosPorCategoria.popular.length === 0" class="empty-category">
+    <span class="empty-text">Nenhum gênero popular cadastrado</span>
+  </div>
+  <div class="category-tags detailed">
+    <button
+      v-for="genre in generosPorCategoria.popular"
+      :key="genre._id"
+      class="tag-btn detailed"
+      @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+    >
+      <i class="fa fa-music"></i>
+      <span>{{ genre.nome }}</span>
+      <small>
+        🎵 {{ genre.musicas?.length || 0 }} • 
+        💿 {{ genre.albuns?.length || 0 }} • 
+        🎤 {{ genre.cantores?.length || 0 }}
+      </small>
+    </button>
+  </div>
+</div>
+
                         
-                        <div class="category-section">
-                          <h4>Estilos Regionais</h4>
-                          <div class="category-tags detailed">
-                            <button
-                              v-for="genre in detailedCategories.genres.regional"
-                              :key="genre.name"
-                              class="tag-btn detailed"
-                              :style="{ borderColor: genre.color, color: genre.color }"
-                              @click="searchAndGo(genre.name); showCategoriesDropdown = false"
-                            >
-                              <i :class="genre.icon"></i>
-                              <span>{{ genre.name }}</span>
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div class="category-section">
-                          <h4>Eletrônica & Dance</h4>
-                          <div class="category-tags detailed">
-                            <button
-                              v-for="genre in detailedCategories.genres.electronic"
-                              :key="genre.name"
-                              class="tag-btn detailed"
-                              :style="{ borderColor: genre.color, color: genre.color }"
-                              @click="searchAndGo(genre.name); showCategoriesDropdown = false"
-                            >
-                              <i :class="genre.icon"></i>
-                              <span>{{ genre.name }}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                      <div class="category-section">
+  <h4>Estilos Regionais</h4>
+  <div class="category-tags detailed">
+    <button
+      v-for="genre in generosPorCategoria.regional"
+      :key="genre._id"
+      class="tag-btn detailed"
+      @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+    >
+      <i class="fa fa-map"></i>
+      <span>{{ genre.nome }}</span>
+    </button>
+  </div>
+</div>
+                       
+      <div class="category-section">
+  <h4>Eletrônica & Dance</h4>
+  <div class="category-tags detailed">
+    <button
+      v-for="genre in generosPorCategoria.electronic"
+      :key="genre._id"
+      class="tag-btn detailed"
+      @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+    >
+      <i class="fa fa-headphones"></i>
+      <span>{{ genre.nome }}</span>
+    </button>
+  </div>
+</div>
+
+              </div>
                       
                       <!-- Tab: Moods -->
                      <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
@@ -239,22 +250,22 @@
 </div>
                                  
                       <!-- Tab: Décadas -->
-                      <div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
-                        <div class="decade-timeline">
-                          <div
-                            v-for="decade in detailedCategories.decades"
-                            :key="decade.name"
-                            class="decade-item"
-                            @click="searchAndGo(decade.name); showCategoriesDropdown = false"
-                          >
-                            <div class="decade-bar" :style="{ width: decade.popularity + '%', background: decade.color }"></div>
-                            <div class="decade-info">
-                              <span class="decade-name">{{ decade.name }}</span>
-                              <span class="decade-desc">{{ decade.description }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+<div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
+  <div class="decade-timeline">
+    <div
+      v-for="decade in detailedCategories.decades"
+      :key="decade.name"
+      class="decade-item"
+      @click="searchByDecade(decade.name); showCategoriesDropdown = false"
+    >
+      <div class="decade-bar" :style="{ width: decade.popularity + '%', background: decade.color }"></div>
+      <div class="decade-info">
+        <span class="decade-name">{{ decade.name }}</span>
+        <span class="decade-desc">{{ decade.description }}</span>
+      </div>
+    </div>
+  </div>
+</div>
                     </div>
                   </div>
                 </transition>
@@ -276,10 +287,6 @@
           <!-- Grid de Descoberta -->
           <div class="discovery-grid">
             
-           
-
-            
-
           </div>
 
           <!-- Top Músicas -->
@@ -367,6 +374,7 @@
               v-for="(result, index) in filteredResults"
               :key="result.id || index"
               class="result-card"
+               :class="{ 'has-decade': result.decada || result.ano }"
             >
               <div class="result-image" @click="handleResultClick(result)">
                 <img :src="getBestImage(result)" :alt="getResultTitle(result)">
@@ -435,12 +443,11 @@
 <script>
 export default {
   name: 'Search',
-  
+
   data() {
     return {
-      // API Config
       DEEZER_API: 'https://proxy.corsfix.com/?https://api.deezer.com',
-      
+
       // Search State
       searchQuery: '',
       lastSearch: '',
@@ -452,27 +459,30 @@ export default {
       activeFilter: 'Todos',
       isLoading: false,
       activeCategoryTab: 'genres',
-      
-      // Curtidas (array de IDs de músicas curtidas)
+
+      // importante
+      searchTimeout: null,
+      quickCategories: [],
+
+      // Curtidas
       likedTracks: [],
       favoriteAlbums: [],
       favoriteArtists: [],
       vibes: [],
-      
+      generosDB: [],
+
       // Data
-      searchHistory: JSON.parse(localStorage.getItem('searchHistory')) || [],
+      searchHistory: [],
       searchResults: [],
       chartTracks: [],
       popularArtistsReal: [],
-      
-      // Tabs de Categorias
+
       categoryTabs: [
         { id: 'genres', name: 'Gêneros', icon: 'fa fa-music' },
         { id: 'moods', name: 'Atividades', icon: 'fa fa-smile-o' },
         { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' }
       ],
-      
-      // Categorias Detalhadas
+
       detailedCategories: {
         genres: {
           popular: [
@@ -504,24 +514,9 @@ export default {
         },
         moods: [
           { name: 'Treino', icon: 'fa fa-heartbeat', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)', description: 'Energia máxima para se exercitar' },
-          { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' },
-          { name: 'Relaxar', icon: 'fa fa-bed', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%)', description: 'Descanse e recarregue as energias' },
-          { name: 'Festa', icon: 'fa fa-glass', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', description: 'Animada para curtir com amigos' },
-          { name: 'Triste', icon: 'fa fa-tint', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Para aqueles dias difíceis' },
-          { name: 'Romântico', icon: 'fa fa-heart', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', description: 'Momentos especiais a dois' },
-          { name: 'Alegre', icon: 'fa fa-sun-o', gradient: 'linear-gradient(135deg, #FFD93D 0%, #F6AD55 100%)', description: 'Bom humor e positividade' },
-          { name: 'Noturno', icon: 'fa fa-moon-o', gradient: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', description: 'Para a madrugada' }
+          { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' }
         ],
-        activities: [
-          { name: 'Academia', icon: 'fa fa-dumbbell', color: '#FF6B6B', description: 'Músicas para treinar pesado' },
-          { name: 'Corrida', icon: 'fa fa-running', color: '#4ECDC4', description: 'Ritmo para manter o pace' },
-          { name: 'Estudo', icon: 'fa fa-book', color: '#667eea', description: 'Concentração sem distrações' },
-          { name: 'Trabalho', icon: 'fa fa-briefcase', color: '#764ba2', description: 'Produtividade no escritório' },
-          { name: 'Viagem', icon: 'fa fa-car', color: '#f093fb', description: 'Na estrada ou no trânsito' },
-          { name: 'Cozinhar', icon: 'fa fa-cutlery', color: '#fa709a', description: 'Ritmo na cozinha' },
-          { name: 'Limpar', icon: 'fa fa-home', color: '#43e97b', description: 'Faxina com energia' },
-          { name: 'Dormir', icon: 'fa fa-moon-o', color: '#30cfd0', description: 'Sons para relaxar' }
-        ],
+        activities: [],
         decades: [
           { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
           { name: '2010s', description: 'A década passada', color: '#1ed760', popularity: 88 },
@@ -532,22 +527,14 @@ export default {
           { name: '60s', description: 'Era clássica', color: '#1aa34a', popularity: 65 }
         ]
       },
-      
-      // Filters
-      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários'],
-      
-      // Quick Categories (visíveis na linha)
-      quickCategories: [
-        'Pop', 'Rock', 'Hip Hop', 'Eletrônica', 'Sertanejo', 
-        'Funk', 'MPB', 'Jazz'
-      ],
-      
-      // Trending
+
+      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Décadas'],
+
       trending: [
-        'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional', 
+        'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional',
         'Trap Brasileiro', 'Rock Clássico', 'MPB Nova'
       ],
-      
+
       trendGradients: [
         'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -556,40 +543,28 @@ export default {
         'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
         'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
       ],
-      
-      // Genres (cards de descoberta)
+
       genres: [
         { name: 'Pop', color: '#E91E63' },
         { name: 'Rock', color: '#F44336' },
         { name: 'Hip Hop', color: '#FF9800' },
         { name: 'Eletrônica', color: '#00BCD4' },
         { name: 'Sertanejo', color: '#8D6E63' },
-        { name: 'Funk', color: '#FF5722' },
-        { name: 'MPB', color: '#9C27B0' },
-        { name: 'Gospel', color: '#1976D2' },
-        { name: 'Jazz', color: '#FFC107' },
-        { name: 'Clássica', color: '#795548' }
+        { name: 'Funk', color: '#FF5722' }
       ],
-      
-      // Moods (cards de descoberta)
+
       moods: [
         { name: 'Treino', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' },
-        { name: 'Foco', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-        { name: 'Relaxar', gradient: 'linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%)' },
-        { name: 'Festa', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-        { name: 'Triste', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-        { name: 'Romântico', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
+        { name: 'Foco', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
       ],
-      
-      // Recommended
+
       recommendedItems: [
         { name: 'The Weeknd', type: 'Artista', image: 'https://i.ytimg.com/vi/34Na4j8AVgA/maxresdefault.jpg' },
         { name: 'Blinding Lights', type: 'Música', image: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/maxresdefault.jpg' },
         { name: 'After Hours', type: 'Álbum', image: 'https://i.ytimg.com/vi/yzTuBuRdAyA/maxresdefault.jpg' },
         { name: 'Taylor Swift', type: 'Artista', image: 'https://i.ytimg.com/vi/b1kbLwvquGKU/maxresdefault.jpg' }
       ],
-      
-      // Toast
+
       toast: {
         show: false,
         message: "",
@@ -601,51 +576,110 @@ export default {
 
   computed: {
     filteredResults() {
+      if (this.activeFilter === 'Décadas') {
+        return this.searchResults.filter(r => {
+          if (r.type !== 'track') return false
+          if (!r.ano) return false
+
+          const searchDecade = this.lastSearch?.toLowerCase().replace('s', '')
+          if (!searchDecade) return false
+
+          const startYear = parseInt(searchDecade)
+          const endYear = startYear + 9
+          const musicYear = parseInt(r.ano)
+
+          return musicYear >= startYear && musicYear <= endYear
+        })
+      }
+
       if (this.activeFilter === 'Todos') return this.searchResults
-      
+
       const typeMap = {
         'Músicas': 'track',
-        'Artistas': 'artist', 
+        'Artistas': 'artist',
         'Álbuns': 'album',
         'Usuários': 'user'
       }
-      
+
       const filterType = typeMap[this.activeFilter]
       return this.searchResults.filter(r => r.type === filterType)
     },
-    
+
+    generosPorCategoria() {
+      const grupos = {
+        popular: [],
+        regional: [],
+        electronic: [],
+        classical: [],
+        jazz: [],
+        rock: [],
+        pop: [],
+        hiphop: [],
+        outros: []
+      }
+
+      if (!Array.isArray(this.generosDB) || this.generosDB.length === 0) {
+        return grupos
+      }
+
+      this.generosDB.forEach(g => {
+        const cat = (g.categoria || 'outros').toLowerCase().trim()
+        if (grupos[cat]) grupos[cat].push(g)
+        else grupos.outros.push(g)
+      })
+
+      return grupos
+    },
+
     groupedSuggestions() {
       if (!this.searchQuery.trim()) return []
-      
+
       const query = this.searchQuery.toLowerCase()
       const groups = {}
-      
+
       const matches = this.searchResults.filter(item => {
-        const title = this.getResultTitle(item).toLowerCase()
-        return title.includes(query)
+        const title = (this.getResultTitle(item) || '').toLowerCase()
+        const subtitle = (this.getResultSubtitle(item) || '').toLowerCase()
+        return title.includes(query) || subtitle.includes(query)
       })
-      
+
       matches.forEach(item => {
         const type = this.getResultType(item)
+
         if (!groups[type]) {
           groups[type] = {
-            type: type,
-            typeClass: type.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, '-'),
+            type,
+            typeClass: type
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/\s+/g, '-'),
             items: []
           }
         }
-        
+
         groups[type].items.push({
+          id: item.id,
+          type: item.type,
+          source: item.source,
           name: this.getResultTitle(item),
           image: this.getBestImage(item),
-          subtitle: this.getResultSubtitle(item)
+          subtitle: this.getResultSubtitle(item),
+          perfilPrivado: item.perfilPrivado,
+          mostrarAtividade: item.mostrarAtividade
         })
       })
-      
-      const typeOrder = ['Artista', 'Música', 'Álbum']
-      
+
+      const typeOrder = ['Artista', 'Música', 'Álbum', 'Usuário', 'Gênero']
+
       return Object.values(groups)
-        .sort((a, b) => typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type))
+        .sort((a, b) => {
+          const indexA = typeOrder.indexOf(a.type)
+          const indexB = typeOrder.indexOf(b.type)
+          if (indexA === -1) return 1
+          if (indexB === -1) return -1
+          return indexA - indexB
+        })
         .map(group => ({
           ...group,
           items: group.items.slice(0, 4)
@@ -659,10 +693,13 @@ export default {
     this.loadLikedTracks()
     this.loadFavoritas()
     this.loadVibes()
+    this.loadGeneros()
+    this.loadHistory()
   },
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
+    if (this.searchTimeout) clearTimeout(this.searchTimeout)
   },
 
   methods: {
@@ -699,9 +736,62 @@ export default {
     console.error("Erro ao carregar vibes:", err)
   }
 },
+async loadHistory() {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    const res = await fetch("http://localhost:3002/historico", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    const data = await res.json()
+    console.log("HISTORICO:", data)
+
+    // 🔥 GARANTE QUE É ARRAY
+    if (Array.isArray(data)) {
+      this.searchHistory = data.map(h => h.termo)
+    } else {
+      this.searchHistory = []
+      console.error("Resposta inesperada:", data)
+    }
+
+  } catch (err) {
+    console.error("Erro ao carregar histórico:", err)
+  }
+},
+// Adicione este método no objeto methods:
+async removeHistoryItem(item) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    await fetch(`http://localhost:3002/historico/item`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ termo: item })
+    })
+
+    // Remove do array local
+    this.searchHistory = this.searchHistory.filter(h => h !== item)
+    
+  } catch (err) {
+    console.error("Erro ao remover item do histórico:", err)
+    // Fallback: remove localmente mesmo se API falhar
+    this.searchHistory = this.searchHistory.filter(h => h !== item)
+  }
+},
 
 searchVibe(vibe) {
-  const query = vibe.tags.join(' ') || vibe.nome
+  const query = Array.isArray(vibe.tags) && vibe.tags.length
+    ? vibe.tags.join(' ')
+    : vibe.nome
+
   this.searchQuery = query
   this.performSearch()
 },
@@ -731,6 +821,33 @@ searchVibe(vibe) {
         console.error("Erro ao carregar favoritas:", err)
       }
     },
+
+async loadGeneros() {
+  try {
+    const res = await fetch("http://localhost:3002/generos")
+    const data = await res.json()
+
+    console.log('Gêneros carregados:', data) // debug
+
+    // Garantir que é um array
+    let generosArray = data
+    if (!Array.isArray(data)) {
+      // Se vier como objeto agrupado, achatar
+      generosArray = Object.values(data).flat()
+    }
+
+    this.generosDB = generosArray
+    
+    // Atualizar quickCategories automaticamente
+    if (this.generosDB.length > 0) {
+      this.quickCategories = this.generosDB.map(g => g.nome)
+    }
+
+  } catch (err) {
+    console.error("Erro ao carregar gêneros:", err)
+    this.generosDB = []
+  }
+},
 
     isAlbumFavorited(albumId) {
       return this.favoriteAlbums.includes(String(albumId))
@@ -800,24 +917,47 @@ searchVibe(vibe) {
       }
     },
 
-    handleResultClick(result) {
-      if (result.type === 'track') {
-        return this.playTrack(result)
-      }
-
-      if (result.type === 'album' && result.source === 'local') {
-        return this.$router.push(`/album/${result.id}`)
-      }
-
-      if (result.type === 'artist' && result.source === 'local') {
-        return this.$router.push(`/cantor/${result.id}`)
-      }
-        // ← NOVO: navegação para perfil de usuário
-  if (result.type === 'user') {
-    return this.$router.push(`/usuario/${result.id}`)
+handleResultClick(result) {
+  if (result.type === 'track') {
+    return this.playTrack(result)
   }
-    },
-    
+
+  if (result.type === 'album' && result.source === 'local') {
+    return this.$router.push(`/album/${result.id}`)
+  }
+
+  if (result.type === 'artist' && result.source === 'local') {
+    return this.$router.push(`/cantor/${result.id}`)
+  }
+
+  if (result.type === 'user') {
+    return this.goToUserProfile(result)
+  }
+},
+
+   goToUserProfile(user) {
+  if (!user) return
+
+  const usuarioLogado = JSON.parse(localStorage.getItem('usuario') || '{}')
+  const loggedId = String(usuarioLogado.id || usuarioLogado._id || '')
+  const targetId = String(user.id || user._id || '')
+
+  if (!targetId) return
+
+  this.showSuggestions = false
+  this.showHistory = false
+
+  // Se clicou no próprio usuário
+  if (loggedId && loggedId === targetId) {
+    return this.$router.push('/perfil')
+  }
+
+  // Outro usuário → página pública/externa estilo Instagram
+  return this.$router.push({
+    name: 'PerfilUsuario',
+    params: { id: targetId }
+  })
+}, 
     // Verificar se uma música está curtida
     isTrackLiked(trackId) {
       return this.likedTracks.some(id => String(id) === String(trackId))
@@ -863,9 +1003,11 @@ searchVibe(vibe) {
 
     // API Methods
     async loadInitialData() {
-      await this.loadChartTracks()
-      await this.loadPopularArtists()
-    },
+  await Promise.all([
+    this.loadChartTracks(),
+    this.loadPopularArtists()
+  ])
+},
 
     async loadChartTracks() {
       try {
@@ -898,41 +1040,59 @@ async loadPopularArtists() {
   }
 },
     
-    async searchAll(query) {
+  async searchAll(query) {
   this.isLoading = true
 
   try {
-    // BACKEND (SEU BANCO) - incluindo usuários agora
-    const [localMusicas, localCantores, localAlbuns, localUsuarios] = await Promise.all([
-      fetch(`http://localhost:3002/musicas/search?q=${query}`).then(r => r.json()),
-      fetch(`http://localhost:3002/cantores/search?q=${query}`).then(r => r.json()),
-      fetch(`http://localhost:3002/albuns/search?q=${query}`).then(r => r.json()),
-      fetch(`http://localhost:3002/usuarios/search?q=${query}`).then(r => r.json()) // ← NOVO
+    const token = localStorage.getItem("token")
+    const authHeaders = token
+      ? { Authorization: `Bearer ${token}` }
+      : {}
+
+    const [
+      localMusicas,
+      localCantores,
+      localAlbuns,
+      localGeneros,
+      localUsuarios
+    ] = await Promise.all([
+      fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/generos`).then(r => r.json()),
+      fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
+        headers: authHeaders
+      })
+        .then(async r => r.ok ? r.json() : [])
+        .catch(() => [])
     ])
 
-    // DEEZER
     const [tracks, artists, albums] = await Promise.all([
-      fetch(`${this.DEEZER_API}/search/track?q=${query}`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/artist?q=${query}`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/album?q=${query}`).then(r => r.json())
+      fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`${this.DEEZER_API}/search/album?q=${encodeURIComponent(query)}`).then(r => r.json())
     ])
 
     let results = []
 
-    // USUÁRIOS LOCAIS (NOVO)
+    // USUÁRIOS LOCAIS
     if (Array.isArray(localUsuarios)) {
-      results.push(...localUsuarios.map(u => ({
-        id: u.id,
-        name: u.nome,
-        username: u.username,
-        picture: u.avatar,
-        bio: u.bio,
-        type: 'user', // ← tipo novo
-        source: 'local'
-      })))
-    }
+  results.push(...localUsuarios.map(u => ({
+    id: u.id || u._id,
+    name: u.nome,
+    username: u.username,
+    picture: u.avatar,
+    bio: u.bio || '',
+    perfilPrivado: !!u.perfilPrivado,
+    mostrarAtividade: u.mostrarAtividade !== false,
+    localizacao: u.localizacao || '',
+    membroDesde: u.membroDesde || null,
+    type: 'user',
+    source: 'local'
+  })))
+}
 
-    // MUSICAS LOCAIS (mantém igual)
+    // MUSICAS LOCAIS
     if (Array.isArray(localMusicas)) {
       results.push(...localMusicas.map(m => ({
         id: m._id,
@@ -946,12 +1106,14 @@ async loadPopularArtists() {
         },
         cover: m.foto,
         preview: m.link,
+        ano: m.ano,
+        decada: m.ano ? Math.floor(m.ano / 10) * 10 + 's' : null,
         type: 'track',
         source: 'local'
       })))
     }
 
-    // CANTORES LOCAIS (mantém igual)
+    // CANTORES LOCAIS
     if (Array.isArray(localCantores)) {
       results.push(...localCantores.map(c => ({
         id: c._id,
@@ -962,7 +1124,7 @@ async loadPopularArtists() {
       })))
     }
 
-    // ÁLBUNS LOCAIS (mantém igual)
+    // ÁLBUNS LOCAIS
     if (Array.isArray(localAlbuns)) {
       results.push(...localAlbuns.map(a => ({
         id: a._id,
@@ -976,19 +1138,108 @@ async loadPopularArtists() {
       })))
     }
 
-    // DEEZER (mantém igual)
+    // GÊNEROS
+    if (Array.isArray(localGeneros)) {
+      results.push(...localGeneros.map(g => ({
+        id: g._id,
+        name: g.nome,
+        description: g.descricao,
+        icon: g.icon,
+        color: g.color,
+        categoria: g.categoria,
+        type: 'genre',
+        source: 'local'
+      })))
+    }
+
+    // DEEZER
     if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
     if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
     if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
 
     this.searchResults = results
-
   } catch (err) {
     console.error(err)
     this.searchResults = []
   } finally {
     this.isLoading = false
   }
+},
+
+searchByDecade(decadeName) {
+  // Mapear nome da década para anos
+  const decadeMap = {
+    '2020s': { start: 2020, end: 2029 },
+    '2010s': { start: 2010, end: 2019 },
+    '2000s': { start: 2000, end: 2009 },
+    '90s': { start: 1990, end: 1999 },
+    '80s': { start: 1980, end: 1989 },
+    '70s': { start: 1970, end: 1979 },
+    '60s': { start: 1960, end: 1969 }
+  }
+
+  const range = decadeMap[decadeName]
+  if (!range) return
+
+  // Configurar estado da busca
+  this.searchQuery = decadeName
+  this.lastSearch = decadeName
+  this.hasSearched = true
+  this.showSuggestions = false
+  this.showHistory = false
+  this.showCategoriesDropdown = false
+  this.activeFilter = 'Décadas' // ← IMPORTANTE: ativar filtro de décadas
+  this.isLoading = true
+
+  // Buscar TODAS as músicas do backend local (sem filtro de query)
+  // e depois filtrar no cliente pela década
+  fetch(`http://localhost:3002/musicas`)
+    .then(r => r.json())
+    .then(data => {
+      let results = []
+      
+      if (Array.isArray(data)) {
+        // Filtrar apenas músicas da década selecionada
+        const musicasDaDecada = data.filter(m => {
+          if (!m.ano) return false
+          const year = parseInt(m.ano)
+          return year >= range.start && year <= range.end
+        })
+        
+        results = musicasDaDecada.map(m => ({
+          id: m._id,
+          title: m.nome,
+          artist: {
+            name: m.cantores?.map(c => c.nome).join(', ')
+          },
+          album: {
+            title: m.albuns?.[0]?.nome || '',
+            cover: m.albuns?.[0]?.foto || ''
+          },
+          cover: m.foto,
+          preview: m.link,
+          ano: m.ano,
+          decada: decadeName, // ← Usar o nome da década selecionada
+          type: 'track',
+          source: 'local'
+        }))
+      }
+      
+      this.searchResults = results
+      
+      // Mostrar mensagem se não encontrou nada
+      if (results.length === 0) {
+        this.showToast(`Nenhuma música encontrada para ${decadeName}`, 'info')
+      }
+    })
+    .catch(err => {
+      console.error('Erro ao buscar por década:', err)
+      this.searchResults = []
+      this.showToast('Erro ao buscar músicas da década', 'error')
+    })
+    .finally(() => {
+      this.isLoading = false
+    })
 },
 
     async searchDeezer(query) {
@@ -1023,11 +1274,40 @@ async loadPopularArtists() {
       return item.name || item.title || 'Desconhecido'
     },
 
-    getResultSubtitle(item) {
-      if (item.type === 'track') return item.artist?.name || 'Artista desconhecido'
-      if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
-      if (item.type === 'album') return item.artist?.name || 'Artista desconhecido'
-       if (item.type === 'user') return `@${item.username}${item.bio ? ' • ' + item.bio.substring(0, 30) + '...' : ''}` // ← NOVO
+getResultSubtitle(item) {
+  if (item.type === 'track') {
+    let subtitle = item.artist?.name || 'Artista desconhecido'
+    if (item.ano) {
+      const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
+      subtitle += ` • ${item.ano} (${decada})`
+    }
+    return subtitle
+  }
+
+  if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
+  if (item.type === 'album') return item.artist?.name || 'Artista desconhecido'
+
+  if (item.type === 'user') {
+  let subtitle = item.username ? `@${item.username}` : 'Usuário'
+
+  if (item.bio) {
+    subtitle += ` • ${item.bio.substring(0, 40)}${item.bio.length > 40 ? '...' : ''}`
+  }
+
+  if (item.perfilPrivado) {
+    subtitle += ' • 🔒 Privado'
+  } else {
+    subtitle += ' • 🌍 Público'
+  }
+
+  if (item.mostrarAtividade === false) {
+    subtitle += ' • atividade oculta'
+  }
+
+  return subtitle
+}
+
+  if (item.type === 'genre') return item.description || 'Gênero musical'
   return ''
 },
 
@@ -1036,27 +1316,33 @@ async loadPopularArtists() {
         'track': 'Música',
         'artist': 'Artista',
         'album': 'Álbum',
-         'user': 'Usuário'
+         'user': 'Usuário',
+          'genre': 'Gênero'
       }
       return typeMap[item.type] || item.type
     },
 
-    getBestImage(item) {
-      if (item.source === 'local') {
-        if (item.type === 'track') {
-          return item.album?.cover || item.cover
-        }
-        if (item.type === 'artist') {
-          return item.picture
-        }
-        if (item.type === 'album') {
-          return item.cover
-           }
-    if (item.type === 'user') {
-      return item.picture || item.avatar || '/default-avatar.png' // ← NOVO
+ getBestImage(item) {
+  if (item.source === 'local') {
+    if (item.type === 'track') {
+      return item.album?.cover || item.cover
     }
-      }
-
+    if (item.type === 'artist') {
+      return item.picture
+    }
+    if (item.type === 'album') {
+      return item.cover
+    }
+    
+    // ✅ USUÁRIO: Priorizar avatar
+    if (item.type === 'user') {
+      return item.picture || item.avatar || '/default-avatar.png'
+    }
+    
+    if (item.type === 'genre') {
+      return '/default-genre.png'
+    }
+  }
       // Deezer
       if (item.type === 'track') {
         return item.album?.cover_medium
@@ -1076,7 +1362,8 @@ async loadPopularArtists() {
         'Artista': 'fa fa-user',
         'Música': 'fa fa-music',
         'Álbum': 'fa fa-circle',
-        'Usuário': 'fa fa-user-circle'
+        'Usuário': 'fa fa-user-circle',
+        'Gênero': 'fa fa-music'
       }
       return icons[type] || 'fa fa-music'
     },
@@ -1093,28 +1380,29 @@ async loadPopularArtists() {
     },
 
     // Interaction Methods
-    handleClickOutside(event) {
-      const historyEl = this.$refs.historyContainer
-      const categoriesEl = this.$refs.categoriesContainer
-      
-      if (historyEl && !historyEl.contains(event.target)) {
-        this.showHistory = false
-      }
-      
-      if (categoriesEl && !categoriesEl.contains(event.target)) {
-        this.showCategoriesDropdown = false
-      }
-    },
+   handleClickOutside(event) {
+  const categoriesEl = this.$refs.categoriesContainer
 
-    handleInput() {
-      this.showSuggestions = true
-      if (this.searchTimeout) clearTimeout(this.searchTimeout)
-      this.searchTimeout = setTimeout(() => {
-        if (this.searchQuery.length > 2) {
-          this.searchAll(this.searchQuery)
-        }
-      }, 300)
-    },
+  if (categoriesEl && !categoriesEl.contains(event.target)) {
+    this.showCategoriesDropdown = false
+  }
+},
+
+  handleInput() {
+  this.showSuggestions = true
+
+  if (this.searchTimeout) {
+    clearTimeout(this.searchTimeout)
+  }
+
+  this.searchTimeout = setTimeout(() => {
+    if (this.searchQuery.trim().length > 2) {
+      this.searchAll(this.searchQuery)
+    } else {
+      this.searchResults = []
+    }
+  }, 300)
+},
 
     highlightText(text) {
       const query = this.searchQuery
@@ -1132,10 +1420,14 @@ async loadPopularArtists() {
       }, 200)
     },
 
-    selectSuggestion(sugg) {
-      this.searchQuery = sugg
-      this.performSearch()
-    },
+  selectSuggestion(sugg, item = null) {
+  if (item && item.type === 'user') {
+    return this.goToUserProfile(item)
+  }
+
+  this.searchQuery = sugg
+  this.performSearch()
+},
 
     selectFromHistory(item) {
       this.searchQuery = item
@@ -1153,11 +1445,28 @@ async loadPopularArtists() {
       this.showCategoriesDropdown = false
       
       // Save to history
-      this.searchHistory = [this.searchQuery, ...this.searchHistory.filter(h => h !== this.searchQuery)].slice(0, 10)
-      localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory))
+      await this.saveHistory(this.searchQuery)
+await this.loadHistory()
       
       await this.searchAll(this.searchQuery)
     },
+    async saveHistory(termo) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) return
+
+    await fetch("http://localhost:3002/historico", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ termo })
+    })
+  } catch (err) {
+    console.error("Erro ao salvar histórico:", err)
+  }
+},
 
     searchAndGo(term) {
       this.searchQuery = term
@@ -1180,11 +1489,23 @@ async loadPopularArtists() {
       this.$refs.searchInput.focus()
     },
 
-    clearHistory() {
-      this.searchHistory = []
-      localStorage.removeItem('searchHistory')
-      this.showHistory = false
-    },
+   async clearHistory() {
+  try {
+    const token = localStorage.getItem("token")
+
+    await fetch("http://localhost:3002/historico", {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    this.searchHistory = []
+    this.showHistory = false
+  } catch (err) {
+    console.error("Erro ao limpar histórico:", err)
+  }
+},
 
     playTrack(track) {
       // Converter para formato do player
@@ -1382,7 +1703,19 @@ html, body, #app {
   cursor: pointer;
   transition: all 0.2s;
 }
+.empty-category {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  margin: 8px 0;
+}
 
+.empty-text {
+  font-style: italic;
+}
 .history-item:hover {
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
@@ -1439,7 +1772,170 @@ html, body, #app {
 .search-box input::placeholder {
   color: #666;
 }
+/* ===== HISTÓRICO NO DROPDOWN DO INPUT ===== */
 
+.history-section {
+  padding: 12px 0;
+}
+
+.history-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 8px;
+}
+
+.history-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.history-title i {
+  color: #1db954;
+  font-size: 14px;
+}
+
+.clear-all-link {
+  font-size: 12px;
+  color: #b3b3b3;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.clear-all-link:hover {
+  color: #ff4444;
+  text-decoration: underline;
+}
+
+.history-list-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.history-list-item:last-child {
+  border-bottom: none;
+}
+
+.history-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.history-item-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.history-icon {
+  color: #888;
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.history-text {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-list-item:hover .history-text {
+  color: #1db954;
+}
+
+.history-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.history-list-item:hover .history-delete-btn {
+  opacity: 1;
+}
+
+.history-delete-btn:hover {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+  transform: scale(1.1);
+}
+
+/* Animação suave */
+.history-list-item {
+  animation: fadeInLeft 0.2s ease forwards;
+  animation-delay: calc(var(--i, 0) * 0.03s);
+  opacity: 0;
+}
+
+.history-list-item:nth-child(1) { --i: 1; }
+.history-list-item:nth-child(2) { --i: 2; }
+.history-list-item:nth-child(3) { --i: 3; }
+.history-list-item:nth-child(4) { --i: 4; }
+.history-list-item:nth-child(5) { --i: 5; }
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mobile: sempre mostrar botão de excluir */
+@media (max-width: 768px) {
+  .history-delete-btn {
+    opacity: 1;
+    color: #888;
+  }
+  
+  .history-list-item {
+    padding: 14px 16px;
+  }
+  
+  .history-header-row {
+    padding: 8px 16px 12px;
+  }
+}
 .clear-btn-icon {
   width: 32px;
   height: 32px;
@@ -1479,6 +1975,23 @@ html, body, #app {
   padding: 20px;
 }
 
+.result-card.has-decade .result-type {
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  color: #000;
+  font-weight: 700;
+}
+
+.decade-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  background: rgba(29, 185, 84, 0.9);
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #000;
+}
 .suggested-header {
   display: flex;
   align-items: center;
@@ -1541,7 +2054,148 @@ html, body, #app {
 .grouped-results {
   padding: 16px 0;
 }
+/* ===== HISTÓRICO ABAIXO DO INPUT ===== */
+.history-below-input {
+  margin-top: 16px;
+  background: rgba(24, 24, 24, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  animation: slideDown 0.3s ease;
+}
 
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.history-below-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(29, 185, 84, 0.05);
+}
+
+.history-below-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1db954;
+}
+
+.history-below-title i {
+  font-size: 16px;
+}
+
+.clear-all-btn {
+  font-size: 12px;
+  color: #888;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  font-weight: 600;
+}
+
+.clear-all-btn:hover {
+  color: #ff4444;
+}
+
+.history-below-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 20px;
+}
+
+.history-below-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  transition: all 0.2s;
+  max-width: 100%;
+}
+
+.history-below-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(29, 185, 84, 0.5);
+}
+
+.history-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #fff;
+  cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-text:hover {
+  color: #1db954;
+}
+
+.history-icon {
+  color: #888;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.delete-history-item {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #888;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.delete-history-item:hover {
+  background: rgba(255, 68, 68, 0.8);
+  color: #fff;
+  transform: scale(1.1);
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .history-below-list {
+    padding: 12px 16px;
+  }
+  
+  .history-below-item {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  .history-below-header {
+    padding: 12px 16px;
+  }
+}
 .result-group {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -1608,7 +2262,16 @@ html, body, #app {
   background: rgba(156, 39, 176, 0.1);
   color: #9C27B0;
 }
+/* ✅ ADICIONAR AQUI: */
+.item-thumb-placeholder.usuario {
+  background: rgba(29, 185, 84, 0.1);
+  color: #1db954;
+}
 
+.item-thumb-placeholder.genero {
+  background: rgba(255, 152, 0, 0.1);
+  color: #FF9800;
+}
 .item-details {
   display: flex;
   flex-direction: column;

@@ -2,7 +2,6 @@
 <template>
   <nav class="navbar" :class="{ scrolled: isScrolled }">
     <div class="navbar-content">
-      <!-- Logo/Brand -->
       <div class="navbar-brand" @click="$router.push('/')">
         <div class="brand-icon">
           <i class="fa fa-headphones"></i>
@@ -10,8 +9,6 @@
         <span class="brand-text">SoundUp</span>
       </div>
 
-
-      <!-- Navigation Links (opcional) -->
       <div class="nav-links" v-if="showNavLinks">
         <router-link to="/" class="nav-link" exact-active-class="active">
           <i class="fa fa-home"></i>
@@ -27,10 +24,7 @@
         </router-link>
       </div>
 
-
-      <!-- Right Section -->
       <div class="nav-right">
-        <!-- Search Bar -->
         <div class="search-container" :class="{ expanded: isSearchFocused }">
           <div class="search-wrapper">
             <i class="fa fa-search search-icon"></i>
@@ -49,8 +43,7 @@
           </div>
         </div>
 
-
-        <!-- Notifications -->
+        <!-- NOTIFICAÇÕES -->
         <div class="notif-wrapper">
           <button
             class="icon-btn notif-btn"
@@ -64,7 +57,6 @@
             </span>
           </button>
 
-
           <transition name="dropdown">
             <div v-if="showNotifications" class="dropdown-panel notif-dropdown">
               <div class="dropdown-header">
@@ -74,30 +66,42 @@
                   class="text-btn"
                   @click="markAllRead"
                 >
-                  Limpar
+                  Marcar todas
                 </button>
               </div>
-             
+
               <div class="dropdown-body">
                 <div v-if="notifications.length === 0" class="empty-state">
                   <i class="fa fa-bell-slash"></i>
                   <p>Sem notificações</p>
                 </div>
-               
+
                 <div
-                  v-for="(notif, index) in notifications"
-                  :key="index"
+                  v-for="notif in notifications"
+                  :key="notif.id"
                   class="notif-item"
                   :class="{ unread: !notif.read }"
-                  @click="markAsRead(index)"
+                  @click="markAsRead(notif)"
                 >
                   <div class="notif-avatar" :style="{ background: notif.color }">
                     <i :class="notif.icon"></i>
                   </div>
+
                   <div class="notif-content">
                     <p class="notif-title">{{ notif.title }}</p>
                     <p class="notif-time">{{ notif.time }}</p>
+
+                    <div
+                      v-if="notif.tipo === 'follow_request'"
+                      class="notif-actions"
+                      @click.stop
+                    >
+                      <button class="notif-action accept" @click="aceitar(notif)">
+                        Aceitar
+                      </button>
+                    </div>
                   </div>
+
                   <div v-if="!notif.read" class="unread-dot"></div>
                 </div>
               </div>
@@ -105,8 +109,7 @@
           </transition>
         </div>
 
-
-        <!-- User Menu (Logado) -->
+        <!-- USER MENU -->
         <div class="user-wrapper" v-if="isLoggedIn">
           <button
             class="user-btn"
@@ -126,7 +129,6 @@
             <i class="fa fa-chevron-down arrow-icon" :class="{ rotate: showUserMenu }"></i>
           </button>
 
-
           <transition name="dropdown">
             <div v-if="showUserMenu" class="dropdown-panel user-dropdown">
               <div class="dropdown-header user-header">
@@ -140,7 +142,6 @@
                 </div>
               </div>
 
-
               <div class="dropdown-body">
                 <div class="dropdown-item" @click="goToProfile">
                   <div class="item-icon">
@@ -148,14 +149,14 @@
                   </div>
                   <span>Meu Perfil</span>
                 </div>
-               
+
                 <div class="dropdown-item" @click="goToSettings">
                   <div class="item-icon">
                     <i class="fa fa-cog"></i>
                   </div>
                   <span>Configurações</span>
                 </div>
-               
+
                 <div class="dropdown-item" @click="goToLibrary">
                   <div class="item-icon">
                     <i class="fa fa-heart"></i>
@@ -163,9 +164,7 @@
                   <span>Favoritos</span>
                 </div>
 
-
                 <div class="dropdown-divider"></div>
-
 
                 <div class="dropdown-item" @click="goToHelp">
                   <div class="item-icon">
@@ -173,7 +172,6 @@
                   </div>
                   <span>Ajuda & Suporte</span>
                 </div>
-
 
                 <div class="dropdown-item danger" @click="handleLogout">
                   <div class="item-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
@@ -186,8 +184,6 @@
           </transition>
         </div>
 
-
-        <!-- Login/Register Buttons (Não logado) -->
         <div class="auth-buttons" v-else>
           <button class="btn-login" @click="handleLogin">
             Entrar
@@ -201,8 +197,8 @@
   </nav>
 </template>
 
-
 <script>
+import axios from 'axios'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -237,32 +233,9 @@ export default {
     const userAvatar = ref(null)
     const userId = ref(null)
 
-    const notificationCount = ref(3)
+    const notifications = ref([])
+    const notificationCount = ref(0)
     const hasNewNotifications = computed(() => notificationCount.value > 0)
-
-    const notifications = ref([
-      {
-        title: 'Nova música adicionada à sua playlist',
-        time: '2 min atrás',
-        icon: 'fa fa-music',
-        color: 'linear-gradient(135deg, #2563eb, #7c3aed)',
-        read: false
-      },
-      {
-        title: 'Novo seguidor: Maria Silva',
-        time: '1 hora atrás',
-        icon: 'fa fa-user',
-        color: 'linear-gradient(135deg, #ec4899, #f43f5e)',
-        read: false
-      },
-      {
-        title: 'Atualização do sistema disponível',
-        time: '3 horas atrás',
-        icon: 'fa fa-info',
-        color: 'linear-gradient(135deg, #10b981, #34d399)',
-        read: true
-      }
-    ])
 
     const loadUserData = () => {
       const storedUser = localStorage.getItem('usuario')
@@ -292,13 +265,92 @@ export default {
       }
     }
 
+    const formatTimeAgo = (dateString) => {
+      if (!dateString) return 'Agora'
+      const diff = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000)
+
+      if (diff < 60) return 'Agora'
+      if (diff < 3600) return `${Math.floor(diff / 60)} min atrás`
+      if (diff < 86400) return `${Math.floor(diff / 3600)} h atrás`
+      return `${Math.floor(diff / 86400)} dia(s) atrás`
+    }
+
+    const getNotifVisual = (tipo) => {
+      const map = {
+        follow_request: {
+          icon: 'fa fa-user-plus',
+          color: 'linear-gradient(135deg, #2563eb, #7c3aed)'
+        },
+        follow_accept: {
+          icon: 'fa fa-check',
+          color: 'linear-gradient(135deg, #10b981, #34d399)'
+        },
+        follow_reject: {
+          icon: 'fa fa-times',
+          color: 'linear-gradient(135deg, #ef4444, #f97316)'
+        }
+      }
+
+      return map[tipo] || {
+        icon: 'fa fa-bell',
+        color: 'linear-gradient(135deg, #64748b, #334155)'
+      }
+    }
+
+    const carregarNotificacoes = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const res = await axios.get('http://localhost:3002/notificacoes', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        notifications.value = (res.data || []).map(n => {
+          const visual = getNotifVisual(n.tipo)
+
+          const nome = n.usuarioOrigem?.nome || 'Alguém'
+
+let mensagemFormatada = n.mensagem
+
+// exemplo: você pode personalizar por tipo
+if (n.tipo === 'follow_request') {
+  mensagemFormatada = `${nome} quer te seguir`
+}
+
+if (n.tipo === 'follow_accept') {
+  mensagemFormatada = `${nome} aceitou sua solicitação`
+}
+
+          return {
+            id: n._id,
+            tipo: n.tipo,
+            title: mensagemFormatada,
+            time: formatTimeAgo(n.createdAt),
+            icon: visual.icon,
+            color: visual.color,
+            read: n.lida,
+            user: n.usuarioOrigem
+          }
+        })
+
+        notificationCount.value = notifications.value.filter(n => !n.read).length
+      } catch (error) {
+        console.error('Erro ao carregar notificações:', error)
+      }
+    }
+
     const handleScroll = () => {
       isScrolled.value = window.scrollY > 20
     }
 
-    const toggleNotifications = () => {
+    const toggleNotifications = async () => {
       showNotifications.value = !showNotifications.value
       showUserMenu.value = false
+
+      if (showNotifications.value) {
+        await carregarNotificacoes()
+      }
     }
 
     const toggleUserMenu = () => {
@@ -306,16 +358,65 @@ export default {
       showNotifications.value = false
     }
 
-    const markAsRead = (index) => {
-      if (!notifications.value[index].read) {
-        notifications.value[index].read = true
+    const markAsRead = async (notif) => {
+      try {
+        if (notif.read) return
+
+        const token = localStorage.getItem('token')
+        await axios.patch(
+          `http://localhost:3002/notificacoes/${notif.id}/lida`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+
+        notif.read = true
         notificationCount.value = Math.max(0, notificationCount.value - 1)
+      } catch (error) {
+        console.error('Erro ao marcar notificação como lida:', error)
       }
     }
 
-    const markAllRead = () => {
-      notifications.value.forEach(n => n.read = true)
-      notificationCount.value = 0
+ const markAllRead = async () => {
+  try {
+    const token = localStorage.getItem('token')
+
+    await axios.patch(
+      'http://localhost:3002/notificacoes/marcar-todas',
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+
+    notifications.value.forEach(n => n.read = true)
+    notificationCount.value = 0
+
+  } catch (error) {
+    console.error('Erro ao marcar todas:', error)
+  }
+}
+
+    const aceitar = async (notif) => {
+      try {
+        const token = localStorage.getItem('token')
+
+        await axios.post(
+          'http://localhost:3002/follows/aceitar',
+          { solicitanteId: notif.user?._id || notif.user?.id },
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+
+        
+        await carregarNotificacoes()
+        await markAsRead(notif)
+
+// remove da lista (opcional melhor UX)
+notifications.value = notifications.value.filter(n => n.id !== notif.id)
+
+notificationCount.value = notifications.value.filter(n => !n.read).length
+
+        window.dispatchEvent(new CustomEvent('follow-request-accepted'))
+      } catch (error) {
+        console.error('Erro ao aceitar solicitação:', error)
+      }
     }
 
     const handleSearch = () => {
@@ -348,8 +449,11 @@ export default {
       userEmail.value = ''
       userAvatar.value = null
       userId.value = null
+      notifications.value = []
+      notificationCount.value = 0
 
       showUserMenu.value = false
+      showNotifications.value = false
 
       window.dispatchEvent(new Event('user-logged-out'))
       emit('logout')
@@ -388,8 +492,9 @@ export default {
       }
     }
 
-    const handleUserLoggedIn = () => {
+    const handleUserLoggedIn = async () => {
       loadUserData()
+      await carregarNotificacoes()
     }
 
     const handleUserLoggedOut = () => {
@@ -398,6 +503,8 @@ export default {
       userEmail.value = ''
       userAvatar.value = null
       userId.value = null
+      notifications.value = []
+      notificationCount.value = 0
       showUserMenu.value = false
     }
 
@@ -415,8 +522,12 @@ export default {
       }
     }
 
-    onMounted(() => {
+    onMounted(async () => {
       loadUserData()
+
+      if (isLoggedIn.value) {
+        await carregarNotificacoes()
+      }
 
       window.addEventListener('scroll', handleScroll)
       document.addEventListener('click', handleClickOutside)
@@ -454,6 +565,7 @@ export default {
       toggleUserMenu,
       markAsRead,
       markAllRead,
+      aceitar,
       handleSearch,
       handleLogin,
       handleRegister,
@@ -467,7 +579,6 @@ export default {
   }
 }
 </script>
-
 
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
@@ -1174,13 +1285,11 @@ export default {
   background: rgba(239, 68, 68, 0.1);
 }
 
-
 .dropdown-divider {
   height: 1px;
   background: rgba(255, 255, 255, 0.05);
   margin: 8px 0;
 }
-
 
 /* ===== TRANSITIONS ===== */
 .dropdown-enter-active,
@@ -1188,18 +1297,41 @@ export default {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-
 .dropdown-enter-from {
   opacity: 0;
   transform: translateY(-10px) scale(0.95);
 }
-
 
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-10px) scale(0.95);
 }
 
+.notif-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.notif-action {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.notif-action.accept {
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+}
+
+.notif-action.accept:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {

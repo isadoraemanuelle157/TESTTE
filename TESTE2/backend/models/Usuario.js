@@ -16,6 +16,11 @@ const usuarioSchema = new mongoose.Schema({
   perfilPrivado: { type: Boolean, default: false },
   mostrarAtividade: { type: Boolean, default: true },
 
+seguindo: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Cantor'
+}],
+
   membroDesde: { type: Date, default: Date.now }
 });
 

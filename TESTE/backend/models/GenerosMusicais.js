@@ -4,6 +4,19 @@ const generosMusicaisSchema = new mongoose.Schema({
   nome: { type: String, required: true },
   descricao: { type: String, required: true },
 
+   categoria: {
+  type: String,
+  default: 'outros'
+},
+
+  icon: String,
+  color: String,
+
+  popularidade: {
+    type: Number,
+    default: 0
+  },
+
   // 🔥 RELAÇÃO COM MÚSICAS
   musicas: [
     {

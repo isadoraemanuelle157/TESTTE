@@ -13,6 +13,16 @@ const create = async (req, res) => {
   }
 }
 
+const search = async (req, res) => {
+  try {
+    const { q } = req.query
+    const cantores = await cantorService.searchCantores(q)
+    res.json(cantores)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 // LISTAR TODOS
 const list = async (req, res) => {
   try {
@@ -98,6 +108,53 @@ const addAlbum = async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }
+const seguir = async (req, res) => {
+  try {
+const usuarioId =
+  req.user?._id ||
+  req.user?.id ||
+  req.user?.usuarioId ||
+  req.body.usuarioId
+
+
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'usuarioId é obrigatório' })
+    }
+
+    const cantor = await cantorService.seguirCantor(req.params.id, usuarioId)
+
+    res.json({
+      message: 'Agora você segue este cantor',
+      cantor
+    })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const deixarSeguir = async (req, res) => {
+  try {
+   const usuarioId =
+  req.user?._id ||
+  req.user?.id ||
+  req.user?.usuarioId ||
+  req.body.usuarioId
+
+
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'usuarioId é obrigatório' })
+    }
+
+    const cantor = await cantorService.deixarSeguirCantor(req.params.id, usuarioId)
+
+    res.json({
+      message: 'Você deixou de seguir este cantor',
+      cantor
+    })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
 
 module.exports = {
   create,
@@ -106,5 +163,8 @@ module.exports = {
   getByNome,
   update,
   remove,
-  addAlbum
+  addAlbum,
+  search,
+    seguir,
+  deixarSeguir
 }

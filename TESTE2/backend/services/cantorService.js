@@ -2,6 +2,7 @@ const Cantor = require('../models/Cantor')
 const Album = require('../models/Album')
 const Genero = require('../models/generosMusicais')
 const Musica = require('../models/Musicas')
+const Usuario = require('../models/Usuario')
 
 const normalizeIds = (value) => {
   if (!value) return []
@@ -17,13 +18,47 @@ const normalizeIds = (value) => {
     .filter(Boolean)
 }
 
+
+const parseSeguidores = (value) => {
+  if (value === undefined || value === null || value === '') return 0
+
+  if (typeof value === 'number') {
+    return Math.max(0, Math.floor(value))
+  }
+
+  const raw = String(value).trim().toLowerCase().replace(/\s/g, '')
+  const normalized = raw.replace(/\./g, '').replace(',', '.')
+
+  if (normalized.endsWith('k')) {
+    const num = parseFloat(normalized.slice(0, -1))
+    return Number.isNaN(num) ? 0 : Math.round(num * 1000)
+  }
+
+  if (normalized.endsWith('m')) {
+    const num = parseFloat(normalized.slice(0, -1))
+    return Number.isNaN(num) ? 0 : Math.round(num * 1000000)
+  }
+
+  const num = Number(normalized)
+  return Number.isNaN(num) ? 0 : Math.max(0, Math.floor(num))
+}
+
+const searchCantores = async (query) => {
+  return await Cantor.find({
+    nome: { $regex: query, $options: 'i' }
+  })
+  .populate('albuns', 'nome foto')
+  .populate('musicas', 'nome')
+}
+
 const createCantor = async (data) => {
   const payload = {
     nome: data.nome?.trim(),
     foto: data.foto?.trim?.() || data.foto || '',
     generos: normalizeIds(data.generos),
     musicas: normalizeIds(data.musicas),
-    albuns: normalizeIds(data.albuns)
+    albuns: normalizeIds(data.albuns),
+     seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores)
   }
 
   if (!payload.nome) {
@@ -93,7 +128,8 @@ const updateCantor = async (id, data) => {
     foto: data.foto?.trim?.() || data.foto || '',
     generos: normalizeIds(data.generos),
     musicas: normalizeIds(data.musicas),
-    albuns: normalizeIds(data.albuns)
+    albuns: normalizeIds(data.albuns),
+    seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase)
   }
 
   const musicasAntigas = (cantorAntigo.musicas || []).map(m => m.toString())
@@ -144,6 +180,49 @@ const addAlbumToCantor = async (cantorId, albumId) => {
     { new: true }
   )
 }
+const seguirCantor = async (cantorId, usuarioId) => {
+  const cantor = await Cantor.findById(cantorId)
+  if (!cantor) throw new Error('Cantor não encontrado')
+
+  const usuario = await Usuario.findById(usuarioId)
+  if (!usuario) throw new Error('Usuário não encontrado')
+
+  await Cantor.findByIdAndUpdate(
+    cantorId,
+    { $addToSet: { seguidores: usuarioId } },
+    { new: true }
+  )
+
+  await Usuario.findByIdAndUpdate(
+    usuarioId,
+    { $addToSet: { seguindo: cantorId } },
+    { new: true }
+  )
+
+  return await Cantor.findById(cantorId)
+}
+
+const deixarSeguirCantor = async (cantorId, usuarioId) => {
+  const cantor = await Cantor.findById(cantorId)
+  if (!cantor) throw new Error('Cantor não encontrado')
+
+  const usuario = await Usuario.findById(usuarioId)
+  if (!usuario) throw new Error('Usuário não encontrado')
+
+  await Cantor.findByIdAndUpdate(
+    cantorId,
+    { $pull: { seguidores: usuarioId } },
+    { new: true }
+  )
+
+  await Usuario.findByIdAndUpdate(
+    usuarioId,
+    { $pull: { seguindo: cantorId } },
+    { new: true }
+  )
+
+  return await Cantor.findById(cantorId)
+}
 
 module.exports = {
   createCantor,
@@ -151,5 +230,9 @@ module.exports = {
   getCantorById,
   getCantorByNome,
   updateCantor,
-  deleteCantor
+  deleteCantor,
+  searchCantores,
+   addAlbumToCantor,
+  seguirCantor,
+  deixarSeguirCantor
 }

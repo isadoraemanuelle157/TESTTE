@@ -625,33 +625,32 @@ export default {
   },
 
   computed: {
-   totalDuration() {
-  if (!this.currentPlaylist || this.currentPlaylist.songs.length === 0) return ""
+    totalDuration() {
+      if (!this.currentPlaylist || this.currentPlaylist.songs.length === 0) return ""
 
-  const totalSeconds = this.currentPlaylist.songs.reduce((acc, s) => {
-    const duration = s.duration || s.duracao
+      const totalSeconds = this.currentPlaylist.songs.reduce((acc, s) => {
+        const duration = s.duration || s.duracao
 
-    if (!duration || typeof duration !== 'string' || !duration.includes(':')) {
-      return acc
+        if (!duration || typeof duration !== 'string' || !duration.includes(':')) {
+          return acc
+        }
+
+        const [m, sec] = duration.split(':').map(Number)
+        return acc + ((m || 0) * 60 + (sec || 0))
+      }, 0)
+
+      const hours = Math.floor(totalSeconds / 3600)
+      const mins = Math.floor((totalSeconds % 3600) / 60)
+
+      return hours > 0 ? `${hours}h ${mins}min` : `${mins}min`
     }
-
-    const [m, sec] = duration.split(':').map(Number)
-    return acc + ((m || 0) * 60 + (sec || 0))
-  }, 0)
-
-  const hours = Math.floor(totalSeconds / 3600)
-  const mins = Math.floor((totalSeconds % 3600) / 60)
-
-  return hours > 0 ? `${hours}h ${mins}min` : `${mins}min`
-}
-
   },
 
- async mounted() {
-  await this.loadPlaylists()   // 🔥 espera carregar playlists
-  await this.loadFavoritas()   // 🔥 só depois marca favoritas
-  this.initAudioPlayer()
-},
+  async mounted() {
+    await this.loadPlaylists()   // espera carregar playlists
+    await this.loadFavoritas()   // só depois marca favoritas
+    this.initAudioPlayer()
+  },
 
   beforeUnmount() {
     if (this.audioPlayer) {
@@ -771,21 +770,22 @@ export default {
         this.isPlaying = false
       }
     },
+    
     normalizeSong(song) {
-  if (!song) return null
+      if (!song) return null
 
-  return {
-    id: song._id || song.id,
-    deezerId: song.deezerId || song._id || song.id,
-    title: song.title || song.nome || 'Sem título',
-    artist: song.artist || (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
-    album: song.album || song.albuns?.[0]?.nome || 'Sem álbum',
-    duration: song.duration || song.duracao || '0:00',
-    cover: song.cover || song.foto || '',
-    preview: song.preview || song.link || '',
-    isFromDB: song.isFromDB ?? true
-  }
-},
+      return {
+        id: song._id || song.id,
+        deezerId: song.deezerId || song._id || song.id,
+        title: song.title || song.nome || 'Sem título',
+        artist: song.artist || (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
+        album: song.album || song.albuns?.[0]?.nome || 'Sem álbum',
+        duration: song.duration || song.duracao || '0:00',
+        cover: song.cover || song.foto || '',
+        preview: song.preview || song.link || '',
+        isFromDB: song.isFromDB ?? true
+      }
+    },
     
     togglePlay() {
       if (!this.currentTrack && this.currentPlaylist?.songs.length > 0) {
@@ -861,137 +861,139 @@ export default {
     },
     
     // ===== CRIAÇÃO =====
-async createPlaylist() {
-  if (!this.playlistTitle.trim()) return
+    async createPlaylist() {
+      if (!this.playlistTitle.trim()) return
 
-  this.isLoading = true
+      this.isLoading = true
 
-  try {
-  const user = JSON.parse(localStorage.getItem('usuario'))
-const userId = user?._id || user?.id
+      try {
+        const user = JSON.parse(localStorage.getItem('usuario'))
+        const userId = user?._id || user?.id
 
-if (!userId) {
-  this.showToast({
-    title: 'Erro',
-    message: 'Usuário não autenticado',
-    type: 'error'
-  })
-  return
-}
-const token = localStorage.getItem("token")
-const res = await fetch('http://localhost:3002/playlists', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json',
-   'Authorization': `Bearer ${token}`
-},
-  body: JSON.stringify({
-    nome: this.playlistTitle,
-    descricao: this.playlistDescription,
-    capa: this.playlistImage,
-    publica: this.isPublic,
-  })
-})
+        if (!userId) {
+          this.showToast({
+            title: 'Erro',
+            message: 'Usuário não autenticado',
+            type: 'error'
+          })
+          return
+        }
+        
+        const token = localStorage.getItem("token")
+        const res = await fetch('http://localhost:3002/playlists', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            nome: this.playlistTitle,
+            descricao: this.playlistDescription,
+            capa: this.playlistImage,
+            publica: this.isPublic,
+          })
+        })
 
-const data = await res.json()
+        const data = await res.json()
 
-await this.loadPlaylists()
+        await this.loadPlaylists()
 
-// 🔥 AVISA O PERFIL
-window.dispatchEvent(new Event('playlist-updated'))
-this.backToList()
+        // AVISA O PERFIL
+        window.dispatchEvent(new Event('playlist-updated'))
+        this.backToList()
 
+        this.showToast({
+          title: 'Sucesso!',
+          message: 'Playlist salva no banco!',
+          type: 'success',
+          icon: 'fa fa-check-circle'
+        })
 
-    this.showToast({
-      title: 'Sucesso!',
-      message: 'Playlist salva no banco!',
-      type: 'success',
-      icon: 'fa fa-check-circle'
-    })
+        this.backToList()
 
-    this.backToList()
-
-  } catch (err) {
-    console.error(err)
-    this.showToast({
-      title: 'Erro',
-      message: 'Erro ao salvar no banco',
-      type: 'error'
-    })
-  }
-
-  this.isLoading = false
-},
-
-async loadPlaylists() {
-  const user = JSON.parse(localStorage.getItem('usuario'))
-const userId = user?._id || user?.id
-
-
-  if (!userId) {
-    this.showToast({
-      title: 'Erro',
-      message: 'Usuário não autenticado',
-      type: 'error'
-    })
-    return
-  }
-
- const token = localStorage.getItem("token")
-
-const res = await fetch(`http://localhost:3002/playlists`, {
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-})
-
-  const data = await res.json()
-
-const safeArray = Array.isArray(data) ? data : []
-
-this.playlists = safeArray.map(p => ({
-    id: p._id || p.id,
-    title: p.nome || p.title,
-    description: p.descricao || '',
-    image: p.capa || null,
-    isPublic: p.publica,
-     isFavorita: false, // 🔥 IMPORTANTE
-  totalCurtidas: 0,
-    songs: Array.isArray(p.musicas)
-      ? p.musicas.map(m => this.normalizeSong(m)).filter(Boolean)
-      : [],
-    authorName: user.nome || 'Você'
-  }))
-},
-    
-async loadFavoritas() {
-  try {
-    const token = localStorage.getItem("token")
-
-    const res = await fetch(`http://localhost:3002/favoritas`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+      } catch (err) {
+        console.error(err)
+        this.showToast({
+          title: 'Erro',
+          message: 'Erro ao salvar no banco',
+          type: 'error'
+        })
       }
-    })
 
-    const data = await res.json()
+      this.isLoading = false
+    },
 
-    this.favoritas = data.map(f => ({
-      id: f.playlist._id,
-      title: f.playlist.nome,
-      description: f.playlist.descricao,
-      image: f.playlist.capa,
-      songs: f.playlist.musicas || []
-    }))
+    async loadPlaylists() {
+      const user = JSON.parse(localStorage.getItem('usuario'))
+      const userId = user?._id || user?.id
 
-    // 🔥 marca playlists como favoritas
-    this.playlists.forEach(p => {
-      p.isFavorita = this.favoritas.some(f => f.id === p.id)
-    })
+      if (!userId) {
+        this.showToast({
+          title: 'Erro',
+          message: 'Usuário não autenticado',
+          type: 'error'
+        })
+        return
+      }
 
-  } catch (err) {
-    console.error(err)
-  }
-},
+      const token = localStorage.getItem("token")
+
+      const res = await fetch(`http://localhost:3002/playlists`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      const data = await res.json()
+
+      const safeArray = Array.isArray(data) ? data : []
+
+      this.playlists = safeArray.map(p => ({
+        id: p._id || p.id,
+        title: p.nome || p.title,
+        description: p.descricao || '',
+        image: p.capa || null,
+        isPublic: p.publica,
+        isFavorita: false, // IMPORTANTE
+        totalCurtidas: 0,
+        songs: Array.isArray(p.musicas)
+          ? p.musicas.map(m => this.normalizeSong(m)).filter(Boolean)
+          : [],
+        authorName: user.nome || 'Você'
+      }))
+    },
+    
+    async loadFavoritas() {
+      try {
+        const token = localStorage.getItem("token")
+
+        const res = await fetch(`http://localhost:3002/favoritas`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const data = await res.json()
+
+        this.favoritas = data
+          .filter(f => f.playlist)
+          .map(f => ({
+            id: f.playlist._id,
+            title: f.playlist.nome,
+            description: f.playlist.descricao,
+            image: f.playlist.capa,
+            songs: f.playlist.musicas || []
+          }))
+
+        // marca playlists como favoritas
+        this.playlists.forEach(p => {
+          p.isFavorita = this.favoritas.some(f => f.id === p.id)
+        })
+
+      } catch (err) {
+        console.error(err)
+      }
+    },
 
     cancelCreate() {
       if (this.playlistTitle.trim() || this.playlistDescription.trim() || this.playlistImage) {
@@ -1023,59 +1025,58 @@ async loadFavoritas() {
       this.editMode = false
     },
     
-   async saveEdit() {
-  if (!this.editTitle.trim()) {
-    this.showToast({
-      title: 'Atenção',
-      message: 'O título é obrigatório',
-      type: 'warning'
-    })
-    window.dispatchEvent(new Event('playlist-updated')) // 🔥 AQUI SIM
-    return
-  }
+    async saveEdit() {
+      if (!this.editTitle.trim()) {
+        this.showToast({
+          title: 'Atenção',
+          message: 'O título é obrigatório',
+          type: 'warning'
+        })
+        return
+      }
 
-  try {
-    const token = localStorage.getItem("token")
+      try {
+        const token = localStorage.getItem("token")
 
-   const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}`, {
-  method: 'PUT',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    nome: this.editTitle.trim(),
-    descricao: this.editDescription.trim(),
-    capa: this.editImage,
-    publica: this.editIsPublic
-  })
-})
+        const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            nome: this.editTitle.trim(),
+            descricao: this.editDescription.trim(),
+            capa: this.editImage,
+            publica: this.editIsPublic
+          })
+        })
 
-    const data = await res.json()
+        const data = await res.json()
 
-    // 🔥 atualizar no front com dados reais
-    this.currentPlaylist.title = data.nome
-    this.currentPlaylist.description = data.descricao
-    this.currentPlaylist.image = data.capa
-    this.currentPlaylist.isPublic = data.publica
+        // atualizar no front com dados reais
+        this.currentPlaylist.title = data.nome
+        this.currentPlaylist.description = data.descricao
+        this.currentPlaylist.image = data.capa
+        this.currentPlaylist.isPublic = data.publica
 
-    this.editMode = false
+        this.editMode = false
 
-    this.showToast({
-      title: 'Atualizado!',
-      message: 'Playlist salva no banco',
-      type: 'success'
-    })
+        this.showToast({
+          title: 'Atualizado!',
+          message: 'Playlist salva no banco',
+          type: 'success'
+        })
 
-  } catch (err) {
-    console.error(err)
-    this.showToast({
-      title: 'Erro',
-      message: 'Erro ao atualizar playlist',
-      type: 'error'
-    })
-  }
-},
+      } catch (err) {
+        console.error(err)
+        this.showToast({
+          title: 'Erro',
+          message: 'Erro ao atualizar playlist',
+          type: 'error'
+        })
+      }
+    },
     
     // ===== IMAGEM =====
     triggerImageUpload() {
@@ -1100,63 +1101,61 @@ async loadFavoritas() {
     
     // ===== BUSCA DEEZER API =====
     debouncedSearch() {
-  clearTimeout(this.searchTimer)
-  this.searchTimer = setTimeout(() => this.searchMusicas(), 400)
-},
+      clearTimeout(this.searchTimer)
+      this.searchTimer = setTimeout(() => this.searchMusicas(), 400)
+    },
     
-   async searchMusicas() {
-  if (this.searchQuery.length < 2) return
+    async searchMusicas() {
+      if (this.searchQuery.length < 2) return
 
-  this.isSearching = true
-  this.searchError = null
+      this.isSearching = true
+      this.searchError = null
 
-  try {
-    // 🔥 BUSCA NO SEU BACKEND
-    const res = await fetch(`http://localhost:3002/musicas/search?q=${this.searchQuery}`)
- const dbMusicas = await res.json()
+      try {
+        // BUSCA NO SEU BACKEND
+        const res = await fetch(`http://localhost:3002/musicas/search?q=${this.searchQuery}`)
+        const dbMusicas = await res.json()
 
-const safeArray = Array.isArray(dbMusicas) ? dbMusicas : []
+        const safeArray = Array.isArray(dbMusicas) ? dbMusicas : []
 
-const formattedDb = safeArray.map(m => ({
+        const formattedDb = safeArray.map(m => ({
+          id: m._id,
+          deezerId: m._id,
+          title: m.nome,
+          artist: m.cantores?.map(c => c.nome).join(', ') || 'Desconhecido',
+          album: m.albuns?.[0]?.nome || 'Sem álbum',
+          duration: m.duracao,
+          cover: m.foto,
+          preview: m.link,
+          isFromDB: true
+        }))
 
-  id: m._id,
-  deezerId: m._id,
-  title: m.nome,
-  artist: m.cantores?.map(c => c.nome).join(', ') || 'Desconhecido',
-  album: m.albuns?.[0]?.nome || 'Sem álbum',
-  duration: m.duracao,
-  cover: m.foto,
-  preview: m.link,
-  isFromDB: true
-}))
+        // DEEZER
+        const response = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=5`)
+        const data = await response.json()
 
+        const deezer = data.data.map(track => ({
+          id: track.id,
+          title: track.title,
+          artist: track.artist.name,
+          album: track.album.title,
+          duration: this.formatDuration(track.duration),
+          cover: track.album.cover_small,
+          preview: track.preview,
+          deezerId: track.id,
+          isFromDB: false
+        }))
 
-    // 🔥 DEEZER
-    const response = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=5`)
-    const data = await response.json()
+        // JUNTA OS DOIS
+        this.searchResults = [...formattedDb, ...deezer]
 
-    const deezer = data.data.map(track => ({
-      id: track.id,
-      title: track.title,
-      artist: track.artist.name,
-      album: track.album.title,
-      duration: this.formatDuration(track.duration),
-      cover: track.album.cover_small,
-      preview: track.preview,
-      deezerId: track.id,
-      isFromDB: false
-    }))
-
-    // 🔥 JUNTA OS DOIS
-    this.searchResults = [...formattedDb, ...deezer]
-
-  } catch (err) {
-    console.error(err)
-    this.searchError = 'Erro ao buscar músicas'
-  } finally {
-    this.isSearching = false
-  }
-},
+      } catch (err) {
+        console.error(err)
+        this.searchError = 'Erro ao buscar músicas'
+      } finally {
+        this.isSearching = false
+      }
+    },
     
     formatDuration(seconds) {
       const mins = Math.floor(seconds / 60)
@@ -1175,29 +1174,29 @@ const formattedDb = safeArray.map(m => ({
     },
     
     // ===== MÚSICAS =====
-   async addSong(song) {
-  try {
-    const token = localStorage.getItem("token")
+    async addSong(song) {
+      try {
+        const token = localStorage.getItem("token")
 
-    if (song.isFromDB) {
-      await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${song.id}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
+        if (song.isFromDB) {
+          await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${song.id}`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
         }
-      })
-    }
 
-    await this.loadPlaylists()
-    window.dispatchEvent(new Event('playlist-updated'))
+        await this.loadPlaylists()
+        window.dispatchEvent(new Event('playlist-updated'))
 
-    const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
-    this.currentPlaylist = updated
+        const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
+        this.currentPlaylist = updated
 
-  } catch (err) {
-    console.error(err)
-  }
-},
+      } catch (err) {
+        console.error(err)
+      }
+    },
     
     // ===== REMOÇÃO DE MÚSICA COM MODAL =====
     confirmRemoveSong(index) {
@@ -1249,57 +1248,58 @@ const formattedDb = safeArray.map(m => ({
     },
     
     // ===== CONTROLES =====
-async toggleFavorita() {
-  try {
-    const token = localStorage.getItem("token")
+    async toggleFavorita() {
+      try {
+        const token = localStorage.getItem("token")
 
-    const res = await fetch(
-      `http://localhost:3002/favoritas/${this.currentPlaylist.id}/favoritar`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // 🔥 IMPORTANTE
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tipo: 'playlist' // 🔥 ESSENCIAL
+        const res = await fetch(
+          `http://localhost:3002/favoritas/${this.currentPlaylist.id}/favoritar`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              tipo: 'playlist'
+            })
+          }
+        )
+
+        const data = await res.json()
+
+        this.currentPlaylist.isFavorita = data.favorited
+
+        const playlist = this.playlists.find(p => p.id === this.currentPlaylist.id)
+        if (playlist) playlist.isFavorita = data.favorited
+
+        if (data.favorited) {
+          if (!this.favoritas.some(f => f.id === this.currentPlaylist.id)) {
+            this.favoritas.push(this.currentPlaylist)
+          }
+        } else {
+          this.favoritas = this.favoritas.filter(f => f.id !== this.currentPlaylist.id)
+        }
+
+        this.showToast({
+          title: data.favorited ? 'Favoritada ❤️' : 'Removida 💔',
+          message: this.currentPlaylist.title,
+          type: 'success'
+        })
+
+        // Dispara evento para atualizar outras páginas
+        window.dispatchEvent(new Event('favoritas-updated'))
+
+      } catch (err) {
+        console.error(err)
+        this.showToast({
+          title: 'Erro',
+          message: 'Erro ao favoritar playlist',
+          type: 'error'
         })
       }
-    )
-
-    const data = await res.json()
-    console.log('RES FAVORITA:', data)
-
-    const favorited = data.favorited
-
-    this.currentPlaylist.isFavorita = favorited
-
-    const playlist = this.playlists.find(p => p.id === this.currentPlaylist.id)
-    if (playlist) playlist.isFavorita = favorited
-
-    if (favorited) {
-      if (!this.favoritas.some(f => f.id === this.currentPlaylist.id)) {
-        this.favoritas.push(this.currentPlaylist)
-      }
-    } else {
-      this.favoritas = this.favoritas.filter(f => f.id !== this.currentPlaylist.id)
-    }
-
-    this.showToast({
-      title: favorited ? 'Favoritada ❤️' : 'Removida 💔',
-      message: this.currentPlaylist.title,
-      type: 'success'
-    })
-
-  } catch (err) {
-    console.error(err)
-    this.showToast({
-      title: 'Erro',
-      message: 'Erro ao favoritar playlist',
-      type: 'error'
-    })
-  }
-},
+    },
+    
     // ===== DROPDOWN OPÇÕES =====
     toggleOptions() {
       this.showOptions = !this.showOptions
@@ -1351,29 +1351,31 @@ async toggleFavorita() {
     },
     
     async executeDelete() {
-  try {
-   const token = localStorage.getItem("token")
+      try {
+        const token = localStorage.getItem("token")
 
-await fetch(`http://localhost:3002/playlists/${this.playlistToDelete.id}`, {
-  method: 'DELETE',
-  headers: {
-    Authorization: `Bearer ${token}`
-  }
-})
-    this.playlists = this.playlists.filter(p => p.id !== this.playlistToDelete.id)
+        await fetch(`http://localhost:3002/playlists/${this.playlistToDelete.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        
+        this.playlists = this.playlists.filter(p => p.id !== this.playlistToDelete.id)
 
-    this.showToast({
-      title: 'Excluída!',
-      message: 'Playlist removida do banco',
-      type: 'success'
-    })
-window.dispatchEvent(new Event('playlist-updated'))
-    this.backToList()
+        this.showToast({
+          title: 'Excluída!',
+          message: 'Playlist removida do banco',
+          type: 'success'
+        })
+        
+        window.dispatchEvent(new Event('playlist-updated'))
+        this.backToList()
 
-  } catch (err) {
-    console.error(err)
-  }
-},
+      } catch (err) {
+        console.error(err)
+      }
+    },
     
     
     // ===== TOAST APRIMORADO =====
@@ -1423,18 +1425,19 @@ window.dispatchEvent(new Event('playlist-updated'))
 
 /* ========== CORREÇÃO DO ESPAÇO À DIREITA ========== */
 .playlist-container {
-  min-height: 100vh;
+   min-height: 100%;
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   padding: 32px;
-  width: calc(100% - 260px);
-  margin-left: 260px;
-  margin-top: 35px;
+   width: 100%;
+    margin-left: 0;
+  margin-top: 1px;
   box-sizing: border-box;
   position: relative;
-  /* Garante que não ultrapasse a viewport */
+    max-width: 100%;
   overflow-x: hidden;
+ padding: 32px;
 }
 
 /* ========== MODO DE EDIÇÃO APRIMORADO ========== */

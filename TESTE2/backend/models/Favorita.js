@@ -8,11 +8,23 @@ const favoritaSchema = new mongoose.Schema({
   },
   musica: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Musica'
+    ref: 'Musica',
+    default: null
   },
   playlist: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Playlist'
+    ref: 'Playlist',
+    default: null
+  },
+  album: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Album',
+    default: null
+  },
+  cantor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Cantor',
+    default: null
   },
   createdAt: {
     type: Date,
@@ -20,9 +32,25 @@ const favoritaSchema = new mongoose.Schema({
   }
 })
 
-// 🔥 evitar duplicar (um ou outro)
-favoritaSchema.index({ usuario: 1, musica: 1 }, { unique: true, sparse: true })
-favoritaSchema.index({ usuario: 1, playlist: 1 }, { unique: true, sparse: true })
+// 🔥 CORREÇÃO: Usar partialFilterExpression para garantir que o índice só aplique quando o campo não for null
+favoritaSchema.index({ usuario: 1, musica: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { musica: { $type: 'objectId' } }
+})
 
+favoritaSchema.index({ usuario: 1, playlist: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { playlist: { $type: 'objectId' } }
+})
+
+favoritaSchema.index({ usuario: 1, album: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { album: { $type: 'objectId' } }
+})
+
+favoritaSchema.index({ usuario: 1, cantor: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { cantor: { $type: 'objectId' } }
+})
 
 module.exports = mongoose.model('Favorita', favoritaSchema)

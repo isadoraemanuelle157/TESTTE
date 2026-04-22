@@ -32,6 +32,7 @@ import Favoritas from '@/views/Favoritas.vue'
 import FeitoParaVoce from '@/components/FeitoParaVoce.vue'
 import Vibe from '@/banco/Vibe.vue'
 import SelecionarAvatar from '@/components/SelecionarAvatar.vue'
+import PerfilUsuario from '@/views/PerfilUsuario.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -151,6 +152,11 @@ const router = createRouter({
       component: Perfil,
       meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
+    {
+  path: '/usuario/:id',
+  name: 'PerfilUsuario',
+  component: PerfilUsuario
+},
     {
       path: '/selecionaravatar',
       name: 'selecionaravatar',

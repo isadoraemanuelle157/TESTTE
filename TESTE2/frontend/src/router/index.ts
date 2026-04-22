@@ -22,7 +22,6 @@ import Cantor from '@/banco/Cantor.vue'
 import TabelaGenero from '@/banco/tabelas/TabelaGenero.vue'
 import TabelaMusica from '@/banco/tabelas/TabelaMusica.vue'
 import TabelaUsuario from '@/banco/tabelas/TabelaUsuario.vue'
-
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import TabelaAlbum from '@/banco/tabelas/TabelaAlbum.vue'
 import TabelaCantor from '@/banco/tabelas/TabelaCantor.vue'
@@ -30,6 +29,9 @@ import Dashboard from '@/views/Dashboard.vue'
 import Registrar2 from '@/banco/Registrar2.vue'
 import Perfil from '@/views/Perfil.vue'
 import Favoritas from '@/views/Favoritas.vue'
+import FeitoParaVoce from '@/components/FeitoParaVoce.vue'
+import Vibe from '@/banco/Vibe.vue'
+import SelecionarAvatar from '@/components/SelecionarAvatar.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -43,26 +45,30 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: Dashboard,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/curtidas',
       name: 'curtidas',
       component: Curtidas,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/favoritas',
       name: 'favoritas',
       component: Favoritas,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
-       {
+    {
       path: '/search',
       name: 'search',
       component: Search,
     },
-       {
+    {
       path: '/playlist',
       name: 'playlist',
       component: Playlist,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/musicplayer',
@@ -70,11 +76,18 @@ const router = createRouter({
       component: MusicPlayer,
     },
     {
+      path: '/feitoparavoce',
+      name: 'feitoparavoce',
+      component: FeitoParaVoce,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
+    },
+    {
       path: '/notificacoes',
       name: 'notificacoes',
       component: Notificacoes,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
-     {
+    {
       path: '/artistas',
       name: 'artistas',
       component: Artistas,
@@ -94,17 +107,17 @@ const router = createRouter({
       name: 'carregamento2',
       component: Carregamento2,
     },
-     {
+    {
       path: '/desafiomusical',
       name: 'desafiomusical',
       component: DesafioMusical,
     },
-     {
+    {
       path: '/karaoke',
       name: 'karaoke',
       component: Karaoke,
     },
-     {
+    {
       path: '/salademusica',
       name: 'salademusica',
       component: SaladeMusica,
@@ -114,62 +127,84 @@ const router = createRouter({
       name: 'matchmusical',
       component: MatchMusical,
     },
-     {
+    {
       path: '/registrar',
       name: 'registrar',
       component: Registrar,
+      meta: { guestOnly: true }, // 🔥 Só para não logados
     },
-     {
+    {
       path: '/registrar2',
       name: 'registrar2',
       component: Registrar2,
+      meta: { guestOnly: true }, // 🔥 Só para não logados
     },
-     {
+    {
       path: '/login',
       name: 'login',
       component: Login,
+      meta: { guestOnly: true }, // 🔥 Só para não logados
     },
     {
       path: '/perfil',
       name: 'perfil',
       component: Perfil,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
-     {
+    {
+      path: '/selecionaravatar',
+      name: 'selecionaravatar',
+      component: SelecionarAvatar,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
+    },
+    {
       path: '/tabelausuario',
       name: 'tabelausuario',
       component: TabelaUsuario,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/tabelagenero',
       name: 'tabelagenero',
       component: TabelaGenero,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/tabelamusica',
       name: 'tabelamusica',
       component: TabelaMusica,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/tabelaalbum',
       name: 'tabelaalbum',
       component: TabelaAlbum,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/tabelacantor',
       name: 'tabelacantor',
       component: TabelaCantor,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
     {
       path: '/editarusuario/:id',
       name: 'editarusuario',
       component: EditarUsuario,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
-     {
+    {
       path: '/generos',
       name: 'generos',
       component: Generos,
     },
-      {
+    {
+      path: '/vibe',
+      name: 'vibe',
+      component: Vibe,
+      meta: { requiresAuth: true }, // 🔥 Protege a rota
+    },
+    {
       path: '/musicas',
       name: 'musicas',
       component: Musicas,
@@ -185,6 +220,33 @@ const router = createRouter({
       component: Cantor,
     },
   ],
+})
+
+// 🔥 NOVO: Guarda de navegação global
+router.beforeEach((to, from, next) => {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
+  const token = localStorage.getItem('token')
+
+  // Verifica se rota requer autenticação
+  if (to.meta.requiresAuth) {
+    if (!isLoggedIn || !token) {
+      // Não está logado, redireciona para login
+      next('/login')
+      return
+    }
+  }
+
+  // Verifica se rota é só para visitantes (não logados)
+  if (to.meta.guestOnly) {
+    if (isLoggedIn && token) {
+      // Já está logado, redireciona para dashboard
+      next('/dashboard')
+      return
+    }
+  }
+
+  // Continua normalmente
+  next()
 })
 
 export default router

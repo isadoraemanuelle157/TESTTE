@@ -26,6 +26,10 @@ const createMusica = async (data) => {
     humor: data.humor?.trim(),
     letra: data.letra?.trim(),
     link: data.link?.trim(),
+
+    ano: data.ano || null,
+    decada: getDecada(data.ano), // 🔥 automático
+
     generos: normalizeIds(data.generos),
     albuns: normalizeIds(data.albuns),
     cantores: normalizeIds(data.cantores)
@@ -86,6 +90,10 @@ const updateMusica = async (id, data) => {
       humor: data.humor?.trim(),
       letra: data.letra?.trim(),
       link: data.link?.trim(),
+
+      ano: data.ano || null,
+      decada: getDecada(data.ano),
+
       generos: normalizeIds(data.generos),
       albuns: normalizeIds(data.albuns),
       cantores: normalizeIds(data.cantores)
@@ -162,11 +170,18 @@ const deleteMusica = async (id) => {
   return await Musica.findByIdAndDelete(id)
 }
 
+const getDecada = (ano) => {
+  if (!ano) return null
+
+  const base = Math.floor(ano / 10) * 10
+  return `Anos ${base}`
+}
 module.exports = {
   createMusica,
   getMusicas,
   getMusicaById,
   updateMusica,
   deleteMusica,
-  searchMusicas
+  searchMusicas,
+  getDecada
 }

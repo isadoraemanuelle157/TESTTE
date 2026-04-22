@@ -33,6 +33,9 @@ const createUser = async (data) => {
   // criptografa senha
   const senhaHash = await bcrypt.hash(senha, 10)
 
+   // Gera avatar padrão com iniciais
+  const defaultAvatar = generateDefaultAvatar(nome, null)
+
  // No createUser, adicione explicitamente:
 const user = new Usuario({
   nome,
@@ -40,12 +43,19 @@ const user = new Usuario({
   email,
   senha: senhaHash,
   bio: '',        // ← explícito
-  avatar: null,   // ← explícito
+   avatar: defaultAvatar, // ← Avatar gerado automaticamente
   cover: null,    // ← explícito
   localizacao: '' // ← explícito
 })
 
   const savedUser = await user.save()
+
+    // Regenera com o ID real
+  if (savedUser._id) {
+    savedUser.avatar = generateDefaultAvatar(nome, savedUser._id.toString())
+    await savedUser.save()
+  }
+  
   return formatUser(savedUser) // ← retorna formatado com id em vez de _id
 }
 
@@ -120,11 +130,75 @@ const deleteUser = async (id) => {
   return formatUser(user)
 }
 
+// Adicione esta função no usuarioservice.js
+const searchUsers = async (query) => {
+  if (!query || query.trim() === '') return []
+  
+  const regex = new RegExp(query, 'i') // case-insensitive
+  
+  const users = await Usuario.find({
+    $or: [
+      { nome: { $regex: regex } },
+      { username: { $regex: regex } },
+      { email: { $regex: regex } }
+    ]
+  }, '-senha').limit(10)
+  
+  return users.map(formatUser)
+}
+const generateDefaultAvatar = (nome, id) => {
+  const initials = nome
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U'
+  
+  // Gera cor consistente baseada no ID
+  const str = id || nome || 'default'
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  
+  const gradients = [
+    ['#667eea', '#764ba2'],
+    ['#f093fb', '#f5576c'],
+    ['#4facfe', '#00f2fe'],
+    ['#43e97b', '#38f9d7'],
+    ['#fa709a', '#fee140'],
+    ['#30cfd0', '#330867']
+  ]
+  
+  const colorIndex = Math.abs(hash) % gradients.length
+  const [color1, color2] = gradients[colorIndex]
+  
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+      <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${color1}"/>
+          <stop offset="100%" stop-color="${color2}"/>
+        </linearGradient>
+      </defs>
+      <rect width="200" height="200" fill="url(#g)"/>
+      <text x="50%" y="50%" font-family="Arial,sans-serif" font-size="80" 
+            font-weight="bold" fill="white" text-anchor="middle" dy=".35em">
+        ${initials}
+      </text>
+    </svg>
+  `
+  
+  return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64')
+}
+// Exporte no module.exports
 module.exports = {
   createUser,
   loginUser,
   getUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
+  searchUsers,
+  generateDefaultAvatar 
 }

@@ -16,6 +16,9 @@ const curtidaRoutes = require('./routes/curtidaRoutes')
 const favoritaRoutes = require('./routes/favoritaRoutes')
 const vibeRoutes = require('./routes/vibeRoutes')
 const followRoutes = require('./routes/followRoutes')
+const historicoRoutes = require('./routes/historicoRoutes')
+const notificacaoRoutes = require('./routes/notificacaoRoutes')
+const privacidadeAtividadeRoutes = require('./routes/privacidadeAtividadeRoutes')
 
 
 // MIDDLEWARES
@@ -34,6 +37,9 @@ app.use('/curtidas', curtidaRoutes)
 app.use('/favoritas', favoritaRoutes)
 app.use('/vibes', vibeRoutes)
 app.use('/follows', followRoutes)
+app.use('/historico', historicoRoutes)
+app.use('/notificacoes', notificacaoRoutes)
+app.use('/privacidade', privacidadeAtividadeRoutes)
 
 // SERVIDOR
 app.listen(3002, () => {

@@ -2,15 +2,16 @@ const express = require('express')
 const router = express.Router()
 
 const followController = require('../controllers/followController')
-const auth = require('../middleware/authMiddleware')
+const authMiddleware = require('../middleware/authMiddleware')
 
-// 🔥 PROTEGIDAS
-router.post('/seguir', auth, followController.seguir)
+router.post('/seguir', authMiddleware, followController.seguir)
 router.get('/seguindo/:id', followController.seguindoPorId)
-router.delete('/desseguir', auth, followController.desseguir)
+router.delete('/desseguir', authMiddleware, followController.desseguir)
 
 router.get('/seguidores/:id', followController.seguidores)
-router.get('/usuario/seguindo', auth, followController.seguindo)
-router.get('/verificar', auth, followController.verificar)
+router.get('/usuario/seguindo', authMiddleware, followController.seguindo)
+router.get('/verificar', authMiddleware, followController.verificar)
+
+router.post('/aceitar', authMiddleware, followController.aceitarSolicitacao)
 
 module.exports = router

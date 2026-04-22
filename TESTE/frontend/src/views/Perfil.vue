@@ -14,7 +14,14 @@
       </div>
     </div>
 
-    <template v-else>
+    <!-- Perfil privado -->
+    <div v-else-if="isPrivateProfile" class="private-profile">
+      <i class="fa fa-lock"></i>
+      <h3>Perfil privado</h3>
+      <p>Este usuário optou por manter o perfil privado.</p>
+    </div>
+  
+<div v-else>
       <!-- Header do Perfil -->
       <div class="profile-header">
         <div class="cover-image" :style="coverStyle">
@@ -977,15 +984,31 @@
                 </div>
                
                 <div class="preference-item">
-                  <div class="preference-info">
-                    <span class="preference-title">Mostrar atividade</span>
-                    <span class="preference-desc">Deixar outros usuários verem o que você está ouvindo</span>
-                  </div>
-                  <label class="toggle-switch">
-                    <input type="checkbox" v-model="editForm.mostrarAtividade" />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </div>
+  <div class="preference-info">
+    <span class="preference-title">Privacidade de atividades</span>
+    <span class="preference-desc">
+      Escolha seguidores e pessoas que você segue que não poderão ver curtidas, playlists e outras informações
+    </span>
+  </div>
+
+  <button
+    type="button"
+    class="btn-secondary"
+    @click="openActivityPrivacyModal"
+  >
+    <i class="fa fa-shield"></i>
+    Gerenciar
+  </button>
+</div>
+
+<div class="preference-item privacy-summary-row">
+  <div class="preference-info">
+    <span class="preference-title">Restrições configuradas</span>
+    <span class="preference-desc">
+      {{ activityPrivacySummary }} pessoa(s) com alguma restrição
+    </span>
+  </div>
+</div>
               </div>
             </div>
            
@@ -1005,6 +1028,102 @@
           </div>
         </div>
       </transition>
+
+      <transition name="modal">
+  <div
+    v-if="showActivityPrivacyModal"
+    class="modal-overlay"
+    @click.self="closeActivityPrivacyModal"
+  >
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <div class="header-info">
+          <h3><i class="fa fa-shield"></i> Privacidade de atividades</h3>
+          <p>Escolha quem não pode ver partes específicas do seu perfil</p>
+        </div>
+
+        <button class="btn-close" @click="closeActivityPrivacyModal">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group full-width">
+          <label>Buscar seguidores e seguindo</label>
+          <input
+            v-model="activityPrivacySearch"
+            type="text"
+            placeholder="Digite nome ou @username"
+          />
+        </div>
+
+        <div v-if="activityPrivacyLoading" class="empty-state">
+          <i class="fa fa-spinner fa-spin"></i>
+          <p>Carregando opções...</p>
+        </div>
+
+        <div v-else-if="filteredActivityPrivacyOptions.length === 0" class="empty-state">
+          <i class="fa fa-users"></i>
+          <p>Nenhum usuário encontrado</p>
+        </div>
+
+        <div v-else class="privacy-users-list">
+          <div
+            v-for="person in filteredActivityPrivacyOptions"
+            :key="person.id"
+            class="privacy-user-card"
+          >
+            <div class="privacy-user-header">
+              <div class="privacy-user-left">
+                <img
+                  :src="person.avatar || defaultAvatar"
+                  class="privacy-user-avatar"
+                  alt="avatar"
+                />
+
+                <div>
+                  <h4>{{ person.nome }}</h4>
+                  <p>@{{ person.username }}</p>
+                  <small>{{ (person.origens || []).join(' • ') }}</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="privacy-resources-grid">
+              <button
+                v-for="resource in activityResources"
+                :key="resource.key"
+                type="button"
+                class="privacy-chip"
+                :class="{ active: isResourceBlockedFor(person.id, resource.key) }"
+                @click="toggleActivityResource(person.id, resource.key)"
+              >
+                <i :class="resource.icon"></i>
+                {{ resource.label }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" @click="closeActivityPrivacyModal">
+          Cancelar
+        </button>
+
+        <button
+          class="btn-primary btn-large"
+          @click="saveActivityPrivacy"
+          :disabled="activityPrivacySaving"
+        >
+          <i v-if="activityPrivacySaving" class="fa fa-spinner fa-spin"></i>
+          <i v-else class="fa fa-check"></i>
+          {{ activityPrivacySaving ? 'Salvando...' : 'Salvar restrições' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</transition>
 
       <!-- Modal de Confirmação de Exclusão -->
       <transition name="modal">
@@ -1243,9 +1362,9 @@
             </div>
           </div>
         </div>
-      </transition>
-    </template>
-  </div>
+      </transition> 
+</div> <!-- fecha v-else -->
+  </div> <!-- fecha .perfil -->
 </template>
 
 <script>
@@ -1301,8 +1420,7 @@ funBaseIcons: ['😎', '🤖', '👻', '🦄', '🐼', '🐸', '🦊', '🐵', '
 
 customArtisticIcons: [],
 customFunIcons: [],
-
-     
+   
       tabs: [
         { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
         { id: 'likes', label: 'Curtidas', icon: 'fa fa-heart', count: 0 },
@@ -1350,7 +1468,22 @@ customFunIcons: [],
         seguindo: 45,
         ouvintesMensais: 0
       },
-     
+      showActivityPrivacyModal: false,
+activityPrivacyLoading: false,
+activityPrivacySaving: false,
+activityPrivacySearch: '',
+activityPrivacyOptions: [],
+activityPrivacyMap: {},
+activityResources: [
+  { key: 'curtidas', label: 'Curtidas', icon: 'fa fa-heart' },
+  { key: 'playlists', label: 'Playlists', icon: 'fa fa-list' },
+  { key: 'atividades', label: 'Atividades', icon: 'fa fa-pulse' },
+  { key: 'seguidores', label: 'Seguidores', icon: 'fa fa-users' },
+  { key: 'seguindo', label: 'Seguindo', icon: 'fa fa-user-plus' },
+  { key: 'estatisticas', label: 'Estatísticas', icon: 'fa fa-bar-chart' },
+  { key: 'tudo', label: 'Tudo', icon: 'fa fa-lock' }
+],
+   
       // Listas
       musicasFavoritas: [],
       playlistsRecentes: [],
@@ -1414,6 +1547,29 @@ customFunIcons: [],
   },
 
   computed: {
+    filteredActivityPrivacyOptions() {
+  const q = this.activityPrivacySearch.trim().toLowerCase()
+  if (!q) return this.activityPrivacyOptions
+
+  return this.activityPrivacyOptions.filter(user =>
+    user.nome?.toLowerCase().includes(q) ||
+    user.username?.toLowerCase().includes(q)
+  )
+},
+
+activityPrivacySummary() {
+  return this.activityPrivacyOptions.filter(user => {
+    const recursos = this.activityPrivacyMap[user.id] || []
+    return recursos.length > 0
+  }).length
+},
+
+      isPrivateProfile() {
+    // Se for dono do perfil, SEMPRE pode ver
+    if (this.isOwnProfile) return false
+
+    return !!this.usuario.perfilPrivado
+  },
     coverStyle() {
       return this.usuario.cover
         ? {
@@ -1768,6 +1924,7 @@ makeAvatarSvg({
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 },
+
 loadCustomAvatarOptions() {
   try {
     this.customArtisticIcons = JSON.parse(localStorage.getItem('custom_artistic_icons') || '[]')
@@ -1824,6 +1981,138 @@ addCustomAvatarOption(type) {
       type: "success",
       icon: "fa fa-plus-circle"
     })
+  }
+},
+async openActivityPrivacyModal() {
+  this.showActivityPrivacyModal = true
+  await this.loadActivityPrivacyData()
+},
+
+closeActivityPrivacyModal() {
+  this.showActivityPrivacyModal = false
+  this.activityPrivacySearch = ''
+},
+
+async loadActivityPrivacyData() {
+  try {
+    this.activityPrivacyLoading = true
+
+    const token = localStorage.getItem('token')
+    const authConfig = {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+
+    const [opcoesRes, restricoesRes] = await Promise.all([
+      axios.get('http://localhost:3002/privacidade/atividade/opcoes', authConfig),
+      axios.get('http://localhost:3002/privacidade/atividade', authConfig)
+    ])
+
+    this.activityPrivacyOptions = opcoesRes.data || []
+
+    const map = {}
+    this.activityPrivacyOptions.forEach(user => {
+      map[user.id] = []
+    })
+
+    ;(restricoesRes.data || []).forEach(item => {
+      const blockedId = item.usuarioBloqueado?._id || item.usuarioBloqueado?.id
+      if (!blockedId) return
+      map[String(blockedId)] = [...(item.recursos || [])]
+    })
+
+    this.activityPrivacyMap = map
+  } catch (error) {
+    console.error('Erro ao carregar privacidade de atividades:', error)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível carregar as restrições de privacidade",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  } finally {
+    this.activityPrivacyLoading = false
+  }
+},
+
+isResourceBlockedFor(userId, resourceKey) {
+  const recursos = this.activityPrivacyMap[userId] || []
+  return recursos.includes(resourceKey)
+},
+
+toggleActivityResource(userId, resourceKey) {
+  if (!this.activityPrivacyMap[userId]) {
+    this.activityPrivacyMap[userId] = []
+  }
+
+  let recursos = [...this.activityPrivacyMap[userId]]
+
+  if (resourceKey === 'tudo') {
+    if (recursos.includes('tudo')) {
+      recursos = []
+    } else {
+      recursos = ['tudo']
+    }
+  } else {
+    recursos = recursos.filter(r => r !== 'tudo')
+
+    if (recursos.includes(resourceKey)) {
+      recursos = recursos.filter(r => r !== resourceKey)
+    } else {
+      recursos.push(resourceKey)
+    }
+  }
+
+  this.activityPrivacyMap[userId] = recursos
+},
+
+async saveActivityPrivacy() {
+  try {
+    this.activityPrivacySaving = true
+
+    const token = localStorage.getItem('token')
+    const authConfig = {
+      headers: { Authorization: `Bearer ${token}` }
+    }
+
+    for (const user of this.activityPrivacyOptions) {
+      const userId = user.id
+      const recursos = this.activityPrivacyMap[userId] || []
+
+      if (recursos.length > 0) {
+        await axios.post(
+          'http://localhost:3002/privacidade/atividade',
+          {
+            usuarioBloqueadoId: userId,
+            recursos
+          },
+          authConfig
+        )
+      } else {
+        await axios.delete(
+          `http://localhost:3002/privacidade/atividade/${userId}`,
+          authConfig
+        )
+      }
+    }
+
+    this.showToast({
+      title: "Privacidade atualizada",
+      message: "Suas restrições de visualização foram salvas",
+      type: "success",
+      icon: "fa fa-shield"
+    })
+
+    this.closeActivityPrivacyModal()
+  } catch (error) {
+    console.error('Erro ao salvar privacidade:', error)
+    this.showToast({
+      title: "Erro",
+      message: error.response?.data?.error || "Não foi possível salvar as restrições",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  } finally {
+    this.activityPrivacySaving = false
   }
 },
 
@@ -2534,25 +2823,24 @@ selectFunAvatar(avatar) {
       }
     },
 
-    openEditModal() {
-      this.editForm = {
-        nome: this.usuario.nome || '',
-        username: this.usuario.username || '',
-        email: this.usuario.email || '',
-        bio: this.usuario.bio || '',
-        avatar: this.usuario.avatar || null,
-        cover: this.usuario.cover || null,
-        localizacao: this.usuario.localizacao || '',
-        website: this.usuario.website || '',
-        generos: [...(this.usuario.generos || [])],
-        perfilPrivado: !!this.usuario.perfilPrivado,
-        mostrarAtividade: this.usuario.mostrarAtividade !== false
-      }
+   openEditModal() {
+  this.editForm = {
+    nome: this.usuario.nome || '',
+    username: this.usuario.username || '',
+    email: this.usuario.email || '',
+    bio: this.usuario.bio || '',
+    avatar: this.usuario.avatar || null,
+    cover: this.usuario.cover || null,
+    localizacao: this.usuario.localizacao || '',
+    website: this.usuario.website || '',
+    generos: [...(this.usuario.generos || [])],
+    perfilPrivado: !!this.usuario.perfilPrivado
+  }
 
-      this.formErrors = {}
-      this.usernameStatus = { type: '', message: '', icon: '' }
-      this.showEditModal = true
-    },
+  this.formErrors = {}
+  this.usernameStatus = { type: '', message: '', icon: '' }
+  this.showEditModal = true
+},
 
     closeEditModal() {
       this.showEditModal = false
@@ -2616,33 +2904,33 @@ selectFunAvatar(avatar) {
           throw new Error("Usuário não identificado")
         }
 
-        const payload = {
-          nome: this.editForm.nome,
-          username: this.editForm.username,
-          bio: this.editForm.bio,
-          email: this.editForm.email,
-          localizacao: this.editForm.localizacao
-        }
+      const payload = {
+  nome: this.editForm.nome,
+  username: this.editForm.username,
+  bio: this.editForm.bio,
+  email: this.editForm.email,
+  localizacao: this.editForm.localizacao
+}
 
-        if (this.editForm.avatar !== this.usuario.avatar) {
-          payload.avatar = this.editForm.avatar ?? null
-        }
+if (this.editForm.avatar !== this.usuario.avatar) {
+  payload.avatar = this.editForm.avatar ?? null
+}
 
-        if (this.editForm.cover !== this.usuario.cover) {
-          payload.cover = this.editForm.cover ?? null
-        }
+if (this.editForm.cover !== this.usuario.cover) {
+  payload.cover = this.editForm.cover ?? null
+}
 
-        if (this.editForm.website !== this.usuario.website) {
-          payload.website = this.editForm.website ?? ''
-        }
+if (this.editForm.website !== this.usuario.website) {
+  payload.website = this.editForm.website ?? ''
+}
 
-        if (JSON.stringify(this.editForm.generos || []) !== JSON.stringify(this.usuario.generos || [])) {
-          payload.generos = this.editForm.generos ?? []
-        }
+if (JSON.stringify(this.editForm.generos || []) !== JSON.stringify(this.usuario.generos || [])) {
+  payload.generos = this.editForm.generos ?? []
+}
 
-        if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
-          payload.perfilPrivado = !!this.editForm.perfilPrivado
-        }
+if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
+  payload.perfilPrivado = !!this.editForm.perfilPrivado
+}
 
         if (this.editForm.mostrarAtividade !== this.usuario.mostrarAtividade) {
           payload.mostrarAtividade = this.editForm.mostrarAtividade !== false
@@ -3072,13 +3360,24 @@ selectFunAvatar(avatar) {
       this.$router.push(`/artista/${artista.id}`)
     },
 
-    goToProfile(user) {
-      if (user.tipo === 'cantor') {
-        this.$router.push(`/cantor/${user._id}`)
-        return
-      }
-      this.$router.push(`/perfil/${user.username || user.id || user._id}`)
-    },
+   goToProfile(user) {
+  if (user.tipo === 'cantor') {
+    this.$router.push(`/cantor/${user._id}`)
+    return
+  }
+
+  const loggedId = String(this.getLoggedUserId())
+  const targetId = String(user._id || user.id)
+
+  if (loggedId === targetId) {
+    return this.$router.push('/perfil')
+  }
+
+  this.$router.push({
+    name: 'PerfilUsuario',
+    params: { id: targetId }
+  })
+},
 
     async toggleFollowUser(user) {
       try {
@@ -3606,6 +3905,75 @@ html, body {
   gap: 8px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+.privacy-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.privacy-user-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.privacy-user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.privacy-user-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.privacy-user-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.privacy-user-left h4 {
+  margin: 0;
+  color: #fff;
+}
+
+.privacy-user-left p,
+.privacy-user-left small {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.privacy-resources-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.privacy-chip {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.03);
+  color: #cbd5e1;
+  padding: 9px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.privacy-chip.active {
+  background: linear-gradient(135deg, rgba(37,99,235,0.24), rgba(124,58,237,0.24));
+  border-color: rgba(37,99,235,0.5);
+  color: #fff;
 }
 
 .genre-tag {

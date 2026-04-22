@@ -1,7 +1,6 @@
 const userService = require('../services/usuarioService')
 const jwt = require('jsonwebtoken')
 
-// CADASTRO
 const create = async (req, res) => {
   try {
     const user = await userService.createUser(req.body)
@@ -12,21 +11,19 @@ const create = async (req, res) => {
       { expiresIn: '365d' }
     )
 
-    res.status(201).json({ 
-      message: 'Usuário criado', 
+    res.status(201).json({
+      message: 'Usuário criado',
       user,
       token
     })
-
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 }
 
-// LOGIN
 const login = async (req, res) => {
   try {
-    const { email, senha } = req.body // 🔥 CORREÇÃO
+    const { email, senha } = req.body
 
     const user = await userService.loginUser(email, senha)
 
@@ -36,18 +33,16 @@ const login = async (req, res) => {
       { expiresIn: '7d' }
     )
 
-    res.json({ 
-      message: 'Login realizado', 
+    res.json({
+      message: 'Login realizado',
       user,
       token
     })
-
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 }
 
-// RESTO IGUAL
 const list = async (req, res) => {
   try {
     const users = await userService.getUsers()
@@ -59,7 +54,7 @@ const list = async (req, res) => {
 
 const getById = async (req, res) => {
   try {
-    const user = await userService.getUserById(req.params.id)
+    const user = await userService.getUserById(req.params.id, req.user?.id)
 
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado" })
@@ -79,11 +74,10 @@ const update = async (req, res) => {
       return res.status(404).json({ message: "Usuário não encontrado" })
     }
 
-    res.json({ 
-      message: "Usuário atualizado", 
+    res.json({
+      message: "Usuário atualizado",
       user
     })
-
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
@@ -103,7 +97,6 @@ const remove = async (req, res) => {
   }
 }
 
-// Adicione no usuarioController.js
 const search = async (req, res) => {
   try {
     const { q } = req.query
@@ -114,7 +107,105 @@ const search = async (req, res) => {
   }
 }
 
-// Exporte no module.exports
+const getPublicCurtidas = async (req, res) => {
+  try {
+    const { id } = req.params
+    const viewerId = req.user?.id
+
+    const user = await userService.getUserById(id, viewerId)
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado" })
+    }
+
+    const podeAcessarPerfil = await userService.canAccessProfile(id, viewerId)
+    if (!podeAcessarPerfil) {
+      return res.status(403).json({ message: "Perfil privado" })
+    }
+
+    const bloqueado = await userService.isResourceBlocked(id, viewerId, 'curtidas')
+    if (bloqueado) {
+      return res.status(403).json({ message: "Curtidas ocultas para você" })
+    }
+
+    const Curtida = require('../models/Curtida')
+    const curtidas = await Curtida.find({ usuario: id })
+      .populate('musica')
+      .limit(50)
+      .sort({ createdAt: -1 })
+
+    const musicas = curtidas.map(c => ({
+      id: c.musica?._id,
+      nome: c.musica?.nome,
+      artist: c.musica?.cantores?.map(cant => cant.nome).join(', ') || 'Artista desconhecido',
+      cover: c.musica?.foto,
+      url: c.musica?.link
+    })).filter(m => m.id)
+
+    res.json(musicas)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const getPublicPlaylists = async (req, res) => {
+  try {
+    const { id } = req.params
+    const viewerId = req.user?.id
+
+    const user = await userService.getUserById(id, viewerId)
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado" })
+    }
+
+    const podeAcessarPerfil = await userService.canAccessProfile(id, viewerId)
+    if (!podeAcessarPerfil) {
+      return res.status(403).json({ message: "Perfil privado" })
+    }
+
+    const bloqueado = await userService.isResourceBlocked(id, viewerId, 'playlists')
+    if (bloqueado) {
+      return res.status(403).json({ message: "Playlists ocultas para você" })
+    }
+
+    const Playlist = require('../models/Playlist')
+    const playlists = await Playlist.find({
+      usuario: id,
+      privacidade: 'Pública'
+    }).sort({ createdAt: -1 }).limit(20)
+
+    res.json(playlists)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const getEstatisticas = async (req, res) => {
+  try {
+    const { id } = req.params
+    const viewerId = req.user?.id
+
+    const user = await userService.getUserById(id, viewerId)
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado" })
+    }
+
+    const podeAcessarPerfil = await userService.canAccessProfile(id, viewerId)
+    if (!podeAcessarPerfil) {
+      return res.status(403).json({ message: "Perfil privado" })
+    }
+
+    const bloqueado = await userService.isResourceBlocked(id, viewerId, 'estatisticas')
+    if (bloqueado) {
+      return res.status(403).json({ message: "Estatísticas ocultas para você" })
+    }
+
+    const stats = await userService.getUserStats(id)
+    res.json(stats)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   create,
   login,
@@ -122,5 +213,8 @@ module.exports = {
   getById,
   update,
   remove,
-  search // 
+  search,
+  getPublicCurtidas,
+  getPublicPlaylists,
+  getEstatisticas
 }

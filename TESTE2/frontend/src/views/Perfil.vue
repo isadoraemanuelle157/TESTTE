@@ -1,867 +1,1250 @@
-<!-- Perfil.vue - Versão Melhorada -->
+<!-- Perfil.vue - Versão Premium Melhorada -->
 <template>
   <div class="perfil">
-    <!-- Header do Perfil -->
-    <div class="profile-header">
-     <div class="cover-image" :style="coverStyle">
-  <div class="cover-gradient"></div>
+    <!-- Skeleton Loading -->
+    <div v-if="loading" class="skeleton-wrapper">
+      <div class="skeleton-cover"></div>
+      <div class="skeleton-profile">
+        <div class="skeleton-avatar"></div>
+        <div class="skeleton-info">
+          <div class="skeleton-line large"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line small"></div>
+        </div>
+      </div>
+    </div>
 
-  <div class="cover-actions" v-if="isOwnProfile">
-    <button
-      type="button"
-      class="btn-cover-action"
-      @click.stop.prevent="triggerCoverUpload"
-    >
-      <i class="fa fa-camera"></i> Alterar capa
-    </button>
-  </div>
+    <template v-else>
+      <!-- Header do Perfil -->
+      <div class="profile-header">
+        <div class="cover-image" :style="coverStyle">
+          <div class="cover-gradient"></div>
 
-  <input
-    type="file"
-    ref="coverInput"
-    accept="image/*"
-    style="display: none"
-    @change="handleCoverChange"
-  />
+          <div class="cover-actions" v-if="isOwnProfile">
+            <button
+              type="button"
+              class="btn-cover-action"
+              @click.stop.prevent="triggerCoverUpload"
+            >
+              <i class="fa fa-camera"></i>
+              <span>Alterar capa</span>
+            </button>
+          </div>
+
+          <input
+            type="file"
+            ref="coverInput"
+            accept="image/*"
+            style="display: none"
+            @change="handleCoverChange"
+          />
+        </div>
+       
+        <div class="profile-info-container">
+          <div class="avatar-section">
+            <div class="avatar-wrapper" :class="{ 'online': isOnline, 'has-story': hasStory }">
+              <!-- Anel de story -->
+              <div class="story-ring" v-if="hasStory" @click="viewStory">
+                <div class="story-progress" :style="storyProgressStyle"></div>
+              </div>
+
+              <!-- Se tem avatar customizado -->
+            <img
+  v-if="usuario.avatar"
+  :src="usuario.avatar"
+  :alt="usuario.nome"
+  class="avatar"
+  @error="handleAvatarError"
+/>
+
+<div
+  v-else
+  class="avatar generated-avatar"
+  :style="generatedAvatarStyle"
+>
+  {{ userInitials }}
 </div>
-     
-      <div class="profile-info-container">
-        <div class="avatar-section">
-          <div class="avatar-wrapper" :class="{ 'online': isOnline }">
-            <img :src="usuario.avatar || defaultAvatar" :alt="usuario.nome" class="avatar" @error="handleAvatarError" />
-            <div class="avatar-status" v-if="isOwnProfile"></div>
-          <button
+
+              <div class="avatar-status" v-if="isOwnProfile"></div>
+
+            <button
   type="button"
   class="btn-edit-avatar"
-  @click="triggerAvatarUpload"
+  @click="openAvatarEditorFlow"
   v-if="isOwnProfile"
 >
   <i class="fa fa-camera"></i>
 </button>
 
-            <input
-              type="file"
-              ref="avatarInput"
-              accept="image/*"
-              @change="handleAvatarChange"
-              style="display: none"
-            />
-          </div>
-        </div>
-       
-        <div class="user-details">
-          <div class="user-badges" v-if="usuario.membroDesde">
-            <span class="badge badge-pro" v-if="isPro">PRO</span>
-            <span class="badge badge-new" v-if="isNewMember">NOVO</span>
-            <span class="badge badge-verified" v-if="usuario.verificado">
-              <i class="fa fa-check-circle"></i> Verificado
-            </span>
-          </div>
-         
-          <h1 class="user-name">{{ usuario.nome || 'Usuário' }}</h1>
-          <p class="user-handle">@{{ usuario.username || 'usuario' }}</p>
-         
-          <div class="user-meta">
-            <span class="meta-item" v-if="usuario.localizacao">
-              <i class="fa fa-map-marker"></i> {{ usuario.localizacao }}
-            </span>
-            <span class="meta-item">
-              <i class="fa fa-calendar"></i> Membro desde {{ formatDate(usuario.membroDesde) }}
-            </span>
-            <span class="meta-item" v-if="usuario.ultimoAcesso">
-              <i class="fa fa-clock-o"></i> Último acesso {{ timeAgo(usuario.ultimoAcesso) }}
-            </span>
-          </div>
-         
-          <p class="user-bio" v-if="usuario.bio">{{ usuario.bio }}</p>
-          <p class="user-bio empty" v-else-if="isOwnProfile">
-            <i class="fa fa-quote-left"></i> Adicione uma bio para que as pessoas te conheçam melhor
-          </p>
-         
-          <div class="user-stats">
-            <div class="stat-item" @click="activeTab = 'likes'">
-              <span class="stat-value">{{ formatNumber(estatisticas.musicasCurtidas) }}</span>
-              <span class="stat-label">Curtidas</span>
-            </div>
-            <div class="stat-item" @click="activeTab = 'playlists'">
-              <span class="stat-value">{{ formatNumber(estatisticas.playlists) }}</span>
-              <span class="stat-label">Playlists</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ formatNumber(estatisticas.seguidores) }}</span>
-              <span class="stat-label">Seguidores</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ formatNumber(estatisticas.seguindo) }}</span>
-              <span class="stat-label">Seguindo</span>
-            </div>
-            <div class="stat-item" v-if="estatisticas.ouvintesMensais">
-              <span class="stat-value highlight">{{ formatNumber(estatisticas.ouvintesMensais) }}</span>
-              <span class="stat-label">Ouvintes/mês</span>
+              <input
+                type="file"
+                ref="avatarInput"
+                accept="image/*"
+                @change="handleAvatarChange"
+                style="display: none"
+              />
             </div>
           </div>
-        </div>
-       
-        <div class="profile-actions">
-        <button type="button" class="btn-primary" @click="openEditModal" v-if="isOwnProfile">
-  <i class="fa fa-pencil"></i> Editar perfil
-</button>
-          <button class="btn-follow" @click="toggleFollow" v-else :class="{ 'following': isFollowing }">
-            <i :class="isFollowing ? 'fa fa-check' : 'fa fa-plus'"></i>
-            {{ isFollowing ? 'Seguindo' : 'Seguir' }}
-          </button>
          
-          <button class="btn-secondary" @click="shareProfile">
-            <i class="fa fa-share-alt"></i>
-          </button>
-          <button class="btn-secondary" @click="showMoreOptions">
-            <i class="fa fa-ellipsis-h"></i>
-          </button>
-        </div>
-      </div>
-    </div>
+          <div class="user-details">
+            <div class="user-badges" v-if="usuario.membroDesde">
+              <span class="badge badge-pro" v-if="isPro">PRO</span>
+              <span class="badge badge-new" v-if="isNewMember">NOVO</span>
+              <span class="badge badge-verified" v-if="usuario.verificado">
+                <i class="fa fa-check-circle"></i> Verificado
+              </span>
+              <span class="badge badge-creator" v-if="usuario.isCreator">
+                <i class="fa fa-music"></i> Criador
+              </span>
+            </div>
+           
+            <h1 class="user-name">{{ usuario.nome || 'Usuário' }}</h1>
+            <p class="user-handle">@{{ usuario.username || 'usuario' }}</p>
+           
+            <div class="user-meta">
+              <span class="meta-item" v-if="usuario.localizacao">
+                <i class="fa fa-map-marker"></i> {{ usuario.localizacao }}
+              </span>
+              <span class="meta-item">
+                <i class="fa fa-calendar"></i> Membro desde {{ formatDate(usuario.membroDesde) }}
+              </span>
+              <span class="meta-item" v-if="usuario.ultimoAcesso">
+                <i class="fa fa-clock-o"></i> Último acesso {{ timeAgo(usuario.ultimoAcesso) }}
+              </span>
+            </div>
+           
+            <p class="user-bio" v-if="usuario.bio">{{ usuario.bio }}</p>
+            <p class="user-bio empty" v-else-if="isOwnProfile">
+              <i class="fa fa-quote-left"></i> Adicione uma bio para que as pessoas te conheçam melhor
+            </p>
 
-    <!-- Menu de Contexto (Mais opções) -->
-    <transition name="fade">
-      <div v-if="showContextMenu" class="context-menu" v-click-outside="closeContextMenu">
-        <div class="context-item" @click="copyProfileUrl">
-          <i class="fa fa-link"></i> Copiar link do perfil
-        </div>
-        <div class="context-item" @click="shareProfile" v-if="!isOwnProfile">
-          <i class="fa fa-share"></i> Compartilhar perfil
-        </div>
-        <div class="context-item" @click="reportUser" v-if="!isOwnProfile">
-          <i class="fa fa-flag"></i> Denunciar usuário
-        </div>
-        <div class="context-item" @click="blockUser" v-if="!isOwnProfile">
-          <i class="fa fa-ban"></i> Bloquear usuário
-        </div>
-        <div class="context-divider" v-if="!isOwnProfile"></div>
-        <div class="context-item danger" @click="confirmDeleteAccount" v-if="isOwnProfile">
-          <i class="fa fa-trash"></i> Excluir conta
-        </div>
-      </div>
-    </transition>
-
-    <!-- Conteúdo Principal -->
-    <div class="profile-content">
-      <!-- Tabs de Navegação -->
-      <div class="tabs-nav-container">
-        <div class="tabs-nav">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            :class="['tab-btn', { active: activeTab === tab.id }]"
-            @click="activeTab = tab.id"
-          >
-            <i :class="tab.icon"></i>
-            <span>{{ tab.label }}</span>
-            <span class="tab-badge" v-if="tab.count">{{ tab.count }}</span>
-          </button>
-        </div>
-       
-        <div class="tabs-actions">
-          <button class="btn-filter" @click="showFilters = !showFilters">
-            <i class="fa fa-filter"></i> Filtros
-          </button>
-          <button class="btn-sort" @click="toggleSort">
-            <i :class="sortDesc ? 'fa fa-sort-amount-desc' : 'fa fa-sort-amount-asc'"></i>
-          </button>
+            <!-- Gêneros favoritos -->
+            <div class="user-genres" v-if="usuario.generos && usuario.generos.length">
+              <span v-for="genre in usuario.generos.slice(0, 4)" :key="genre" class="genre-tag">
+                {{ genre }}
+              </span>
+            </div>
+           
+            <div class="user-stats">
+              <div class="stat-item" @click="activeTab = 'likes'">
+                <span class="stat-value">{{ formatNumber(estatisticas.musicasCurtidas) }}</span>
+                <span class="stat-label">Curtidas</span>
+              </div>
+              <div class="stat-item" @click="activeTab = 'playlists'">
+                <span class="stat-value">{{ formatNumber(estatisticas.playlists) }}</span>
+                <span class="stat-label">Playlists</span>
+              </div>
+              <div class="stat-item" @click="activeTab = 'followers'">
+                <span class="stat-value">{{ seguidoresList?.length || 0 }}</span>
+                <span class="stat-label">Seguidores</span>
+              </div>
+              <div class="stat-item" @click="activeTab = 'following'">
+                <span class="stat-value">{{ seguindoList?.length || 0 }}</span>
+                <span class="stat-label">Seguindo</span>
+              </div>
+              <div class="stat-item" v-if="estatisticas.ouvintesMensais">
+                <span class="stat-value highlight">{{ formatNumber(estatisticas.ouvintesMensais) }}</span>
+                <span class="stat-label">Ouvintes/mês</span>
+              </div>
+            </div>
+          </div>
+         
+          <div class="profile-actions">
+            <button type="button" class="btn-primary" @click="openEditModal" v-if="isOwnProfile">
+              <i class="fa fa-pencil"></i> Editar perfil
+            </button>
+            <button class="btn-follow" @click="toggleFollow" v-else :class="{ 'following': isFollowing }">
+              <i :class="isFollowing ? 'fa fa-check' : 'fa fa-plus'"></i>
+              {{ isFollowing ? 'Seguindo' : 'Seguir' }}
+            </button>
+           
+            <button class="btn-secondary" @click="shareProfile" title="Compartilhar">
+              <i class="fa fa-share-alt"></i>
+            </button>
+            <button class="btn-secondary" @click="showMoreOptions" title="Mais opções">
+              <i class="fa fa-ellipsis-h"></i>
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Painel de Filtros -->
-      <transition name="slide-down">
-        <div v-if="showFilters" class="filters-panel">
-          <div class="filter-group">
-            <label>Período</label>
-            <div class="filter-options">
-              <button
-                v-for="period in filterPeriods"
-                :key="period.value"
-                :class="['filter-chip', { active: activeFilter === period.value }]"
-                @click="activeFilter = period.value"
+      <!-- Menu de Contexto (Mais opções) -->
+      <transition name="fade">
+        <div v-if="showContextMenu" class="context-menu" v-click-outside="closeContextMenu">
+          <div class="context-item" @click="copyProfileUrl">
+            <i class="fa fa-link"></i> Copiar link do perfil
+          </div>
+          <div class="context-item" @click="shareProfile" v-if="!isOwnProfile">
+            <i class="fa fa-share"></i> Compartilhar perfil
+          </div>
+          <div class="context-item" @click="reportUser" v-if="!isOwnProfile">
+            <i class="fa fa-flag"></i> Denunciar usuário
+          </div>
+          <div class="context-item" @click="blockUser" v-if="!isOwnProfile">
+            <i class="fa fa-ban"></i> Bloquear usuário
+          </div>
+          <div class="context-divider" v-if="!isOwnProfile"></div>
+          <div class="context-item danger" @click="confirmDeleteAccount" v-if="isOwnProfile">
+            <i class="fa fa-trash"></i> Excluir conta
+          </div>
+        </div>
+      </transition>
+
+      <!-- Conteúdo Principal -->
+      <div class="profile-content">
+        <!-- Tabs de Navegação -->
+        <div class="tabs-nav-container">
+          <div class="tabs-nav">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              :class="['tab-btn', { active: activeTab === tab.id }]"
+              @click="activeTab = tab.id"
+            >
+              <i :class="tab.icon"></i>
+              <span>{{ tab.label }}</span>
+              <span class="tab-badge" v-if="tab.count">{{ formatNumber(tab.count) }}</span>
+              <div class="tab-indicator" v-if="activeTab === tab.id"></div>
+            </button>
+          </div>
+         
+          <div class="tabs-actions">
+            <button class="btn-filter" @click="showFilters = !showFilters" :class="{ active: showFilters }">
+              <i class="fa fa-filter"></i> Filtros
+            </button>
+            <button class="btn-sort" @click="toggleSort">
+              <i :class="sortDesc ? 'fa fa-sort-amount-desc' : 'fa fa-sort-amount-asc'"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Painel de Filtros -->
+        <transition name="slide-down">
+          <div v-if="showFilters" class="filters-panel">
+            <div class="filter-group">
+              <label>Período</label>
+              <div class="filter-options">
+                <button
+                  v-for="period in filterPeriods"
+                  :key="period.value"
+                  :class="['filter-chip', { active: activeFilter === period.value }]"
+                  @click="activeFilter = period.value"
+                >
+                  {{ period.label }}
+                </button>
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Gênero</label>
+              <div class="filter-options">
+                <button
+                  v-for="genre in genres"
+                  :key="genre"
+                  :class="['filter-chip', { active: selectedGenres.includes(genre) }]"
+                  @click="toggleGenre(genre)"
+                >
+                  {{ genre }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </transition>
+
+        <!-- Tab: Visão Geral -->
+        <div v-if="activeTab === 'overview'" class="tab-content">
+          <div class="content-grid">
+            <!-- Destaque: Música mais ouvida -->
+            <div class="highlight-card" v-if="topTrack">
+              <div class="highlight-header">
+                <i class="fa fa-trophy"></i>
+                <span>Mais ouvida este mês</span>
+              </div>
+              <div class="highlight-content" @click="playMusic(topTrack)">
+                <div class="highlight-image-wrapper">
+                  <img :src="topTrack.cover" :alt="topTrack.title" />
+                  <div class="highlight-glow"></div>
+                </div>
+                <div class="highlight-info">
+                  <h4>{{ topTrack.title }}</h4>
+                  <p>{{ topTrack.artist }}</p>
+                  <span class="highlight-plays">{{ formatNumber(topTrack.plays) }} plays</span>
+                </div>
+                <button class="btn-play-highlight">
+                  <i class="fa fa-play"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Músicas Favoritas -->
+            <div class="content-section">
+              <div class="section-header">
+                <h3><i class="fa fa-heart"></i> Músicas Favoritas</h3>
+                <button class="btn-view-all" @click="activeTab = 'likes'" v-if="musicasFavoritas.length > 0">
+                  Ver todas <i class="fa fa-arrow-right"></i>
+                </button>
+              </div>
+              <div class="mini-list" v-if="musicasFavoritas.length > 0">
+                <div
+                  v-for="(musica, index) in musicasFavoritas.slice(0, 5)"
+                  :key="musica.id"
+                  class="mini-item"
+                  @click="playMusic(musica)"
+                  @contextmenu.prevent="showMusicContext($event, musica)"
+                >
+                  <div class="mini-rank" v-if="index < 3">
+                    <i class="fa fa-trophy" :class="`rank-${index + 1}`"></i>
+                  </div>
+                  <span class="mini-number" v-else>{{ index + 1 }}</span>
+                  <div class="mini-image-wrapper">
+                    <img :src="musica.cover" :alt="musica.nome" />
+                    <div class="mini-overlay">
+                      <i class="fa fa-play"></i>
+                    </div>
+                  </div>
+                  <div class="mini-info">
+                    <h4>{{ musica.nome }}</h4>
+                    <p>{{ musica.artist }}</p>
+                  </div>
+                  <button class="btn-like-mini" @click.stop="toggleLike(musica)" :class="{ 'active': musica.curtido }">
+                    <i :class="musica.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="empty-state" v-else>
+                <div class="empty-icon">
+                  <i class="fa fa-music"></i>
+                </div>
+                <h4>Nenhuma música curtida</h4>
+                <p v-if="isOwnProfile">Comece a curtir músicas para vê-las aqui</p>
+                <button class="btn-explore" @click="$router.push('/search')" v-if="isOwnProfile">
+                  <i class="fa fa-compass"></i> Explorar músicas
+                </button>
+              </div>
+            </div>
+
+            <!-- Playlists Recentes -->
+            <div class="content-section">
+              <div class="section-header">
+                <h3><i class="fa fa-list"></i> Playlists</h3>
+                <button class="btn-view-all" @click="activeTab = 'playlists'" v-if="playlistsRecentes.length > 0">
+                  Ver todas <i class="fa fa-arrow-right"></i>
+                </button>
+              </div>
+              <div class="playlist-list" v-if="playlistsRecentes.length > 0">
+                <div
+                  v-for="playlist in playlistsRecentes"
+                  :key="playlist._id"
+                  class="playlist-row"
+                >
+                  <div class="playlist-header" @click="togglePlaylist(playlist._id)">
+                    <div class="playlist-left">
+                      <i
+                        class="fa"
+                        :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
+                      ></i>
+                      <div class="playlist-thumb-wrapper">
+                        <img :src="playlist.cover || playlist.capa" class="playlist-thumb" />
+                      </div>
+                      <div>
+                        <h4>{{ playlist.nome }}</h4>
+                        <p>{{ playlist.totalMusicas }} músicas • {{ playlist.privacidade }}</p>
+                      </div>
+                    </div>
+                    <button class="btn-play-mini">
+                      <i class="fa fa-play"></i>
+                    </button>
+                  </div>
+
+                  <transition name="expand">
+                    <div v-if="openedPlaylist === playlist._id" class="playlist-musicas">
+                      <div
+                        v-for="(musica, index) in playlist.musicas"
+                        :key="musica._id"
+                        class="musica-item"
+                        @click="playMusic(musica)"
+                      >
+                        <span>{{ index + 1 }}</span>
+                        <img :src="musica.foto" />
+                        <div>
+                          <h5>{{ musica.nome }}</h5>
+                          <p>{{ musica.duracao }}</p>
+                        </div>
+                        <button @click.stop="playMusic(musica)">
+                          <i class="fa fa-play"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </transition>
+                </div>
+              </div>
+              <div class="empty-state" v-else>
+                <div class="empty-icon">
+                  <i class="fa fa-list"></i>
+                </div>
+                <h4>Nenhuma playlist</h4>
+              </div>
+            </div>
+
+            <!-- Artistas Favoritos -->
+            <div class="content-section">
+              <div class="section-header">
+                <h3><i class="fa fa-star"></i> Artistas Favoritos</h3>
+              </div>
+              <div class="artists-list" v-if="artistasFavoritos.length > 0">
+                <div
+                  v-for="artista in artistasFavoritos.slice(0, 6)"
+                  :key="artista.id"
+                  class="artist-item"
+                  @click="goToArtist(artista)"
+                >
+                  <div class="artist-image-wrapper">
+                    <img :src="artista.image" :alt="artista.name" class="artist-avatar" />
+                  </div>
+                  <span class="artist-name">{{ artista.name }}</span>
+                  <span class="artist-plays">{{ formatNumber(artista.plays) }} plays</span>
+                </div>
+              </div>
+              <div class="empty-state compact" v-else>
+                <p>Nenhum artista favorito ainda</p>
+              </div>
+            </div>
+           
+            <!-- Favoritos -->
+            <div class="content-section">
+              <div class="section-header">
+                <h3><i class="fa fa-star"></i> Favoritos</h3>
+              </div>
+              <div class="mini-list" v-if="favoritosRecentes.length > 0">
+                <div
+                  v-for="(item, index) in favoritosRecentes.filter(f => f.type !== 'cantor')"
+                  :key="`${item.type}-${item.id || item._id}`"
+                  class="mini-item"
+                  @click="abrirFavorito(item)"
+                >
+                  <div class="mini-rank" v-if="index < 3">
+                    <i class="fa fa-star" :class="`rank-${index + 1}`"></i>
+                  </div>
+                  <span class="mini-number" v-else>{{ index + 1 }}</span>
+                  <div class="mini-image-wrapper">
+                    <img :src="item.cover" :alt="item.nome" />
+                    <div class="mini-overlay">
+                      <i :class="item.type === 'musica' ? 'fa fa-play' : 'fa fa-list'"></i>
+                    </div>
+                  </div>
+                  <div class="mini-info">
+                    <h4>{{ item.nome }}</h4>
+                    <p>
+                      {{ item.type === 'musica'
+                        ? item.artist
+                        : `${item.musicas || 0} músicas • ${item.duracaoTotal || '0 min'}` }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="empty-state compact" v-else>
+                <p>Nenhum favorito ainda</p>
+              </div>
+            </div>
+           
+            <!-- Atividade Recente -->
+            <div class="content-section full-width">
+              <div class="section-header">
+                <h3><i class="fa fa-pulse"></i> Atividade Recente</h3>
+                <button class="btn-view-all" @click="activeTab = 'activity'" v-if="atividadesRecentes.length > 0">
+                  Ver tudo <i class="fa fa-arrow-right"></i>
+                </button>
+              </div>
+              <div class="activity-list" v-if="atividadesRecentes.length > 0">
+                <div
+                  v-for="atividade in atividadesRecentes.slice(0, 5)"
+                  :key="atividade.id"
+                  class="activity-item"
+                >
+                  <div class="activity-icon" :class="atividade.tipo">
+                    <i :class="getActivityIcon(atividade.tipo)"></i>
+                  </div>
+                  <div class="activity-content">
+                    <p class="activity-text" v-html="atividade.texto"></p>
+                    <span class="activity-time">{{ timeAgo(atividade.data) }}</span>
+                  </div>
+                  <img :src="atividade.imagem" alt="" class="activity-image" v-if="atividade.imagem" />
+                </div>
+              </div>
+              <div class="empty-state compact" v-else>
+                <p>Sem atividades recentes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Curtidas -->
+        <div v-if="activeTab === 'likes'" class="tab-content">
+          <div class="content-section">
+            <div class="section-header">
+              <div class="header-title">
+                <h3><i class="fa fa-heart"></i> Músicas Curtidas</h3>
+                <span class="count-badge">{{ formatNumber(musicasFavoritas.length) }} músicas</span>
+              </div>
+              <div class="header-actions">
+                <button class="btn-shuffle" @click="shufflePlay" :disabled="musicasFavoritas.length === 0">
+                  <i class="fa fa-random"></i> Aleatório
+                </button>
+                <button class="btn-play-all" @click="playAll" :disabled="musicasFavoritas.length === 0">
+                  <i class="fa fa-play"></i> Tocar tudo
+                </button>
+              </div>
+            </div>
+           
+            <div class="music-list-detailed" v-if="musicasFavoritas.length > 0">
+              <div class="list-header">
+                <span class="col-number">#</span>
+                <span class="col-title">Título</span>
+                <span class="col-album">Álbum</span>
+                <span class="col-date">Adicionado</span>
+                <span class="col-duration"><i class="fa fa-clock-o"></i></span>
+                <span class="col-actions"></span>
+              </div>
+             
+              <div
+                v-for="(musica, index) in filteredMusicas"
+                :key="musica.id"
+                class="music-row"
+                :class="{ 'playing': currentPlayingId === musica.id, 'hovered': hoveredRow === musica.id }"
+                @dblclick="playMusic(musica)"
+                @contextmenu.prevent="showMusicContext($event, musica)"
+                @mouseenter="hoveredRow = musica.id"
+                @mouseleave="hoveredRow = null"
               >
-                {{ period.label }}
+                <span class="row-number">
+                  <span v-if="currentPlayingId !== musica.id && hoveredRow !== musica.id">{{ index + 1 }}</span>
+                  <i v-else-if="currentPlayingId === musica.id" class="fa fa-volume-up playing-icon"></i>
+                  <i v-else class="fa fa-play" @click.stop="playMusic(musica)"></i>
+                </span>
+                <div class="row-image-wrapper">
+                  <img :src="musica.cover" :alt="musica.nome" />
+                  <div class="row-image-overlay" v-if="hoveredRow === musica.id">
+                    <i class="fa fa-play"></i>
+                  </div>
+                </div>
+                <div class="row-info">
+                  <h4 :class="{ 'playing': currentPlayingId === musica.id }">{{ musica.nome}}</h4>
+                  <p>{{ musica.artist }}</p>
+                </div>
+                <span class="row-album">{{ musica.album }}</span>
+                <span class="row-date">{{ timeAgo(musica.dataCurtida) }}</span>
+                <span class="row-duration">{{ formatDuration(musica.duration) }}</span>
+                <div class="row-actions">
+                  <button
+                    class="btn-like active"
+                    @click="removerCurtida(musica)"
+                    title="Remover dos curtidos"
+                  >
+                    <i class="fa fa-heart"></i>
+                  </button>
+                  <button class="btn-add" @click="addToPlaylist(musica)" title="Adicionar à playlist">
+                    <i class="fa fa-plus"></i>
+                  </button>
+                  <button class="btn-more" @click="showMusicOptions(musica)">
+                    <i class="fa fa-ellipsis-v"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+           
+            <div class="empty-state large" v-else>
+              <div class="empty-icon large">
+                <i class="fa fa-heart-o"></i>
+              </div>
+              <h4>Sua coleção está vazia</h4>
+              <p>As músicas que você curtir aparecerão aqui</p>
+              <button class="btn-explore" @click="$router.push('/search')">
+                <i class="fa fa-compass"></i> Descobrir músicas
               </button>
             </div>
           </div>
-          <div class="filter-group">
-            <label>Gênero</label>
-            <div class="filter-options">
-              <button
-                v-for="genre in genres"
-                :key="genre"
-                :class="['filter-chip', { active: selectedGenres.includes(genre) }]"
-                @click="toggleGenre(genre)"
+        </div>
+
+        <!-- Tab: Playlists -->
+        <div v-if="activeTab === 'playlists'" class="tab-content">
+          <div class="playlists-full-grid">        
+            <div
+              v-for="playlist in filteredPlaylists"
+              :key="playlist._id"
+              class="playlist-card-large"
+              @click="openPlaylist(playlist)"
+            >
+              <div class="playlist-cover-large">
+                <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                <div class="playlist-overlay">
+                  <button class="btn-play-playlist-large">
+                    <i class="fa fa-play"></i>
+                  </button>
+                </div>
+                <div class="playlist-privacy-badge" :class="playlist.privacidade.toLowerCase()">
+                  <i :class="playlist.privacidade === 'Pública' ? 'fa fa-globe' : 'fa fa-lock'"></i>
+                  {{ playlist.privacidade }}
+                </div>
+              </div>
+              <div class="playlist-info-large">
+                <h4>{{ playlist.nome }}</h4>
+                <p>{{ playlist.descricao || 'Sem descrição' }}</p>
+                <div class="playlist-meta-large">
+                  <span><i class="fa fa-music"></i> {{ playlist.musicas.length }} músicas</span>
+                  <span><i class="fa fa-clock-o"></i> {{ playlist.duracaoTotal || '0 min' }}</span>
+                  <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
+                </div>
+                <div class="playlist-tags" v-if="playlist.tags">
+                  <span v-for="tag in playlist.tags" :key="tag" class="tag">{{ tag }}</span>
+                </div>
+              </div>
+              <div class="playlist-actions">
+                <button class="btn-icon" @click.stop="togglePlaylistLike(playlist)" :class="{ 'active': playlist.curtida }">
+                  <i :class="playlist.curtida ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                </button>
+                <button class="btn-icon" @click.stop="showPlaylistOptions(playlist)">
+                  <i class="fa fa-ellipsis-v"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Histórico -->
+        <div v-if="activeTab === 'history'" class="tab-content">
+          <div class="content-section">
+            <div class="section-header">
+              <div class="header-title">
+                <h3><i class="fa fa-history"></i> Histórico de Reprodução</h3>
+                <span class="count-badge">{{ formatNumber(historicoCompleto.length) }} reproduções</span>
+              </div>
+              <div class="header-actions">
+                <button class="btn-clear" @click="clearHistory" v-if="historicoCompleto.length > 0 && isOwnProfile">
+                  <i class="fa fa-trash"></i> Limpar
+                </button>
+              </div>
+            </div>
+           
+            <div class="history-timeline" v-if="historicoCompleto.length > 0">
+              <div
+                v-for="(item, index) in groupedHistory"
+                :key="index"
+                class="history-group"
               >
-                {{ genre }}
+                <div class="history-date-header">
+                  <span class="date-label">{{ item.date }}</span>
+                  <span class="date-count">{{ item.items.length }} músicas</span>
+                </div>
+               
+                <div class="history-items">
+                  <div
+                    v-for="music in item.items"
+                    :key="music.id"
+                    class="history-item-detailed"
+                    @click="playMusic(music)"
+                  >
+                    <div class="history-image-wrapper">
+                      <img :src="music.cover" :alt="music.title" />
+                    </div>
+                    <div class="history-item-info">
+                      <h4>{{ music.title }}</h4>
+                      <p>{{ music.artist }}</p>
+                    </div>
+                    <span class="history-time">{{ music.hora }}</span>
+                    <button class="btn-like" @click.stop="toggleLike(music)">
+                      <i :class="music.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+           
+            <div class="empty-state large" v-else>
+              <div class="empty-icon large">
+                <i class="fa fa-history"></i>
+              </div>
+              <h4>Histórico vazio</h4>
+              <p>Suas reproduções aparecerão aqui</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Seguidores -->
+        <div v-if="activeTab === 'followers'" class="tab-content">
+          <div class="users-grid" v-if="seguidoresList.length">
+            <div
+              v-for="user in seguidoresList"
+              :key="user._id"
+              class="user-card"
+              @click="goToProfile(user)"
+            >
+              <div class="user-avatar-wrapper">
+                <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
+              </div>
+              <h4>{{ user.nome }}</h4>
+              <p>@{{ user.username }}</p>
+
+              <button
+                v-if="String(user._id) !== String(getLoggedUserId())"
+                class="btn-follow-small"
+                @click.stop="toggleFollowUser(user)"
+                :class="{ 'following': user.isFollowing }"
+              >
+                {{ user.isFollowing ? 'Seguindo' : 'Seguir' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="empty-state large" v-else>
+            <div class="empty-icon large">
+              <i class="fa fa-users"></i>
+            </div>
+            <h4>Nenhum seguidor ainda</h4>
+            <p>Quando alguém seguir este perfil, aparecerá aqui</p>
+          </div>
+        </div>
+
+        <!-- Tab: Seguindo -->
+        <div v-if="activeTab === 'following'" class="tab-content">
+          <div class="users-grid" v-if="seguindoList.length">
+            <div
+              v-for="user in seguindoList"
+              :key="user._id"
+              class="user-card"
+              @click="goToProfile(user)"
+            >
+              <div class="user-avatar-wrapper">
+                <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
+              </div>
+              <h4>{{ user.nome }}</h4>
+              <p>@{{ user.username }}</p>
+
+              <button
+                v-if="String(user._id) !== String(getLoggedUserId())"
+                class="btn-follow-small following"
+                @click.stop="toggleFollowUser(user)"
+              >
+                Seguindo
+              </button>
+            </div>
+          </div>
+
+          <div class="empty-state large" v-else>
+            <div class="empty-icon large">
+              <i class="fa fa-user-plus"></i>
+            </div>
+            <h4>Não segue ninguém ainda</h4>
+            <p>Os usuários seguidos aparecerão aqui</p>
+          </div>
+        </div>
+
+        <!-- Tab: Favoritos -->
+        <div v-if="activeTab === 'favorites'" class="tab-content">
+          <div class="content-section">
+            <div class="section-header">
+              <div class="header-title">
+                <h3><i class="fa fa-star"></i> Seus Favoritos</h3>
+                <span class="count-badge">
+                  {{ favoritosRecentes.length }} itens
+                </span>
+              </div>
+            </div>
+
+            <div class="music-list-detailed" v-if="favoritosRecentes.length > 0">
+              <div
+                v-for="(item, index) in favoritosRecentes"
+                :key="`${item.type}-${item.id || item._id}`"
+                class="music-row"
+                @dblclick="abrirFavorito(item)"
+              >
+                <span class="row-number">{{ index + 1 }}</span>
+                <div class="row-image-wrapper">
+                  <img :src="item.cover" :alt="item.nome" />
+                </div>
+                <div class="row-info">
+                  <h4>{{ item.nome }}</h4>
+                  <p v-if="item.type === 'musica'">{{ item.artist }}</p>
+                  <p v-else-if="item.type === 'playlist'">{{ item.musicas || 0 }} músicas • {{ item.duracaoTotal || '0 min' }}</p>
+                  <p v-else-if="item.type === 'album'">{{ item.artist }} • {{ item.ano || '' }}</p>
+                  <p v-else-if="item.type === 'cantor'">Artista favorito</p>
+                  <p v-else>{{ item.descricao || 'Item favorito' }}</p>
+                </div>
+                <span class="row-album">
+                  {{
+                    item.type === 'musica' ? 'Música' :
+                    item.type === 'playlist' ? 'Playlist' :
+                    item.type === 'album' ? 'Álbum' :
+                    item.type === 'cantor' ? 'Artista' :
+                    'Outro'
+                  }}
+                </span>
+                <div class="row-actions">
+                  <button @click.stop="abrirFavorito(item)">
+                    <i :class="{
+                      'fa fa-play': item.type === 'musica',
+                      'fa fa-list': item.type === 'playlist',
+                      'fa fa-book': item.type === 'album',
+                      'fa fa-microphone': item.type === 'cantor'
+                    }"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="empty-state large" v-else>
+              <div class="empty-icon large">
+                <i class="fa fa-star-o"></i>
+              </div>
+              <h4>Nenhum favorito ainda</h4>
+              <p>Adicione músicas ou playlists aos favoritos</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Edição de Perfil -->
+      <transition name="modal">
+        <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+          <div class="modal-content modal-large">
+            <div class="modal-header">
+              <div class="header-info">
+                <h3><i class="fa fa-pencil"></i> Editar Perfil</h3>
+                <p>Personalize como as pessoas te veem</p>
+              </div>
+              <button class="btn-close" @click="closeEditModal">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+           
+            <div class="modal-body">
+              <!-- Preview do Perfil -->
+              <div class="profile-preview">
+                <div class="preview-cover" :style="previewCoverStyle">
+                  <div class="preview-cover-overlay">
+                    <div class="preview-media-actions">
+                      <button type="button" class="btn-change-cover" @click="triggerCoverUpload">
+                        <i class="fa fa-camera"></i> Alterar capa
+                      </button>
+
+                      <button
+                        v-if="previewHasCover"
+                        type="button"
+                        class="btn-remove-cover"
+                        @click="removeCoverFromEdit"
+                      >
+                        <i class="fa fa-trash"></i> Remover capa
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="preview-avatar-wrapper">
+              <img
+  v-if="editForm.avatar"
+  :src="editForm.avatar"
+  class="preview-avatar"
+  @error="handleAvatarError"
+/>
+<div
+  v-else
+  class="preview-avatar generated-avatar"
+  :style="generatedAvatarStyle"
+>
+  {{ userInitials }}
+</div>
+
+                  <button type="button" class="btn-change-avatar" @click="openAvatarEditorFlow">
+  <i class="fa fa-camera"></i>
+</button>
+
+                  <button
+                    v-if="previewHasAvatar"
+                    type="button"
+                    class="btn-remove-preview-avatar"
+                    @click="removeAvatarFromEdit"
+                  >
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Formulário -->
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Nome completo <span class="required">*</span></label>
+                  <input
+                    v-model="editForm.nome"
+                    type="text"
+                    placeholder="Como você quer ser chamado"
+                    maxlength="50"
+                    :class="{ 'error': formErrors.nome }"
+                  />
+                  <span class="error-message" v-if="formErrors.nome">{{ formErrors.nome }}</span>
+                  <span class="char-count">{{ editForm.nome?.length || 0 }}/50</span>
+                </div>
+               
+                <div class="form-group">
+                  <label>Nome de usuário <span class="required">*</span></label>
+                  <div class="input-prefix">
+                    <span class="prefix">@</span>
+                    <input
+                      v-model="editForm.username"
+                      type="text"
+                      placeholder="seu_username"
+                      maxlength="30"
+                      :class="{ 'error': formErrors.username }"
+                      @blur="checkUsernameAvailability"
+                    />
+                  </div>
+                  <span class="error-message" v-if="formErrors.username">{{ formErrors.username }}</span>
+                  <span class="hint" v-else>URL do perfil: spotify-clone.com/u/{{ editForm.username }}</span>
+                  <span class="availability" :class="usernameStatus.type" v-if="usernameStatus.message">
+                    <i :class="usernameStatus.icon"></i> {{ usernameStatus.message }}
+                  </span>
+                </div>
+               
+                <div class="form-group full-width">
+                  <label>Bio</label>
+                  <textarea
+                    v-model="editForm.bio"
+                    placeholder="Conte um pouco sobre você, seus gostos musicais, bandas favoritas..."
+                    maxlength="160"
+                    rows="3"
+                    :class="{ 'error': formErrors.bio }"
+                  ></textarea>
+                  <span class="error-message" v-if="formErrors.bio">{{ formErrors.bio }}</span>
+                  <span class="char-count">{{ editForm.bio?.length || 0 }}/160</span>
+                </div>
+               
+                <div class="form-group">
+                  <label>Email <span class="required">*</span></label>
+                  <input
+                    v-model="editForm.email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    :class="{ 'error': formErrors.email }"
+                  />
+                  <span class="error-message" v-if="formErrors.email">{{ formErrors.email }}</span>
+                </div>
+               
+                <div class="form-group">
+                  <label>Localização</label>
+                  <input
+                    v-model="editForm.localizacao"
+                    type="text"
+                    placeholder="Cidade, País"
+                    maxlength="50"
+                  />
+                  <span class="hint">Ex: São Paulo, Brasil</span>
+                </div>
+
+                <div class="form-group">
+                  <label>Site / Link</label>
+                  <input
+                    v-model="editForm.website"
+                    type="url"
+                    placeholder="https://seusite.com"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>Gêneros favoritos</label>
+                  <div class="genre-selector">
+                    <button
+                      v-for="genre in availableGenres"
+                      :key="genre"
+                      :class="['genre-chip', { active: (editForm.generos || []).includes(genre) }]"
+                      @click="toggleEditGenre(genre)"
+                    >
+                      {{ genre }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Preferências -->
+              <div class="preferences-section">
+                <h4><i class="fa fa-cog"></i> Preferências</h4>
+               
+                <div class="preference-item">
+                  <div class="preference-info">
+                    <span class="preference-title">Perfil privado</span>
+                    <span class="preference-desc">Apenas seguidores aprovados podem ver seu perfil</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" v-model="editForm.perfilPrivado" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+               
+                <div class="preference-item">
+                  <div class="preference-info">
+                    <span class="preference-title">Mostrar atividade</span>
+                    <span class="preference-desc">Deixar outros usuários verem o que você está ouvindo</span>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" v-model="editForm.mostrarAtividade" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+           
+            <div class="modal-footer">
+              <div class="footer-actions">
+                <button class="btn-secondary" @click="closeEditModal">Cancelar</button>
+                <button class="btn-danger" @click="confirmDeleteAccount">
+                  <i class="fa fa-trash"></i> Excluir conta
+                </button>
+              </div>
+              <button class="btn-primary btn-large" @click="saveProfile" :disabled="saving || !isFormValid">
+                <i v-if="saving" class="fa fa-spinner fa-spin"></i>
+                <i v-else class="fa fa-check"></i>
+                {{ saving ? 'Salvando...' : 'Salvar alterações' }}
               </button>
             </div>
           </div>
         </div>
       </transition>
 
-      <!-- Tab: Visão Geral -->
-      <div v-if="activeTab === 'overview'" class="tab-content">
-        <div class="content-grid">
-          <!-- Destaque: Música mais ouvida -->
-          <div class="highlight-card" v-if="topTrack">
-            <div class="highlight-header">
-              <i class="fa fa-trophy"></i>
-              <span>Mais ouvida este mês</span>
-            </div>
-            <div class="highlight-content" @click="playMusic(topTrack)">
-              <img :src="topTrack.cover" :alt="topTrack.title" />
-              <div class="highlight-info">
-                <h4>{{ topTrack.title }}</h4>
-                <p>{{ topTrack.artist }}</p>
-                <span class="highlight-plays">{{ formatNumber(topTrack.plays) }} plays</span>
+      <!-- Modal de Confirmação de Exclusão -->
+      <transition name="modal">
+        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+          <div class="modal-content modal-danger">
+            <div class="modal-header danger">
+              <div class="danger-icon">
+                <i class="fa fa-exclamation-triangle"></i>
               </div>
-              <button class="btn-play-highlight">
-                <i class="fa fa-play"></i>
+              <h3>Excluir conta permanentemente</h3>
+            </div>
+           
+            <div class="modal-body">
+              <div class="warning-box">
+                <p><strong>Esta ação não pode ser desfeita!</strong></p>
+                <p>Todos os seus dados serão permanentemente removidos, incluindo:</p>
+                <ul>
+                  <li><i class="fa fa-music"></i> {{ musicasFavoritas.length }} músicas curtidas</li>
+                  <li><i class="fa fa-list"></i> {{ todasPlaylists.length }} playlists criadas</li>
+                  <li><i class="fa fa-history"></i> Histórico completo de reprodução</li>
+                  <li><i class="fa fa-user"></i> Seguidores e seguindo</li>
+                  <li><i class="fa fa-cog"></i> Todas as configurações</li>
+                </ul>
+              </div>
+             
+              <div class="confirm-section">
+                <p>Para confirmar, digite <strong>"{{ usuario.username }}"</strong> abaixo:</p>
+                <input
+                  v-model="deleteConfirmText"
+                  type="text"
+                  placeholder="Digite seu nome de usuário"
+                  class="confirm-input"
+                  :class="{ 'error': deleteError }"
+                />
+                <span class="error-message" v-if="deleteError">{{ deleteError }}</span>
+              </div>
+             
+              <div class="password-section">
+                <label>Digite sua senha</label>
+                <div class="password-input">
+                  <input
+                    v-model="deletePassword"
+                    :type="showDeletePassword ? 'text' : 'password'"
+                    placeholder="Sua senha atual"
+                  />
+                  <button @click="showDeletePassword = !showDeletePassword">
+                    <i :class="showDeletePassword ? 'fa fa-eye-slash' : 'fa fa-eye'"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+           
+            <div class="modal-footer danger">
+              <button class="btn-secondary" @click="closeDeleteModal">Cancelar</button>
+              <button
+                class="btn-danger btn-large"
+                @click="executeDeleteAccount"
+                :disabled="deleting || deleteConfirmText !== usuario.username || !deletePassword"
+              >
+                <i v-if="deleting" class="fa fa-spinner fa-spin"></i>
+                <i v-else class="fa fa-trash"></i>
+                {{ deleting ? 'Excluindo...' : 'Excluir minha conta' }}
               </button>
             </div>
           </div>
+        </div>
+      </transition>
 
-          <!-- Músicas Favoritas -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><i class="fa fa-heart"></i> Músicas Favoritas</h3>
-              <button class="btn-view-all" @click="activeTab = 'likes'" v-if="musicasFavoritas.length > 0">
-                Ver todas <i class="fa fa-arrow-right"></i>
+      <!-- Modal de Adicionar à Playlist -->
+      <transition name="modal">
+        <div v-if="showAddToPlaylistModal" class="modal-overlay" @click.self="closeAddToPlaylistModal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Adicionar à playlist</h3>
+              <button class="btn-close" @click="closeAddToPlaylistModal">
+                <i class="fa fa-times"></i>
               </button>
             </div>
-            <div class="mini-list" v-if="musicasFavoritas.length > 0">
-              <div
-                v-for="(musica, index) in musicasFavoritas.slice(0, 5)"
-                :key="musica.id"
-                class="mini-item"
-                @click="playMusic(musica)"
-                @contextmenu.prevent="showMusicContext($event, musica)"
-              >
-                <div class="mini-rank" v-if="index < 3">
-                  <i class="fa fa-trophy" :class="`rank-${index + 1}`"></i>
+           
+            <div class="modal-body">
+              <div class="playlist-selector">
+                <div
+                  v-for="playlist in minhasPlaylists"
+                  :key="playlist._id"
+                  class="playlist-option"
+                  @click="addMusicToPlaylist(playlist)"
+                  :class="{ 'selected': selectedPlaylist === playlist._id }"
+                >
+                  <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                  <div class="playlist-option-info">
+                    <h4>{{ playlist.nome }}</h4>
+                    <p>{{ playlist.musicas.length }} músicas</p>
+                  </div>
+                  <i class="fa fa-check" v-if="selectedPlaylist === playlist._id"></i>
                 </div>
-                <span class="mini-number" v-else>{{ index + 1 }}</span>
-                <img :src="musica.cover" :alt="musica.nome" />
-                <div class="mini-info">
-                  <h4>{{ musica.nome }}</h4>
-                  <p>{{ musica.artist }}</p>
+               
+                <div class="playlist-option create-new" @click="createAndAdd">
+                  <div class="create-icon-small">
+                    <i class="fa fa-plus"></i>
+                  </div>
+                  <span>Criar nova playlist</span>
                 </div>
-                <button class="btn-like-mini" @click.stop="toggleLike(musica)" :class="{ 'active': musica.curtido }">
-                  <i :class="musica.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                </button>
-                <button class="btn-play-mini" @click.stop="playMusic(musica)">
-                  <i class="fa fa-play"></i>
-                </button>
               </div>
-            </div>
-            <div class="empty-state" v-else>
-              <div class="empty-icon">
-                <i class="fa fa-music"></i>
-              </div>
-              <h4>Nenhuma música curtida</h4>
-              <p v-if="isOwnProfile">Comece a curtir músicas para vê-las aqui</p>
-              <button class="btn-explore" @click="$router.push('/explorar')" v-if="isOwnProfile">
-                <i class="fa fa-compass"></i> Explorar músicas
-              </button>
             </div>
           </div>
+        </div>
+      </transition>
 
-          <!-- Playlists Recentes -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><i class="fa fa-list"></i> Playlists</h3>
-              <button class="btn-view-all" @click="activeTab = 'playlists'" v-if="playlistsRecentes.length > 0">
-                Ver todas <i class="fa fa-arrow-right"></i>
+      <!-- Toast de Notificação -->
+      <transition name="toast">
+        <div v-if="toast.show" class="toast-notification" :class="toast.type">
+          <div class="toast-content">
+            <div class="toast-icon">
+              <i :class="toast.icon"></i>
+            </div>
+            <div class="toast-text">
+              <span class="toast-title">{{ toast.title }}</span>
+              <span class="toast-message">{{ toast.message }}</span>
+            </div>
+          </div>
+          <button class="toast-close" @click="toast.show = false">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+      </transition>
+
+      <!-- Modal de Seleção de Avatar -->
+      <transition name="modal">
+        <div v-if="showAvatarSelector" class="modal-overlay" @click.self="closeAvatarSelector">
+          <div class="modal-content modal-avatar">
+            <div class="modal-header">
+              <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
+              <button class="btn-close" @click="closeAvatarSelector">
+                <i class="fa fa-times"></i>
               </button>
             </div>
-            <div class="playlists-grid" v-if="playlistsRecentes.length > 0">
-              <div
-                v-for="playlist in playlistsRecentes"
-                :key="playlist._id"
-                class="playlist-card"
-                @click="openPlaylist(playlist)"
-              >
-                <div class="playlist-cover">
-                  <img :src="playlist.cover" :alt="playlist.nome" />
-                  <div class="playlist-overlay">
-                    <button class="btn-play-playlist">
-                      <i class="fa fa-play"></i>
+           
+            <div class="modal-body">
+              <div class="avatar-selector-tabs">
+                <button
+                  v-for="tab in avatarTabs"
+                  :key="tab.id"
+                  :class="['avatar-tab', { active: activeAvatarTab === tab.id }]"
+                  @click="activeAvatarTab = tab.id"
+                >
+                  <i :class="tab.icon"></i>
+                  {{ tab.label }}
+                </button>
+              </div>
+
+              <div class="avatar-options-grid">
+                <!-- Avatar Iniciais -->
+                <div v-if="activeAvatarTab === 'initials'" class="avatar-option-group">
+                  <div class="avatar-preview-large generated-avatar" :style="generatedAvatarStyle">
+                    {{ userInitials }}
+                  </div>
+                  <p class="avatar-desc">Avatar gerado automaticamente com suas iniciais</p>
+                  <button class="btn-primary" @click="selectInitialsAvatar">
+                    Usar este avatar
+                  </button>
+                </div>
+
+                <!-- Upload -->
+                <div v-if="activeAvatarTab === 'upload'" class="avatar-option-group">
+                  <div
+                    class="upload-dropzone"
+                    @dragover.prevent
+                    @drop.prevent="handleAvatarDrop"
+                    :class="{ 'dragging': isDragging }"
+                  >
+                    <i class="fa fa-cloud-upload"></i>
+                    <p>Arraste uma imagem ou clique para selecionar</p>
+                    <input
+                      type="file"
+                      ref="avatarUploadInput"
+                      accept="image/*"
+                      @change="handleAvatarUploadSelect"
+                      style="display: none"
+                    />
+                    <button class="btn-secondary" @click="$refs.avatarUploadInput.click()">
+                      Selecionar arquivo
                     </button>
                   </div>
-                  <div class="playlist-badge" v-if="playlist.privacidade === 'Privada'">
-                    <i class="fa fa-lock"></i>
-                  </div>
                 </div>
-                <div class="playlist-info-card">
-                  <h4>{{ playlist.nome }}</h4>
-                  <p>{{ playlist.musicas }} músicas • {{ playlist.privacidade }}</p>
-                </div>
-              </div>
-            </div>
-            <div class="empty-state" v-else>
-              <div class="empty-icon">
-                <i class="fa fa-list"></i>
-              </div>
-              <h4>Nenhuma playlist</h4>
-            </div>
-          </div>
 
-          <!-- Artistas Favoritos -->
-          <div class="content-section">
-            <div class="section-header">
-              <h3><i class="fa fa-star"></i> Artistas Favoritos</h3>
-            </div>
-            <div class="artists-list" v-if="artistasFavoritos.length > 0">
-              <div
-                v-for="artista in artistasFavoritos.slice(0, 6)"
-                :key="artista.id"
-                class="artist-item"
-                @click="goToArtist(artista)"
-              >
-                <img :src="artista.image" :alt="artista.name" class="artist-avatar" />
-                <span class="artist-name">{{ artista.name }}</span>
-                <span class="artist-plays">{{ formatNumber(artista.plays) }} plays</span>
-              </div>
-            </div>
-            <div class="empty-state compact" v-else>
-              <p>Nenhum artista favorito ainda</p>
-            </div>
-          </div>
-
-          <!-- Atividade Recente -->
-          <div class="content-section full-width">
-            <div class="section-header">
-              <h3><i class="fa fa-pulse"></i> Atividade Recente</h3>
-              <button class="btn-view-all" @click="activeTab = 'activity'" v-if="atividadesRecentes.length > 0">
-                Ver tudo <i class="fa fa-arrow-right"></i>
-              </button>
-            </div>
-            <div class="activity-list" v-if="atividadesRecentes.length > 0">
-              <div
-                v-for="atividade in atividadesRecentes.slice(0, 5)"
-                :key="atividade.id"
-                class="activity-item"
-              >
-                <div class="activity-icon" :class="atividade.tipo">
-                  <i :class="getActivityIcon(atividade.tipo)"></i>
-                </div>
-                <div class="activity-content">
-                  <p class="activity-text" v-html="atividade.texto"></p>
-                  <span class="activity-time">{{ timeAgo(atividade.data) }}</span>
-                </div>
-                <img :src="atividade.imagem" alt="" class="activity-image" v-if="atividade.imagem" />
-              </div>
-            </div>
-            <div class="empty-state compact" v-else>
-              <p>Sem atividades recentes</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab: Curtidas -->
-      <div v-if="activeTab === 'likes'" class="tab-content">
-        <div class="content-section">
-          <div class="section-header">
-            <div class="header-title">
-              <h3><i class="fa fa-heart"></i> Músicas Curtidas</h3>
-              <span class="count-badge">{{ formatNumber(musicasFavoritas.length) }} músicas</span>
-            </div>
-            <div class="header-actions">
-              <button class="btn-shuffle" @click="shufflePlay" :disabled="musicasFavoritas.length === 0">
-                <i class="fa fa-random"></i> Aleatório
-              </button>
-              <button class="btn-play-all" @click="playAll" :disabled="musicasFavoritas.length === 0">
-                <i class="fa fa-play"></i> Tocar tudo
-              </button>
-            </div>
-          </div>
-         
-          <div class="music-list-detailed" v-if="musicasFavoritas.length > 0">
-            <div class="list-header">
-              <span class="col-number">#</span>
-              <span class="col-title">Título</span>
-              <span class="col-album">Álbum</span>
-              <span class="col-date">Adicionado</span>
-              <span class="col-duration"><i class="fa fa-clock-o"></i></span>
-              <span class="col-actions"></span>
-            </div>
-           
-            <div
-              v-for="(musica, index) in filteredMusicas"
-              :key="musica.id"
-              class="music-row"
-              :class="{ 'playing': currentPlayingId === musica.id }"
-              @dblclick="playMusic(musica)"
-              @contextmenu.prevent="showMusicContext($event, musica)"
-            >
-              <span class="row-number">
-                <span v-if="currentPlayingId !== musica.id">{{ index + 1 }}</span>
-                <i v-else class="fa fa-volume-up playing-icon"></i>
-              </span>
-              <img :src="musica.cover" :alt="musica.nome" />
-              <div class="row-info">
-                <h4 :class="{ 'playing': currentPlayingId === musica.id }">{{ musica.nome}}</h4>
-                <p>{{ musica.artist }}</p>
-              </div>
-              <span class="row-album">{{ musica.album }}</span>
-              <span class="row-date">{{ timeAgo(musica.dataCurtida) }}</span>
-              <span class="row-duration">{{ formatDuration(musica.duration) }}</span>
-              <div class="row-actions">
-                <button
-                  class="btn-like active"
-                  @click="removerCurtida(musica)"
-                  title="Remover dos curtidos"
-                >
-                  <i class="fa fa-heart"></i>
-                </button>
-                <button class="btn-add" @click="addToPlaylist(musica)" title="Adicionar à playlist">
-                  <i class="fa fa-plus"></i>
-                </button>
-                <button class="btn-more" @click="showMusicOptions(musica)">
-                  <i class="fa fa-ellipsis-v"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-         
-          <div class="empty-state large" v-else>
-            <div class="empty-icon large">
-              <i class="fa fa-heart-o"></i>
-            </div>
-            <h4>Sua coleção está vazia</h4>
-            <p>As músicas que você curtir aparecerão aqui</p>
-            <button class="btn-explore" @click="$router.push('/explorar')">
-              <i class="fa fa-compass"></i> Descobrir músicas
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab: Playlists -->
-      <div v-if="activeTab === 'playlists'" class="tab-content">
-        <div class="playlists-full-grid">        
-          <div
-            v-for="playlist in filteredPlaylists"
-            :key="playlist._id"
-            class="playlist-card-large"
-            @click="openPlaylist(playlist)"
-          >
-            <div class="playlist-cover-large">
-              <img :src="playlist.cover" :alt="playlist.nome" />
-              <div class="playlist-overlay">
-                <button class="btn-play-playlist-large">
-                  <i class="fa fa-play"></i>
-                </button>
-              </div>
-              <div class="playlist-privacy-badge" :class="playlist.privacidade.toLowerCase()">
-                <i :class="playlist.privacidade === 'Pública' ? 'fa fa-globe' : 'fa fa-lock'"></i>
-                {{ playlist.privacidade }}
-              </div>
-            </div>
-            <div class="playlist-info-large">
-              <h4>{{ playlist.nome }}</h4>
-              <p>{{ playlist.descricao || 'Sem descrição' }}</p>
-              <div class="playlist-meta-large">
-                <span><i class="fa fa-music"></i> {{ playlist.musicas }} músicas</span>
-                <span><i class="fa fa-clock-o"></i> {{ playlist.duracaoTotal || '0 min' }}</span>
-                <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
-              </div>
-              <div class="playlist-tags" v-if="playlist.tags">
-                <span v-for="tag in playlist.tags" :key="tag" class="tag">{{ tag }}</span>
-              </div>
-            </div>
-            <div class="playlist-actions">
-              <button class="btn-icon" @click.stop="togglePlaylistLike(playlist)" :class="{ 'active': playlist.curtida }">
-                <i :class="playlist.curtida ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-              </button>
-              <button class="btn-icon" @click.stop="showPlaylistOptions(playlist)">
-                <i class="fa fa-ellipsis-v"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab: Histórico -->
-      <div v-if="activeTab === 'history'" class="tab-content">
-        <div class="content-section">
-          <div class="section-header">
-            <div class="header-title">
-              <h3><i class="fa fa-history"></i> Histórico de Reprodução</h3>
-              <span class="count-badge">{{ formatNumber(historicoCompleto.length) }} reproduções</span>
-            </div>
-            <div class="header-actions">
-              <button class="btn-clear" @click="clearHistory" v-if="historicoCompleto.length > 0 && isOwnProfile">
-                <i class="fa fa-trash"></i> Limpar
-              </button>
-            </div>
-          </div>
-         
-          <div class="history-timeline" v-if="historicoCompleto.length > 0">
-            <div
-              v-for="(item, index) in groupedHistory"
-              :key="index"
-              class="history-group"
-            >
-              <div class="history-date-header">
-                <span class="date-label">{{ item.date }}</span>
-                <span class="date-count">{{ item.items.length }} músicas</span>
-              </div>
-             
-              <div class="history-items">
-                <div
-                  v-for="music in item.items"
-                  :key="music.id"
-                  class="history-item-detailed"
-                  @click="playMusic(music)"
-                >
-                  <img :src="music.cover" :alt="music.title" />
-                  <div class="history-item-info">
-                    <h4>{{ music.title }}</h4>
-                    <p>{{ music.artist }}</p>
-                  </div>
-                  <span class="history-time">{{ music.hora }}</span>
-                  <button class="btn-like" @click.stop="toggleLike(music)">
-                    <i :class="music.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-         
-          <div class="empty-state large" v-else>
-            <div class="empty-icon large">
-              <i class="fa fa-history"></i>
-            </div>
-            <h4>Histórico vazio</h4>
-            <p>Suas reproduções aparecerão aqui</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab: Seguidores -->
-      <div v-if="activeTab === 'followers'" class="tab-content">
-        <div class="users-grid">
-          <div
-            v-for="user in seguidoresList"
-            :key="user.id"
-            class="user-card"
-            @click="goToProfile(user)"
-          >
-            <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
-            <h4>{{ user.nome }}</h4>
-            <p>@{{ user.username }}</p>
-            <button
-              class="btn-follow-small"
-              @click.stop="toggleFollowUser(user)"
-              :class="{ 'following': user.isFollowing }"
-            >
-              {{ user.isFollowing ? 'Seguindo' : 'Seguir' }}
-            </button>
-          </div>
-        </div>
-      </div>
+                <!-- Avatares Artísticos -->
+<div v-if="activeAvatarTab === 'artistic'" class="avatar-option-group">
+  <div class="avatar-grid">
+    <div
+      v-for="(avatar, index) in artisticAvatars"
+      :key="`artistic-${index}`"
+      class="avatar-grid-item"
+      @click="selectArtisticAvatar(avatar)"
+    >
+      <img :src="avatar" alt="Avatar artístico" @error="handleGeneratedOptionError" />
     </div>
 
-    <!-- Modal de Edição de Perfil -->
-    <transition name="modal">
-      <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
-        <div class="modal-content modal-large">
-          <div class="modal-header">
-            <div class="header-info">
-              <h3><i class="fa fa-pencil"></i> Editar Perfil</h3>
-              <p>Personalize como as pessoas te veem</p>
-            </div>
-            <button class="btn-close" @click="closeEditModal">
-              <i class="fa fa-times"></i>
-            </button>
-          </div>
-         
-          <div class="modal-body">
-            <!-- Preview do Perfil -->
-            <div class="profile-preview">
-              <div class="preview-cover" :style="previewCoverStyle">
-                <div class="preview-cover-overlay">
-                  <button class="btn-change-cover" @click="triggerCoverUpload">
-                    <i class="fa fa-camera"></i> Alterar capa
-                  </button>
-                </div>
-              </div>
-              <div class="preview-avatar-wrapper">
-                <img :src="editForm.avatar || defaultAvatar" class="preview-avatar" />
-                <button class="btn-change-avatar" @click="triggerAvatarUpload">
-                  <i class="fa fa-camera"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Formulário -->
-            <div class="form-grid">
-              <div class="form-group">
-                <label>Nome completo <span class="required">*</span></label>
-                <input
-                  v-model="editForm.nome"
-                  type="text"
-                  placeholder="Como você quer ser chamado"
-                  maxlength="50"
-                  :class="{ 'error': formErrors.nome }"
-                />
-                <span class="error-message" v-if="formErrors.nome">{{ formErrors.nome }}</span>
-                <span class="char-count">{{ editForm.nome?.length || 0 }}/50</span>
-              </div>
-             
-              <div class="form-group">
-                <label>Nome de usuário <span class="required">*</span></label>
-                <div class="input-prefix">
-                  <span class="prefix">@</span>
-                  <input
-                    v-model="editForm.username"
-                    type="text"
-                    placeholder="seu_username"
-                    maxlength="30"
-                    :class="{ 'error': formErrors.username }"
-                    @blur="checkUsernameAvailability"
-                  />
-                </div>
-                <span class="error-message" v-if="formErrors.username">{{ formErrors.username }}</span>
-                <span class="hint" v-else>URL do perfil: spotify-clone.com/u/{{ editForm.username }}</span>
-                <span class="availability" :class="usernameStatus.type" v-if="usernameStatus.message">
-                  <i :class="usernameStatus.icon"></i> {{ usernameStatus.message }}
-                </span>
-              </div>
-             
-              <div class="form-group full-width">
-                <label>Bio</label>
-                <textarea
-                  v-model="editForm.bio"
-                  placeholder="Conte um pouco sobre você, seus gostos musicais, bandas favoritas..."
-                  maxlength="160"
-                  rows="3"
-                  :class="{ 'error': formErrors.bio }"
-                ></textarea>
-                <span class="error-message" v-if="formErrors.bio">{{ formErrors.bio }}</span>
-                <span class="char-count">{{ editForm.bio?.length || 0 }}/160</span>
-              </div>
-             
-              <div class="form-group">
-                <label>Email <span class="required">*</span></label>
-                <input
-                  v-model="editForm.email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  :class="{ 'error': formErrors.email }"
-                />
-                <span class="error-message" v-if="formErrors.email">{{ formErrors.email }}</span>
-              </div>
-             
-              <div class="form-group">
-                <label>Localização</label>
-                <input
-                  v-model="editForm.localizacao"
-                  type="text"
-                  placeholder="Cidade, País"
-                  maxlength="50"
-                />
-                <span class="hint">Ex: São Paulo, Brasil</span>
-              </div>
-
-              <div class="form-group">
-                <label>Site / Link</label>
-                <input
-                  v-model="editForm.website"
-                  type="url"
-                  placeholder="https://seusite.com"
-                />
-              </div>
-
-              <div class="form-group">
-                <label>Gêneros favoritos</label>
-                <div class="genre-selector">
-                  <button
-                    v-for="genre in availableGenres"
-                    :key="genre"
-                    :class="['genre-chip', { active: (editForm.generos || []).includes(genre) }]"
-                    @click="toggleEditGenre(genre)"
-                  >
-                    {{ genre }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Preferências -->
-            <div class="preferences-section">
-              <h4><i class="fa fa-cog"></i> Preferências</h4>
-             
-              <div class="preference-item">
-                <div class="preference-info">
-                  <span class="preference-title">Perfil privado</span>
-                  <span class="preference-desc">Apenas seguidores aprovados podem ver seu perfil</span>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" v-model="editForm.perfilPrivado" />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-             
-              <div class="preference-item">
-                <div class="preference-info">
-                  <span class="preference-title">Mostrar atividade</span>
-                  <span class="preference-desc">Deixar outros usuários verem o que você está ouvindo</span>
-                </div>
-                <label class="toggle-switch">
-                  <input type="checkbox" v-model="editForm.mostrarAtividade" />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-          </div>
-         
-          <div class="modal-footer">
-            <div class="footer-actions">
-              <button class="btn-secondary" @click="closeEditModal">Cancelar</button>
-              <button class="btn-danger" @click="confirmDeleteAccount">
-                <i class="fa fa-trash"></i> Excluir conta
-              </button>
-            </div>
-            <button class="btn-primary btn-large" @click="saveProfile" :disabled="saving || !isFormValid">
-              <i v-if="saving" class="fa fa-spinner fa-spin"></i>
-              <i v-else class="fa fa-check"></i>
-              {{ saving ? 'Salvando...' : 'Salvar alterações' }}
-            </button>
-          </div>
-        </div>
+    <button
+      type="button"
+      class="avatar-grid-item avatar-grid-item--add"
+      @click="addCustomAvatarOption('artistic')"
+    >
+      <div class="add-avatar-content">
+        <i class="fa fa-plus"></i>
+        <span>Novo ícone</span>
       </div>
-    </transition>
+    </button>
+  </div>
+</div>
 
-    <!-- Modal de Confirmação de Exclusão -->
-    <transition name="modal">
-      <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-        <div class="modal-content modal-danger">
-          <div class="modal-header danger">
-            <div class="danger-icon">
-              <i class="fa fa-exclamation-triangle"></i>
-            </div>
-            <h3>Excluir conta permanentemente</h3>
-          </div>
-         
-          <div class="modal-body">
-            <div class="warning-box">
-              <p><strong>Esta ação não pode ser desfeita!</strong></p>
-              <p>Todos os seus dados serão permanentemente removidos, incluindo:</p>
-              <ul>
-                <li><i class="fa fa-music"></i> {{ musicasFavoritas.length }} músicas curtidas</li>
-                <li><i class="fa fa-list"></i> {{ todasPlaylists.length }} playlists criadas</li>
-                <li><i class="fa fa-history"></i> Histórico completo de reprodução</li>
-                <li><i class="fa fa-user"></i> Seguidores e seguindo</li>
-                <li><i class="fa fa-cog"></i> Todas as configurações</li>
-              </ul>
-            </div>
-           
-            <div class="confirm-section">
-              <p>Para confirmar, digite <strong>"{{ usuario.username }}"</strong> abaixo:</p>
-              <input
-                v-model="deleteConfirmText"
-                type="text"
-                placeholder="Digite seu nome de usuário"
-                class="confirm-input"
-                :class="{ 'error': deleteError }"
-              />
-              <span class="error-message" v-if="deleteError">{{ deleteError }}</span>
-            </div>
-           
-            <div class="password-section">
-              <label>Digite sua senha</label>
-              <div class="password-input">
-                <input
-                  v-model="deletePassword"
-                  :type="showDeletePassword ? 'text' : 'password'"
-                  placeholder="Sua senha atual"
-                />
-                <button @click="showDeletePassword = !showDeletePassword">
-                  <i :class="showDeletePassword ? 'fa fa-eye-slash' : 'fa fa-eye'"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-         
-          <div class="modal-footer danger">
-            <button class="btn-secondary" @click="closeDeleteModal">Cancelar</button>
-            <button
-              class="btn-danger btn-large"
-              @click="executeDeleteAccount"
-              :disabled="deleting || deleteConfirmText !== usuario.username || !deletePassword"
-            >
-              <i v-if="deleting" class="fa fa-spinner fa-spin"></i>
-              <i v-else class="fa fa-trash"></i>
-              {{ deleting ? 'Excluindo...' : 'Excluir minha conta' }}
-            </button>
-          </div>
-        </div>
+<!-- Avatares Divertidos -->
+<div v-if="activeAvatarTab === 'fun'" class="avatar-option-group">
+  <div class="avatar-grid">
+    <div
+      v-for="(avatar, index) in funAvatars"
+      :key="`fun-${index}`"
+      class="avatar-grid-item"
+      @click="selectFunAvatar(avatar)"
+    >
+      <img :src="avatar" alt="Avatar divertido" />
+    </div>
+
+    <button
+      type="button"
+      class="avatar-grid-item avatar-grid-item--add"
+      @click="addCustomAvatarOption('fun')"
+    >
+      <div class="add-avatar-content">
+        <i class="fa fa-plus"></i>
+        <span>Novo ícone</span>
       </div>
-    </transition>
-
-    <!-- Modal de Adicionar à Playlist -->
-    <transition name="modal">
-      <div v-if="showAddToPlaylistModal" class="modal-overlay" @click.self="closeAddToPlaylistModal">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>Adicionar à playlist</h3>
-            <button class="btn-close" @click="closeAddToPlaylistModal">
-              <i class="fa fa-times"></i>
-            </button>
-          </div>
-         
-          <div class="modal-body">
-            <div class="playlist-selector">
-              <div
-                v-for="playlist in minhasPlaylists"
-                :key="playlist._id"
-                class="playlist-option"
-                @click="addMusicToPlaylist(playlist)"
-                :class="{ 'selected': selectedPlaylist === playlist._id }"
-              >
-                <img :src="playlist.cover" :alt="playlist.nome" />
-                <div class="playlist-option-info">
-                  <h4>{{ playlist.nome }}</h4>
-                  <p>{{ playlist.musicas }} músicas</p>
+    </button>
+  </div>
                 </div>
-                <i class="fa fa-check" v-if="selectedPlaylist === playlist._id"></i>
-              </div>
-             
-              <div class="playlist-option create-new" @click="createAndAdd">
-                <div class="create-icon-small">
-                  <i class="fa fa-plus"></i>
-                </div>
-                <span>Criar nova playlist</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </transition>
-
-    <!-- Toast de Notificação -->
-    <transition name="toast">
-      <div v-if="toast.show" class="toast-notification" :class="toast.type">
-        <div class="toast-content">
-          <div class="toast-icon">
-            <i :class="toast.icon"></i>
-          </div>
-          <div class="toast-text">
-            <span class="toast-title">{{ toast.title }}</span>
-            <span class="toast-message">{{ toast.message }}</span>
-          </div>
-        </div>
-        <button class="toast-close" @click="toast.show = false">
-          <i class="fa fa-times"></i>
-        </button>
-      </div>
-    </transition>
+      </transition>
+    </template>
   </div>
 </template>
 
@@ -892,13 +1275,42 @@ export default {
  
   data() {
     return {
+      loading: true,
       activeTab: 'overview',
+      seguindoList: [],
+      openedPlaylist: null,
+      showAvatarSelector: false,
+      activeAvatarTab: 'initials',
+      isDragging: false,
+      hoveredRow: null,
+      hasStory: false,
+      storyProgress: 0,
+      defaultAvatar: null,
+     
+      avatarTabs: [
+        { id: 'initials', label: 'Iniciais', icon: 'fa fa-font' },
+        { id: 'upload', label: 'Upload', icon: 'fa fa-upload' },
+        { id: 'artistic', label: 'Artístico', icon: 'fa fa-paint-brush' },
+        { id: 'fun', label: 'Divertido', icon: 'fa fa-smile-o' }
+      ],
+     
+      artisticAvatars: [],
+      funAvatars: [],
+      artisticBaseIcons: ['♪', '♫', '★', '✦', '◆', '⚡', '♥', '☾'],
+funBaseIcons: ['😎', '🤖', '👻', '🦄', '🐼', '🐸', '🦊', '🐵', '😺', '🔥', '🌈', '🎵'],
+
+customArtisticIcons: [],
+customFunIcons: [],
+
+     
       tabs: [
         { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null },
         { id: 'likes', label: 'Curtidas', icon: 'fa fa-heart', count: 0 },
         { id: 'playlists', label: 'Playlists', icon: 'fa fa-list', count: 0 },
         { id: 'history', label: 'Histórico', icon: 'fa fa-history', count: null },
-        { id: 'followers', label: 'Seguidores', icon: 'fa fa-users', count: 128 }
+        { id: 'followers', label: 'Seguidores', icon: 'fa fa-users', count: 0 },
+        { id: 'following', label: 'Seguindo', icon: 'fa fa-user-plus', count: 0 },
+        { id: 'favorites', label: 'Favoritos', icon: 'fa fa-star', count: 0 }
       ],
      
       // Dados do usuário
@@ -917,10 +1329,11 @@ export default {
         verificado: false,
         perfilPrivado: false,
         mostrarAtividade: true,
-        generos: []
+        generos: [],
+        isCreator: false
       },
      
-      defaultAvatar: "https://ui-avatars.com/api/?name=User&background=6366f1&color=fff",
+      // defaultAvatar: "https://ui-avatars.com/api/?name=User&background=6366f1&color=fff",
      
       // Estados
       isOwnProfile: true,
@@ -946,6 +1359,8 @@ export default {
       historicoRecente: [],
       historicoCompleto: [],
       artistasFavoritos: [],
+      favoritos: [],
+      favoritosRecentes: [],
       atividadesRecentes: [],
       seguidoresList: [],
       topTrack: null,
@@ -999,31 +1414,97 @@ export default {
   },
 
   computed: {
-   coverStyle() {
-  return this.usuario.cover
-    ? {
-        backgroundImage: `url(${this.usuario.cover})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+    coverStyle() {
+      return this.usuario.cover
+        ? {
+            backgroundImage: `url(${this.usuario.cover})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }
+        : {
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+          }
+    },
+   
+  hasCustomAvatar() {
+  return !!this.usuario.avatar
+},
+
+    hasCustomCover() {
+      return !!this.usuario.cover
+    },
+
+    previewHasAvatar() {
+      return !!this.editForm.avatar
+    },
+
+    previewHasCover() {
+      return !!this.editForm.cover
+    },
+
+    userInitials() {
+      if (!this.usuario.nome) return 'U'
+      return this.usuario.nome
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    },
+   
+    userColorIndex() {
+      const str = this.usuario.id || this.usuario.nome || 'default'
+      let hash = 0
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash)
       }
-    : {
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+      return Math.abs(hash) % 12
+    },
+   
+    generatedAvatarStyle() {
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+        'linear-gradient(135deg, #fc466b 0%, #3f5efb 100%)'
+      ]
+     
+      const textColors = ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff',
+                          '#333', '#333', '#333', '#fff', '#fff', '#fff']
+     
+      return {
+        background: gradients[this.userColorIndex],
+        color: textColors[this.userColorIndex]
       }
+    },
+   
+isDefaultAvatar() {
+  return !this.usuario.avatar
 },
    
-previewCoverStyle() {
-  return this.editForm.cover
-    ? {
-        backgroundImage: `url(${this.editForm.cover})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }
-    : {
-        background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
-      }
-},
+    previewCoverStyle() {
+      const cover = this.editForm.cover || this.usuario.cover
+
+      return cover
+        ? {
+            backgroundImage: `url(${cover})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }
+        : {
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+          }
+    },
    
     isNewMember() {
       if (!this.usuario.membroDesde) return false
@@ -1041,7 +1522,6 @@ previewCoverStyle() {
     filteredMusicas() {
       let musicas = [...this.musicasFavoritas]
      
-      // Filtro de período
       if (this.activeFilter !== 'all') {
         const now = Date.now()
         const limits = {
@@ -1055,12 +1535,10 @@ previewCoverStyle() {
         })
       }
      
-      // Filtro de gênero
       if (this.selectedGenres.length > 0) {
         musicas = musicas.filter(m => this.selectedGenres.some(g => m.genero?.includes(g)))
       }
      
-      // Ordenação
       musicas.sort((a, b) => {
         const dateA = new Date(a.dataCurtida || a.adicionadoEm)
         const dateB = new Date(b.dataCurtida || b.adicionadoEm)
@@ -1094,197 +1572,887 @@ previewCoverStyle() {
         date: date.charAt(0).toUpperCase() + date.slice(1),
         items
       }))
+    },
+
+    storyProgressStyle() {
+      return {
+        background: `conic-gradient(#ec4899 ${this.storyProgress}%, transparent ${this.storyProgress}%)`
+      }
     }
   },
 
-mounted() {
-  this.carregarUsuarioLogado()
+ mounted() {
+  setTimeout(() => {
+    this.loading = false
+  }, 800)
+
+this.carregarUsuarioLogado()
+this.loadCustomAvatarOptions()
+this.generateArtisticAvatars()
+this.generateFunAvatars()
+
   this.carregarDados()
   this.carregarCurtidas()
+  this.carregarFavoritos()
   this.carregarArtistas()
   this.carregarAtividades()
+  this.carregarFollows()
 
   this.onPlaylistUpdated = () => this.carregarDados()
   this.onLikesUpdated = () => this.carregarCurtidas()
-  this.onPerfilUpdated = () => this.carregarUsuarioLogado()
+  this.onFavoritesUpdated = () => this.carregarFavoritos()
+  this.onPerfilUpdated = () => {
+    this.carregarUsuarioLogado()
+    this.generateArtisticAvatars()
+    this.generateFunAvatars()
+  }
 
   window.addEventListener('playlist-updated', this.onPlaylistUpdated)
   window.addEventListener('likes-updated', this.onLikesUpdated)
+  window.addEventListener('favoritas-updated', this.onFavoritesUpdated)
   window.addEventListener('perfil-updated', this.onPerfilUpdated)
   window.addEventListener('focus', this.handleFocus)
   window.addEventListener('storage', this.handleStorage)
 },
 
-beforeUnmount() {
-  if (this.toastTimeout) clearTimeout(this.toastTimeout)
+  beforeUnmount() {
+    if (this.toastTimeout) clearTimeout(this.toastTimeout)
 
-  window.removeEventListener('playlist-updated', this.onPlaylistUpdated)
-  window.removeEventListener('likes-updated', this.onLikesUpdated)
-  window.removeEventListener('perfil-updated', this.onPerfilUpdated)
-  window.removeEventListener('focus', this.handleFocus)
-  window.removeEventListener('storage', this.handleStorage)
-},
-
+    window.removeEventListener('playlist-updated', this.onPlaylistUpdated)
+    window.removeEventListener('likes-updated', this.onLikesUpdated)
+    window.removeEventListener('favoritas-updated', this.onFavoritesUpdated)
+    window.removeEventListener('perfil-updated', this.onPerfilUpdated)
+    window.removeEventListener('focus', this.handleFocus)
+    window.removeEventListener('storage', this.handleStorage)
+  },
 
   methods: {
+generateArtisticAvatars() {
+  const palettes = [
+    ['#667eea', '#764ba2'],
+    ['#f093fb', '#f5576c'],
+    ['#4facfe', '#00f2fe'],
+    ['#43e97b', '#38f9d7'],
+    ['#fa709a', '#fee140'],
+    ['#30cfd0', '#330867'],
+    ['#11998e', '#38ef7d'],
+    ['#fc466b', '#3f5efb']
+  ]
+
+  const icons = [...this.artisticBaseIcons, ...this.customArtisticIcons]
+
+  this.artisticAvatars = icons.map((iconSymbol, index) => {
+    const colors = palettes[index % palettes.length]
+
+    return this.makeAvatarSvg({
+      type: 'artistic',
+      seed: `${this.usuario.username || this.usuario.nome || 'user'}-${index}-${iconSymbol}`,
+      iconSymbol,
+      colorA: colors[0],
+      colorB: colors[1]
+    })
+  })
+},
+
+generateFunAvatars() {
+  const palettes = [
+    ['#ff9a9e', '#fecfef'],
+    ['#a18cd1', '#fbc2eb'],
+    ['#fad0c4', '#ffd1ff'],
+    ['#ffecd2', '#fcb69f'],
+    ['#84fab0', '#8fd3f4'],
+    ['#fccb90', '#d57eeb']
+  ]
+
+  const emojis = [...this.funBaseIcons, ...this.customFunIcons]
+
+  this.funAvatars = emojis.map((emoji, index) => {
+    const colors = palettes[index % palettes.length]
+
+    return this.makeAvatarSvg({
+      type: 'fun',
+      emoji,
+      colorA: colors[0],
+      colorB: colors[1]
+    })
+  })
+},
+
+makeAvatarSvg({
+  type = 'artistic',
+  seed = 'user',
+  emoji = '😎',
+  iconSymbol = '♪',
+  colorA = '#667eea',
+  colorB = '#764ba2'
+}) {
+  const initials = this.userInitials || 'U'
+  const hash = [...seed].reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+  const circle1X = 40 + (hash % 24)
+  const circle1Y = 46 + (hash % 20)
+  const circle2X = 210 - (hash % 18)
+  const circle2Y = 58 + (hash % 14)
+  const circle3X = 205 - (hash % 22)
+  const circle3Y = 210 - (hash % 18)
+
+  let content = ''
+
+  if (type === 'artistic') {
+    content = `
+      <circle cx="128" cy="128" r="74" fill="rgba(255,255,255,0.08)" />
+      <circle cx="128" cy="128" r="56" fill="rgba(255,255,255,0.14)" />
+      <text
+        x="128"
+        y="148"
+        text-anchor="middle"
+        font-size="82"
+        font-family="Segoe UI Symbol, Arial Unicode MS, sans-serif"
+        font-weight="700"
+        fill="#ffffff"
+      >
+        ${iconSymbol}
+      </text>
+      <circle cx="${circle1X}" cy="${circle1Y}" r="18" fill="rgba(255,255,255,0.18)" />
+      <circle cx="${circle2X}" cy="${circle2Y}" r="12" fill="rgba(255,255,255,0.15)" />
+      <circle cx="${circle3X}" cy="${circle3Y}" r="20" fill="rgba(255,255,255,0.10)" />
+    `
+  } else {
+    content = `
+      <text
+        x="128"
+        y="145"
+        text-anchor="middle"
+        font-size="82"
+        font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif"
+      >
+        ${emoji}
+      </text>
+      <circle cx="${circle1X}" cy="${circle1Y}" r="18" fill="rgba(255,255,255,0.18)" />
+      <circle cx="${circle2X}" cy="${circle2Y}" r="12" fill="rgba(255,255,255,0.16)" />
+      <circle cx="${circle3X}" cy="${circle3Y}" r="18" fill="rgba(255,255,255,0.12)" />
+    `
+  }
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${colorA}" />
+          <stop offset="100%" stop-color="${colorB}" />
+        </linearGradient>
+      </defs>
+
+      <rect width="256" height="256" rx="64" fill="url(#bg)" />
+      ${content}
+
+      ${
+        type === 'artistic'
+          ? `
+          <text
+            x="128"
+            y="228"
+            text-anchor="middle"
+            font-size="20"
+            font-weight="700"
+            fill="rgba(255,255,255,0.65)"
+            font-family="Arial, sans-serif"
+          >
+            ${initials}
+          </text>
+        `
+          : ''
+      }
+    </svg>
+  `
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+},
+loadCustomAvatarOptions() {
+  try {
+    this.customArtisticIcons = JSON.parse(localStorage.getItem('custom_artistic_icons') || '[]')
+    this.customFunIcons = JSON.parse(localStorage.getItem('custom_fun_icons') || '[]')
+  } catch (error) {
+    this.customArtisticIcons = []
+    this.customFunIcons = []
+  }
+},
+
+saveCustomAvatarOptions() {
+  localStorage.setItem('custom_artistic_icons', JSON.stringify(this.customArtisticIcons))
+  localStorage.setItem('custom_fun_icons', JSON.stringify(this.customFunIcons))
+},
+
+addCustomAvatarOption(type) {
+  if (type === 'artistic') {
+    const value = window.prompt('Digite um símbolo para o avatar artístico\nEx.: ♪ ★ ✦ ⚡ ♥ ☾')
+    if (!value) return
+
+    const icon = value.trim()
+    if (!icon) return
+
+    if (!this.customArtisticIcons.includes(icon)) {
+      this.customArtisticIcons.push(icon)
+      this.saveCustomAvatarOptions()
+      this.generateArtisticAvatars()
+
+      this.showToast({
+        title: "Ícone artístico adicionado",
+        message: `Novo ícone "${icon}" disponível na galeria`,
+        type: "success",
+        icon: "fa fa-plus-circle"
+      })
+    }
+
+    return
+  }
+
+  const value = window.prompt('Digite um emoji para o avatar divertido\nEx.: 😺 🚀 🎧 🎮 🎵')
+  if (!value) return
+
+  const emoji = value.trim()
+  if (!emoji) return
+
+  if (!this.customFunIcons.includes(emoji)) {
+    this.customFunIcons.push(emoji)
+    this.saveCustomAvatarOptions()
+    this.generateFunAvatars()
+
+    this.showToast({
+      title: "Emoji adicionado",
+      message: `Novo avatar divertido "${emoji}" disponível na galeria`,
+      type: "success",
+      icon: "fa fa-plus-circle"
+    })
+  }
+},
+
+    viewStory() {
+      this.showToast({
+        title: "Story",
+        message: "Visualizando story do usuário...",
+        type: "info",
+        icon: "fa fa-circle-o"
+      })
+    },
+
+handleGeneratedOptionError(event) {
+  event.target.src = this.defaultAvatar
+},
+
     carregarUsuarioLogado() {
       const storedUser = localStorage.getItem('usuario')
       const storedProfile = localStorage.getItem('usuario_perfil')
      
       if (storedUser) {
         const userData = JSON.parse(storedUser)
-        this.usuario = { ...this.usuario, ...userData }
-       
+        this.usuario = {
+          ...this.usuario,
+          ...userData,
+          id: userData.id || userData._id || this.usuario.id
+        }
+     
         if (storedProfile) {
           const profileData = JSON.parse(storedProfile)
-          this.usuario = { ...this.usuario, ...profileData }
+          this.usuario = {
+            ...this.usuario,
+            ...profileData,
+            id: profileData.id || profileData._id || this.usuario.id
+          }
         }
        
-        // Atualizar counts das tabs
         this.tabs[1].count = this.estatisticas.musicasCurtidas
         this.tabs[2].count = this.estatisticas.playlists
         this.tabs[4].count = this.estatisticas.seguidores
+        this.tabs[5].count = this.estatisticas.favoritos
       } else {
-  this.$router.push('/login')
-}
+        this.$router.push('/login')
+      }
     },
-    getAuthConfig() {
-  const token = localStorage.getItem('token')
 
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  }
-},
-async compressImage(file, {
-  maxWidth = 1600,
-  maxHeight = 1600,
-  quality = 0.75,
-  mimeType = 'image/jpeg'
-} = {}) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
+    getLoggedUserId() {
+      return String(this.usuario?._id || this.usuario?.id || '')
+    },
 
-    reader.onload = (e) => {
-      const img = new Image()
+    getProfileUserId() {
+      return String(this.usuario?._id || this.usuario?.id || '')
+    },
 
-      img.onload = () => {
-        let { width, height } = img
+    setTabCount(tabId, count) {
+      const tab = this.tabs.find(t => t.id === tabId)
+      if (tab) tab.count = count
+    },
 
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height)
-          width = Math.round(width * ratio)
-          height = Math.round(height * ratio)
+    async carregarFollows() {
+      try {
+        const token = localStorage.getItem("token")
+        const userId = this.getProfileUserId()
+
+        if (!userId || !token) return
+
+        const authConfig = {
+          headers: { Authorization: `Bearer ${token}` }
         }
 
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
+        const [resSeguidores, resSeguindoUsuarios, resSeguindoCantores] = await Promise.all([
+          axios.get(`http://localhost:3002/follows/seguidores/${userId}?tipo=usuario`),
+          axios.get(`http://localhost:3002/follows/usuario/seguindo?tipo=usuario`, authConfig),
+          axios.get(`http://localhost:3002/follows/usuario/seguindo?tipo=cantor`, authConfig)
+        ])
 
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, width, height)
+        const seguindoUsuarios = (resSeguindoUsuarios.data || [])
+          .filter(f => f.seguindo_id)
+          .map(f => ({
+            _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
+            nome: f.seguindo_id?.nome || 'Usuário',
+            username: f.seguindo_id?.username || 'usuario',
+            avatar: f.seguindo_id?.avatar || null,
+            tipo: 'usuario',
+            isFollowing: true
+          }))
 
-        const compressedBase64 = canvas.toDataURL(mimeType, quality)
-        resolve(compressedBase64)
+        const seguindoCantores = (resSeguindoCantores.data || [])
+          .filter(f => f.seguindo_id)
+          .map(f => ({
+            _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
+            nome: f.seguindo_id?.nome || 'Artista',
+            username: null,
+            avatar: f.seguindo_id?.foto || f.seguindo_id?.avatar || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
+            tipo: 'cantor',
+            isFollowing: true,
+            generos: f.seguindo_id?.generos || []
+          }))
+
+        const seguindoUsuariosIds = new Set(seguindoUsuarios.map(u => String(u._id)))
+
+        this.seguidoresList = (resSeguidores.data || [])
+          .filter(f => f.seguidor_id)
+          .map(f => ({
+            _id: String(f.seguidor_id?._id || f.seguidor_id?.id),
+            nome: f.seguidor_id?.nome || 'Usuário',
+            username: f.seguidor_id?.username || 'usuario',
+            avatar: f.seguidor_id?.avatar || null,
+            tipo: 'usuario',
+            isFollowing: seguindoUsuariosIds.has(String(f.seguidor_id?._id || f.seguidor_id?.id))
+          }))
+
+        this.seguindoList = [...seguindoUsuarios, ...seguindoCantores]
+
+        this.estatisticas.seguidores = this.seguidoresList.length
+        this.estatisticas.seguindo = this.seguindoList.length
+
+        this.setTabCount('followers', this.seguidoresList.length)
+        this.setTabCount('following', this.seguindoList.length)
+
+      } catch (error) {
+        console.error("Erro ao carregar follows:", error)
       }
+    },
 
-      img.onerror = reject
-      img.src = e.target.result
-    }
+    getAuthConfig() {
+      const token = localStorage.getItem('token')
+      return {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    },
+    openAvatarEditorFlow() {
+  if (!this.showEditModal) {
+    this.openEditModal()
+  }
 
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+  this.$nextTick(() => {
+    this.openAvatarSelector()
   })
 },
 
-persistUsuario(user) {
+isAvatarGenerated(value) {
+  return !value
+},
+
+    async updateProfileMediaField(field, value, successTitle, successMessage) {
+      try {
+        if (!this.usuario?.id) {
+          throw new Error("Usuário não identificado")
+        }
+
+        const response = await axios.put(
+          `http://localhost:3002/usuarios/${this.usuario.id}`,
+          { [field]: value },
+          this.getAuthConfig()
+        )
+
+        const updatedUser = response.data?.user
+          ? { ...this.usuario, ...response.data.user }
+          : { ...this.usuario, [field]: value }
+
+        this.usuario = updatedUser
+
+        if (this.showEditModal) {
+          this.editForm[field] = value
+        }
+
+        this.persistUsuario(this.usuario)
+
+        this.showToast({
+          title: successTitle,
+          message: successMessage,
+          type: "success",
+          icon: "fa fa-check-circle"
+        })
+      } catch (error) {
+        this.showToast({
+          title: "Erro",
+          message: error.response?.data?.error || `Não foi possível remover ${field === 'avatar' ? 'a foto' : 'a capa'}`,
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+      }
+    },
+
+    async removeAvatar() {
+      if (!this.hasCustomAvatar) return
+      const confirmed = window.confirm("Deseja remover sua foto de perfil da conta?")
+      if (!confirmed) return
+
+      await this.updateProfileMediaField(
+        'avatar',
+        null,
+        "Foto removida",
+        "Sua foto de perfil foi removida da conta"
+      )
+    },
+
+    async removeCover() {
+      if (!this.hasCustomCover) return
+      const confirmed = window.confirm("Deseja remover o banner/capa da conta?")
+      if (!confirmed) return
+
+      await this.updateProfileMediaField(
+        'cover',
+        null,
+        "Capa removida",
+        "Seu banner foi removido da conta"
+      )
+    },
+
+    removeAvatarFromEdit() {
+      this.editForm.avatar = null
+      this.showToast({
+        title: "Foto removida do preview",
+        message: "Clique em salvar para remover da conta",
+        type: "info",
+        icon: "fa fa-user-circle"
+      })
+    },
+
+    removeCoverFromEdit() {
+      this.editForm.cover = null
+      this.showToast({
+        title: "Capa removida do preview",
+        message: "Clique em salvar para remover da conta",
+        type: "info",
+        icon: "fa fa-image"
+      })
+    },
+
+openAvatarSelector() {
+  this.showAvatarSelector = true
+  this.activeAvatarTab = 'initials'
+  this.generateArtisticAvatars()
+  this.generateFunAvatars()
+},
+   
+    closeAvatarSelector() {
+      this.showAvatarSelector = false
+    },
+
+  selectInitialsAvatar() {
+  this.onAvatarSelect(null)
+},
+
+selectArtisticAvatar(avatar) {
+  this.onAvatarSelect(avatar)
+},
+
+selectFunAvatar(avatar) {
+  this.onAvatarSelect(avatar)
+},
+
+    handleAvatarDrop(e) {
+      e.preventDefault()
+      this.isDragging = false
+      const file = e.dataTransfer.files[0]
+      if (file) this.processAvatarFile(file)
+    },
+
+    handleAvatarUploadSelect(e) {
+      const file = e.target.files[0]
+      if (file) this.processAvatarFile(file)
+    },
+
+   async processAvatarFile(file) {
+  try {
+    const compressedImage = await this.compressImage(file, {
+      maxWidth: 512,
+      maxHeight: 512,
+      quality: 0.78,
+      mimeType: 'image/jpeg'
+    })
+
+    if (!this.showEditModal) {
+      this.openEditModal()
+      this.$nextTick(() => {
+        this.editForm.avatar = compressedImage
+      })
+    } else {
+      this.editForm.avatar = compressedImage
+    }
+
+    this.closeAvatarSelector()
+
+    this.showToast({
+      title: "Imagem carregada",
+      message: "Avatar atualizado no preview. Clique em salvar alterações para confirmar",
+      type: "success",
+      icon: "fa fa-check-circle"
+    })
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível processar a imagem",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
+   
+ async onAvatarSelect(avatarUrl) {
+  try {
+    if (!this.showEditModal) {
+      this.openEditModal()
+      await this.$nextTick()
+    }
+
+    this.editForm.avatar = avatarUrl || null
+
+    await this.updateProfileMediaField(
+      'avatar',
+      avatarUrl || null,
+      "Avatar atualizado",
+      "Sua foto de perfil foi atualizada com sucesso"
+    )
+
+    this.closeAvatarSelector()
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível atualizar o avatar",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
+
+ handleAvatarError() {
+  this.usuario.avatar = null
+  if (this.showEditModal) {
+    this.editForm.avatar = null
+  }
+  this.persistUsuario(this.usuario)
+},
+
+    async handleCoverChange(event) {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      if (!file.type.startsWith('image/')) {
+        this.showToast({
+          title: "Erro",
+          message: "Selecione uma imagem válida para a capa",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+        return
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        this.showToast({
+          title: "Erro",
+          message: "A imagem da capa deve ter no máximo 5MB",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+        return
+      }
+
+      try {
+        const novaCover = await this.compressImage(file, {
+          maxWidth: 1600,
+          maxHeight: 900,
+          quality: 0.82,
+          mimeType: 'image/jpeg'
+        })
+
+        if (!this.showEditModal) {
+          this.openEditModal()
+          this.$nextTick(() => {
+            this.editForm.cover = novaCover
+          })
+        } else {
+          this.editForm.cover = novaCover
+        }
+
+        this.showToast({
+          title: "Capa atualizada",
+          message: "A nova capa foi carregada no preview",
+          type: "success",
+          icon: "fa fa-check"
+        })
+      } catch (error) {
+        this.showToast({
+          title: "Erro",
+          message: "Não foi possível processar a imagem da capa",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+      } finally {
+        event.target.value = ''
+      }
+    },
+
+    abrirFavorito(item) {
+      if (item.type === 'musica') {
+        this.playMusic(item)
+        return
+      }
+      if (item.type === 'playlist') {
+        this.openPlaylist({ _id: item.id })
+        return
+      }
+      if (item.type === 'album') {
+        this.$router.push(`/album/${item.id}`)
+        return
+      }
+      if (item.type === 'cantor') {
+        this.$router.push(`/cantor/${item.id}`)
+        return
+      }
+    },
+
+    async compressImage(file, {
+      maxWidth = 1600,
+      maxHeight = 1600,
+      quality = 0.75,
+      mimeType = 'image/jpeg'
+    } = {}) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+
+        reader.onload = (e) => {
+          const img = new Image()
+
+          img.onload = () => {
+            let { width, height } = img
+
+            if (width > maxWidth || height > maxHeight) {
+              const ratio = Math.min(maxWidth / width, maxHeight / height)
+              width = Math.round(width * ratio)
+              height = Math.round(height * ratio)
+            }
+
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0, width, height)
+
+            const compressedBase64 = canvas.toDataURL(mimeType, quality)
+            resolve(compressedBase64)
+          }
+
+          img.onerror = reject
+          img.src = e.target.result
+        }
+
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+    },
+
+   persistUsuario(user) {
   localStorage.setItem('usuario', JSON.stringify(user))
   localStorage.setItem('usuario_perfil', JSON.stringify(user))
-  window.dispatchEvent(new Event('perfil-updated'))
+
+  window.dispatchEvent(new CustomEvent('perfil-updated', {
+    detail: user
+  }))
 },
 
     handleFocus() {
-  this.carregarCurtidas()
-  this.carregarDados()
-},
+      this.carregarCurtidas()
+      this.carregarDados()
+      this.carregarFavoritos()
+    },
 
-handleStorage(e) {
+   handleStorage(e) {
   if (e.key === 'usuario_perfil') {
     this.carregarUsuarioLogado()
+    this.generateArtisticAvatars()
+    this.generateFunAvatars()
   }
 },
    
-async carregarDados() {
-  const token = localStorage.getItem("token")
+    async carregarDados() {
+      const token = localStorage.getItem("token")
 
-const res = await fetch("http://localhost:3002/playlists", {
-  headers: { Authorization: `Bearer ${token}` }
-})
+      const res = await fetch("http://localhost:3002/playlists", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
 
-if (!res.ok) {
-  console.error("Erro ao buscar playlists")
-  return
-}
+      if (!res.ok) {
+        console.error("Erro ao buscar playlists")
+        return
+      }
 
-const data = await res.json() || []
+      const data = await res.json() || []
 
-this.todasPlaylists = data.map(p => ({
-  _id: p._id,
-  nome: p.nome,
-  cover: p.cover || p.capa || 'https://via.placeholder.com/150',
-  musicas: p.musicas?.length || 0,
-  privacidade: p.privacidade || (p.privada ? 'Privada' : 'Pública'),
-  descricao: p.descricao || '',
-  duracaoTotal: p.duracaoTotal || '0 min',
-  curtidas: p.curtidas || 0
-}))
-this.minhasPlaylists = data
-this.playlistsRecentes = data.slice(0, 4)
-this.estatisticas.playlists = data.length
-this.tabs[2].count = data.length
-},
-   
-async carregarCurtidas() {
-  try {
-    const token = localStorage.getItem("token")
-
-    const res = await fetch(`http://localhost:3002/curtidas`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-
-    if (!res.ok) throw new Error("Erro ao buscar curtidas")
-
-    const data = await res.json()
-
-    this.musicasFavoritas = data.map(c => ({
-      id: c.musica._id,
-      nome: c.musica.nome,
-      cantores: c.musica.cantores || [],
-      cover: c.musica.foto,
-      url: c.musica.link,
-      duration: c.musica.duracao
-    }))
-
-    this.estatisticas.musicasCurtidas = data.length
-    this.tabs[1].count = data.length
-
-  } catch (error) {
-    console.error(error)
-  }
-},
-   
-    carregarArtistas() {
-      this.artistasFavoritos = [
-        { id: 1, name: "Queen", plays: 5234, image: "https://ui-avatars.com/api/?name=Queen&background=e91e63&color=fff" },
-        { id: 2, name: "The Beatles", plays: 4891, image: "https://ui-avatars.com/api/?name=Beatles&background=2196f3&color=fff" },
-        { id: 3, name: "Pink Floyd", plays: 3654, image: "https://ui-avatars.com/api/?name=Pink+Floyd&background=9c27b0&color=fff" },
-        { id: 4, name: "Led Zeppelin", plays: 2987, image: "https://ui-avatars.com/api/?name=Led+Zeppelin&background=ff9800&color=fff" },
-        { id: 5, name: "Nirvana", plays: 2456, image: "https://ui-avatars.com/api/?name=Nirvana&background=4caf50&color=fff" },
-        { id: 6, name: "Arctic Monkeys", plays: 1987, image: "https://ui-avatars.com/api/?name=Arctic+Monkeys&background=00bcd4&color=fff" }
-      ]
+      this.todasPlaylists = data.map(p => ({
+        _id: p._id,
+        nome: p.nome,
+        cover: p.cover || p.capa || 'https://via.placeholder.com/150',
+        musicas: p.musicas?.length || 0,
+        privacidade: p.privacidade || (p.privada ? 'Privada' : 'Pública'),
+        descricao: p.descricao || '',
+        duracaoTotal: p.duracaoTotal || '0 min',
+        curtidas: p.curtidas || 0
+      }))
+      this.minhasPlaylists = data
+      this.playlistsRecentes = data.slice(0, 4)
+      this.estatisticas.playlists = data.length
+      this.tabs[2].count = data.length
     },
+   
+    async carregarCurtidas() {
+      try {
+        const token = localStorage.getItem("token")
+
+        const res = await fetch(`http://localhost:3002/curtidas`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (!res.ok) throw new Error("Erro ao buscar curtidas")
+
+        const data = await res.json()
+
+        this.musicasFavoritas = data.map(c => ({
+          id: c.musica._id,
+          nome: c.musica.nome,
+          artist: (c.musica.cantores || []).filter(c => c && c.nome).map(c => c.nome).join(', ') || 'Artista desconhecido',
+          cover: c.musica.foto,
+          url: c.musica.link,
+          duration: c.musica.duracao,
+          curtido: true,
+          dataCurtida: c.createdAt
+        }))
+
+        this.estatisticas.musicasCurtidas = data.length
+        this.tabs[1].count = data.length
+
+      } catch (error) {
+        console.error(error)
+      }
+    },
+
+    async carregarFavoritos() {
+      try {
+        const token = localStorage.getItem("token")
+
+        const res = await fetch("http://localhost:3002/favoritas", {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (!res.ok) throw new Error("Erro ao buscar favoritas")
+
+        const data = await res.json()
+
+        this.favoritos = data.map(f => {
+          if (f.musica) {
+            return {
+              id: f.musica._id,
+              type: "musica",
+              nome: f.musica.nome,
+              artist: f.musica.cantores?.length
+                ? f.musica.cantores.map(c => c.nome).join(', ')
+                : "Artista desconhecido",
+              cover: f.musica.foto,
+              url: f.musica.link,
+              duration: f.musica.duracao,
+              dataFavoritado: f.createdAt
+            }
+          }
+          if (f.playlist) {
+            return {
+              id: f.playlist._id,
+              type: "playlist",
+              nome: f.playlist.nome,
+              artist: f.playlist.descricao || "Playlist",
+              cover: f.playlist.capa || f.playlist.cover || "https://via.placeholder.com/150",
+              musicas: f.playlist.quantidadeMusicas || f.playlist.musicas?.length || 0,
+              duracaoTotal: f.playlist.duracaoTotal || "0 min",
+              dataFavoritado: f.createdAt
+            }
+          }
+          if (f.cantor && f.cantor._id) {
+            return {
+              id: f.cantor._id,
+              type: "cantor",
+              nome: f.cantor.nome,
+              artist: "Artista",
+              cover: f.cantor.foto,
+              dataFavoritado: f.createdAt
+            }
+          }
+          if (f.album) {
+            return {
+              id: f.album._id,
+              type: "album",
+              nome: f.album.nome,
+              artist: f.album.cantor?.nome || "Álbum",
+              cover: f.album.foto,
+              musicas: f.album.musicas?.length || 0,
+              dataFavoritado: f.createdAt
+            }
+          }
+          return null
+        }).filter(Boolean)
+
+        this.artistasFavoritos = this.favoritos
+          .filter(f => f.type === 'cantor')
+          .map(a => ({
+            id: a.id,
+            name: a.nome,
+            image: a.cover,
+            addedAt: a.dataFavoritado
+          }))
+
+        this.favoritosRecentes = [...this.favoritos]
+          .sort((a, b) => new Date(b.dataFavoritado) - new Date(a.dataFavoritado))
+          .slice(0, 6)
+
+        this.setTabCount('favorites', this.favoritos.length)
+
+      } catch (error) {
+        console.error(error)
+        this.favoritos = []
+        this.favoritosRecentes = []
+      }
+    },
+   
+    carregarArtistas() {},
    
     carregarAtividades() {
       this.atividadesRecentes = [
@@ -1295,150 +2463,96 @@ async carregarCurtidas() {
       ]
     },
 
-    handleAvatarError() {
-      this.usuario.avatar = this.defaultAvatar
+    triggerAvatarUpload() {
+      if (this.$refs.avatarInput) {
+        this.$refs.avatarInput.click()
+      }
     },
 
- triggerAvatarUpload() {
-  if (this.$refs.avatarInput) {
-    this.$refs.avatarInput.click()
-  }
-},
+    triggerCoverUpload() {
+      if (this.$refs.coverInput) {
+        this.$refs.coverInput.click()
+      }
+    },
 
-triggerCoverUpload() {
-  if (this.$refs.coverInput) {
-    this.$refs.coverInput.click()
-  }
-},
+    async handleAvatarChange(event) {
+      const file = event.target.files?.[0]
+      if (!file) return
 
+      if (!file.type.startsWith('image/')) {
+        this.showToast({
+          title: "Erro",
+          message: "Selecione uma imagem válida",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+        return
+      }
 
-  handleAvatarChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
+      if (file.size > 2 * 1024 * 1024) {
+        this.showToast({
+          title: "Erro",
+          message: "Avatar original deve ter no máximo 2MB",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+        return
+      }
 
-  if (!file.type.startsWith('image/')) {
-    this.showToast({
-      title: "Erro",
-      message: "Selecione uma imagem válida",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-    return
-  }
+      try {
+        const novoAvatar = await this.compressImage(file, {
+          maxWidth: 512,
+          maxHeight: 512,
+          quality: 0.78,
+          mimeType: 'image/jpeg'
+        })
 
-  if (file.size > 5 * 1024 * 1024) {
-    this.showToast({
-      title: "Erro",
-      message: "Imagem deve ter no máximo 5MB",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-    return
-  }
+        if (!this.showEditModal) {
+          this.openEditModal()
+          this.$nextTick(() => {
+            this.editForm.avatar = novoAvatar
+          })
+        } else {
+          this.editForm.avatar = novoAvatar
+        }
 
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const novoAvatar = e.target.result
+        this.showToast({
+          title: "Imagem carregada",
+          message: "Avatar atualizado no preview",
+          type: "success",
+          icon: "fa fa-check"
+        })
+      } catch (error) {
+        this.showToast({
+          title: "Erro",
+          message: "Não foi possível processar o avatar",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+      } finally {
+        event.target.value = ''
+      }
+    },
 
-    if (!this.showEditModal) {
-      this.openEditModal()
-      this.$nextTick(() => {
-        this.editForm.avatar = novoAvatar
-      })
-    } else {
-      this.editForm.avatar = novoAvatar
-    }
+    openEditModal() {
+      this.editForm = {
+        nome: this.usuario.nome || '',
+        username: this.usuario.username || '',
+        email: this.usuario.email || '',
+        bio: this.usuario.bio || '',
+        avatar: this.usuario.avatar || null,
+        cover: this.usuario.cover || null,
+        localizacao: this.usuario.localizacao || '',
+        website: this.usuario.website || '',
+        generos: [...(this.usuario.generos || [])],
+        perfilPrivado: !!this.usuario.perfilPrivado,
+        mostrarAtividade: this.usuario.mostrarAtividade !== false
+      }
 
-    this.showToast({
-      title: "Imagem carregada",
-      message: "Avatar atualizado no preview",
-      type: "success",
-      icon: "fa fa-check"
-    })
-  }
-
-  reader.readAsDataURL(file)
-  event.target.value = ''
-},
-
-async handleAvatarChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-
-  if (!file.type.startsWith('image/')) {
-    this.showToast({
-      title: "Erro",
-      message: "Selecione uma imagem válida",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-    return
-  }
-
-  if (file.size > 2 * 1024 * 1024) {
-    this.showToast({
-      title: "Erro",
-      message: "Avatar original deve ter no máximo 2MB",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-    return
-  }
-
-  try {
-    const novoAvatar = await this.compressImage(file, {
-      maxWidth: 512,
-      maxHeight: 512,
-      quality: 0.78,
-      mimeType: 'image/jpeg'
-    })
-
-    if (!this.showEditModal) {
-      this.openEditModal()
-      this.$nextTick(() => {
-        this.editForm.avatar = novoAvatar
-      })
-    } else {
-      this.editForm.avatar = novoAvatar
-    }
-
-    this.showToast({
-      title: "Imagem carregada",
-      message: "Avatar atualizado no preview",
-      type: "success",
-      icon: "fa fa-check"
-    })
-  } catch (error) {
-    this.showToast({
-      title: "Erro",
-      message: "Não foi possível processar o avatar",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-  } finally {
-    event.target.value = ''
-  }
-},
-
-openEditModal() {
-  this.editForm = {
-    nome: this.usuario.nome || '',
-    username: this.usuario.username || '',
-    email: this.usuario.email || '',
-    bio: this.usuario.bio || '',
-    avatar: this.usuario.avatar || null,
-    cover: this.usuario.cover || null,
-    localizacao: this.usuario.localizacao || '',
-    website: this.usuario.website || '',
-    generos: [...(this.usuario.generos || [])],
-    perfilPrivado: !!this.usuario.perfilPrivado,
-    mostrarAtividade: this.usuario.mostrarAtividade !== false
-  }
-
-  this.formErrors = {}
-  this.usernameStatus = { type: '', message: '', icon: '' }
-  this.showEditModal = true
-},
+      this.formErrors = {}
+      this.usernameStatus = { type: '', message: '', icon: '' }
+      this.showEditModal = true
+    },
 
     closeEditModal() {
       this.showEditModal = false
@@ -1448,7 +2562,6 @@ openEditModal() {
     async checkUsernameAvailability() {
       if (!this.editForm.username || this.editForm.username === this.usuario.username) return
      
-      // Simulação de verificação
       this.usernameStatus = { type: 'loading', message: 'Verificando...', icon: 'fa fa-spinner fa-spin' }
      
       setTimeout(() => {
@@ -1493,81 +2606,81 @@ openEditModal() {
       return Object.keys(this.formErrors).length === 0
     },
 
- async saveProfile() {
-  if (!this.validateForm()) return
+    async saveProfile() {
+      if (!this.validateForm()) return
 
-  this.saving = true
+      this.saving = true
 
-  try {
-    if (!this.usuario?.id) {
-      throw new Error("Usuário não identificado")
-    }
+      try {
+        if (!this.usuario?.id) {
+          throw new Error("Usuário não identificado")
+        }
 
-    const payload = {
-      nome: this.editForm.nome,
-      username: this.editForm.username,
-      bio: this.editForm.bio,
-      email: this.editForm.email,
-      localizacao: this.editForm.localizacao
-    }
+        const payload = {
+          nome: this.editForm.nome,
+          username: this.editForm.username,
+          bio: this.editForm.bio,
+          email: this.editForm.email,
+          localizacao: this.editForm.localizacao
+        }
 
-    if (this.editForm.avatar !== this.usuario.avatar) {
-      payload.avatar = this.editForm.avatar ?? null
-    }
+        if (this.editForm.avatar !== this.usuario.avatar) {
+          payload.avatar = this.editForm.avatar ?? null
+        }
 
-    if (this.editForm.cover !== this.usuario.cover) {
-      payload.cover = this.editForm.cover ?? null
-    }
+        if (this.editForm.cover !== this.usuario.cover) {
+          payload.cover = this.editForm.cover ?? null
+        }
 
-    if (this.editForm.website !== this.usuario.website) {
-      payload.website = this.editForm.website ?? ''
-    }
+        if (this.editForm.website !== this.usuario.website) {
+          payload.website = this.editForm.website ?? ''
+        }
 
-    if (JSON.stringify(this.editForm.generos || []) !== JSON.stringify(this.usuario.generos || [])) {
-      payload.generos = this.editForm.generos ?? []
-    }
+        if (JSON.stringify(this.editForm.generos || []) !== JSON.stringify(this.usuario.generos || [])) {
+          payload.generos = this.editForm.generos ?? []
+        }
 
-    if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
-      payload.perfilPrivado = !!this.editForm.perfilPrivado
-    }
+        if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
+          payload.perfilPrivado = !!this.editForm.perfilPrivado
+        }
 
-    if (this.editForm.mostrarAtividade !== this.usuario.mostrarAtividade) {
-      payload.mostrarAtividade = this.editForm.mostrarAtividade !== false
-    }
+        if (this.editForm.mostrarAtividade !== this.usuario.mostrarAtividade) {
+          payload.mostrarAtividade = this.editForm.mostrarAtividade !== false
+        }
 
-    const response = await axios.put(
-      `http://localhost:3002/usuarios/${this.usuario.id}`,
-      payload,
-      this.getAuthConfig()
-    )
+        const response = await axios.put(
+          `http://localhost:3002/usuarios/${this.usuario.id}`,
+          payload,
+          this.getAuthConfig()
+        )
 
-    const updatedUser = response.data.user
-      ? { ...this.usuario, ...response.data.user }
-      : { ...this.usuario, ...payload }
+        const updatedUser = response.data.user
+          ? { ...this.usuario, ...response.data.user }
+          : { ...this.usuario, ...payload }
 
-    this.usuario = updatedUser
-    this.persistUsuario(this.usuario)
+        this.usuario = updatedUser
+        this.persistUsuario(this.usuario)
 
-    this.closeEditModal()
+        this.closeEditModal()
 
-    this.showToast({
-      title: "Perfil atualizado! 🎉",
-      message: "Suas alterações foram salvas com sucesso",
-      type: "success",
-      icon: "fa fa-check-circle",
-      duration: 4000
-    })
-  } catch (error) {
-    this.showToast({
-      title: "Erro ao salvar",
-      message: error.response?.data?.error || error.message || "Tente novamente mais tarde",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
-  } finally {
-    this.saving = false
-  }
-},
+        this.showToast({
+          title: "Perfil atualizado! 🎉",
+          message: "Suas alterações foram salvas com sucesso",
+          type: "success",
+          icon: "fa fa-check-circle",
+          duration: 4000
+        })
+      } catch (error) {
+        this.showToast({
+          title: "Erro ao salvar",
+          message: error.response?.data?.error || error.message || "Tente novamente mais tarde",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+      } finally {
+        this.saving = false
+      }
+    },
 
     showMoreOptions() {
       this.showContextMenu = !this.showContextMenu
@@ -1635,18 +2748,25 @@ openEditModal() {
       this.deleting = true
      
       try {
-       await axios.delete(`http://localhost:3002/usuarios/${this.usuario.id}`, {
-  data: { senha: this.deletePassword },
-  ...this.getAuthConfig()
-})
+        await axios.delete(`http://localhost:3002/usuarios/${this.usuario.id}`, {
+          data: { senha: this.deletePassword },
+          ...this.getAuthConfig()
+        })
        
-        // Limpar dados locais
         localStorage.removeItem('usuario')
         localStorage.removeItem('usuario_perfil')
         localStorage.removeItem('isLoggedIn')
+        localStorage.removeItem('token')
         localStorage.removeItem('curtidas')
         localStorage.removeItem('playlists')
         localStorage.removeItem('historico')
+       
+        window.dispatchEvent(new CustomEvent('user-logged-out'))
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'isLoggedIn',
+          newValue: null,
+          oldValue: 'true'
+        }))
        
         this.showToast({
           title: "Conta excluída",
@@ -1655,9 +2775,7 @@ openEditModal() {
           icon: "fa fa-check-circle"
         })
        
-        setTimeout(() => {
-          this.$router.push('/')
-        }, 2000)
+        this.$router.push('/login')
        
       } catch (error) {
         this.deleting = false
@@ -1665,63 +2783,112 @@ openEditModal() {
       }
     },
 
-    toggleFollow() {
-      this.isFollowing = !this.isFollowing
-      this.estatisticas.seguidores += this.isFollowing ? 1 : -1
-      this.showToast({
-        title: this.isFollowing ? "Seguindo!" : "Deixou de seguir",
-        message: this.isFollowing
-          ? `Você está seguindo ${this.usuario.nome}`
-          : `Você deixou de seguir ${this.usuario.nome}`,
-        type: "success",
-        icon: this.isFollowing ? "fa fa-user-plus" : "fa fa-user-times"
-      })
+    async toggleFollow() {
+      try {
+        const token = localStorage.getItem('token')
+        const targetId = this.getProfileUserId()
+
+        if (!token || !targetId) return
+        if (this.isOwnProfile) return
+
+        const tipo = 'usuario'
+
+        if (this.isFollowing) {
+          await axios.delete(`http://localhost:3002/follows/desseguir`, {
+            data: {
+              seguindo_id: targetId,
+              tipo
+            },
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          this.isFollowing = false
+          this.estatisticas.seguidores = Math.max(0, this.estatisticas.seguidores - 1)
+
+          this.showToast({
+            title: "Deixou de seguir",
+            message: `Você deixou de seguir ${this.usuario.nome}`,
+            type: "info",
+            icon: "fa fa-user-times"
+          })
+        } else {
+          await axios.post(`http://localhost:3002/follows/seguir`, {
+            seguindo_id: targetId,
+            tipo
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          this.isFollowing = true
+          this.estatisticas.seguidores += 1
+
+          this.showToast({
+            title: "Seguindo!",
+            message: `Você está seguindo ${this.usuario.nome}`,
+            type: "success",
+            icon: "fa fa-user-plus"
+          })
+        }
+
+        this.setTabCount('followers', this.estatisticas.seguidores)
+      } catch (error) {
+        console.error(error)
+        this.showToast({
+          title: "Erro",
+          message: error.response?.data?.message || "Não foi possível atualizar o follow",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+      }
     },
 
- shareProfile() {
-  const profileUrl = `${window.location.origin}/perfil/${this.usuario.username || this.usuario.id}`
- 
-  if (navigator.share) {
-    navigator.share({
-      title: `Perfil de ${this.usuario.nome}`,
-      text: `Confira o perfil musical de ${this.usuario.nome}! 🎵`,
-      url: profileUrl
-    })
-  } else {
-    navigator.clipboard.writeText(profileUrl)
-    this.showToast({
-      title: "Link copiado! 📋",
-      message: "O link do perfil foi copiado para a área de transferência",
-      type: "success",
-      icon: "fa fa-link"
-    })
-  }
-},
+    shareProfile() {
+      const profileUrl = `${window.location.origin}/perfil/${this.usuario.username || this.usuario.id}`
+     
+      if (navigator.share) {
+        navigator.share({
+          title: `Perfil de ${this.usuario.nome}`,
+          text: `Confira o perfil musical de ${this.usuario.nome}! 🎵`,
+          url: profileUrl
+        })
+      } else {
+        navigator.clipboard.writeText(profileUrl)
+        this.showToast({
+          title: "Link copiado! 📋",
+          message: "O link do perfil foi copiado para a área de transferência",
+          type: "success",
+          icon: "fa fa-link"
+        })
+      }
+    },
 
     playMusic(musica) {
       this.currentPlayingId = musica.id
      
-const playerSong = {
-  id: musica.id,
-  title: musica.nome,
-artist: musica.cantores && musica.cantores.length
-  ? musica.cantores.map(c => c.nome).join(', ')
-  : 'Artista desconhecido',
-  cover: musica.cover,
-  url: musica.preview || musica.url,
-  duration: musica.duration || 30,
-  type: 'profile'
-}
+      const playerSong = {
+        id: musica.id,
+        title: musica.nome,
+        artist: musica.cantores?.length
+          ? musica.cantores
+              .filter(c => c && c.nome)
+              .map(c => c.nome)
+              .join(', ')
+          : 'Artista desconhecido',
+        cover: musica.cover,
+        url: musica.preview || musica.url,
+        duration: musica.duration || 30,
+        type: 'profile'
+      }
      
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
           playlist: this.musicasFavoritas.map(m => ({
             id: m.id,
-        title: m.nome,
-artist: m.cantores && m.cantores.length
-  ? m.cantores.map(c => c.nome).join(', ')
-  : 'Artista desconhecido',
+            title: m.nome,
+            artist: m.cantores && m.cantores.length
+              ? m.cantores.map(c => c.nome).join(', ')
+              : 'Artista desconhecido',
             cover: m.cover,
             url: m.preview || m.url,
             duration: m.duration || 30,
@@ -1760,14 +2927,23 @@ artist: m.cantores && m.cantores.length
       })
     },
 
-    removerCurtida(musica) {
-      const index = this.musicasFavoritas.findIndex(m => m.id === musica.id)
-      if (index !== -1) {
-        this.musicasFavoritas.splice(index, 1)
-        localStorage.setItem("curtidas", JSON.stringify(this.musicasFavoritas))
+    async removerCurtida(musica) {
+      try {
+        const token = localStorage.getItem("token")
+
+        await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        this.musicasFavoritas = this.musicasFavoritas.filter(
+          m => m.id !== musica.id
+        )
+
         this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
         this.tabs[1].count = this.musicasFavoritas.length
-      
 
         this.showToast({
           title: "Removida dos curtidos 💔",
@@ -1775,13 +2951,44 @@ artist: m.cantores && m.cantores.length
           type: "info",
           icon: "fa fa-heart-broken"
         })
+
+      } catch (error) {
+        console.error(error)
       }
     },
 
-    toggleLike(item) {
-      item.curtido = !item.curtido
-      if (!item.curtido) {
-        this.removerCurtida(item)
+    async toggleLike(musica) {
+      try {
+        const token = localStorage.getItem("token")
+
+        const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const data = await res.json()
+
+        musica.curtido = data.liked
+
+        if (!data.liked) {
+          this.musicasFavoritas = this.musicasFavoritas.filter(
+            m => m.id !== musica.id
+          )
+        } else {
+          this.musicasFavoritas.unshift({
+            ...musica,
+            curtido: true,
+            dataCurtida: new Date()
+          })
+        }
+
+        this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
+        this.tabs[1].count = this.musicasFavoritas.length
+
+      } catch (error) {
+        console.error(error)
       }
     },
 
@@ -1818,6 +3025,10 @@ artist: m.cantores && m.cantores.length
       this.$router.push(`/playlist/${playlist._id}`)
     },
 
+    togglePlaylist(id) {
+      this.openedPlaylist = this.openedPlaylist === id ? null : id
+    },
+
     togglePlaylistLike(playlist) {
       playlist.curtida = !playlist.curtida
       this.showToast({
@@ -1839,7 +3050,6 @@ artist: m.cantores && m.cantores.length
     },
 
     showMusicContext(event, musica) {
-      // Implementar menu de contexto customizado
       console.log("Context menu for:", musica)
     },
 
@@ -1863,19 +3073,98 @@ artist: m.cantores && m.cantores.length
     },
 
     goToProfile(user) {
-      this.$router.push(`/perfil/${user.username || user.id}`)
+      if (user.tipo === 'cantor') {
+        this.$router.push(`/cantor/${user._id}`)
+        return
+      }
+      this.$router.push(`/perfil/${user.username || user.id || user._id}`)
     },
 
-    toggleFollowUser(user) {
-      user.isFollowing = !user.isFollowing
-      this.showToast({
-        title: user.isFollowing ? "Seguindo!" : "Deixou de seguir",
-        message: user.isFollowing
-          ? `Você está seguindo ${user.nome}`
-          : `Você deixou de seguir ${user.nome}`,
-        type: "success",
-        icon: user.isFollowing ? "fa fa-user-plus" : "fa fa-user-times"
-      })
+    async toggleFollowUser(user) {
+      try {
+        const token = localStorage.getItem("token")
+        const targetId = String(user._id || user.id)
+        const tipo = user.tipo || 'usuario'
+
+        if (!token || !targetId) return
+
+        if (tipo === 'usuario' && String(targetId) === String(this.getLoggedUserId())) {
+          return
+        }
+
+        if (user.isFollowing) {
+          await axios.delete(`http://localhost:3002/follows/desseguir`, {
+            data: {
+              seguindo_id: targetId,
+              tipo
+            },
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          user.isFollowing = false
+
+          this.seguindoList = this.seguindoList.filter(
+            item => !(String(item._id) === targetId && item.tipo === tipo)
+          )
+
+          this.showToast({
+            title: "Deixou de seguir",
+            message: `Você deixou de seguir ${user.nome}`,
+            type: "info",
+            icon: "fa fa-user-times"
+          })
+        } else {
+          await axios.post(`http://localhost:3002/follows/seguir`, {
+            seguindo_id: targetId,
+            tipo
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+
+          user.isFollowing = true
+
+          const jaExiste = this.seguindoList.some(
+            item => String(item._id) === targetId && item.tipo === tipo
+          )
+
+          if (!jaExiste) {
+            this.seguindoList.unshift({
+              _id: targetId,
+              nome: user.nome,
+              username: user.username || null,
+              avatar: user.avatar || null,
+              tipo,
+              isFollowing: true
+            })
+          }
+
+          this.showToast({
+            title: "Agora seguindo",
+            message: `Você está seguindo ${user.nome}`,
+            type: "success",
+            icon: "fa fa-user-plus"
+          })
+        }
+
+        this.estatisticas.seguindo = this.seguindoList.length
+        this.setTabCount('following', this.seguindoList.length)
+
+        if (tipo === 'usuario') {
+          this.seguidoresList = this.seguidoresList.map(follower => ({
+            ...follower,
+            isFollowing: String(follower._id) === targetId ? user.isFollowing : follower.isFollowing
+          }))
+        }
+
+      } catch (error) {
+        console.error(error)
+        this.showToast({
+          title: "Erro",
+          message: error.response?.data?.message || "Não foi possível atualizar o follow",
+          type: "error",
+          icon: "fa fa-exclamation-circle"
+        })
+      }
     },
 
     toggleSort() {
@@ -1944,10 +3233,10 @@ artist: m.cantores && m.cantores.length
     },
 
     showToast(options) {
-     if (this.toastTimeout) {
-  clearTimeout(this.toastTimeout)
-  this.toastTimeout = null
-}
+      if (this.toastTimeout) {
+        clearTimeout(this.toastTimeout)
+        this.toastTimeout = null
+      }
      
       this.toast = {
         show: true,
@@ -1968,13 +3257,84 @@ artist: m.cantores && m.cantores.length
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
 .perfil {
-  margin-left: 260px;
+  width: 100%;
   min-height: 100vh;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   padding-bottom: 100px;
+  box-sizing: border-box;
+}
+
+/* ===== SKELETON LOADING ===== */
+.skeleton-wrapper {
+  width: 100%;
+}
+
+.skeleton-cover {
+  width: 100%;
+  height: 460px;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 20px 20px 0 0;
+}
+
+.skeleton-profile {
+  display: flex;
+  gap: 32px;
+  padding: 0 40px;
+  margin-top: -90px;
+  position: relative;
+  z-index: 10;
+}
+
+.skeleton-avatar {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border: 4px solid #0f172a;
+  flex-shrink: 0;
+}
+
+.skeleton-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 100px;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-line.large { width: 300px; height: 48px; }
+.skeleton-line.medium { width: 200px; height: 20px; }
+.skeleton-line.small { width: 400px; height: 16px; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 /* ===== HEADER DO PERFIL ===== */
@@ -1984,55 +3344,53 @@ artist: m.cantores && m.cantores.length
 }
 
 .cover-image {
-  height: 350px;
   position: relative;
+  width: 100%;
+  height: 460px;
+  border-radius: 20px 20px 0 0;
   overflow: hidden;
-  padding: 24px;
 }
 
 .cover-gradient {
-  pointer-events: none;
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.6) 60%, rgba(15, 23, 42, 0.95) 100%);
+  background: linear-gradient(
+    to top,
+    rgba(15, 23, 42, 0.75) 0%,
+    rgba(15, 23, 42, 0.25) 45%,
+    rgba(15, 23, 42, 0.05) 100%
+  );
+  pointer-events: none;
 }
 
 .cover-actions {
   position: absolute;
-  top: 24px;
-  right: 24px;
+  right: 16px;
+  bottom: 20px;
   z-index: 30;
+  pointer-events: auto;
 }
 
 .btn-cover-action {
-  padding: 10px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 31;
 }
 
 .btn-cover-action:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.btn-cover-action.btn-gradient {
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  border: none;
-}
-
-.btn-cover-action.btn-gradient:hover {
-  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.4);
+  background: rgba(0, 0, 0, 0.72);
+  transform: translateY(-1px);
 }
 
 .profile-info-container {
@@ -2040,7 +3398,7 @@ artist: m.cantores && m.cantores.length
   align-items: flex-end;
   gap: 32px;
   padding: 0 40px;
-  margin-top: -80px;
+  margin-top: 20px;
   position: relative;
   z-index: 10;
 }
@@ -2058,6 +3416,34 @@ artist: m.cantores && m.cantores.length
 .avatar-wrapper.online .avatar {
   border-color: #22c55e;
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.avatar-wrapper.has-story .avatar {
+  border-color: #ec4899;
+}
+
+/* Anel de Story */
+.story-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  padding: 3px;
+  background: conic-gradient(from 0deg, #ec4899, #8b5cf6, #ec4899);
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.story-ring:hover {
+  transform: scale(1.05);
+}
+
+.story-progress {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #1e293b;
+  mask: radial-gradient(transparent 68%, black 70%);
+  -webkit-mask: radial-gradient(transparent 68%, black 70%);
 }
 
 .avatar {
@@ -2105,6 +3491,17 @@ artist: m.cantores && m.cantores.length
   box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
 }
 
+/* Avatar Gerado */
+.avatar.generated-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72px;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  background-size: cover;
+}
+
 .user-details {
   flex: 1;
   padding-bottom: 16px;
@@ -2114,6 +3511,7 @@ artist: m.cantores && m.cantores.length
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
 .badge {
@@ -2138,6 +3536,14 @@ artist: m.cantores && m.cantores.length
 .badge-verified {
   background: rgba(59, 130, 246, 0.2);
   color: #60a5fa;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-creator {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: white;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2194,9 +3600,63 @@ artist: m.cantores && m.cantores.length
   color: #64748b;
 }
 
+/* Gêneros do usuário */
+.user-genres {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.genre-tag {
+  padding: 6px 14px;
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+  border-radius: 20px;
+  font-size: 12px;
+  color: #ec4899;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.genre-tag:hover {
+  background: rgba(236, 72, 153, 0.25);
+  transform: translateY(-2px);
+}
+
 .user-stats {
   display: flex;
   gap: 32px;
+}
+.avatar-grid-item--add {
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.avatar-grid-item--add:hover {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.12);
+  transform: scale(1.05);
+}
+
+.add-avatar-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.add-avatar-content i {
+  font-size: 22px;
+  color: #ec4899;
 }
 
 .stat-item {
@@ -2234,21 +3694,6 @@ artist: m.cantores && m.cantores.length
   letter-spacing: 0.5px;
   font-weight: 600;
 }
-.btn-cover-action {
-  padding: 10px 16px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
-}
 
 .profile-actions {
   display: flex;
@@ -2272,9 +3717,14 @@ artist: m.cantores && m.cantores.length
   box-shadow: 0 4px 20px rgba(236, 72, 153, 0.3);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(236, 72, 153, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
@@ -2409,7 +3859,22 @@ artist: m.cantores && m.cantores.length
 
 .tab-btn.active {
   color: #ec4899;
-  border-bottom-color: #ec4899;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ec4899, #8b5cf6);
+  border-radius: 3px 3px 0 0;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .tab-badge {
@@ -2440,7 +3905,9 @@ artist: m.cantores && m.cantores.length
   transition: all 0.3s;
 }
 
-.btn-filter:hover, .btn-sort:hover {
+.btn-filter.active,
+.btn-filter:hover,
+.btn-sort:hover {
   background: rgba(255, 255, 255, 0.1);
   color: white;
 }
@@ -2524,6 +3991,11 @@ artist: m.cantores && m.cantores.length
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 20px;
   padding: 24px;
+  transition: all 0.3s;
+}
+
+.content-section:hover {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .content-section.full-width {
@@ -2654,11 +4126,31 @@ artist: m.cantores && m.cantores.length
   background: rgba(255, 255, 255, 0.05);
 }
 
-.highlight-content img {
+.highlight-image-wrapper {
+  position: relative;
   width: 80px;
   height: 80px;
   border-radius: 12px;
+  overflow: hidden;
+}
+
+.highlight-image-wrapper img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+
+.highlight-glow {
+  position: absolute;
+  inset: -20px;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.4) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.highlight-content:hover .highlight-glow {
+  opacity: 1;
 }
 
 .highlight-info {
@@ -2815,11 +4307,38 @@ artist: m.cantores && m.cantores.length
   font-weight: 600;
 }
 
-.mini-item img {
+.mini-image-wrapper {
+  position: relative;
   width: 48px;
   height: 48px;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.mini-image-wrapper img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+
+.mini-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.mini-item:hover .mini-overlay {
+  opacity: 1;
+}
+
+.mini-overlay i {
+  color: white;
+  font-size: 16px;
 }
 
 .mini-info {
@@ -2887,100 +4406,75 @@ artist: m.cantores && m.cantores.length
   transform: scale(1.1);
 }
 
-/* Playlists Grid */
-.playlists-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+/* Playlists */
+.playlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.playlist-card {
-  cursor: pointer;
+.playlist-row {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.3s;
 }
 
-.playlist-card:hover {
-  transform: translateY(-4px);
+.playlist-row:hover {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
-.playlist-cover {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 16px;
+.playlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.playlist-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.playlist-thumb-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 12px;
 }
 
-.playlist-cover img {
+.playlist-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.playlist-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+.playlist-musicas {
+  padding: 10px 15px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.musica-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.3s;
-}
-
-.playlist-card:hover .playlist-overlay {
-  opacity: 1;
-}
-
-.btn-play-playlist {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  color: white;
-  font-size: 20px;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: scale(0.8);
-  transition: all 0.3s;
-  box-shadow: 0 8px 30px rgba(236, 72, 153, 0.4);
+  transition: all 0.2s;
 }
 
-.playlist-card:hover .btn-play-playlist {
-  transform: scale(1);
+.musica-item:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.playlist-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+.musica-item img {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-  backdrop-filter: blur(10px);
-}
-
-.playlist-info-card h4 {
-  font-size: 15px;
-  font-weight: 600;
-  margin: 0 0 4px 0;
-  color: #f8fafc;
-}
-
-.playlist-info-card p {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0;
+  border-radius: 4px;
 }
 
 /* Artistas */
@@ -3007,10 +4501,22 @@ artist: m.cantores && m.cantores.length
   transform: translateY(-4px);
 }
 
-.artist-avatar {
+.artist-image-wrapper {
   width: 80px;
   height: 80px;
   border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.artist-item:hover .artist-image-wrapper {
+  border-color: #ec4899;
+}
+
+.artist-avatar {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -3153,11 +4659,38 @@ artist: m.cantores && m.cantores.length
   50% { opacity: 0.5; }
 }
 
-.music-row img {
+.row-image-wrapper {
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 6px;
+  overflow: hidden;
+}
+
+.row-image-wrapper img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+}
+
+.row-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.row-image-overlay i {
+  color: white;
+  font-size: 14px;
+}
+
+.music-row:hover .row-image-overlay {
+  opacity: 1;
 }
 
 .row-info {
@@ -3250,57 +4783,6 @@ artist: m.cantores && m.cantores.length
   gap: 24px;
 }
 
-.create-playlist-card {
-  aspect-ratio: 16/10;
-  border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-align: center;
-  padding: 24px;
-}
-
-.create-playlist-card:hover {
-  border-color: #ec4899;
-  background: rgba(236, 72, 153, 0.05);
-}
-
-.create-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #ec4899;
-  transition: all 0.3s;
-}
-
-.create-playlist-card:hover .create-icon {
-  background: rgba(236, 72, 153, 0.2);
-  transform: scale(1.1);
-}
-
-.create-playlist-card h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #f8fafc;
-  margin: 0;
-}
-
-.create-playlist-card p {
-  font-size: 13px;
-  color: #64748b;
-  margin: 0;
-}
-
 .playlist-card-large {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -3330,7 +4812,7 @@ artist: m.cantores && m.cantores.length
   object-fit: cover;
 }
 
-.playlist-cover-large .playlist-overlay {
+.playlist-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
@@ -3521,10 +5003,16 @@ artist: m.cantores && m.cantores.length
   background: rgba(255, 255, 255, 0.05);
 }
 
-.history-item-detailed img {
+.history-image-wrapper {
   width: 48px;
   height: 48px;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.history-image-wrapper img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
 }
 
@@ -3576,13 +5064,24 @@ artist: m.cantores && m.cantores.length
   border-color: rgba(236, 72, 153, 0.3);
 }
 
-.user-avatar-large {
+.user-avatar-wrapper {
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  object-fit: cover;
+  overflow: hidden;
   margin-bottom: 16px;
   border: 3px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s;
+}
+
+.user-card:hover .user-avatar-wrapper {
+  border-color: #ec4899;
+}
+
+.user-avatar-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-card h4 {
@@ -3648,6 +5147,10 @@ artist: m.cantores && m.cantores.length
 .modal-content.modal-danger {
   max-width: 480px;
   border-color: rgba(239, 68, 68, 0.3);
+}
+
+.modal-content.modal-avatar {
+  max-width: 600px;
 }
 
 .modal-header {
@@ -3724,6 +5227,122 @@ artist: m.cantores && m.cantores.length
   padding: 24px;
 }
 
+/* Avatar Selector Modal */
+.avatar-selector-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 16px;
+}
+
+.avatar-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.avatar-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.avatar-tab.active {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-color: transparent;
+  color: white;
+}
+
+.avatar-options-grid {
+  min-height: 300px;
+}
+
+.avatar-option-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar-preview-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.avatar-desc {
+  color: #94a3b8;
+  text-align: center;
+  margin: 0;
+}
+
+.upload-dropzone {
+  width: 100%;
+  padding: 40px;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s;
+}
+
+.upload-dropzone.dragging,
+.upload-dropzone:hover {
+  border-color: #ec4899;
+  background: rgba(236, 72, 153, 0.05);
+}
+
+.upload-dropzone i {
+  font-size: 48px;
+  color: #64748b;
+}
+
+.upload-dropzone p {
+  color: #94a3b8;
+  margin: 0;
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.avatar-grid-item {
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.avatar-grid-item:hover {
+  border-color: #ec4899;
+  transform: scale(1.05);
+}
+
+.avatar-grid-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Profile Preview no Modal */
 .profile-preview {
   position: relative;
@@ -3766,6 +5385,30 @@ artist: m.cantores && m.cantores.length
   backdrop-filter: blur(10px);
 }
 
+.preview-media-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-remove-cover {
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.btn-remove-cover:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
 .preview-avatar-wrapper {
   position: relative;
   margin-top: -50px;
@@ -3783,6 +5426,14 @@ artist: m.cantores && m.cantores.length
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+.preview-avatar.generated-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 700;
+}
+
 .btn-change-avatar {
   position: absolute;
   bottom: 0;
@@ -3794,6 +5445,23 @@ artist: m.cantores && m.cantores.length
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
   color: white;
   font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove-preview-avatar {
+  position: absolute;
+  top: 0;
+  left: 72px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #1e293b;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-size: 13px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -4397,6 +6065,17 @@ artist: m.cantores && m.cantores.length
   transform: translateY(-20px);
 }
 
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
 @keyframes toastSlideIn {
   from {
     opacity: 0;
@@ -4431,6 +6110,10 @@ artist: m.cantores && m.cantores.length
  
   .playlists-full-grid {
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .avatar-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -4521,6 +6204,27 @@ artist: m.cantores && m.cantores.length
     right: 16px;
     transform: none;
     min-width: auto;
+  }
+
+  .avatar-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .skeleton-profile {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .skeleton-info {
+    padding-top: 20px;
+    align-items: center;
+  }
+
+  .skeleton-line.large,
+  .skeleton-line.medium,
+  .skeleton-line.small {
+    width: 80%;
   }
 }
 </style>

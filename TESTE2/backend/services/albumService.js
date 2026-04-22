@@ -5,12 +5,11 @@ const Musica = require('../models/Musicas')
 
 // CRIAR
 const createAlbum = async (data) => {
-
   // 🔥 garante que cantor é único (não array)
   if (Array.isArray(data.cantor)) {
     data.cantor = data.cantor[0]
   }
-
+  
   // 🔥 garante arrays
   if (data.generos && !Array.isArray(data.generos)) {
     data.generos = [data.generos]
@@ -48,6 +47,15 @@ const createAlbum = async (data) => {
   }
 
   return savedAlbum
+}
+
+// 🔥 SEARCH (AGORA FUNCIONA)
+const searchAlbuns = async (query) => {
+  return await Album.find({
+    nome: { $regex: query, $options: 'i' }
+  })
+  .populate('cantor', 'nome foto')
+  .populate('musicas', 'nome')
 }
 
 // LISTAR
@@ -171,5 +179,6 @@ module.exports = {
   getAlbuns,
   getAlbumById,
   updateAlbum,
-  deleteAlbum
+  deleteAlbum,
+  searchAlbuns 
 }
