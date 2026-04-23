@@ -291,6 +291,25 @@
               </div>
             </div>
 
+ <!-- Ano do Álbum -->
+            <div class="form-row">
+              <div class="input-wrap" :class="{ 'active': focused === 'ano', 'filled': form.ano }">
+                <span class="input-emoji">📅</span>
+                <input 
+                  ref="anoInput"
+                  v-model="form.ano" 
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  @focus="focused = 'ano'"
+                  @blur="focused = null"
+                  placeholder=" "
+                />
+                <label>Ano do álbum (ex: 2005)</label>
+                <div class="input-glow"></div>
+              </div>
+            </div>
+
             <div class="form-row">
               <div class="input-wrap textarea-wrap" :class="{ 'active': focused === 'descricao', 'filled': form.descricao }">
                 <span class="input-emoji textarea-emoji">📝</span>
@@ -386,7 +405,7 @@
                     <span>▶</span>
                   </button>
                 </div>
-                <div class="album-year">2024</div>
+                <div class="album-year">{{ album.ano || '---' }}</div>
               </div>
               
               <div class="album-info">
@@ -421,6 +440,7 @@
               <div class="list-info">
                 <h4>{{ album.nome }}</h4>
                 <p>{{ truncateDesc(album.descricao, 100) }}</p>
+                <span class="list-year">📅 {{ album.ano || '---' }}</span>
               </div>
               <div class="list-actions">
                <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)">✏️</button>
@@ -510,6 +530,7 @@ export default {
         nome: "",
         descricao: "",
         foto: "",
+        ano:"",
         cantor: "",
         musicas: [],
         generos: []
@@ -600,14 +621,25 @@ totalTracks() {
       }
     },
 
-    async carregarGeneros() {
-      try {
-        const res = await axios.get("http://localhost:3002/generos")
-        this.generos = res.data
-      } catch {
-        this.showToast('Erro ao carregar gêneros', 'error')
-      }
-    },
+async carregarGeneros() {
+  try {
+    const res = await axios.get("http://localhost:3002/generos")
+    console.log("GENEROS:", res.data)
+
+    let data = res.data
+
+    // 🔥 CONVERSÃO CORRETA
+    if (!Array.isArray(data)) {
+      data = Object.values(data).flat()
+    }
+
+    this.generos = data
+
+  } catch {
+    this.generos = []
+    this.showToast('Erro ao carregar gêneros', 'error')
+  }
+},
 
     async carregarMusicas() {
       try {
@@ -661,9 +693,9 @@ totalTracks() {
       return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
     },
 
-    getGeneroNome(id) {
-      return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
-    },
+getGeneroNome(id) {
+  return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
+},
 
     getGeneroColor(id) {
       const colors = [
@@ -672,7 +704,7 @@ totalTracks() {
         'linear-gradient(135deg, #10b981, #3b82f6)',
         'linear-gradient(135deg, #f59e0b, #ef4444)'
       ]
-      const index = this.generos.findIndex(g => g._id === id)
+    const index = this.generos.findIndex(g => g._id === id)
       return colors[index % colors.length]
     },
 
@@ -692,10 +724,11 @@ totalTracks() {
   this.saving = true
 
   try {
-    const payload = {
+ const payload = {
       nome: this.form.nome?.trim(),
       descricao: this.form.descricao?.trim(),
       foto: this.form.foto?.trim() || this.defaultCover,
+      ano: this.form.ano || null,
       cantor: this.form.cantor || null,
       musicas: Array.isArray(this.form.musicas) ? this.form.musicas : [],
       generos: Array.isArray(this.form.generos) ? this.form.generos : []
@@ -734,11 +767,12 @@ totalTracks() {
   try {
     const albumCompleto = await this.carregarAlbumPorId(album._id)
 
-    this.form = {
+this.form = {
       id: albumCompleto._id,
       nome: albumCompleto.nome || "",
       descricao: albumCompleto.descricao || "",
       foto: albumCompleto.foto === this.defaultCover ? "" : (albumCompleto.foto || ""),
+      ano: albumCompleto.ano || "",
       cantor:
         albumCompleto.cantor && typeof albumCompleto.cantor === 'object'
           ? albumCompleto.cantor._id
@@ -818,6 +852,7 @@ reset() {
     nome: "",
     descricao: "",
     foto: "",
+    ano: "",
     cantor: "",
     musicas: [],
     generos: []
@@ -1928,6 +1963,14 @@ textarea {
 .list-actions {
   display: flex;
   gap: 8px;
+}
+
+.list-year {
+  display: block;
+  font-size: 0.8rem;
+  color: #8b5cf6;
+  margin-top: 4px;
+  font-weight: 500;
 }
 
 .list-actions .action-btn {

@@ -19,6 +19,12 @@ const createAlbum = async (data) => {
     data.musicas = [data.musicas]
   }
 
+    const payload = {
+    ...data,
+    ano: data.ano || null,
+    decada: getDecada(data.ano)
+  }
+
   const album = new Album(data)
   const savedAlbum = await album.save()
 
@@ -93,6 +99,9 @@ const updateAlbum = async (id, data) => {
   if (!data.cantor) {
     data.cantor = oldAlbum.cantor
   }
+
+    data.ano = data.ano || null
+  data.decada = getDecada(data.ano)
 
   const oldGeneros = oldAlbum.generos || []
   const oldMusicas = oldAlbum.musicas || []
@@ -177,10 +186,18 @@ const deleteAlbum = async (id) => {
   return await Album.findByIdAndDelete(id)
 }
 
+const getDecada = (ano) => {
+  if (!ano) return null
+
+  const base = Math.floor(ano / 10) * 10
+  return `Anos ${base}`
+}
+
 module.exports = {
   createAlbum,
   getAlbuns,
   getAlbumById,
+  getDecada,
   updateAlbum,
   deleteAlbum,
   searchAlbuns 

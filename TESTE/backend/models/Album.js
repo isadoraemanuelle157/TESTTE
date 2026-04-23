@@ -22,6 +22,9 @@ const albumSchema = new mongoose.Schema({
     ref: 'Genero'
   }],
 
+  ano: { type: Number }, // ex: 1998
+decada: { type: String }, // ex: "Anos 90"
+
   createdAt: { type: Date, default: Date.now }
 });
 

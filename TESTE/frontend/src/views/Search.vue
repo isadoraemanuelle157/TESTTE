@@ -575,10 +575,10 @@ export default {
   },
 
   computed: {
-    filteredResults() {
+filteredResults() {
       if (this.activeFilter === 'Décadas') {
         return this.searchResults.filter(r => {
-          if (r.type !== 'track') return false
+          if (r.type !== 'track' && r.type !== 'album') return false
           if (!r.ano) return false
 
           const searchDecade = this.lastSearch?.toLowerCase().replace('s', '')
@@ -586,9 +586,9 @@ export default {
 
           const startYear = parseInt(searchDecade)
           const endYear = startYear + 9
-          const musicYear = parseInt(r.ano)
+          const itemYear = parseInt(r.ano)
 
-          return musicYear >= startYear && musicYear <= endYear
+          return itemYear >= startYear && itemYear <= endYear
         })
       }
 
@@ -1124,7 +1124,7 @@ async loadPopularArtists() {
       })))
     }
 
-    // ÁLBUNS LOCAIS
+// ÁLBUNS LOCAIS
     if (Array.isArray(localAlbuns)) {
       results.push(...localAlbuns.map(a => ({
         id: a._id,
@@ -1133,6 +1133,8 @@ async loadPopularArtists() {
           name: a.cantor?.nome || ''
         },
         cover: a.foto,
+        ano: a.ano,
+        decada: a.ano ? Math.floor(a.ano / 10) * 10 + 's' : null,
         type: 'album',
         source: 'local'
       })))
@@ -1188,25 +1190,26 @@ searchByDecade(decadeName) {
   this.showSuggestions = false
   this.showHistory = false
   this.showCategoriesDropdown = false
-  this.activeFilter = 'Décadas' // ← IMPORTANTE: ativar filtro de décadas
+  this.activeFilter = 'Décadas'
   this.isLoading = true
 
-  // Buscar TODAS as músicas do backend local (sem filtro de query)
-  // e depois filtrar no cliente pela década
-  fetch(`http://localhost:3002/musicas`)
-    .then(r => r.json())
-    .then(data => {
+  // Buscar TODAS as músicas E álbuns do backend local
+  Promise.all([
+    fetch(`http://localhost:3002/musicas`).then(r => r.json()),
+    fetch(`http://localhost:3002/albuns`).then(r => r.json())
+  ])
+    .then(([musicasData, albunsData]) => {
       let results = []
       
-      if (Array.isArray(data)) {
-        // Filtrar apenas músicas da década selecionada
-        const musicasDaDecada = data.filter(m => {
+      // Filtrar músicas da década
+      if (Array.isArray(musicasData)) {
+        const musicasDaDecada = musicasData.filter(m => {
           if (!m.ano) return false
           const year = parseInt(m.ano)
           return year >= range.start && year <= range.end
         })
         
-        results = musicasDaDecada.map(m => ({
+        results.push(...musicasDaDecada.map(m => ({
           id: m._id,
           title: m.nome,
           artist: {
@@ -1219,28 +1222,131 @@ searchByDecade(decadeName) {
           cover: m.foto,
           preview: m.link,
           ano: m.ano,
-          decada: decadeName, // ← Usar o nome da década selecionada
+          decada: decadeName,
           type: 'track',
           source: 'local'
-        }))
+        })))
+      }
+      
+      // Filtrar álbuns da década
+      if (Array.isArray(albunsData)) {
+        const albunsDaDecada = albunsData.filter(a => {
+          if (!a.ano) return false
+          const year = parseInt(a.ano)
+          return year >= range.start && year <= range.end
+        })
+        
+        results.push(...albunsDaDecada.map(a => ({
+          id: a._id,
+          title: a.nome,
+          artist: {
+            name: a.cantor?.nome || ''
+          },
+          cover: a.foto,
+          ano: a.ano,
+          decada: decadeName,
+          type: 'album',
+          source: 'local'
+        })))
       }
       
       this.searchResults = results
       
       // Mostrar mensagem se não encontrou nada
       if (results.length === 0) {
-        this.showToast(`Nenhuma música encontrada para ${decadeName}`, 'info')
+        this.showToast(`Nenhum resultado encontrado para ${decadeName}`, 'info')
       }
     })
     .catch(err => {
       console.error('Erro ao buscar por década:', err)
       this.searchResults = []
-      this.showToast('Erro ao buscar músicas da década', 'error')
+      this.showToast('Erro ao buscar resultados da década', 'error')
     })
     .finally(() => {
       this.isLoading = false
     })
 },
+
+searchByYear(year) {
+      const targetYear = parseInt(year)
+      if (isNaN(targetYear)) return
+
+      this.searchQuery = String(targetYear)
+      this.lastSearch = String(targetYear)
+      this.hasSearched = true
+      this.showSuggestions = false
+      this.showHistory = false
+      this.showCategoriesDropdown = false
+      this.activeFilter = 'Todos'
+      this.isLoading = true
+
+      Promise.all([
+        fetch(`http://localhost:3002/musicas`).then(r => r.json()),
+        fetch(`http://localhost:3002/albuns`).then(r => r.json())
+      ])
+        .then(([musicasData, albunsData]) => {
+          let results = []
+          
+          // Filtrar músicas do ano
+          if (Array.isArray(musicasData)) {
+            const musicasDoAno = musicasData.filter(m => {
+              if (!m.ano) return false
+              return parseInt(m.ano) === targetYear
+            })
+            
+            results.push(...musicasDoAno.map(m => ({
+              id: m._id,
+              title: m.nome,
+              artist: {
+                name: m.cantores?.map(c => c.nome).join(', ')
+              },
+              album: {
+                title: m.albuns?.[0]?.nome || '',
+                cover: m.albuns?.[0]?.foto || ''
+              },
+              cover: m.foto,
+              preview: m.link,
+              ano: m.ano,
+              type: 'track',
+              source: 'local'
+            })))
+          }
+          
+          // Filtrar álbuns do ano
+          if (Array.isArray(albunsData)) {
+            const albunsDoAno = albunsData.filter(a => {
+              if (!a.ano) return false
+              return parseInt(a.ano) === targetYear
+            })
+            
+            results.push(...albunsDoAno.map(a => ({
+              id: a._id,
+              title: a.nome,
+              artist: {
+                name: a.cantor?.nome || ''
+              },
+              cover: a.foto,
+              ano: a.ano,
+              type: 'album',
+              source: 'local'
+            })))
+          }
+          
+          this.searchResults = results
+          
+          if (results.length === 0) {
+            this.showToast(`Nenhum resultado encontrado para ${targetYear}`, 'info')
+          }
+        })
+        .catch(err => {
+          console.error('Erro ao buscar por ano:', err)
+          this.searchResults = []
+          this.showToast('Erro ao buscar resultados do ano', 'error')
+        })
+        .finally(() => {
+          this.isLoading = false
+        })
+    },
 
     async searchDeezer(query) {
       this.isLoading = true
@@ -1276,6 +1382,16 @@ searchByDecade(decadeName) {
 
 getResultSubtitle(item) {
   if (item.type === 'track') {
+    let subtitle = item.artist?.name || 'Artista desconhecido'
+    if (item.ano) {
+      const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
+      subtitle += ` • ${item.ano} (${decada})`
+    }
+    return subtitle
+  }
+
+  if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
+  if (item.type === 'album') {
     let subtitle = item.artist?.name || 'Artista desconhecido'
     if (item.ano) {
       const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
@@ -1388,7 +1504,7 @@ getResultSubtitle(item) {
   }
 },
 
-  handleInput() {
+handleInput() {
   this.showSuggestions = true
 
   if (this.searchTimeout) {
@@ -1396,8 +1512,19 @@ getResultSubtitle(item) {
   }
 
   this.searchTimeout = setTimeout(() => {
-    if (this.searchQuery.trim().length > 2) {
-      this.searchAll(this.searchQuery)
+    const query = this.searchQuery.trim()
+    
+    // Se for um ano (4 dígitos entre 1900-2100), buscar por ano
+    if (/^\d{4}$/.test(query)) {
+      const year = parseInt(query)
+      if (year >= 1900 && year <= 2100) {
+        this.searchByYear(query)
+        return
+      }
+    }
+    
+    if (query.length > 2) {
+      this.searchAll(query)
     } else {
       this.searchResults = []
     }
@@ -1435,21 +1562,34 @@ getResultSubtitle(item) {
       this.showHistory = false
     },
 
-    async performSearch() {
-      if (!this.searchQuery.trim()) return
+ async performSearch() {
+      const query = this.searchQuery.trim()
+      if (!query) return
       
-      this.lastSearch = this.searchQuery
+      // Se for um ano (4 dígitos entre 1900-2100), buscar por ano
+      if (/^\d{4}$/.test(query)) {
+        const year = parseInt(query)
+        if (year >= 1900 && year <= 2100) {
+          this.searchByYear(query)
+          await this.saveHistory(query)
+          await this.loadHistory()
+          return
+        }
+      }
+      
+      this.lastSearch = query
       this.hasSearched = true
       this.showSuggestions = false
       this.showHistory = false
       this.showCategoriesDropdown = false
       
       // Save to history
-      await this.saveHistory(this.searchQuery)
-await this.loadHistory()
+      await this.saveHistory(query)
+      await this.loadHistory()
       
-      await this.searchAll(this.searchQuery)
+      await this.searchAll(query)
     },
+    
     async saveHistory(termo) {
   try {
     const token = localStorage.getItem("token")
