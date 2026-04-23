@@ -43,7 +43,7 @@
       <!-- Main Card -->
       <main class="main-card">
         <!-- Form Section -->
-        <section class="form-section" :class="{ 'editing': modoEdicao }">
+        <section ref="formSection" class="form-section" :class="{ 'editing': modoEdicao }">
           <div class="section-header">
             <div class="section-icon">
               <span v-if="!modoEdicao">➕</span>
@@ -165,7 +165,7 @@
                   <label>Gêneros</label>
                   
                   <!-- Tags dos gêneros selecionados -->
-                  <div class="selected-tags-inline" v-if="form.generos.length > 0">
+                  <div class="selected-tags-inline" v-if="form.generos && form.generos.length > 0">
                     <span 
                       v-for="generoId in form.generos" 
                       :key="generoId" 
@@ -389,7 +389,7 @@
           </div>
 
           <!-- Music Grid -->
-          <div v-else class="music-grid">
+          <div v-else-if="Array.isArray(musicasFiltradas) && musicasFiltradas.length > 0" class="music-grid">
             <div 
               v-for="musica in musicasFiltradas" 
               :key="musica._id" 
@@ -559,6 +559,7 @@ export default {
       hoveredId: null,
       activeFilter: 'Todas',
       showDeleteModal: false,
+      _skipAlbumWatch: false,
       musicaParaExcluir: null,
       imageLoaded: false,
       defaultImage: DEFAULT_IMAGE,
@@ -587,11 +588,13 @@ export default {
   },
 
   computed: {
-    musicasFiltradas() {
-      if (this.activeFilter === 'Todas') return this.musicas
-      return this.musicas.filter(m => m.humor?.includes(this.activeFilter))
-    },
-    
+ musicasFiltradas() {
+  // 🔒 Garante que é array
+  const lista = Array.isArray(this.musicas) ? this.musicas : []
+  if (this.activeFilter === 'Todas') return lista
+  return lista.filter(m => m && m.humor?.includes(this.activeFilter))
+},
+
     totalDuration() {
       return this.musicas.reduce((acc, m) => {
         const [min, sec] = m.duracao?.split(':').map(Number) || [0, 0]
@@ -599,18 +602,22 @@ export default {
       }, 0).toFixed(0)
     },
     
-    filteredGeneros() {
-      if (!this.searchGeneros) return this.generos
-      const s = this.searchGeneros.toLowerCase()
-      return this.generos.filter(g => g.nome.toLowerCase().includes(s))
-    },
-    
-    filteredCantores() {
-      if (!this.searchCantores) return this.cantores
-      const s = this.searchCantores.toLowerCase()
-      return this.cantores.filter(c => c.nome.toLowerCase().includes(s))
-    }
+  filteredGeneros() {
+    // 🔒 Garante que é array antes de filtrar
+    const lista = Array.isArray(this.generos) ? this.generos : []
+    if (!this.searchGeneros) return lista
+    const s = this.searchGeneros.toLowerCase()
+    return lista.filter(g => g && g.nome && g.nome.toLowerCase().includes(s))
   },
+  
+  filteredCantores() {
+    // 🔒 Garante que é array antes de filtrar
+    const lista = Array.isArray(this.cantores) ? this.cantores : []
+    if (!this.searchCantores) return lista
+    const s = this.searchCantores.toLowerCase()
+    return lista.filter(c => c && c.nome && c.nome.toLowerCase().includes(s))
+  }
+},
 
   mounted() {
     this.carregarMusicas()
@@ -626,25 +633,31 @@ export default {
     document.removeEventListener('mousedown', this.handleClickOutside)
   },
 
- watch: {
-    dropdownOpen() {
+watch: {
+  dropdownOpen() {
     this.searchGeneros = ''
     this.searchCantores = ''
   },
-    'form.album'(novoAlbum) {
-      if (!novoAlbum) {
-        return
-      }
+  
+  'form.album'(novoAlbum, antigoAlbum) {
+    // 🔒 Ignora se estiver carregando dados do editar
+    if (this._skipAlbumWatch) return
+    
+    // Ignora se o valor não mudou de verdade (evita loop no reset)
+    if (novoAlbum === antigoAlbum) return
+    
+    if (!novoAlbum) return
 
-      const album = this.albuns.find(a => a._id === novoAlbum)
+    const album = this.albuns.find(a => a._id === novoAlbum)
 
-      if (album && album.cantores?.length > 0) {
-        // Adiciona cantores do álbum se ainda não estiverem selecionados
-        const cantoresDoAlbum = album.cantores.map(c => c._id || c)
-        this.form.cantores = [...new Set([...this.form.cantores, ...cantoresDoAlbum])]
-      }
+    if (album && album.cantores?.length > 0) {
+      const cantoresDoAlbum = album.cantores.map(c => 
+        typeof c === 'object' ? c._id || c : c
+      )
+      this.form.cantores = [...new Set([...this.form.cantores, ...cantoresDoAlbum])]
     }
-  },
+  }
+},
 
   methods: {
     // 🔥 MÉTODOS PARA DROPDOWNS
@@ -674,13 +687,23 @@ toggleCantor(id) {
       }
     },
 
-    getGeneroNome(id) {
-      return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
-    },
+getGeneroNome(id) {
+  // 🔒 Proteção máxima: garante que this.generos é um array válido
+  if (!Array.isArray(this.generos)) return 'Carregando...'
+  if (!id) return 'Desconhecido'
+  
+  const genero = this.generos.find(g => g && g._id === id)
+  return genero?.nome || 'Desconhecido'
+},
 
-    getCantorNome(id) {
-      return this.cantores.find(c => c._id === id)?.nome || 'Desconhecido'
-    },
+getCantorNome(id) {
+  // 🔒 Proteção máxima: garante que this.cantores é um array válido
+  if (!Array.isArray(this.cantores)) return 'Carregando...'
+  if (!id) return 'Desconhecido'
+  
+  const cantor = this.cantores.find(c => c && c._id === id)
+  return cantor?.nome || 'Desconhecido'
+},
 
     removeGenero(id) {
       this.form.generos = this.form.generos.filter(g => g !== id)
@@ -715,41 +738,75 @@ toggleCantor(id) {
       this.showToast('Erro ao carregar imagem. Verifique a URL.', 'error')
     },
 
-    async carregarMusicas() {
-      try {
-        const res = await axios.get(API)
-        this.musicas = res.data
-      } catch (err) {
-        this.showToast('Erro ao carregar músicas', 'error')
+forceFloatingLabels() {
+  // Força o estado 'filled' em todos os campos para os labels subirem
+  // Usa $nextTick para garantir que o DOM foi atualizado
+  this.$nextTick(() => {
+    // Força reatividade em todos os campos do form
+    const formFields = ['nome', 'duracao', 'ano', 'humor', 'album', 'link', 'foto', 'letra']
+    
+    formFields.forEach(field => {
+      // Trigger visual update
+      if (this.form[field]) {
+        const val = this.form[field]
+        this.form[field] = ''
+        this.$nextTick(() => {
+          this.form[field] = val
+        })
       }
-    },
+    })
+  })
+},
 
-    async carregarGeneros() {
-      try {
-        const res = await axios.get(API_GENEROS)
-        this.generos = res.data
-      } catch (err) {
-        this.showToast('Erro ao carregar gêneros', 'error')
-      }
-    },
+async carregarGeneros() {
+  try {
+    const res = await axios.get(API_GENEROS)
+    console.log('📦 RESPOSTA GENEROS:', res.data)
+    
+    // 🔒 Extrai array de res.data (suporta tanto array direto quanto { data: [...] })
+    let dados = res.data
+    if (!Array.isArray(dados) && dados?.data) {
+      dados = dados.data
+    }
+    
+    this.generos = Array.isArray(dados) ? dados : []
+    console.log('✅ GENEROS CARREGADOS:', this.generos.length, this.generos)
+  } catch (err) {
+    console.error('❌ ERRO CARREGAR GENEROS:', err)
+    this.generos = []
+    this.showToast('Erro ao carregar gêneros', 'error')
+  }
+},
 
-    async carregarAlbuns() {
-      try {
-        const res = await axios.get(API_ALBUNS)
-        this.albuns = res.data
-      } catch (err) {
-        this.showToast('Erro ao carregar álbuns', 'error')
-      }
-    },
+async carregarAlbuns() {
+  try {
+    const res = await axios.get(API_ALBUNS)
+    this.albuns = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+  } catch (err) {
+    this.albuns = []
+    this.showToast('Erro ao carregar álbuns', 'error')
+  }
+},
 
-    async carregarCantores() {
-      try {
-        const res = await axios.get(API_CANTORES)
-        this.cantores = res.data
-      } catch (err) {
-        this.showToast('Erro ao carregar cantores', 'error')
-      }
-    },
+async carregarCantores() {
+  try {
+    const res = await axios.get(API_CANTORES)
+    this.cantores = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+  } catch (err) {
+    this.cantores = []
+    this.showToast('Erro ao carregar cantores', 'error')
+  }
+},
+
+async carregarMusicas() {
+  try {
+    const res = await axios.get(API)
+    this.musicas = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+  } catch (err) {
+    this.musicas = []
+    this.showToast('Erro ao carregar músicas', 'error')
+  }
+},
 
     async salvarMusica() {
       this.loading = true
@@ -766,7 +823,7 @@ toggleCantor(id) {
   ano: this.form.ano,
 
   generos: this.form.generos || [],
-  album: this.form.album || null,
+  albuns: this.form.album ? [this.form.album] : [], // 🔥 CORRETO
   cantores: this.form.cantores || []
 }
 
@@ -792,17 +849,55 @@ console.error(err)
       }
     },
 
-    editarMusica(musica) {
-      this.form = {
-        ...musica,
-        id: musica._id,
-        generos: musica.generos?.map(g => g._id) || [],  // 🔥 Array de IDs
-        album: musica.albuns?.[0]?._id || '',
-        cantores: musica.cantores?.map(c => c._id) || []  // 🔥 Array de IDs
-      }
-      this.modoEdicao = true
-      this.scrollToForm()
-    },
+editarMusica(musica) {
+  // 🔒 Desativa o watch do álbum temporariamente
+  this._skipAlbumWatch = true
+
+  // Garante que todos os IDs sejam strings
+  const generoIds = (musica.generos || []).map(g => 
+    typeof g === 'object' && g !== null ? g._id?.toString() : String(g)
+  ).filter(Boolean)
+
+  const cantorIds = (musica.cantores || []).map(c => 
+    typeof c === 'object' && c !== null ? c._id?.toString() : String(c)
+  ).filter(Boolean)
+
+  // Pega o ID do álbum (primeiro álbum, se houver)
+  let albumId = ""
+  if (musica.albuns?.length > 0) {
+    const firstAlbum = musica.albuns[0]
+    albumId = typeof firstAlbum === 'object' && firstAlbum !== null
+      ? firstAlbum._id?.toString() 
+      : String(firstAlbum)
+  }
+
+  this.form = {
+    id: musica._id?.toString() || null,
+    nome: musica.nome || "",
+    duracao: musica.duracao || "",
+    foto: musica.foto || "",
+    humor: musica.humor || "",
+    letra: musica.letra || "",
+    link: musica.link || "",
+    ano: musica.ano ? String(musica.ano) : "",
+    generos: generoIds,
+    album: albumId,
+    cantores: cantorIds
+  }
+
+  this.modoEdicao = true
+
+  // Força os labels flutuantes a subirem e scrolla para o topo
+  this.$nextTick(() => {
+    this.forceFloatingLabels()
+    this.scrollToForm()
+    
+    // Reativa o watch do álbum após um delay
+    setTimeout(() => {
+      this._skipAlbumWatch = false
+    }, 500)
+  })
+},
 
     confirmarExclusao(musica) {
       this.musicaParaExcluir = musica
@@ -864,31 +959,43 @@ console.error(err)
       return letra.length > 60 ? letra.substring(0, 60) + '...' : letra
     },
 
-    scrollToForm() {
-      this.$nextTick(() => {
-        document.querySelector('.form-section').scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
-    },
+scrollToForm() {
+  this.$nextTick(() => {
+    const el = this.$refs.formSection
 
-    reset() {
-      this.form = {
-        id: null,
-        nome: "",
-        duracao: "",
-        foto: "",
-        humor: "",
-        letra: "",
-        link: "",
-        generos: [],    // 🔥 Array vazio
-        album: "",
-        cantores: []    // 🔥 Array vazio
-      }
-      this.modoEdicao = false
-      this.imageLoaded = false
-      this.dropdownOpen = null
-      this.searchGeneros = ''
-      this.searchCantores = ''
-    },
+    if (el) {
+      el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      })
+    }
+  })
+},
+
+reset() {
+  this.form = {
+    id: null,
+    nome: "",
+    duracao: "",
+    foto: "",
+    humor: "",
+    letra: "",
+    link: "",
+    ano: "",
+    generos: [],
+    album: "",
+    cantores: []
+  }
+  this.modoEdicao = false
+  this.imageLoaded = false
+  this.dropdownOpen = null
+  this.searchGeneros = ''
+  this.searchCantores = ''
+  this._skipAlbumWatch = false // Reseta a flag
+  
+  // Limpa o foco para os labels voltarem ao normal
+  this.focused = null
+},
 
     cancelarEdicao() {
       this.reset()
@@ -1279,6 +1386,20 @@ select:valid + label,
 textarea:focus + label,
 textarea:not(:placeholder-shown) + label,
 .input-group.filled label {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  color: #8b5cf6;
+  background: #111827;
+  padding: 0 6px;
+  font-weight: 500;
+}
+
+/* Força labels a subirem quando o form está preenchido */
+.input-group.filled label,
+.input-group.focused label,
+/* Nova regra: quando o input tem valor (via JS) */
+input:not([value=""]) + label,
+select:has(option:checked:not([value=""])) + label {
   top: 0;
   transform: translateY(-50%) scale(0.85);
   color: #8b5cf6;

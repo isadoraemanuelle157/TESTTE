@@ -66,56 +66,60 @@ const search = async (req, res) => {
 
 
 // ATUALIZAR
+// ATUALIZAR
 const update = async (req, res) => {
   try {
+    // 🔥 PRIMEIRO: pega a música antiga (com dados populados)
     const musicaAntiga = await musicaService.getMusicaById(req.params.id)
+    if (!musicaAntiga) {
+      return res.status(404).json({ message: "Música não encontrada" })
+    }
 
+    // 🔥 SEGUNDO: converte os IDs antigos para strings (antes de atualizar!)
+    const generosAntigos = (musicaAntiga.generos || []).map(g =>
+      g._id ? g._id.toString() : g.toString()
+    )
+    const albunsAntigos = (musicaAntiga.albuns || []).map(a =>
+      a._id ? a._id.toString() : a.toString()
+    )
+    const cantoresAntigos = (musicaAntiga.cantores || []).map(c =>
+      c._id ? c._id.toString() : c.toString()
+    )
+
+    // 🔥 TERCEIRO: prepara os novos IDs (sempre arrays)
+    const generosNovos = req.body.generos || []
+    const albunsNovos = req.body.albuns || []
+    const cantoresNovos = req.body.cantores || []
+
+    // 🔥 QUARTO: atualiza a música no banco
     const musica = await musicaService.updateMusica(req.params.id, req.body)
 
     // =========================
     // 🎧 GENEROS
     // =========================
+    if (generosNovos.length > 0 || generosAntigos.length > 0) {
+      // Remove dos gêneros antigos que não estão mais na música
+      for (const generoId of generosAntigos) {
+        if (!generosNovos.includes(generoId)) {
+          await Genero.findByIdAndUpdate(generoId, {
+            $pull: { musicas: musica._id }
+          })
+        }
+      }
 
-   if (req.body.generos) {
-
-  const generosAntigos = musicaAntiga.generos?.map(g =>
-    g._id ? g._id.toString() : g.toString()
-  ) || []
-
-  const generosNovos = req.body.generos
-
-  for (const generoId of generosAntigos) {
-    if (!generosNovos.includes(generoId)) {
-      await Genero.findByIdAndUpdate(generoId, {
-        $pull: { musicas: musica._id }
-      })
+      // Adiciona aos novos gêneros
+      for (const generoId of generosNovos) {
+        if (!generosAntigos.includes(generoId)) {
+          await Genero.findByIdAndUpdate(generoId, {
+            $addToSet: { musicas: musica._id }
+          })
+        }
+      }
     }
-  }
-
-  for (const generoId of generosNovos) {
-    if (!generosAntigos.includes(generoId)) {
-      await Genero.findByIdAndUpdate(generoId, {
-        $addToSet: { musicas: musica._id }
-      })
-    }
-  }
-
-}
-console.log("BODY:", req.body)
-console.log("ANTIGOS:", generosAntigos)
-console.log("NOVOS:", generosNovos)
-
 
     // =========================
     // 💿 ALBUNS
     // =========================
-
-    const albunsAntigos = musicaAntiga.albuns?.map(a =>
-  a._id ? a._id.toString() : a.toString()
-) || []
-
-    const albunsNovos = req.body.albuns || []
-
     const Album = require('../models/Album')
 
     for (const albumId of albunsAntigos) {
@@ -137,13 +141,6 @@ console.log("NOVOS:", generosNovos)
     // =========================
     // 🎤 CANTORES
     // =========================
-
-    const cantoresAntigos = musicaAntiga.cantores?.map(c =>
-  c._id ? c._id.toString() : c.toString()
-) || []
-
-    const cantoresNovos = req.body.cantores || []
-
     const Cantor = require('../models/Cantor')
 
     for (const cantorId of cantoresAntigos) {
@@ -165,6 +162,7 @@ console.log("NOVOS:", generosNovos)
     res.json({ message: "Música atualizada", musica })
 
   } catch (error) {
+    console.error('🔥 ERRO UPDATE:', error)
     res.status(500).json({ error: error.message })
   }
 }

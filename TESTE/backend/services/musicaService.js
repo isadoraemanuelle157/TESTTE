@@ -90,44 +90,18 @@ const updateMusica = async (id, data) => {
       humor: data.humor?.trim(),
       letra: data.letra?.trim(),
       link: data.link?.trim(),
-
       ano: data.ano || null,
       decada: getDecada(data.ano),
-
       generos: normalizeIds(data.generos),
       albuns: normalizeIds(data.albuns),
       cantores: normalizeIds(data.cantores)
     }
 
-    // 🔥 REMOVE IDs inválidos
-    payload.cantores = payload.cantores.filter(id => id)
+    // Atualiza a música
+    await Musica.findByIdAndUpdate(id, payload, { new: true })
 
-    const cantoresAntigos = (musicaAntiga.cantores || []).map(id => id.toString())
-    const cantoresNovos = payload.cantores.map(id => id.toString())
-
-    // REMOVE antigos
-    for (const cantorId of cantoresAntigos) {
-      if (!cantoresNovos.includes(cantorId)) {
-        await Cantor.findByIdAndUpdate(cantorId, {
-          $pull: { musicas: id }
-        })
-      }
-    }
-
-    // ADICIONA novos
-    for (const cantorId of cantoresNovos) {
-      if (!cantoresAntigos.includes(cantorId)) {
-        if (!cantorId) continue // 🔥 proteção
-
-        await Cantor.findByIdAndUpdate(cantorId, {
-          $addToSet: { musicas: id }
-        })
-      }
-    }
-
-    const musicaAtualizada = await Musica.findByIdAndUpdate(id, payload, { new: true })
-
-    return await Musica.findById(musicaAtualizada._id)
+    // Retorna a música atualizada com populate
+    return await Musica.findById(id)
       .populate('generos', 'nome _id')
       .populate('albuns', 'nome _id')
       .populate('cantores', 'nome _id')
@@ -137,6 +111,7 @@ const updateMusica = async (id, data) => {
     throw err
   }
 }
+
 const searchMusicas = async (query) => {
   if (!query) return []
 
