@@ -58,7 +58,9 @@ const createCantor = async (data) => {
     generos: normalizeIds(data.generos),
     musicas: normalizeIds(data.musicas),
     albuns: normalizeIds(data.albuns),
-     seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores)
+     seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores),
+     ano: data.ano || null,
+decada: getDecada(data.ano)
   }
 
   if (!payload.nome) {
@@ -129,7 +131,9 @@ const updateCantor = async (id, data) => {
     generos: normalizeIds(data.generos),
     musicas: normalizeIds(data.musicas),
     albuns: normalizeIds(data.albuns),
-    seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase)
+    seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase),
+    ano: data.ano || null,
+decada: getDecada(data.ano)
   }
 
   const musicasAntigas = (cantorAntigo.musicas || []).map(m => m.toString())
@@ -224,11 +228,18 @@ const deixarSeguirCantor = async (cantorId, usuarioId) => {
   return await Cantor.findById(cantorId)
 }
 
+const getDecada = (ano) => {
+  if (!ano) return null
+  const base = Math.floor(ano / 10) * 10
+  return `Anos ${base}`
+}
+
 module.exports = {
   createCantor,
   getCantores,
   getCantorById,
   getCantorByNome,
+  getDecada,
   updateCantor,
   deleteCantor,
   searchCantores,

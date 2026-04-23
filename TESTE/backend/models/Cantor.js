@@ -58,6 +58,9 @@ const cantorSchema = new mongoose.Schema({
     default: []
   },
 
+ano: { type: Number },
+decada: { type: String },
+
   createdAt: { type: Date, default: Date.now }
 }, {
   toJSON: { virtuals: true },

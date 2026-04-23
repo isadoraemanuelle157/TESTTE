@@ -576,21 +576,21 @@ export default {
 
   computed: {
 filteredResults() {
-      if (this.activeFilter === 'Décadas') {
-        return this.searchResults.filter(r => {
-          if (r.type !== 'track' && r.type !== 'album') return false
-          if (!r.ano) return false
+if (this.activeFilter === 'Décadas') {
+  return this.searchResults.filter(r => {
+    if (r.type !== 'track' && r.type !== 'album' && r.type !== 'artist') return false
+    if (!r.ano) return false
 
-          const searchDecade = this.lastSearch?.toLowerCase().replace('s', '')
-          if (!searchDecade) return false
+    const searchDecade = this.lastSearch?.toLowerCase().replace('s', '')
+    if (!searchDecade) return false
 
-          const startYear = parseInt(searchDecade)
-          const endYear = startYear + 9
-          const itemYear = parseInt(r.ano)
+    const startYear = parseInt(searchDecade)
+    const endYear = startYear + 9
+    const itemYear = parseInt(r.ano)
 
-          return itemYear >= startYear && itemYear <= endYear
-        })
-      }
+    return itemYear >= startYear && itemYear <= endYear
+  })
+}
 
       if (this.activeFilter === 'Todos') return this.searchResults
 
@@ -1119,6 +1119,8 @@ async loadPopularArtists() {
         id: c._id,
         name: c.nome,
         picture: c.foto,
+         ano: c.ano, // 🔥 IMPORTANTE
+    decada: c.ano ? Math.floor(c.ano / 10) * 10 + 's' : null,
         type: 'artist',
         source: 'local'
       })))
@@ -1196,10 +1198,11 @@ searchByDecade(decadeName) {
   // Buscar TODAS as músicas E álbuns do backend local
   Promise.all([
     fetch(`http://localhost:3002/musicas`).then(r => r.json()),
-    fetch(`http://localhost:3002/albuns`).then(r => r.json())
+    fetch(`http://localhost:3002/albuns`).then(r => r.json()),
+    fetch(`http://localhost:3002/cantores`).then(r => r.json())
   ])
-    .then(([musicasData, albunsData]) => {
-      let results = []
+  .then(([musicasData, albunsData, cantoresData]) => {
+  let results = []
       
       // Filtrar músicas da década
       if (Array.isArray(musicasData)) {
@@ -1249,7 +1252,26 @@ searchByDecade(decadeName) {
           source: 'local'
         })))
       }
-      
+
+      // 🎤 CANTORES DA DÉCADA
+  if (Array.isArray(cantoresData)) {
+    const cantoresDaDecada = cantoresData.filter(c => {
+      if (!c.ano) return false
+      const year = parseInt(c.ano)
+      return year >= range.start && year <= range.end
+    })
+
+    results.push(...cantoresDaDecada.map(c => ({
+      id: c._id,
+      name: c.nome,
+      picture: c.foto,
+      ano: c.ano,
+      decada: decadeName,
+      type: 'artist',
+      source: 'local'
+    })))
+  }
+
       this.searchResults = results
       
       // Mostrar mensagem se não encontrou nada
@@ -1282,10 +1304,11 @@ searchByYear(year) {
 
       Promise.all([
         fetch(`http://localhost:3002/musicas`).then(r => r.json()),
-        fetch(`http://localhost:3002/albuns`).then(r => r.json())
+        fetch(`http://localhost:3002/albuns`).then(r => r.json()),
+        fetch(`http://localhost:3002/cantores`).then(r => r.json())
       ])
-        .then(([musicasData, albunsData]) => {
-          let results = []
+        .then(([musicasData, albunsData, cantoresData]) => {
+  let results = []
           
           // Filtrar músicas do ano
           if (Array.isArray(musicasData)) {
@@ -1332,6 +1355,23 @@ searchByYear(year) {
             })))
           }
           
+            // 🎤 ARTISTAS DO ANO
+  if (Array.isArray(cantoresData)) {
+    const cantoresDoAno = cantoresData.filter(c => {
+      if (!c.ano) return false
+      return parseInt(c.ano) === targetYear
+    })
+
+    results.push(...cantoresDoAno.map(c => ({
+      id: c._id,
+      name: c.nome,
+      picture: c.foto,
+      ano: c.ano,
+      type: 'artist',
+      source: 'local'
+    })))
+  }
+
           this.searchResults = results
           
           if (results.length === 0) {
@@ -1381,49 +1421,68 @@ searchByYear(year) {
     },
 
 getResultSubtitle(item) {
+  // 🎵 TRACK
   if (item.type === 'track') {
     let subtitle = item.artist?.name || 'Artista desconhecido'
+
     if (item.ano) {
       const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
       subtitle += ` • ${item.ano} (${decada})`
     }
+
     return subtitle
   }
 
-  if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
+  // 🎤 ARTISTA
+  if (item.type === 'artist') {
+    let subtitle = `${this.formatFans(item.nb_fan)} fãs`
+
+    if (item.ano) {
+      const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
+      subtitle += ` • ${item.ano} (${decada})`
+    }
+
+    return subtitle
+  }
+
+  // 💿 ÁLBUM
   if (item.type === 'album') {
     let subtitle = item.artist?.name || 'Artista desconhecido'
+
     if (item.ano) {
       const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
       subtitle += ` • ${item.ano} (${decada})`
     }
+
     return subtitle
   }
 
-  if (item.type === 'artist') return `${this.formatFans(item.nb_fan)} fãs`
-  if (item.type === 'album') return item.artist?.name || 'Artista desconhecido'
-
+  // 👤 USUÁRIO
   if (item.type === 'user') {
-  let subtitle = item.username ? `@${item.username}` : 'Usuário'
+    let subtitle = item.username ? `@${item.username}` : 'Usuário'
 
-  if (item.bio) {
-    subtitle += ` • ${item.bio.substring(0, 40)}${item.bio.length > 40 ? '...' : ''}`
+    if (item.bio) {
+      subtitle += ` • ${item.bio.substring(0, 40)}${item.bio.length > 40 ? '...' : ''}`
+    }
+
+    if (item.perfilPrivado) {
+      subtitle += ' • 🔒 Privado'
+    } else {
+      subtitle += ' • 🌍 Público'
+    }
+
+    if (item.mostrarAtividade === false) {
+      subtitle += ' • atividade oculta'
+    }
+
+    return subtitle
   }
 
-  if (item.perfilPrivado) {
-    subtitle += ' • 🔒 Privado'
-  } else {
-    subtitle += ' • 🌍 Público'
+  // 🎼 GÊNERO
+  if (item.type === 'genre') {
+    return item.description || 'Gênero musical'
   }
 
-  if (item.mostrarAtividade === false) {
-    subtitle += ' • atividade oculta'
-  }
-
-  return subtitle
-}
-
-  if (item.type === 'genre') return item.description || 'Gênero musical'
   return ''
 },
 

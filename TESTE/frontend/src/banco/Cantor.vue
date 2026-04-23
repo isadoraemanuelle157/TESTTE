@@ -159,7 +159,10 @@
     </span>
   </div>
 
-  <p class="artist-date">
+<p class="artist-date">
+    <span v-if="cantor.ano">📅 Desde {{ cantor.ano }}</span>
+    <span v-else>📅 Ano não informado</span>
+    <span class="date-separator">•</span>
     Adicionado em {{ formatarData(cantor.createdAt) }}
   </p>
 
@@ -273,12 +276,23 @@
                       @input="previewFoto = null"
                     />
                   </div>
-                   <div class="input-group">
+            <div class="input-group">
     <label>Seguidores/Fãs iniciais</label>
     <input 
       v-model="form.seguidoresBase"
       type="text"
       placeholder="Ex: 10k, 100k, 2500"
+    />
+  </div>
+
+  <div class="input-group">
+    <label>Ano de início da carreira</label>
+    <input 
+      v-model="form.ano"
+      type="number"
+      min="1900"
+      max="2100"
+      placeholder="Ex: 2005"
     />
   </div>
                 </div>
@@ -783,6 +797,7 @@ export default {
       form: {
         nome: '',
         foto: '',
+        ano: '',
         albuns: [],
         generos: [],
         musicas: [],
@@ -1269,6 +1284,7 @@ fecharModalMusica() {
         const dadosCantor = {
   nome: this.form.nome?.trim(),
   foto: fotoUrl?.trim?.() || fotoUrl || '',
+  ano: this.form.ano || null,
   generos: Array.isArray(this.form.generos)
     ? this.form.generos.filter(Boolean)
     : [],
@@ -1279,7 +1295,6 @@ fecharModalMusica() {
     : [],
       seguidoresBase: this.form.seguidoresBase
 }
-
 
         let response
         let cantorId
@@ -1440,7 +1455,7 @@ async editarCantor(cantor) {
     this.cantorEditando = cantorCompleto
 
     // 🔥 NORMALIZAÇÃO CORRETA
-    this.form = {
+   this.form = {
       nome: cantorCompleto.nome || '',
       foto: cantorCompleto.foto || '',
 
@@ -1484,6 +1499,7 @@ resetForm() {
   this.form = { 
     nome: '', 
     foto: '',
+    ano: '',
     albuns: [],
     generos: [],
     musicas: [],
@@ -2841,6 +2857,11 @@ resetForm() {
   margin-top: 0.5rem;
   position: relative;
   z-index: 3;
+}
+
+.date-separator {
+  margin: 0 0.5rem;
+  opacity: 0.5;
 }
 
 .card-action-btn {
