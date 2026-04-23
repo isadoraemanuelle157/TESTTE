@@ -104,17 +104,18 @@
             <tbody>
               <tr 
                 v-for="user in usuariosFiltrados" 
-                :key="user._id"
+                :key="user.id"
                 class="table-row"
               >
                 <td class="td-user">
                   <div class="user-info">
-                    <div class="avatar" :style="{ background: generateGradient(user.nome) }">
-                      {{ getInitials(user.nome) }}
-                    </div>
+                    <div class="avatar">
+  <img v-if="user.avatar" :src="user.avatar" />
+  <span v-else>{{ getInitials(user.nome) }}</span>
+</div>
                     <div class="user-details">
                       <span class="user-name">{{ user.nome }}</span>
-                      <span class="user-id">ID: {{ user._id.slice(-6) }}</span>
+                      <span class="user-id">ID: {{ user.id.slice(-6) }}</span>
                     </div>
                   </div>
                 </td>
@@ -128,9 +129,9 @@
                   </div>
                 </td>
                 <td class="td-status">
-                  <span class="status-badge" :class="user.status || 'active'">
+                  <span class="status-badge" :class="user.perfilPrivado ? 'inactive' : 'active'">
                     <span class="status-dot"></span>
-                    {{ user.status === 'inactive' ? 'Inativo' : 'Ativo' }}
+                    {{ user.perfilPrivado ? 'Privado' : 'Ativo' }}
                   </span>
                 </td>
                 <td class="td-date">
@@ -140,7 +141,7 @@
                   <div class="action-buttons">
                     <button 
                       class="btn-icon edit" 
-                      @click="editarUsuario(user._id)"
+                      @click="editarUsuario(user.id)"
                       title="Editar usuário"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -255,10 +256,10 @@ export default {
       if (!this.searchQuery) return this.usuarios
       
       const query = this.searchQuery.toLowerCase()
-      return this.usuarios.filter(user => 
-        user.nome.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query)
-      )
+     return this.usuarios.filter(user => 
+  (user.nome || '').toLowerCase().includes(query) ||
+  (user.email || '').toLowerCase().includes(query)
+)
     },
     usuariosAtivos() {
       return this.usuarios.filter(u => u.status !== 'inactive').length
@@ -274,17 +275,24 @@ export default {
   },
 
   methods: {
-    async carregarUsuarios() {
-      try {
-        const res = await axios.get("http://localhost:3002/usuarios")
-        this.usuarios = res.data
-      } catch (err) {
-        console.error("Erro ao buscar usuários:", err)
-        this.showToast("Erro ao carregar usuários", "error")
-      } finally {
-        this.loading = false
+async carregarUsuarios() {
+  try {
+    const token = localStorage.getItem("token")
+
+    const res = await axios.get("http://localhost:3002/usuarios", {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
+
+    this.usuarios = res.data
+  } catch (err) {
+    console.error("Erro ao buscar usuários:", err)
+    this.showToast("Erro ao carregar usuários", "error")
+  } finally {
+    this.loading = false
+  }
+},
 
     getInitials(nome) {
       return nome
@@ -330,24 +338,38 @@ export default {
       this.showDeleteModal = true
     },
 
-    async excluirUsuarioConfirmado() {
-      if (!this.usuarioParaExcluir) return
-      
-      this.deleting = true
-      try {
-        await axios.delete(`http://localhost:3002/usuarios/${this.usuarioParaExcluir._id}`)
-        
-        this.usuarios = this.usuarios.filter(user => user._id !== this.usuarioParaExcluir._id)
-        this.showToast("Usuário excluído com sucesso!", "success")
-        this.showDeleteModal = false
-      } catch (err) {
-        console.error("Erro ao excluir:", err)
-        this.showToast("Erro ao excluir usuário", "error")
-      } finally {
-        this.deleting = false
-        this.usuarioParaExcluir = null
+  async excluirUsuarioConfirmado() {
+  if (!this.usuarioParaExcluir) return
+  
+  this.deleting = true
+
+  try {
+    const token = localStorage.getItem("token")
+
+    await axios.delete(
+      `http://localhost:3002/usuarios/${this.usuarioParaExcluir.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       }
-    },
+    )
+
+    this.usuarios = this.usuarios.filter(
+      user => user.id !== this.usuarioParaExcluir.id
+    )
+
+    this.showToast("Usuário excluído com sucesso!", "success")
+    this.showDeleteModal = false
+
+  } catch (err) {
+    console.error("Erro ao excluir:", err)
+    this.showToast("Erro ao excluir usuário", "error")
+  } finally {
+    this.deleting = false
+    this.usuarioParaExcluir = null
+  }
+},
 
     showToast(message, type = "success") {
       this.toast = { show: true, message, type }
@@ -722,13 +744,22 @@ export default {
   width: 48px;
   height: 48px;
   border-radius: 50%;
+   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #334155;
   font-weight: 700;
   font-size: 0.875rem;
   color: white;
   flex-shrink: 0;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* mantém proporção e corta certinho */
+  border-radius: 50%;
 }
 
 .user-details {

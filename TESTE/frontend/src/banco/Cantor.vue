@@ -110,9 +110,7 @@
 
             </div>
           </div>
-          <div class="audio-wave" v-if="hoveredCard === cantor._id">
-            <span v-for="n in 5" :key="n" :style="{ animationDelay: (n * 0.1) + 's' }"></span>
-          </div>
+        
         </div>
 
      <div class="artist-card-body">
