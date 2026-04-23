@@ -508,15 +508,7 @@
       </div>
 
       <!-- LOADING STATE -->
-      <div v-if="loading && !chartTracks.length" class="loading-overlay">
-        <div class="spinner-container">
-          <div class="spinner"></div>
-          <div class="spinner-pulse"></div>
-        </div>
-        <p>Carregando seu SoundUp...</p>
-        <span class="loading-sub">Preparando sua experiência personalizada</span>
-      </div>
-
+<div v-if="!chartTracks.length" class="skeleton"></div>
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">
         <div v-if="toast.visible" class="toast-notification" :class="toast.type">
@@ -637,6 +629,7 @@ export default {
   mounted() {
     // Verifica autenticação primeiro
     this.checkAuth()
+      this.loadAllData()
    
     // Carrega dados do usuário do localStorage se existir
     this.loadUserFromStorage()
@@ -645,12 +638,14 @@ export default {
       window.addEventListener('artists-updated', this.loadFollowedArtists)
    
     // 🔥 Carrega playlists reais do backend
-    this.loadUserPlaylists()
     this.loadFollowedArtists()
-    this.loadAllData()
    
     // Atualizar saudação a cada minuto
     setInterval(this.updateGreeting, 60000)
+      // 🔥 carrega playlists depois (sem travar)
+  setTimeout(() => {
+    this.loadUserPlaylists()
+  }, 0)
    
     // 🔥 Escuta eventos de atualização de playlists
     window.addEventListener('playlist-updated', this.loadUserPlaylists)
@@ -856,37 +851,46 @@ async loadFollowedArtists() {
 
     // ========== DATA LOADING ==========
 
-    async loadAllData() {
-      this.loading = true
-      try {
-        await Promise.all([
-          this.loadChartTracks(),
-          this.loadNewReleases(),
-          this.loadGenres(),
-          this.loadMockUserData()
-        ])
-       
-        this.showToast('Bem-vindo de volta!', `Olá, ${this.currentUser.firstName}!`, 'success', 'fa fa-smile-o')
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error)
-        this.showToast('Erro', 'Falha ao carregar dados', 'error', 'fa fa-exclamation-circle')
-      } finally {
-        this.loading = false
-      }
-    },
+async loadAllData() {
+  this.loading = true
 
-    async loadChartTracks() {
-      try {
-        const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
-        const data = await response.json()
-        if (data.data) {
-          this.chartTracks = data.data
-          this.generateRecommendations()
-        }
-      } catch (error) {
-        console.error('Erro chart:', error)
-      }
-    },
+  try {
+    // 🔥 1. CARREGA O ESSENCIAL PRIMEIRO
+    await this.loadChartTracks()
+
+    // já mostra conteúdo rápido
+    this.generateRecommendations()
+
+    // 🔥 2. RESTO EM BACKGROUND (não trava UI)
+    this.loadNewReleases()
+    this.loadGenres()
+    this.loadMockUserData()
+
+  } catch (error) {
+    console.error(error)
+  } finally {
+    this.loading = false
+  }
+},
+
+async loadChartTracks() {
+  const cache = localStorage.getItem('dashboard_chart')
+
+  if (cache) {
+    this.chartTracks = JSON.parse(cache)
+    this.generateRecommendations()
+  }
+
+  try {
+    const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
+    const data = await response.json()
+
+    if (data.data) {
+      this.chartTracks = data.data
+      localStorage.setItem('dashboard_chart', JSON.stringify(data.data))
+    }
+  } catch (e) {}
+},
 
     async loadNewReleases() {
       try {

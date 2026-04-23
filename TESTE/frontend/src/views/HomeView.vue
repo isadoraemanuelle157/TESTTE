@@ -495,14 +495,7 @@
       </section>
 
       <!-- LOADING STATE -->
-      <div v-if="loading && !chartTracks.length" class="loading-overlay">
-        <div class="spinner-container">
-          <div class="spinner"></div>
-          <div class="spinner-pulse"></div>
-        </div>
-        <p>Carregando músicas do SoundUp...</p>
-        <span class="loading-sub">Conectando à API</span>
-      </div>
+      <<div v-if="!chartTracks.length" class="skeleton"></div>
 
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">
@@ -645,31 +638,31 @@ export default {
 
     // ============ API LOADING ============
     
-    async loadAllApiData() {
-      this.loading = true
-      try {
-        await Promise.all([
-          this.loadChartTracks(),
-          this.loadPopularArtists(),
-          this.loadNewReleases(),
-          this.loadPopularPlaylists(),
-          this.loadGenres(),
-          this.loadRadios()
-        ])
-        
-        this.generateRecommendations()
-        this.generateRadioMixes()
-        this.buildRandomPool()
-        this.selectRandomHeroSong()
-        
-        this.showToast('Sucesso', 'Dados carregados com sucesso!', 'success', 'fa fa-check-circle')
-      } catch (error) {
-        console.error('Erro ao carregar dados:', error)
-        this.showToast('Erro', 'Falha ao carregar dados da API', 'error', 'fa fa-exclamation-circle')
-      } finally {
-        this.loading = false
-      }
-    },
+async loadAllApiData() {
+  this.loading = true
+
+  try {
+    // CARREGA SÓ O ESSENCIAL PRIMEIRO
+    await this.loadChartTracks()
+
+    // Mostra conteúdo rápido
+    this.generateRecommendations()
+    this.buildRandomPool()
+    this.selectRandomHeroSong()
+
+    // Carrega o resto em background (SEM travar UI)
+    this.loadPopularArtists()
+    this.loadNewReleases()
+    this.loadPopularPlaylists()
+    this.loadGenres()
+    this.loadRadios()
+
+  } catch (error) {
+    console.error(error)
+  } finally {
+    this.loading = false
+  }
+},
 
     async refreshAllData() {
       this.chartTracks = []
@@ -677,17 +670,23 @@ export default {
       await this.loadAllApiData()
     },
 
-    async loadChartTracks() {
-      try {
-        const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=20`)
-        const data = await response.json()
-        if (data.data) {
-          this.chartTracks = data.data
-        }
-      } catch (error) {
-        console.error('Erro chart:', error)
-      }
-    },
+async loadChartTracks() {
+  const cache = localStorage.getItem('chartTracks')
+
+  if (cache) {
+    this.chartTracks = JSON.parse(cache)
+  }
+
+  try {
+    const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=20`)
+    const data = await response.json()
+
+    if (data.data) {
+      this.chartTracks = data.data
+      localStorage.setItem('chartTracks', JSON.stringify(data.data))
+    }
+  } catch (e) {}
+},
 
     async loadPopularArtists() {
       try {
