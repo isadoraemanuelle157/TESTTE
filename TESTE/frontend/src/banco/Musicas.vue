@@ -86,18 +86,27 @@
                   <label>Duração (ex: 3:45)</label>
                 </div>
 
-                <div class="input-group" :class="{ 'focused': focused === 'ano', 'filled': form.ano }">
+    <div class="input-group" :class="{ 'focused': focused === 'ano', 'filled': form.ano }">
   <div class="input-icon">📅</div>
-  <input 
-    v-model="form.ano" 
-    type="number"
-    min="1900"
-    max="2100"
+
+  <select
+    v-model="form.ano"
+    required
     @focus="focused = 'ano'"
     @blur="focused = null"
-    placeholder=" "
-  />
-  <label>Ano da música (ex: 2005)</label>
+  >
+    <option value="" disabled selected hidden>Selecione o ano</option>
+    
+ <option
+  v-for="ano in anosDisponiveis"
+  :key="ano"
+  :value="ano"
+>
+  {{ ano }}s
+</option>
+  </select>
+
+  <label>Ano da música</label>
 </div>
 
                 <div class="input-group" :class="{ 'focused': focused === 'humor', 'filled': form.humor }">
@@ -120,7 +129,10 @@
                 </div>
 
                 <!-- GÊNEROS - MÚLTIPLOS COM DROPDOWN -->
-                <div class="input-group selection-dropdown-group" :class="{ 'focused': dropdownOpen === 'generos', 'filled': form.generos.length > 0 }">
+                <div class="input-group selection-dropdown-group"
+                 :class="{
+                   'focused': dropdownOpen === 'generos',
+                  'filled': form.generos.length > 0 }">
                   <div class="input-icon">🎶</div>
                   
                   <div class="custom-dropdown" :class="{ 'open': dropdownOpen === 'generos' }">
@@ -420,7 +432,6 @@
                     </svg>
                   </button>
                   
-              
                 </div>
 
                 <!-- Mood Badge -->
@@ -586,6 +597,14 @@ export default {
   return lista.filter(m => m && m.humor?.includes(this.activeFilter))
 },
 
+anosDisponiveis() {
+  const decadas = []
+  for (let i = 1920; i <= 2020; i += 10) {
+    decadas.push(i)
+  }
+  return decadas
+},
+
     totalDuration() {
       return this.musicas.reduce((acc, m) => {
         const [min, sec] = m.duracao?.split(':').map(Number) || [0, 0]
@@ -654,6 +673,7 @@ watch: {
     // 🔥 MÉTODOS PARA DROPDOWNS
     toggleDropdown(type) {
       this.dropdownOpen = this.dropdownOpen === type ? null : type
+      
     },
     toggleGenero(id) {
   if (this.form.generos.includes(id)) {
@@ -753,15 +773,18 @@ async carregarGeneros() {
   try {
     const res = await axios.get(API_GENEROS)
     console.log('📦 RESPOSTA GENEROS:', res.data)
-    
-    // 🔒 Extrai array de res.data (suporta tanto array direto quanto { data: [...] })
+
     let dados = res.data
-    if (!Array.isArray(dados) && dados?.data) {
-      dados = dados.data
+
+    // 🔥 Se vier agrupado (objeto), transforma em array
+    if (!Array.isArray(dados) && typeof dados === 'object') {
+      dados = Object.values(dados).flat()
     }
-    
+
     this.generos = Array.isArray(dados) ? dados : []
-    console.log('✅ GENEROS CARREGADOS:', this.generos.length, this.generos)
+
+    console.log('✅ GENEROS TRATADOS:', this.generos)
+
   } catch (err) {
     console.error('❌ ERRO CARREGAR GENEROS:', err)
     this.generos = []
@@ -1399,6 +1422,49 @@ select:has(option:checked:not([value=""])) + label {
   font-weight: 500;
 }
 
+/* LABEL FLUTUANTE PARA DROPDOWNS */
+.selection-dropdown-group > label {
+  position: absolute;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 1rem;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  background: transparent;
+  z-index: 5;
+  opacity: 1;
+}
+/* LABEL FLUTUANTE PARA DROPDOWNS (GÊNEROS E CANTORES) */
+.selection-dropdown-group {
+  position: relative;
+  padding-top: 10px;
+}
+
+/* LABEL SEMPRE FLUTUANTE PARA DROPDOWNS */
+.selection-dropdown-group > label {
+  top: 0 !important;
+  transform: translateY(-50%) scale(0.85) !important;
+  color: #8b5cf6 !important;
+  background: #111827 !important;
+  padding: 0 6px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+
+/* Padding ajustado no trigger para não sobrepor o label */
+.selection-dropdown-group .dropdown-trigger {
+  padding-top: 20px !important;
+  padding-bottom: 12px !important;
+}
+
+.selection-dropdown-group.focused .dropdown-trigger,
+.selection-dropdown-group.filled .dropdown-trigger {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
+}
+
 .textarea-group.filled label,
 .textarea-group.focused label {
   top: 0;
@@ -1410,8 +1476,8 @@ select:has(option:checked:not([value=""])) + label {
    ============================================ */
 .selection-dropdown-group {
   position: relative;
+  padding-top: 0;
 }
-
 .custom-dropdown {
   position: relative;
   width: 100%;
@@ -2032,6 +2098,18 @@ select:has(option:checked:not([value=""])) + label {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* SELECT COM LABEL FLUTUANTE IGUAL INPUT */
+select:focus + label,
+select:not([value=""]) + label,
+.input-group.filled label {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  color: #8b5cf6;
+  background: #111827;
+  padding: 0 6px;
+  font-weight: 500;
 }
 
 .mood {

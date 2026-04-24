@@ -1,6 +1,7 @@
 const Musica = require('../models/Musicas')
 const Album = require('../models/Album')
 const Cantor = require('../models/Cantor')
+const Genero = require('../models/GenerosMusicais')
 
 const normalizeIds = (value) => {
   if (!value) return []
@@ -147,10 +148,9 @@ const deleteMusica = async (id) => {
 
 const getDecada = (ano) => {
   if (!ano) return null
-
-  const base = Math.floor(ano / 10) * 10
-  return `Anos ${base}`
+  return `${ano}s` // 🔥 melhor visual
 }
+
 module.exports = {
   createMusica,
   getMusicas,

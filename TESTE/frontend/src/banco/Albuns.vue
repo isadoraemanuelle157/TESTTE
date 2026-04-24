@@ -292,23 +292,35 @@
             </div>
 
  <!-- Ano do Álbum -->
-            <div class="form-row">
-              <div class="input-wrap" :class="{ 'active': focused === 'ano', 'filled': form.ano }">
-                <span class="input-emoji">📅</span>
-                <input 
-                  ref="anoInput"
-                  v-model="form.ano" 
-                  type="number"
-                  min="1900"
-                  max="2100"
-                  @focus="focused = 'ano'"
-                  @blur="focused = null"
-                  placeholder=" "
-                />
-                <label>Ano do álbum (ex: 2005)</label>
-                <div class="input-glow"></div>
-              </div>
-            </div>
+<div class="input-group modern-select">
+  <label class="select-label">
+    <span class="label-icon">📅</span>
+    Selecionar Década
+  </label>
+
+  <div class="select-container">
+    <select
+      v-model="form.ano"
+      required
+      class="custom-select"
+       :class="{ 'is-placeholder': !form.ano }"
+    >
+      <option value="" disabled>Escolha a década...</option>
+      <option 
+        v-for="ano in anosDisponiveis" 
+        :key="ano" 
+        :value="ano"
+      >
+        {{ ano }}s
+      </option>
+    </select>
+  </div>
+
+  <small class="hint">
+    <span class="hint-icon">💡</span>
+    Selecione a década do álbum
+  </small>
+</div>
 
             <div class="form-row">
               <div class="input-wrap textarea-wrap" :class="{ 'active': focused === 'descricao', 'filled': form.descricao }">
@@ -501,6 +513,7 @@ export default {
       cantores: [],
       musicas: [],
       generos: [],
+      anosDisponiveis: [],
 
       modoEdicao: false,
       saving: false,
@@ -574,6 +587,7 @@ totalTracks() {
 
 
   mounted() {
+    this.gerarAnos()
     this.carregarCantores()
     this.carregarAlbuns()
     this.carregarMusicas()
@@ -593,6 +607,14 @@ totalTracks() {
 },
 
   methods: {
+ gerarAnos() {
+  const decadas = []
+  for (let i = 1920; i <= 2020; i += 10) {
+    decadas.push(i)
+  }
+  this.anosDisponiveis = decadas
+},
+
      toggleDropdown(type) {
     this.dropdownOpen = this.dropdownOpen === type ? null : type
   },
@@ -1171,6 +1193,14 @@ reset() {
   z-index: 2;
   opacity: 0.6;
   transition: all 0.3s;
+}
+
+.custom-select.is-placeholder {
+  color: #64748b; /* mesma cor do placeholder dos outros */
+}
+
+.custom-select option {
+  color: #fff;
 }
 
 .input-wrap.active .input-emoji {
@@ -1755,6 +1785,73 @@ textarea {
 .empty-studio p {
   color: #64748b;
   margin-bottom: 24px;
+}
+
+/* Select customizado */
+.custom-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: 100%;
+  padding: 16px 40px 16px 16px;
+
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+}
+
+/* Placeholder */
+.custom-select.is-placeholder {
+  color: #64748b;
+}
+
+/* Opções */
+.custom-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+/* Focus */
+.custom-select:focus {
+  border-color: #8b5cf6;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3); /* glow roxo */
+  outline: none;
+}
+
+/* Arrow customizada */
+.input-wrap {
+  position: relative;
+}
+
+.input-wrap::after {
+  content: "⌄";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8b5cf6;
+  font-size: 1.2rem;
+  pointer-events: none;
+  transition: transform 0.3s;
+}
+
+/* Rotação quando ativo */
+.input-wrap.active::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Options (limitado pelo browser, mas ajuda) */
+.custom-select option {
+  background: #1a1a2e;
+  color: #fff;
 }
 
 .btn-first {

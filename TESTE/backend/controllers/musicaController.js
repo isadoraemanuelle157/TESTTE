@@ -1,5 +1,7 @@
 const musicaService = require('../services/musicaService')
-const Genero = require('../models/generosMusicais')
+const Genero = require('../models/GenerosMusicais')
+const Album = require('../models/Album')
+const Cantor = require('../models/Cantor')
 
 // CRIAR
 const create = async (req, res) => {

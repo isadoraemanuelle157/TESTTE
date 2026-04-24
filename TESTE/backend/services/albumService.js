@@ -5,12 +5,12 @@ const Musica = require('../models/Musicas')
 
 // CRIAR
 const createAlbum = async (data) => {
-  // 🔥 garante que cantor é único (não array)
+  // garante que cantor é único (não array)
   if (Array.isArray(data.cantor)) {
     data.cantor = data.cantor[0]
   }
   
-  // 🔥 garante arrays
+  // garante arrays
   if (data.generos && !Array.isArray(data.generos)) {
     data.generos = [data.generos]
   }
@@ -19,16 +19,10 @@ const createAlbum = async (data) => {
     data.musicas = [data.musicas]
   }
 
-    const payload = {
-    ...data,
-    ano: data.ano || null,
-    decada: getDecada(data.ano)
-  }
-
   const album = new Album(data)
   const savedAlbum = await album.save()
 
-  // 🔥 Atualiza cantor
+  // Atualiza cantor
   if (data.cantor) {
     await Cantor.findByIdAndUpdate(
       data.cantor,
@@ -36,7 +30,7 @@ const createAlbum = async (data) => {
     )
   }
 
-  // 🔥 Atualiza generos
+  // Atualiza generos
   if (data.generos?.length) {
     await Genero.updateMany(
       { _id: { $in: data.generos } },
@@ -44,7 +38,7 @@ const createAlbum = async (data) => {
     )
   }
 
-  // 🔥 Atualiza músicas
+  // Atualiza músicas
   if (data.musicas?.length) {
     await Musica.updateMany(
       { _id: { $in: data.musicas } },
@@ -55,7 +49,7 @@ const createAlbum = async (data) => {
   return savedAlbum
 }
 
-// 🔥 SEARCH (AGORA FUNCIONA)
+// SEARCH
 const searchAlbuns = async (query) => {
   return await Album.find({
     nome: { $regex: query, $options: 'i' }
@@ -73,7 +67,7 @@ const getAlbuns = async (cantor) => {
   }
 
   return await Album.find(filtro)
-    .populate('cantor', '_id nome') // 🔥 singular
+    .populate('cantor', '_id nome')
     .populate('musicas', '_id nome')
     .populate('generos', '_id nome')
 }
@@ -100,9 +94,6 @@ const updateAlbum = async (id, data) => {
     data.cantor = oldAlbum.cantor
   }
 
-    data.ano = data.ano || null
-  data.decada = getDecada(data.ano)
-
   const oldGeneros = oldAlbum.generos || []
   const oldMusicas = oldAlbum.musicas || []
 
@@ -128,11 +119,11 @@ const updateAlbum = async (id, data) => {
     )
   }
 
-  // atualiza
-const updated = await Album.findByIdAndUpdate(id, data, { new: true })
-  .populate('cantor', '_id nome')
-  .populate('musicas', '_id nome')
-  .populate('generos', '_id nome')
+  // atualiza (o pre-hook do model calcula a decada)
+  const updated = await Album.findByIdAndUpdate(id, data, { new: true })
+    .populate('cantor', '_id nome')
+    .populate('musicas', '_id nome')
+    .populate('generos', '_id nome')
 
   // adiciona novos vínculos
   if (data.cantor) {
@@ -158,12 +149,13 @@ const updated = await Album.findByIdAndUpdate(id, data, { new: true })
 
   return updated
 }
+
 // DELETAR
 const deleteAlbum = async (id) => {
   const album = await Album.findById(id)
   if (!album) return null
 
-  // 🔥 remove do cantor
+  // remove do cantor
   if (album.cantor) {
     await Cantor.findByIdAndUpdate(
       album.cantor,
@@ -171,13 +163,13 @@ const deleteAlbum = async (id) => {
     )
   }
 
-  // 🔥 remove dos gêneros
+  // remove dos gêneros
   await Genero.updateMany(
     { _id: { $in: album.generos } },
     { $pull: { albuns: id } }
   )
 
-  // 🔥 remove das músicas
+  // remove das músicas
   await Musica.updateMany(
     { _id: { $in: album.musicas } },
     { $pull: { albuns: id } }
@@ -186,18 +178,10 @@ const deleteAlbum = async (id) => {
   return await Album.findByIdAndDelete(id)
 }
 
-const getDecada = (ano) => {
-  if (!ano) return null
-
-  const base = Math.floor(ano / 10) * 10
-  return `Anos ${base}`
-}
-
 module.exports = {
   createAlbum,
   getAlbuns,
   getAlbumById,
-  getDecada,
   updateAlbum,
   deleteAlbum,
   searchAlbuns 

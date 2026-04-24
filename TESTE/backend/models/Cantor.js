@@ -76,4 +76,4 @@ cantorSchema.virtual('seguidoresFormatado').get(function () {
   return formatarSeguidores(total)
 })
 
-module.exports = mongoose.model('Cantor', cantorSchema);
+module.exports = mongoose.models.Cantor || mongoose.model('Cantor', cantorSchema);

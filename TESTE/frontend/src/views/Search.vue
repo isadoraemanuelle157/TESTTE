@@ -517,15 +517,21 @@ export default {
           { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' }
         ],
         activities: [],
-        decades: [
-          { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
-          { name: '2010s', description: 'A década passada', color: '#1ed760', popularity: 88 },
-          { name: '2000s', description: 'Anos 2000', color: '#1db954', popularity: 82 },
-          { name: '90s', description: 'Clássicos dos 90', color: '#1aa34a', popularity: 78 },
-          { name: '80s', description: 'Ouro dos 80', color: '#1db954', popularity: 75 },
-          { name: '70s', description: 'Disco e rock', color: '#1ed760', popularity: 70 },
-          { name: '60s', description: 'Era clássica', color: '#1aa34a', popularity: 65 }
-        ]
+      decades: [
+  { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
+  { name: '2010s', description: 'A década passada', color: '#1ed760', popularity: 88 },
+  { name: '2000s', description: 'Anos 2000', color: '#1db954', popularity: 82 },
+  { name: '90s', description: 'Clássicos dos 90', color: '#1aa34a', popularity: 78 },
+  { name: '80s', description: 'Ouro dos 80', color: '#1db954', popularity: 75 },
+  { name: '70s', description: 'Disco e rock', color: '#1ed760', popularity: 70 },
+  { name: '60s', description: 'Era clássica', color: '#1aa34a', popularity: 65 },
+
+  // 🔥 NOVAS
+  { name: '50s', description: 'Nascimento do rock e jazz moderno', color: '#ff9800', popularity: 60 },
+  { name: '40s', description: 'Swing, jazz e clássicos antigos', color: '#ffb74d', popularity: 55 },
+  { name: '30s', description: 'Era do rádio e big bands', color: '#ffd54f', popularity: 50 },
+  { name: '20s', description: 'Jazz raiz e música vintage', color: '#ffe082', popularity: 45 }
+]
       },
 
       searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Décadas'],

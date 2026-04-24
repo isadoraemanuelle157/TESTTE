@@ -32,9 +32,9 @@ const getGeneros = async () => {
   generos.forEach(g => {
     const generoFormatado = {
       ...g._doc,
-      quantidade: g.musicas.length,
-      totalAlbuns: g.albuns.length,
-      totalCantores: g.cantores.length
+  quantidade: g.musicas?.length || 0,
+totalAlbuns: g.albuns?.length || 0,
+totalCantores: g.cantores?.length || 0
     }
 
     if (!agrupado[g.categoria]) {

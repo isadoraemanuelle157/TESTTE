@@ -1456,6 +1456,7 @@ async editarCantor(cantor) {
    this.form = {
       nome: cantorCompleto.nome || '',
       foto: cantorCompleto.foto || '',
+      ano: cantorCompleto.ano || '',
 
       generos: Array.isArray(cantorCompleto.generos)
         ? cantorCompleto.generos.map(g => typeof g === 'object' ? g._id : g)
@@ -1809,6 +1810,7 @@ resetForm() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 2rem;
+  align-items: stretch; /* 👈 importante */
   position: relative;
   z-index: 1;
 }
@@ -1824,7 +1826,9 @@ resetForm() {
   border: 1px solid rgba(37, 99, 235, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.6rem;
+   justify-content: space-between; /* 👈 distribui conteúdo igual */
+  height: 100%; /* 👈 garante mesma altura */
 }
 
 .artist-card:hover {
@@ -2788,7 +2792,7 @@ resetForm() {
 .artist-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.5rem;
   position: relative;
   z-index: 1;
 }
@@ -2863,6 +2867,7 @@ resetForm() {
 }
 
 .card-action-btn {
+  height: 44px; /* 👈 altura fixa igual pra todos */
   min-width: 120px;
   display: flex;
   align-items: center;

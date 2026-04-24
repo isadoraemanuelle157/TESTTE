@@ -420,6 +420,9 @@
             <div class="content-section">
               <div class="section-header">
                 <h3><i class="fa fa-star"></i> Favoritos</h3>
+                 <button class="btn-view-all" @click="activeTab = 'favorites'" v-if="musicasFavoritas.length > 0">
+                  Ver todas <i class="fa fa-arrow-right"></i>
+                </button>
               </div>
               <div class="mini-list" v-if="favoritosRecentes.length > 0">
                 <div

@@ -41,4 +41,4 @@ const generosMusicaisSchema = new mongoose.Schema({
 
 });
 
-module.exports = mongoose.model('Genero', generosMusicaisSchema);
+module.exports = mongoose.models.Genero || mongoose.model('Genero', generosMusicaisSchema);
