@@ -117,6 +117,7 @@ const createUser = async (data) => {
   const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
   const senhaHash = await bcrypt.hash(senha, 10)
   const defaultAvatar = generateDefaultAvatar(nome, null)
+  const agora = new Date()
 
   const user = new Usuario({
     nome,
@@ -128,7 +129,9 @@ const createUser = async (data) => {
     cover: null,
     localizacao: '',
     perfilPrivado: false,
-    mostrarAtividade: true
+    mostrarAtividade: true,
+    membroDesde: agora,
+    createdAt: agora
   })
 
   const savedUser = await user.save()

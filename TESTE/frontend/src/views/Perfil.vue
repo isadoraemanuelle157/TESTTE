@@ -3489,10 +3489,16 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       return `${mins}:${secs.toString().padStart(2, '0')}`
     },
 
-    formatDate(date) {
+   formatDate(date) {
       if (!date) return ''
-      const d = new Date(date)
-      return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+      try {
+        const d = new Date(date)
+        // Verifica se a data é válida
+        if (isNaN(d.getTime())) return ''
+        return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+      } catch (e) {
+        return ''
+      }
     },
 
     formatNumber(num) {

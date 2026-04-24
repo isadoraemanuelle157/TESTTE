@@ -258,9 +258,18 @@
       class="decade-item"
       @click="searchByDecade(decade.name); showCategoriesDropdown = false"
     >
-      <div class="decade-bar" :style="{ width: decade.popularity + '%', background: decade.color }"></div>
+     <div
+  class="decade-bar"
+  :style="{ width: decade.popularity + '%', background: getDecadeColor(decade.name) }"
+></div>
       <div class="decade-info">
-        <span class="decade-name">{{ decade.name }}</span>
+       <span
+  class="decade-name"
+  :style="{ color: getDecadeColor(decade.name) }"
+>
+  {{ decade.name }}
+</span>
+
         <span class="decade-desc">{{ decade.description }}</span>
       </div>
     </div>
@@ -382,6 +391,14 @@
                   <i class="fa fa-play"></i>
                 </div>
                 <span class="result-type">{{ getResultType(result) }}</span>
+
+                  <span
+    v-if="result.decada || result.ano"
+    class="decade-badge"
+    :style="{ background: getDecadeColor(result.decada || result.ano) }"
+  >
+    {{ result.decada || getDecadeFromYear(result.ano) }}
+  </span>
               </div>
               
             <!-- Música = coração -->
@@ -482,56 +499,70 @@ export default {
         { id: 'moods', name: 'Atividades', icon: 'fa fa-smile-o' },
         { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' }
       ],
+      decadeColors: {
+  '2020s': '#1db954',
+  '2010s': '#00c2ff',
+  '2000s': '#7c4dff',
+  '90s': '#ff2d95',
+  '80s': '#ff6b00',
+  '70s': '#f4c542',
+  '60s': '#8bc34a',
+  '50s': '#a1887f',
+  '40s': '#78909c',
+  '30s': '#b0bec5',
+  '20s': '#d4af37'
+},
 
-      detailedCategories: {
-        genres: {
-          popular: [
-            { name: 'Pop', icon: 'fa fa-star', color: '#E91E63', count: '2.4M' },
-            { name: 'Rock', icon: 'fa fa-bolt', color: '#F44336', count: '1.8M' },
-            { name: 'Hip Hop', icon: 'fa fa-microphone', color: '#FF9800', count: '3.2M' },
-            { name: 'Eletrônica', icon: 'fa fa-headphones', color: '#00BCD4', count: '2.1M' },
-            { name: 'R&B', icon: 'fa fa-heart', color: '#9C27B0', count: '890K' },
-            { name: 'Indie', icon: 'fa fa-tree', color: '#4CAF50', count: '1.2M' }
-          ],
-          regional: [
-            { name: 'Sertanejo', icon: 'fa fa-guitar', color: '#8D6E63' },
-            { name: 'Funk', icon: 'fa fa-fire', color: '#FF5722' },
-            { name: 'MPB', icon: 'fa fa-music', color: '#9C27B0' },
-            { name: 'Gospel', icon: 'fa fa-book', color: '#1976D2' },
-            { name: 'Forró', icon: 'fa fa-accordion', color: '#795548' },
-            { name: 'Pagode', icon: 'fa fa-users', color: '#FF9800' },
-            { name: 'Samba', icon: 'fa fa-drum', color: '#F44336' },
-            { name: 'Bossa Nova', icon: 'fa fa-coffee', color: '#4CAF50' }
-          ],
-          electronic: [
-            { name: 'House', icon: 'fa fa-home', color: '#00BCD4' },
-            { name: 'Techno', icon: 'fa fa-cog', color: '#3F51B5' },
-            { name: 'Trance', icon: 'fa fa-moon-o', color: '#9C27B0' },
-            { name: 'Dubstep', icon: 'fa fa-bomb', color: '#FF5722' },
-            { name: 'Drum & Bass', icon: 'fa fa-tachometer', color: '#E91E63' },
-            { name: 'Ambient', icon: 'fa fa-cloud', color: '#607D8B' }
-          ]
-        },
-        moods: [
-          { name: 'Treino', icon: 'fa fa-heartbeat', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)', description: 'Energia máxima para se exercitar' },
-          { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' }
-        ],
-        activities: [],
-      decades: [
-  { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
-  { name: '2010s', description: 'A década passada', color: '#1ed760', popularity: 88 },
-  { name: '2000s', description: 'Anos 2000', color: '#1db954', popularity: 82 },
-  { name: '90s', description: 'Clássicos dos 90', color: '#1aa34a', popularity: 78 },
-  { name: '80s', description: 'Ouro dos 80', color: '#1db954', popularity: 75 },
-  { name: '70s', description: 'Disco e rock', color: '#1ed760', popularity: 70 },
-  { name: '60s', description: 'Era clássica', color: '#1aa34a', popularity: 65 },
+     detailedCategories: {
+  genres: {
+    popular: [
+      { name: 'Pop', icon: 'fa fa-star', color: '#E91E63', count: '2.4M' },
+      { name: 'Rock', icon: 'fa fa-bolt', color: '#F44336', count: '1.8M' },
+      { name: 'Hip Hop', icon: 'fa fa-microphone', color: '#FF9800', count: '3.2M' },
+      { name: 'Eletrônica', icon: 'fa fa-headphones', color: '#00BCD4', count: '2.1M' },
+      { name: 'R&B', icon: 'fa fa-heart', color: '#9C27B0', count: '890K' },
+      { name: 'Indie', icon: 'fa fa-tree', color: '#4CAF50', count: '1.2M' }
+    ],
+    regional: [
+      { name: 'Sertanejo', icon: 'fa fa-guitar', color: '#8D6E63' },
+      { name: 'Funk', icon: 'fa fa-fire', color: '#FF5722' },
+      { name: 'MPB', icon: 'fa fa-music', color: '#9C27B0' },
+      { name: 'Gospel', icon: 'fa fa-book', color: '#1976D2' },
+      { name: 'Forró', icon: 'fa fa-accordion', color: '#795548' },
+      { name: 'Pagode', icon: 'fa fa-users', color: '#FF9800' },
+      { name: 'Samba', icon: 'fa fa-drum', color: '#F44336' },
+      { name: 'Bossa Nova', icon: 'fa fa-coffee', color: '#4CAF50' }
+    ],
+    electronic: [
+      { name: 'House', icon: 'fa fa-home', color: '#00BCD4' },
+      { name: 'Techno', icon: 'fa fa-cog', color: '#3F51B5' },
+      { name: 'Trance', icon: 'fa fa-moon-o', color: '#9C27B0' },
+      { name: 'Dubstep', icon: 'fa fa-bomb', color: '#FF5722' },
+      { name: 'Drum & Bass', icon: 'fa fa-tachometer', color: '#E91E63' },
+      { name: 'Ambient', icon: 'fa fa-cloud', color: '#607D8B' }
+    ]
+  },
 
-  // 🔥 NOVAS
-  { name: '50s', description: 'Nascimento do rock e jazz moderno', color: '#ff9800', popularity: 60 },
-  { name: '40s', description: 'Swing, jazz e clássicos antigos', color: '#ffb74d', popularity: 55 },
-  { name: '30s', description: 'Era do rádio e big bands', color: '#ffd54f', popularity: 50 },
-  { name: '20s', description: 'Jazz raiz e música vintage', color: '#ffe082', popularity: 45 }
-]
+  moods: [
+    { name: 'Treino', icon: 'fa fa-heartbeat', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)', description: 'Energia máxima para se exercitar' },
+    { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' }
+  ],
+
+  activities: [],
+
+  decades: [
+    { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
+    { name: '2010s', description: 'Streaming e pop global', color: '#00c2ff', popularity: 88 },
+    { name: '2000s', description: 'Anos 2000', color: '#7c4dff', popularity: 82 },
+    { name: '90s', description: 'Clássicos dos 90', color: '#ff2d95', popularity: 78 },
+    { name: '80s', description: 'Ouro dos 80', color: '#ff6b00', popularity: 75 },
+    { name: '70s', description: 'Disco e rock', color: '#f4c542', popularity: 70 },
+    { name: '60s', description: 'Era clássica', color: '#8bc34a', popularity: 65 },
+    { name: '50s', description: 'Nascimento do rock e jazz moderno', color: '#a1887f', popularity: 60 },
+    { name: '40s', description: 'Swing, jazz e clássicos antigos', color: '#78909c', popularity: 55 },
+    { name: '30s', description: 'Era do rádio e big bands', color: '#b0bec5', popularity: 50 },
+    { name: '20s', description: 'Jazz raiz e música vintage', color: '#d4af37', popularity: 45 }
+  ]
       },
 
       searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Décadas'],
@@ -582,34 +613,31 @@ export default {
 
   computed: {
 filteredResults() {
-if (this.activeFilter === 'Décadas') {
-  return this.searchResults.filter(r => {
-    if (r.type !== 'track' && r.type !== 'album' && r.type !== 'artist') return false
-    if (!r.ano) return false
+  if (this.activeFilter === 'Décadas') {
+    const range = this.getDecadeRange(this.lastSearch)
+    if (!range) return []
 
-    const searchDecade = this.lastSearch?.toLowerCase().replace('s', '')
-    if (!searchDecade) return false
+    return this.searchResults.filter(r => {
+      if (!['track', 'album', 'artist'].includes(r.type)) return false
+      if (!r.ano) return false
 
-    const startYear = parseInt(searchDecade)
-    const endYear = startYear + 9
-    const itemYear = parseInt(r.ano)
+      const itemYear = parseInt(r.ano)
+      return itemYear >= range.start && itemYear <= range.end
+    })
+  }
 
-    return itemYear >= startYear && itemYear <= endYear
-  })
-}
+  if (this.activeFilter === 'Todos') return this.searchResults
 
-      if (this.activeFilter === 'Todos') return this.searchResults
+  const typeMap = {
+    'Músicas': 'track',
+    'Artistas': 'artist',
+    'Álbuns': 'album',
+    'Usuários': 'user'
+  }
 
-      const typeMap = {
-        'Músicas': 'track',
-        'Artistas': 'artist',
-        'Álbuns': 'album',
-        'Usuários': 'user'
-      }
-
-      const filterType = typeMap[this.activeFilter]
-      return this.searchResults.filter(r => r.type === filterType)
-    },
+  const filterType = typeMap[this.activeFilter]
+  return this.searchResults.filter(r => r.type === filterType)
+},
 
     generosPorCategoria() {
       const grupos = {
@@ -853,6 +881,54 @@ async loadGeneros() {
     console.error("Erro ao carregar gêneros:", err)
     this.generosDB = []
   }
+},
+
+getDecadeFromYear(year) {
+  const y = parseInt(year)
+  if (isNaN(y)) return null
+
+  if (y >= 2020 && y <= 2029) return '2020s'
+  if (y >= 2010 && y <= 2019) return '2010s'
+  if (y >= 2000 && y <= 2009) return '2000s'
+  if (y >= 1990 && y <= 1999) return '90s'
+  if (y >= 1980 && y <= 1989) return '80s'
+  if (y >= 1970 && y <= 1979) return '70s'
+  if (y >= 1960 && y <= 1969) return '60s'
+  if (y >= 1950 && y <= 1959) return '50s'
+  if (y >= 1940 && y <= 1949) return '40s'
+  if (y >= 1930 && y <= 1939) return '30s'
+  if (y >= 1920 && y <= 1929) return '20s'
+
+  return null
+},
+
+getDecadeColor(decadeOrYear) {
+  if (!decadeOrYear) return '#1db954'
+
+  if (/^\d{4}$/.test(String(decadeOrYear))) {
+    const decade = this.getDecadeFromYear(decadeOrYear)
+    return this.decadeColors[decade] || '#1db954'
+  }
+
+  return this.decadeColors[decadeOrYear] || '#1db954'
+},
+
+getDecadeRange(decadeName) {
+  const ranges = {
+    '2020s': { start: 2020, end: 2029 },
+    '2010s': { start: 2010, end: 2019 },
+    '2000s': { start: 2000, end: 2009 },
+    '90s': { start: 1990, end: 1999 },
+    '80s': { start: 1980, end: 1989 },
+    '70s': { start: 1970, end: 1979 },
+    '60s': { start: 1960, end: 1969 },
+    '50s': { start: 1950, end: 1959 },
+    '40s': { start: 1940, end: 1949 },
+    '30s': { start: 1930, end: 1939 },
+    '20s': { start: 1920, end: 1929 }
+  }
+
+  return ranges[decadeName] || null
 },
 
     isAlbumFavorited(albumId) {
@@ -1113,7 +1189,7 @@ async loadPopularArtists() {
         cover: m.foto,
         preview: m.link,
         ano: m.ano,
-        decada: m.ano ? Math.floor(m.ano / 10) * 10 + 's' : null,
+        decada: m.ano ? this.getDecadeFromYear(m.ano) : null,
         type: 'track',
         source: 'local'
       })))
@@ -1126,7 +1202,7 @@ async loadPopularArtists() {
         name: c.nome,
         picture: c.foto,
          ano: c.ano, // 🔥 IMPORTANTE
-    decada: c.ano ? Math.floor(c.ano / 10) * 10 + 's' : null,
+    decada: a.ano ? this.getDecadeFromYear(a.ano) : null,
         type: 'artist',
         source: 'local'
       })))
@@ -1142,7 +1218,7 @@ async loadPopularArtists() {
         },
         cover: a.foto,
         ano: a.ano,
-        decada: a.ano ? Math.floor(a.ano / 10) * 10 + 's' : null,
+        decada: a.ano ? this.getDecadeFromYear(a.ano) : null,
         type: 'album',
         source: 'local'
       })))
@@ -1177,21 +1253,9 @@ async loadPopularArtists() {
 },
 
 searchByDecade(decadeName) {
-  // Mapear nome da década para anos
-  const decadeMap = {
-    '2020s': { start: 2020, end: 2029 },
-    '2010s': { start: 2010, end: 2019 },
-    '2000s': { start: 2000, end: 2009 },
-    '90s': { start: 1990, end: 1999 },
-    '80s': { start: 1980, end: 1989 },
-    '70s': { start: 1970, end: 1979 },
-    '60s': { start: 1960, end: 1969 }
-  }
-
-  const range = decadeMap[decadeName]
+  const range = this.getDecadeRange(decadeName)
   if (!range) return
 
-  // Configurar estado da busca
   this.searchQuery = decadeName
   this.lastSearch = decadeName
   this.hasSearched = true
@@ -1201,23 +1265,21 @@ searchByDecade(decadeName) {
   this.activeFilter = 'Décadas'
   this.isLoading = true
 
-  // Buscar TODAS as músicas E álbuns do backend local
   Promise.all([
     fetch(`http://localhost:3002/musicas`).then(r => r.json()),
     fetch(`http://localhost:3002/albuns`).then(r => r.json()),
     fetch(`http://localhost:3002/cantores`).then(r => r.json())
   ])
-  .then(([musicasData, albunsData, cantoresData]) => {
-  let results = []
-      
-      // Filtrar músicas da década
+    .then(([musicasData, albunsData, cantoresData]) => {
+      let results = []
+
       if (Array.isArray(musicasData)) {
         const musicasDaDecada = musicasData.filter(m => {
           if (!m.ano) return false
           const year = parseInt(m.ano)
           return year >= range.start && year <= range.end
         })
-        
+
         results.push(...musicasDaDecada.map(m => ({
           id: m._id,
           title: m.nome,
@@ -1231,20 +1293,19 @@ searchByDecade(decadeName) {
           cover: m.foto,
           preview: m.link,
           ano: m.ano,
-          decada: decadeName,
+          decada: this.getDecadeFromYear(m.ano),
           type: 'track',
           source: 'local'
         })))
       }
-      
-      // Filtrar álbuns da década
+
       if (Array.isArray(albunsData)) {
         const albunsDaDecada = albunsData.filter(a => {
           if (!a.ano) return false
           const year = parseInt(a.ano)
           return year >= range.start && year <= range.end
         })
-        
+
         results.push(...albunsDaDecada.map(a => ({
           id: a._id,
           title: a.nome,
@@ -1253,34 +1314,32 @@ searchByDecade(decadeName) {
           },
           cover: a.foto,
           ano: a.ano,
-          decada: decadeName,
+          decada: this.getDecadeFromYear(a.ano),
           type: 'album',
           source: 'local'
         })))
       }
 
-      // 🎤 CANTORES DA DÉCADA
-  if (Array.isArray(cantoresData)) {
-    const cantoresDaDecada = cantoresData.filter(c => {
-      if (!c.ano) return false
-      const year = parseInt(c.ano)
-      return year >= range.start && year <= range.end
-    })
+      if (Array.isArray(cantoresData)) {
+        const cantoresDaDecada = cantoresData.filter(c => {
+          if (!c.ano) return false
+          const year = parseInt(c.ano)
+          return year >= range.start && year <= range.end
+        })
 
-    results.push(...cantoresDaDecada.map(c => ({
-      id: c._id,
-      name: c.nome,
-      picture: c.foto,
-      ano: c.ano,
-      decada: decadeName,
-      type: 'artist',
-      source: 'local'
-    })))
-  }
+        results.push(...cantoresDaDecada.map(c => ({
+          id: c._id,
+          name: c.nome,
+          picture: c.foto,
+          ano: c.ano,
+          decada: this.getDecadeFromYear(c.ano),
+          type: 'artist',
+          source: 'local'
+        })))
+      }
 
       this.searchResults = results
-      
-      // Mostrar mensagem se não encontrou nada
+
       if (results.length === 0) {
         this.showToast(`Nenhum resultado encontrado para ${decadeName}`, 'info')
       }
@@ -2190,13 +2249,17 @@ html, body, #app {
   position: absolute;
   top: 8px;
   left: 8px;
-  padding: 4px 8px;
-  background: rgba(29, 185, 84, 0.9);
-  border-radius: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
   font-size: 10px;
-  font-weight: 700;
-  color: #000;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255,255,255,0.15);
+  z-index: 2;
 }
+
 .suggested-header {
   display: flex;
   align-items: center;

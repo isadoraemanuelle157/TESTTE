@@ -35,14 +35,14 @@ const usuarioSchema = new mongoose.Schema({
     }
   }],
 
-  createdAt: {
-  type: Date,
-  default: Date.now
-},
+// createdAt gerenciado automaticamente pelo timestamps: true
 
   membroDesde: { type: Date, default: Date.now }
-}, {})
-
-
+}, { 
+  timestamps: { 
+    createdAt: 'createdAt', 
+    updatedAt: 'updatedAt' 
+  }
+})
 
 module.exports = mongoose.model('Usuario', usuarioSchema)

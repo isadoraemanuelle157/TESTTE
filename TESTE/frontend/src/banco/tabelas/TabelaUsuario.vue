@@ -316,15 +316,21 @@ async carregarUsuarios() {
       return colors[index % colors.length]
     },
 
-    formatDate(date) {
+formatDate(date) {
       if (!date) return '-'
-      return new Date(date).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      })
+      try {
+        const d = new Date(date)
+        if (isNaN(d.getTime())) return '-'
+        return d.toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        })
+      } catch (e) {
+        return '-'
+      }
     },
-
+    
     novoUsuario() {
       this.$router.push('/registrar')
     },
