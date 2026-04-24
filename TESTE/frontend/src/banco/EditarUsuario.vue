@@ -249,7 +249,10 @@ export default {
         email: "",
         senha: ""
       },
-      originalData: {},
+      originalData: {
+        nome: "",
+        email: ""
+      },
       loading: false,
       mensagem: "",
       erro: "",
@@ -259,60 +262,69 @@ export default {
       showSuccessOverlay: false,
       createdAt: null,
       updatedAt: null,
-      userStatus: 'active'
+      userStatus: "active"
     }
   },
 
   computed: {
     userInitials() {
       return this.form.nome
-        ?.split(' ')
+        ?.split(" ")
+        .filter(Boolean)
         .map(n => n[0])
-        .join('')
+        .join("")
         .toUpperCase()
-        .slice(0, 2) || '??'
+        .slice(0, 2) || "??"
     },
-    
+
     userGradient() {
       const colors = [
-        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+        "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+        "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+        "linear-gradient(135deg, #fa709a 0%, #fee140 100%)"
       ]
-      const index = (this.form.nome || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
+      const index = (this.form.nome || "")
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+
       return colors[index % colors.length]
     },
 
     hasChanges() {
-      return this.form.nome !== this.originalData.nome || 
-             this.form.email !== this.originalData.email ||
-             this.form.senha
+      return (
+        this.form.nome !== this.originalData.nome ||
+        this.form.email !== this.originalData.email ||
+        !!this.form.senha
+      )
     },
 
     passwordStrength() {
-      const senha = this.form.senha || ''
+      const senha = this.form.senha || ""
       let strength = 0
+
       if (senha.length >= 6) strength += 25
       if (senha.length >= 8) strength += 25
       if (/[A-Z]/.test(senha)) strength += 25
       if (/[0-9!@#$%^&*]/.test(senha)) strength += 25
+
       return strength
     },
 
     strengthColor() {
-      if (this.passwordStrength <= 25) return '#ef4444'
-      if (this.passwordStrength <= 50) return '#f59e0b'
-      if (this.passwordStrength <= 75) return '#3b82f6'
-      return '#22c55e'
+      if (this.passwordStrength <= 25) return "#ef4444"
+      if (this.passwordStrength <= 50) return "#f59e0b"
+      if (this.passwordStrength <= 75) return "#3b82f6"
+      return "#22c55e"
     },
 
     strengthText() {
-      if (this.passwordStrength <= 25) return 'Fraca'
-      if (this.passwordStrength <= 50) return 'Média'
-      if (this.passwordStrength <= 75) return 'Boa'
-      return 'Forte'
+      if (this.passwordStrength <= 25) return "Fraca"
+      if (this.passwordStrength <= 50) return "Média"
+      if (this.passwordStrength <= 75) return "Boa"
+      return "Forte"
     }
   },
 
@@ -321,67 +333,129 @@ export default {
   },
 
   methods: {
+    getAuthHeaders() {
+      const token = localStorage.getItem("token")
+      return {
+        Authorization: `Bearer ${token}`
+      }
+    },
+
     async buscarUsuario() {
       try {
         const id = this.$route.params.id
-        const res = await axios.get(`http://localhost:3002/usuarios/${id}`)
-        
-        this.form.nome = res.data.nome
-        this.form.email = res.data.email
-        this.originalData = { ...this.form }
-        this.createdAt = res.data.createdAt
-        this.updatedAt = res.data.updatedAt
-        this.userStatus = res.data.status || 'active'
+
+        const res = await axios.get(`http://localhost:3002/usuarios/${id}`, {
+          headers: this.getAuthHeaders()
+        })
+
+        const usuario = res.data
+
+        this.form.nome = usuario.nome || ""
+        this.form.email = usuario.email || ""
+        this.form.senha = ""
+
+        this.originalData = {
+          nome: usuario.nome || "",
+          email: usuario.email || ""
+        }
+
+        this.createdAt = usuario.createdAt || usuario.membroDesde || null
+        this.updatedAt = usuario.updatedAt || usuario.createdAt || usuario.membroDesde || null
+
+        // como no model existe perfilPrivado, e não status
+        this.userStatus = usuario.perfilPrivado ? "inactive" : "active"
       } catch (err) {
-        this.erro = "Erro ao carregar usuário"
-        setTimeout(() => this.voltar(), 2000)
+        console.error("Erro ao carregar usuário:", err)
+        this.erro =
+          err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Erro ao carregar usuário"
+
+        setTimeout(() => {
+          this.voltar()
+        }, 2000)
       }
     },
 
     async salvar() {
       if (!this.hasChanges) return
-      
+
       this.loading = true
       this.erro = ""
       this.mensagem = ""
 
       try {
         const id = this.$route.params.id
+
         const payload = {
           nome: this.form.nome,
           email: this.form.email
         }
-        
-        if (this.form.senha) {
-          payload.senha = this.form.senha
+
+        if (this.form.senha && this.form.senha.trim()) {
+          payload.senha = this.form.senha.trim()
         }
 
-        await axios.put(`http://localhost:3002/usuarios/${id}`, payload)
+        const res = await axios.put(
+          `http://localhost:3002/usuarios/${id}`,
+          payload,
+          {
+            headers: this.getAuthHeaders()
+          }
+        )
+
+        this.mensagem = res.data?.message || "Usuário atualizado com sucesso!"
+
+        const usuarioAtualizado = res.data?.user || {}
+
+        this.originalData = {
+          nome: this.form.nome,
+          email: this.form.email
+        }
+
+        this.form.senha = ""
+        this.showPasswordFields = false
+        this.showPassword = false
+
+        this.updatedAt =
+          usuarioAtualizado.updatedAt ||
+          new Date().toISOString()
+
+        this.userStatus = usuarioAtualizado.perfilPrivado ? "inactive" : this.userStatus
 
         this.showSuccessOverlay = true
-        
-        setTimeout(() => {
-          this.$router.push("/usuarios")
-        }, 1500)
 
+        setTimeout(() => {
+          this.$router.push("/tabelausuario")
+        }, 1500)
       } catch (err) {
-        this.erro = err.response?.data?.error || "Erro ao salvar alterações"
+        console.error("Erro ao salvar alterações:", err)
+        this.erro =
+          err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Erro ao salvar alterações"
+      } finally {
         this.loading = false
       }
     },
 
     voltar() {
-      this.$router.push("/usuarios")
+      this.$router.push("/tabelausuario")
     },
 
     formatDate(date) {
-      if (!date) return '-'
-      return new Date(date).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      if (!date) return "-"
+
+      const parsed = new Date(date)
+
+      if (isNaN(parsed.getTime())) return "-"
+
+      return parsed.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
       })
     }
   }

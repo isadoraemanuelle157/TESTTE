@@ -54,10 +54,15 @@
             <span class="stat-value">{{ usuarios.length }}</span>
             <span class="stat-label">Total de Usuários</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-value">{{ usuariosAtivos }}</span>
-            <span class="stat-label">Ativos Hoje</span>
-          </div>
+        <div class="stat-item">
+  <span class="stat-value">{{ usuariosPublicos }}</span>
+  <span class="stat-label">Contas Públicas</span>
+</div>
+
+<div class="stat-item">
+  <span class="stat-value">{{ usuariosPrivados }}</span>
+  <span class="stat-label">Contas Privadas</span>
+</div>
           <div class="stat-item">
             <span class="stat-value">{{ novosEstaSemana }}</span>
             <span class="stat-label">Novos (7 dias)</span>
@@ -103,7 +108,7 @@
             </thead>
             <tbody>
               <tr 
-                v-for="user in usuariosFiltrados" 
+                v-for="user in usuariosPaginados"
                 :key="user.id"
                 class="table-row"
               >
@@ -131,12 +136,12 @@
                 <td class="td-status">
                   <span class="status-badge" :class="user.perfilPrivado ? 'inactive' : 'active'">
                     <span class="status-dot"></span>
-                    {{ user.perfilPrivado ? 'Privado' : 'Ativo' }}
+                    {{ user.perfilPrivado ? 'Privado' : 'Público' }}
                   </span>
                 </td>
-                <td class="td-date">
-                  {{ formatDate(user.createdAt) }}
-                </td>
+               <td class="td-date">
+  {{ formatDate(user.createdAt || user.membroDesde) }}
+</td>
                 <td class="td-actions">
                   <div class="action-buttons">
                     <button 
@@ -167,11 +172,46 @@
         </div>
 
         <!-- Pagination -->
-        <div v-if="usuariosFiltrados.length > 0" class="pagination">
-          <span class="pagination-info">
-            Mostrando {{ usuariosFiltrados.length }} de {{ usuarios.length }} usuários
-          </span>
-        </div>
+      <div v-if="usuariosFiltrados.length > 0" class="pagination">
+  
+  <span class="pagination-info">
+    Mostrando 
+    {{ (currentPage - 1) * itemsPerPage + 1 }} -
+    {{ Math.min(currentPage * itemsPerPage, usuariosFiltrados.length) }}
+    de {{ usuariosFiltrados.length }} usuários
+  </span>
+
+  <div class="pagination-controls">
+    <!-- Botão anterior -->
+    <button 
+      class="btn-page"
+      :disabled="currentPage === 1"
+      @click="currentPage--"
+    >
+      ←
+    </button>
+
+    <!-- Páginas -->
+    <button
+      v-for="page in totalPages"
+      :key="page"
+      :class="['btn-page', { active: currentPage === page }]"
+      @click="currentPage = page"
+    >
+      {{ page }}
+    </button>
+
+    <!-- Botão próximo -->
+    <button 
+      class="btn-page"
+      :disabled="currentPage === totalPages"
+      @click="currentPage++"
+    >
+      →
+    </button>
+  </div>
+
+</div>
       </main>
     </div>
 
@@ -243,6 +283,8 @@ export default {
       showDeleteModal: false,
       usuarioParaExcluir: null,
       deleting: false,
+      currentPage: 1,
+itemsPerPage: 10,
       toast: {
         show: false,
         message: "",
@@ -252,22 +294,41 @@ export default {
   },
 
   computed: {
-    usuariosFiltrados() {
-      if (!this.searchQuery) return this.usuarios
-      
-      const query = this.searchQuery.toLowerCase()
-     return this.usuarios.filter(user => 
-  (user.nome || '').toLowerCase().includes(query) ||
-  (user.email || '').toLowerCase().includes(query)
-)
-    },
-    usuariosAtivos() {
-      return this.usuarios.filter(u => u.status !== 'inactive').length
-    },
-    novosEstaSemana() {
-      const umaSemanaAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      return this.usuarios.filter(u => new Date(u.createdAt) > umaSemanaAtras).length
-    }
+usuariosFiltrados() {
+  if (!this.searchQuery) return this.usuarios
+
+  const query = this.searchQuery.toLowerCase()
+  return this.usuarios.filter(user =>
+    (user.nome || '').toLowerCase().includes(query) ||
+    (user.email || '').toLowerCase().includes(query)
+  )
+},
+
+usuariosPaginados() {
+  const start = (this.currentPage - 1) * this.itemsPerPage
+  const end = start + this.itemsPerPage
+  return this.usuariosFiltrados.slice(start, end)
+},
+
+totalPages() {
+  return Math.ceil(this.usuariosFiltrados.length / this.itemsPerPage)
+},
+
+usuariosPublicos() {
+  return this.usuarios.filter(u => !u.perfilPrivado).length
+},
+
+usuariosPrivados() {
+  return this.usuarios.filter(u => u.perfilPrivado).length
+},
+
+  novosEstaSemana() {
+  const umaSemanaAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  return this.usuarios.filter(u => {
+    const dataCadastro = u.createdAt || u.membroDesde
+    return dataCadastro && new Date(dataCadastro) > umaSemanaAtras
+  }).length
+}
   },
 
   async mounted() {
@@ -285,7 +346,10 @@ async carregarUsuarios() {
       }
     })
 
-    this.usuarios = res.data
+    this.usuarios = (res.data || []).map(user => ({
+      ...user,
+      createdAt: user.createdAt || user.membroDesde || null
+    }))
   } catch (err) {
     console.error("Erro ao buscar usuários:", err)
     this.showToast("Erro ao carregar usuários", "error")
@@ -316,21 +380,15 @@ async carregarUsuarios() {
       return colors[index % colors.length]
     },
 
-formatDate(date) {
+    formatDate(date) {
       if (!date) return '-'
-      try {
-        const d = new Date(date)
-        if (isNaN(d.getTime())) return '-'
-        return d.toLocaleDateString('pt-BR', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric'
-        })
-      } catch (e) {
-        return '-'
-      }
+      return new Date(date).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      })
     },
-    
+
     novoUsuario() {
       this.$router.push('/registrar')
     },
@@ -578,7 +636,9 @@ formatDate(date) {
 /* Stats Bar */
 .stats-bar {
   display: flex;
-  gap: 32px;
+  justify-content: center; /* CENTRALIZA */
+  align-items: center;
+  gap: 48px; /* aumenta o espaçamento pra ficar bonito */
   padding: 20px 24px;
   background: rgba(17, 24, 39, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -589,7 +649,9 @@ formatDate(date) {
 .stat-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  align-items: center; /* centraliza texto dentro do bloco */
+  text-align: center;
+  min-width: 140px;
 }
 
 .stat-value {
@@ -601,6 +663,46 @@ formatDate(date) {
 .stat-label {
   font-size: 0.875rem;
   color: #64748b;
+}
+
+.pagination {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-page {
+  min-width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.2);
+  color: #fff;
+}
+
+.btn-page.active {
+  background: #6366f1;
+  color: white;
+  font-weight: bold;
+}
+
+.btn-page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Main Card */

@@ -46,13 +46,13 @@ const login = async (req, res) => {
 const list = async (req, res) => {
   try {
     const users = await userService.getUsers()
-    // Garante que createdAt e membroDesde sejam retornados
-    const usersWithDates = users.map(user => ({
+
+    const usersComData = users.map(user => ({
       ...user,
-      createdAt: user.createdAt || user.membroDesde,
-      membroDesde: user.membroDesde || user.createdAt
+      createdAt: user.createdAt || user.membroDesde || null
     }))
-    res.json(usersWithDates)
+
+    res.json(usersComData)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
