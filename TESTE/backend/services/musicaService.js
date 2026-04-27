@@ -29,23 +29,33 @@ const createMusica = async (data) => {
     link: data.link?.trim(),
 
     ano: data.ano || null,
-    decada: getDecada(data.ano), // 🔥 automático
+    decada: getDecada(data.ano),
 
     generos: normalizeIds(data.generos),
-    albuns: normalizeIds(data.albuns),
+    albuns: normalizeIds(data.albuns), // pode vazio = single
     cantores: normalizeIds(data.cantores)
   }
 
+  // CAMPOS OBRIGATÓRIOS
   if (!payload.nome) throw new Error('Nome da música é obrigatório')
   if (!payload.duracao) throw new Error('Duração é obrigatória')
   if (!payload.foto) throw new Error('Foto é obrigatória')
   if (!payload.humor) throw new Error('Humor é obrigatório')
   if (!payload.letra) throw new Error('Letra é obrigatória')
   if (!payload.link) throw new Error('Link é obrigatório')
+  if (!payload.ano) throw new Error('Ano é obrigatório')
 
+  if (!payload.generos.length) {
+    throw new Error('Selecione pelo menos um gênero')
+  }
+
+  if (!payload.cantores.length) {
+    throw new Error('Selecione pelo menos um cantor')
+  }
+
+  // álbum pode ficar vazio (single)
   const musica = await Musica.create(payload)
 
-  // relaciona com álbuns se houver
   if (payload.albuns.length > 0) {
     await Album.updateMany(
       { _id: { $in: payload.albuns } },
@@ -53,13 +63,10 @@ const createMusica = async (data) => {
     )
   }
 
-  // relaciona com cantores se houver
-  if (payload.cantores.length > 0) {
-    await Cantor.updateMany(
-      { _id: { $in: payload.cantores } },
-      { $addToSet: { musicas: musica._id } }
-    )
-  }
+  await Cantor.updateMany(
+    { _id: { $in: payload.cantores } },
+    { $addToSet: { musicas: musica._id } }
+  )
 
   return musica
 }
@@ -98,6 +105,21 @@ const updateMusica = async (id, data) => {
       cantores: normalizeIds(data.cantores)
     }
 
+    if (!payload.nome) throw new Error('Nome da música é obrigatório')
+if (!payload.duracao) throw new Error('Duração é obrigatória')
+if (!payload.foto) throw new Error('Foto é obrigatória')
+if (!payload.humor) throw new Error('Humor é obrigatório')
+if (!payload.letra) throw new Error('Letra é obrigatória')
+if (!payload.link) throw new Error('Link é obrigatório')
+if (!payload.ano) throw new Error('Ano é obrigatório')
+
+if (!payload.generos.length) {
+  throw new Error('Selecione pelo menos um gênero')
+}
+
+if (!payload.cantores.length) {
+  throw new Error('Selecione pelo menos um cantor')
+}
     // Atualiza a música
     await Musica.findByIdAndUpdate(id, payload, { new: true })
 

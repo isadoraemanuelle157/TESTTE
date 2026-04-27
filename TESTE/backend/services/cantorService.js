@@ -57,15 +57,38 @@ const createCantor = async (data) => {
     foto: data.foto?.trim?.() || data.foto || '',
     generos: normalizeIds(data.generos),
     musicas: normalizeIds(data.musicas),
-    albuns: normalizeIds(data.albuns),
-     seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores),
-     ano: data.ano || null,
-decada: getDecada(data.ano)
+    albuns: normalizeIds(data.albuns), // opcional
+    seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores),
+    ano: data.ano || null,
+    decada: getDecada(data.ano)
   }
 
+  // 🔥 CAMPOS OBRIGATÓRIOS (menos álbum)
   if (!payload.nome) {
     throw new Error('Nome do cantor é obrigatório')
   }
+
+  if (!payload.foto) {
+    throw new Error('Foto é obrigatória')
+  }
+
+  if (!payload.ano) {
+    throw new Error('Ano de início é obrigatório')
+  }
+
+  if (!payload.seguidoresBase && payload.seguidoresBase !== 0) {
+    throw new Error('Seguidores é obrigatório')
+  }
+
+  if (!payload.generos.length) {
+    throw new Error('Selecione ao menos um gênero')
+  }
+
+  if (!payload.musicas.length) {
+    throw new Error('Selecione ao menos uma música')
+  }
+
+  // albuns continua opcional
 
   const cantor = new Cantor(payload)
   const savedCantor = await cantor.save()
@@ -125,19 +148,30 @@ const updateCantor = async (id, data) => {
   const cantorAntigo = await Cantor.findById(id)
   if (!cantorAntigo) throw new Error('Cantor não encontrado')
 
-  const payload = {
-    nome: data.nome?.trim(),
-    foto: data.foto?.trim?.() || data.foto || '',
-    generos: normalizeIds(data.generos),
-    musicas: normalizeIds(data.musicas),
-    albuns: normalizeIds(data.albuns),
-    seguidoresBase: parseSeguidores(data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase),
-    ano: data.ano || null,
-decada: getDecada(data.ano)
-  }
+const payload = {
+  nome: data.nome?.trim() || cantorAntigo.nome,
+  foto: data.foto?.trim?.() || data.foto || cantorAntigo.foto || '',
+  generos: data.generos !== undefined
+    ? normalizeIds(data.generos)
+    : cantorAntigo.generos,
+  musicas: data.musicas !== undefined
+    ? normalizeIds(data.musicas)
+    : cantorAntigo.musicas,
+  albuns: data.albuns !== undefined
+    ? normalizeIds(data.albuns)
+    : cantorAntigo.albuns,
+  seguidoresBase: parseSeguidores(
+    data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase
+  ),
+  ano: data.ano ?? cantorAntigo.ano ?? null,
+  decada: getDecada(data.ano ?? cantorAntigo.ano)
+}
 
   const musicasAntigas = (cantorAntigo.musicas || []).map(m => m.toString())
   const musicasNovas = payload.musicas.map(m => m.toString())
+  
+  const generosAntigos = (cantorAntigo.generos || []).map(g => g.toString())
+const generosNovos = payload.generos.map(g => g.toString())
 
   for (const musicaId of musicasAntigas) {
     if (!musicasNovas.includes(musicaId)) {
@@ -154,6 +188,22 @@ decada: getDecada(data.ano)
       })
     }
   }
+
+  for (const generoId of generosAntigos) {
+  if (!generosNovos.includes(generoId)) {
+    await Genero.findByIdAndUpdate(generoId, {
+      $pull: { cantores: id }
+    })
+  }
+}
+
+for (const generoId of generosNovos) {
+  if (!generosAntigos.includes(generoId)) {
+    await Genero.findByIdAndUpdate(generoId, {
+      $addToSet: { cantores: id }
+    })
+  }
+}
 
   return await Cantor.findByIdAndUpdate(id, payload, { new: true })
 }

@@ -77,10 +77,10 @@
         <div class="genres-masonry">
           <button
             v-for="(genre, index) in genres"
-            :key="genre.name"
+            :key="genre.id"
             class="genre-tile"
             :class="{
-              active: selectedGenres.includes(genre.name),
+             active: selectedGenres.some(g=>g.id===genre.id),
               'is-large': index % 7 === 0
             }"
             :style="{
@@ -88,7 +88,7 @@
               '--genre-gradient': genre.gradient,
               animationDelay: index * 0.05 + 's'
             }"
-            @click="toggleGenre(genre.name)"
+            @click="toggleGenre(genre)"
           >
             <div class="tile-bg" :style="{ background: genre.gradient }"></div>
             <div class="tile-content">
@@ -127,11 +127,11 @@
         <div class="artists-grid">
           <div
             v-for="(artist, index) in artists"
-            :key="artist.name"
+            :key="artist.id"
             class="artist-card-large"
-            :class="{ active: selectedArtists.includes(artist.name) }"
+            :class="{ active: selectedArtists.some(a=>a.id===artist.id) }"
             :style="{ animationDelay: index * 0.04 + 's' }"
-            @click="toggleArtist(artist.name)"
+            @click="toggleArtist(artist)"
           >
             <div class="artist-image">
               <img :src="artist.photo" :alt="artist.name">
@@ -177,14 +177,14 @@
         <div class="vibes-showcase">
           <div
             v-for="(vibe, index) in vibes"
-            :key="vibe.name"
+            :key="vibe.id"
             class="vibe-showcase-card"
-            :class="{ active: selectedVibes.includes(vibe.name) }"
+            :class="{ active: selectedVibes.some(v=>v.id===vibe.id) }"
             :style="{
               '--vibe-gradient': vibe.gradient,
               animationDelay: index * 0.08 + 's'
             }"
-            @click="toggleVibe(vibe.name)"
+            @click="toggleVibe(vibe)"
           >
             <div class="vibe-bg" :style="{ background: vibe.gradient }"></div>
             <div class="vibe-illustration">
@@ -306,21 +306,25 @@ export default {
   data() {
     return {
       currentStep: 1,
-      selectedGenres: [],
-      selectedArtists: [],
-      selectedVibes: [],
-      showSuccess: false,
 
-      genres: [],
-      artists: [],
-      vibes: []
+   selectedGenres:[],
+   selectedArtists:[],
+   selectedVibes:[],
+   showSuccess:false,
+
+   genres:[],
+   artists:[],
+   vibes:[]
     }
-  },
-  mounted() {
-    this.loadGeneros()
-    this.loadCantores()
-    this.loadVibes()
-  },
+},
+ 
+async mounted(){
+ await Promise.all([
+   this.loadGeneros(),
+   this.loadCantores(),
+   this.loadVibes()
+ ])
+},
 
   computed: {
     genreProgress() {
@@ -337,134 +341,150 @@ export default {
       if (this.currentStep === 2) return this.selectedArtists.length >= 2
       return true
     },
-    selectedItems() {
-      const items = []
-      this.selectedGenres.forEach(g => {
-        const genre = this.genres.find(gen => gen.name === g)
-        if (genre) items.push({ name: g, emoji: genre.emoji, color: genre.color })
-      })
-      this.selectedArtists.forEach(a => {
-        const artist = this.artists.find(art => art.name === a)
-        if (artist) items.push({ name: a, emoji: '🎤', gradient: 'linear-gradient(135deg, #1DB954 0%, #1ed760 100%)' })
-      })
-      this.selectedVibes.forEach(v => {
-        const vibe = this.vibes.find(vib => vib.name === v)
-        if (vibe) items.push({ name: v, emoji: vibe.emoji, gradient: vibe.gradient })
-      })
-      return items
-    },
-    summaryTags() {
-      return [
-        ...this.selectedGenres.slice(0, 3),
-        ...this.selectedArtists.slice(0, 2),
-        ...this.selectedVibes.slice(0, 2)
-      ]
-    }
+selectedItems(){
+ return [
+   ...this.selectedGenres,
+   ...this.selectedArtists,
+   ...this.selectedVibes
+ ]
+},
+
+   summaryTags(){
+ return [
+  ...this.selectedGenres.slice(0,3).map(g=>g.name),
+  ...this.selectedArtists.slice(0,2).map(a=>a.name),
+  ...this.selectedVibes.slice(0,2).map(v=>v.name)
+ ]
+}
   },
 
   methods: {
-    async loadGeneros() {
-      try {
-        const res = await fetch("http://localhost:3002/generos")
-        const data = await res.json()
+async loadGeneros(){
+ try{
+   const res = await fetch("http://localhost:3002/generos")
+   const data = await res.json()
 
-        this.genres = data.map((g, index) => ({
-          name: g.nome,
-          emoji: this.getEmoji(g.nome),
-          color: this.getColor(index),
-          gradient: this.getGradient(index)
-        }))
+   // backend retorna objeto agrupado
+   const generosArray = Object.values(data).flat()
 
-      } catch (err) {
-        console.error("Erro ao carregar gêneros:", err)
-      }
-    },
-    
-    async loadCantores() {
-      try {
-        const res = await fetch("http://localhost:3002/cantores")
-        const data = await res.json()
+   this.genres = generosArray.map((g,index)=>({
+      id:g._id,
+      name:g.nome,
+      emoji:g.icon || this.getEmoji(g.nome),
+      color:g.color || this.getColor(index),
+      gradient:this.getGradient(index)
+   }))
 
-        // 🔥 transformar dados do banco para UI
-        this.artists = data.map((c, index) => ({
-          name: c.nome,
-          photo: c.foto || `https://i.pravatar.cc/400?img=${index + 1}`,
+ }catch(e){
+   console.error("Erro gêneros:",e)
+ }
+},
 
-          // pegar gênero (se existir)
-          genre: c.generos?.length
-            ? c.generos.map(g => g.nome).join(", ")
-            : "Sem gênero",
+// ==================== ARTISTAS ====================
+async loadCantores(){
+ try{
 
-          // fake de popularidade (ou você pode criar no banco depois)
-          popularity: Math.floor(Math.random() * 20) + 80
-        }))
+  const res = await fetch("http://localhost:3002/cantores")
+  const data = await res.json()
 
-      } catch (err) {
-        console.error("Erro ao carregar cantores:", err)
-      }
-    },
-    
-    async loadVibes() {
-      try {
-        const res = await fetch("http://localhost:3002/vibes")
-        const data = await res.json()
+  this.artists = data.map((c,index)=>({
+      id:c._id,
+      name:c.nome,
 
-        this.vibes = data.map(v => ({
-          name: v.nome,
-          emoji: v.emoji || "🎵",
-          gradient: v.gradient || "linear-gradient(135deg, #667eea, #764ba2)",
-          description: v.descricao,
-          tags: v.tags || []
-        }))
+      photo:
+        c.foto ||
+        `https://i.pravatar.cc/400?img=${index+10}`,
 
-      } catch (err) {
-        console.error("Erro ao carregar vibes:", err)
-      }
-    },
+      genre:
+       c.generos?.length
+        ? c.generos.map(g=>g.nome).join(", ")
+        : "Sem gênero",
 
-    getEmoji(nome) {
-      if (!nome) return "🎶"
+      popularity:
+         Math.floor(Math.random()*20)+80
+  }))
 
-      const normalizado = nome
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // remove acentos
-        .replace(/\s+/g, "")
-      
-      const map = {
-        pop: "🎵",
-        rock: "🎸",
-        funk: "💃",
-        hiphop: "🎤",
-        eletronica: "🎹",
-        gospel: "🙏",
-        samba: "🥁",
-        sertanejo: "🌾",
-        mpb: "🇧🇷"
-      }
+ }catch(e){
+   console.error("Erro cantores:",e)
+ }
 
-      return map[normalizado] || "🎶"
-    },
+},
 
-    getColor(index) {
-      const colors = [
-        "#E91E63", "#F44336", "#FF9800", "#00BCD4",
-        "#9C27B0", "#4CAF50", "#FFC107", "#3F51B5"
-      ]
-      return colors[index % colors.length]
-    },
+// ==================== VIBES ====================
+async loadVibes(){
 
-    getGradient(index) {
-      const gradients = [
-        "linear-gradient(135deg, #E91E63 0%, #F48FB1 100%)",
-        "linear-gradient(135deg, #F44336 0%, #EF5350 100%)",
-        "linear-gradient(135deg, #FF9800 0%, #FFB74D 100%)",
-        "linear-gradient(135deg, #00BCD4 0%, #4DD0E1 100%)",
-        "linear-gradient(135deg, #9C27B0 0%, #CE93D8 100%)",
-        "linear-gradient(135deg, #4CAF50 0%, #81C784 100%)"
-      ]
-      return gradients[index % gradients.length]
-    },
+ try{
+   const res = await fetch("http://localhost:3002/vibes")
+   const data = await res.json()
+
+   this.vibes = data.map(v=>({
+
+      id:v._id,
+      name:v.nome,
+      emoji:v.emoji || "🎵",
+
+      gradient:
+        v.gradient ||
+       "linear-gradient(135deg,#667eea,#764ba2)",
+
+      description:v.descricao,
+
+      tags:v.tags || []
+
+   }))
+
+ }catch(e){
+   console.error("Erro vibes:",e)
+ }
+
+},
+
+  getEmoji(nome){
+ const map={
+   pop:"🎵",
+   rock:"🎸",
+   funk:"🔥",
+   hiphop:"🎤",
+   eletronica:"🎹",
+   gospel:"🙏",
+   samba:"🥁",
+   sertanejo:"🌾",
+   mpb:"🇧🇷"
+ }
+
+ const key=nome
+  ?.toLowerCase()
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g,"")
+  .replace(/\s/g,"")
+
+ return map[key] || "🎶"
+},
+
+getColor(index){
+const colors=[
+"#E91E63",
+"#F44336",
+"#FF9800",
+"#00BCD4",
+"#9C27B0",
+"#4CAF50"
+]
+return colors[index%colors.length]
+},
+
+getGradient(index){
+const gradients=[
+"linear-gradient(135deg,#E91E63,#F48FB1)",
+"linear-gradient(135deg,#F44336,#EF5350)",
+"linear-gradient(135deg,#FF9800,#FFB74D)",
+"linear-gradient(135deg,#00BCD4,#4DD0E1)",
+"linear-gradient(135deg,#9C27B0,#CE93D8)",
+"linear-gradient(135deg,#4CAF50,#81C784)"
+]
+
+return gradients[index%gradients.length]
+},
 
     getBgStyle(step) {
       const gradients = {
@@ -475,39 +495,69 @@ export default {
       return { background: gradients[step] }
     },
 
-    toggleGenre(genre) {
-      if (this.selectedGenres.includes(genre)) {
-        this.selectedGenres = this.selectedGenres.filter(g => g !== genre)
-      } else {
-        this.selectedGenres.push(genre)
-      }
-    },
+toggleGenre(genre){
+ const existe=this.selectedGenres.find(
+   g=>g.id===genre.id
+ )
 
-    toggleArtist(name) {
-      if (this.selectedArtists.includes(name)) {
-        this.selectedArtists = this.selectedArtists.filter(a => a !== name)
-      } else {
-        this.selectedArtists.push(name)
-      }
-    },
+ if(existe){
+   this.selectedGenres=
+    this.selectedGenres.filter(
+      g=>g.id!==genre.id
+    )
+ }else{
+   this.selectedGenres.push(genre)
+ }
+},
 
-    toggleVibe(vibe) {
-      if (this.selectedVibes.includes(vibe)) {
-        this.selectedVibes = this.selectedVibes.filter(v => v !== vibe)
-      } else {
-        this.selectedVibes.push(vibe)
-      }
-    },
+toggleArtist(artist){
+ const existe=this.selectedArtists.find(
+   a=>a.id===artist.id
+ )
 
-    removeItem(item) {
-      if (this.selectedGenres.includes(item.name)) {
-        this.selectedGenres = this.selectedGenres.filter(g => g !== item.name)
-      } else if (this.selectedArtists.includes(item.name)) {
-        this.selectedArtists = this.selectedArtists.filter(a => a !== item.name)
-      } else {
-        this.selectedVibes = this.selectedVibes.filter(v => v !== item.name)
-      }
-    },
+ if(existe){
+  this.selectedArtists=
+   this.selectedArtists.filter(
+    a=>a.id!==artist.id
+   )
+ }else{
+   this.selectedArtists.push(artist)
+ }
+},
+
+toggleVibe(vibe){
+ const existe=this.selectedVibes.find(
+   v=>v.id===vibe.id
+ )
+
+ if(existe){
+   this.selectedVibes=
+    this.selectedVibes.filter(
+      v=>v.id!==vibe.id
+    )
+ }else{
+   this.selectedVibes.push(vibe)
+ }
+},
+
+   removeItem(item){
+
+this.selectedGenres=
+ this.selectedGenres.filter(
+   g=>g.id!==item.id
+ )
+
+this.selectedArtists=
+ this.selectedArtists.filter(
+   a=>a.id!==item.id
+ )
+
+this.selectedVibes=
+ this.selectedVibes.filter(
+   v=>v.id!==item.id
+ )
+
+},
 
     nextStep() {
       if (this.currentStep === 3) {
@@ -535,23 +585,72 @@ export default {
       }
     },
 
-    finishOnboarding() {
-      // ✅ ALTERAÇÃO: Salvar preferências e redirecionar para o Dashboard
-      const preferences = {
-        genres: this.selectedGenres,
-        artists: this.selectedArtists,
-        vibes: this.selectedVibes,
-        completedAt: new Date().toISOString()
+ async finishOnboarding(){
+ try{
+   const usuario = JSON.parse(
+      localStorage.getItem("usuario")
+   )
+
+   const token = localStorage.getItem("token")
+
+   // 1) salva preferências no usuário
+   await fetch(
+      `http://localhost:3002/usuarios/${usuario.id}`,
+      {
+        method:"PUT",
+        headers:{
+          "Content-Type":"application/json",
+          Authorization:`Bearer ${token}`
+        },
+        body: JSON.stringify({
+          generos:
+            this.selectedGenres.map(g=>g.id),
+
+          artistasFavoritos:
+            this.selectedArtists.map(a=>a.id),
+
+          vibesFavoritas:
+            this.selectedVibes.map(v=>v.id),
+
+          onboardingCompleto:true
+        })
       }
-      
-      // Salvar no localStorage para uso futuro
-      localStorage.setItem('user_preferences', JSON.stringify(preferences))
-      
-      console.log('Onboarding finalizado:', preferences)
-      
-      // Redirecionar para o Dashboard
-      this.$router.push("/dashboard")
-    }
+   )
+
+
+   // 2) cria favoritos dos artistas escolhidos
+   await Promise.all(
+     this.selectedArtists.map(artist =>
+       fetch(
+         `http://localhost:3002/favoritas/${artist.id}/favoritar`,
+         {
+           method:"POST",
+           headers:{
+             "Content-Type":"application/json",
+             Authorization:`Bearer ${token}`
+           },
+           body: JSON.stringify({
+             tipo:"cantor"
+           })
+         }
+       )
+     )
+   )
+
+   // opcional: salva localmente para refletir rápido em outras páginas
+   localStorage.setItem(
+      "artistasFavoritos",
+      JSON.stringify(
+        this.selectedArtists.map(a=>a.id)
+      )
+   )
+
+   this.$router.push('/dashboard')
+
+ }catch(err){
+   console.error(err)
+ }
+}
   }
 }
 </script>

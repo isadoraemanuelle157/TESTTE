@@ -131,10 +131,12 @@
             Descrição
           </label>
           <textarea 
-            v-model="form.descricao"
-            placeholder="Descreva a vibe..."
-            rows="3"
-            class="input-field"
+        v-model="form.descricao"
+ required
+ minlength="5"
+ placeholder="Descreva a vibe..."
+ rows="3"
+ class="input-field"
           ></textarea>
         </div>
 
@@ -238,7 +240,7 @@
           </div>
         </div>
 
-        <button type="submit" class="btn-submit" :disabled="isLoading">
+        <button type="submit" class="btn-submit"  :disabled="isLoading || form.tags.length === 0">
           <span v-if="isLoading">⏳ Salvando...</span>
           <span v-else>💾 Salvar Vibe</span>
         </button>
@@ -403,7 +405,13 @@
       <!-- Descrição -->
       <div class="form-group">
         <label><span class="label-icon">📄</span> Descrição</label>
-        <textarea v-model="editingVibe.descricao" rows="2" class="input-field"></textarea>
+       <textarea 
+ v-model="editingVibe.descricao"
+ required
+ minlength="5"
+ rows="2"
+ class="input-field">
+</textarea>
       </div>
 
       <!-- 🔥 NOVO: Editor de Gradiente -->
@@ -453,7 +461,7 @@
       
       <div class="modal-actions">
         <button type="button" @click="cancelEdit" class="btn-cancel">Cancelar</button>
-        <button type="submit" class="btn-save" :disabled="isUpdating">
+        <button type="submit" class="btn-save"  :disabled="isUpdating || editingVibe.tags.length === 0">
           {{ isUpdating ? '⏳ Salvando...' : '💾 Salvar Alterações' }}
         </button>
       </div>
@@ -689,6 +697,17 @@ filteredEditEmojis() {
     },
 
     async createVibe() {
+       if (
+   !this.form.nome.trim() ||
+   !this.form.emoji.trim() ||
+   !this.form.descricao.trim() ||
+   !this.form.gradient.trim() ||
+   this.form.tags.length === 0
+ ) {
+   alert('Preencha todos os campos e adicione ao menos uma tag.')
+   return
+ }
+
       this.isLoading = true
       try {
         const res = await fetch("http://localhost:3002/vibes", {
@@ -816,6 +835,15 @@ editVibe(vibe) {
 
 // ========== SUBSTITUIR updateVibe ==========
 async updateVibe() {
+  if (
+ !this.editingVibe.nome.trim() ||
+ !this.editingVibe.emoji.trim() ||
+ !this.editingVibe.descricao.trim() ||
+ this.editingVibe.tags.length === 0
+){
+ alert('Todos os campos são obrigatórios.')
+ return
+}
   this.isUpdating = true
   try {
     const finalGradient = this.editingVibe.isCustomGradient 

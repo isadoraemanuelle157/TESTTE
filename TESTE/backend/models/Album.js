@@ -7,14 +7,27 @@ function calcularDecada(ano) {
 }
 
 const albumSchema = new mongoose.Schema({
-  nome: { type: String, required: true },
-  descricao: { type: String, required: true },
-  foto: { type: String, required: true },
+  nome: { 
+    type: String, 
+    required: [true, 'Nome é obrigatório'],
+    trim: true
+  },
+
+  descricao: { 
+    type: String, 
+    required: [true, 'Descrição é obrigatória'],
+    trim: true
+  },
+
+  foto: { 
+    type: String, 
+    required: [true, 'Foto é obrigatória']
+  },
 
   cantor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Cantor',
-    required: true
+    required: [true, 'Cantor é obrigatório']
   },
 
   musicas: [{
@@ -29,16 +42,32 @@ const albumSchema = new mongoose.Schema({
 
   ano: { 
     type: Number,
+    required: [true, 'Ano é obrigatório'],
     min: 1920,
     max: 2020
   },
-  
-  decada: { type: String },
 
-  createdAt: { type: Date, default: Date.now }
-});
+  decada: {
+    type: String,
+    required: true
+  },
 
-// Middleware para calcular década automaticamente
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+})
+
+albumSchema.path('musicas').validate(
+  val => Array.isArray(val) && val.length > 0,
+  'Selecione ao menos uma música'
+)
+
+albumSchema.path('generos').validate(
+  val => Array.isArray(val) && val.length > 0,
+  'Selecione ao menos um gênero'
+)
+
 albumSchema.pre('save', function(next) {
   if (this.isModified('ano')) {
     this.decada = calcularDecada(this.ano)
@@ -48,10 +77,12 @@ albumSchema.pre('save', function(next) {
 
 albumSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate()
+
   if (update.ano !== undefined) {
     update.decada = calcularDecada(update.ano)
   }
+
   next()
 })
 
-module.exports = mongoose.models.Album || mongoose.model('Album', albumSchema);
+module.exports = mongoose.models.Album || mongoose.model('Album', albumSchema)

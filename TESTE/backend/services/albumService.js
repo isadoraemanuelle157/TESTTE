@@ -5,18 +5,35 @@ const Musica = require('../models/Musicas')
 
 // CRIAR
 const createAlbum = async (data) => {
-  // garante que cantor é único (não array)
+  // Validação detalhada
+  const erros = []
+  
+  if (!data.nome?.trim()) erros.push('Nome é obrigatório')
+  if (!data.descricao?.trim()) erros.push('Descrição é obrigatória')
+  if (!data.foto?.trim()) erros.push('Foto é obrigatória')
+  if (!data.ano || isNaN(Number(data.ano))) erros.push('Ano deve ser um número válido')
+  if (!data.cantor) erros.push('Cantor é obrigatório')
+  if (!Array.isArray(data.musicas) || data.musicas.length === 0) erros.push('Selecione ao menos uma música')
+  if (!Array.isArray(data.generos) || data.generos.length === 0) erros.push('Selecione ao menos um gênero')
+
+  if (erros.length > 0) {
+    throw new Error(erros.join(' | '))
+  }
+
+  // Normaliza cantor
   if (Array.isArray(data.cantor)) {
     data.cantor = data.cantor[0]
   }
-  
-  // garante arrays
-  if (data.generos && !Array.isArray(data.generos)) {
-    data.generos = [data.generos]
-  }
 
-  if (data.musicas && !Array.isArray(data.musicas)) {
-    data.musicas = [data.musicas]
+  // Garante que ano é número
+  data.ano = Number(data.ano)
+
+  // Garante arrays
+  if (!Array.isArray(data.generos)) data.generos = [data.generos].filter(Boolean)
+  if (!Array.isArray(data.musicas)) data.musicas = [data.musicas].filter(Boolean)
+      if (data.ano) {
+    const inicio = Math.floor(Number(data.ano) / 10) * 10
+    data.decada = `Anos ${inicio}`
   }
 
   const album = new Album(data)
@@ -85,13 +102,43 @@ const updateAlbum = async (id, data) => {
   const oldAlbum = await Album.findById(id)
   if (!oldAlbum) return null
 
-  // garante cantor único
-  if (Array.isArray(data.cantor)) {
-    data.cantor = data.cantor[0]
+  // Mesma validação do create
+  const erros = []
+  if (!data.nome?.trim()) erros.push('Nome é obrigatório')
+  if (!data.descricao?.trim()) erros.push('Descrição é obrigatória')
+  if (!data.foto?.trim()) erros.push('Foto é obrigatória')
+  if (!data.ano || isNaN(Number(data.ano))) erros.push('Ano deve ser um número válido')
+  if (!data.cantor) erros.push('Cantor é obrigatório')
+  if (!Array.isArray(data.musicas) || data.musicas.length === 0) erros.push('Selecione ao menos uma música')
+  if (!Array.isArray(data.generos) || data.generos.length === 0) erros.push('Selecione ao menos um gênero')
+
+  if (erros.length > 0) {
+    throw new Error(erros.join(' | '))
   }
 
-  if (!data.cantor) {
-    data.cantor = oldAlbum.cantor
+  // Normaliza
+  if (Array.isArray(data.cantor)) data.cantor = data.cantor[0]
+  data.ano = Number(data.ano)
+  if (!Array.isArray(data.generos)) data.generos = [data.generos].filter(Boolean)
+  if (!Array.isArray(data.musicas)) data.musicas = [data.musicas].filter(Boolean)
+     if (data.ano !== undefined) {
+    const inicio = Math.floor(Number(data.ano) / 10) * 10
+    data.decada = `Anos ${inicio}`
+  }
+
+  // validação obrigatória
+  if (
+    !data.nome?.trim() ||
+    !data.descricao?.trim() ||
+    !data.foto?.trim() ||
+    !data.ano ||
+    !data.cantor ||
+    !data.musicas?.length ||
+    !data.generos?.length
+  ) {
+    throw new Error(
+      'Todos os campos são obrigatórios, incluindo músicas e gêneros'
+    )
   }
 
   const oldGeneros = oldAlbum.generos || []
@@ -119,33 +166,34 @@ const updateAlbum = async (id, data) => {
     )
   }
 
-  // atualiza (o pre-hook do model calcula a decada)
-  const updated = await Album.findByIdAndUpdate(id, data, { new: true })
-    .populate('cantor', '_id nome')
-    .populate('musicas', '_id nome')
-    .populate('generos', '_id nome')
+  // atualiza com validações do mongoose
+  const updated = await Album.findByIdAndUpdate(
+    id,
+    data,
+    {
+      new: true,
+      runValidators: true
+    }
+  )
+  .populate('cantor', '_id nome')
+  .populate('musicas', '_id nome')
+  .populate('generos', '_id nome')
 
-  // adiciona novos vínculos
-  if (data.cantor) {
-    await Cantor.findByIdAndUpdate(
-      data.cantor,
-      { $addToSet: { albuns: id } }
-    )
-  }
+  // recria vínculos
+  await Cantor.findByIdAndUpdate(
+    data.cantor,
+    { $addToSet: { albuns: id } }
+  )
 
-  if (data.generos?.length) {
-    await Genero.updateMany(
-      { _id: { $in: data.generos } },
-      { $addToSet: { albuns: id } }
-    )
-  }
+  await Genero.updateMany(
+    { _id: { $in: data.generos } },
+    { $addToSet: { albuns: id } }
+  )
 
-  if (data.musicas?.length) {
-    await Musica.updateMany(
-      { _id: { $in: data.musicas } },
-      { $addToSet: { albuns: id } }
-    )
-  }
+  await Musica.updateMany(
+    { _id: { $in: data.musicas } },
+    { $addToSet: { albuns: id } }
+  )
 
   return updated
 }

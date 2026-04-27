@@ -284,11 +284,12 @@
                   <input 
                     v-model="form.foto" 
                     type="text"
+                     required
                     @focus="focused = 'foto'"
                     @blur="focused = null"
                     placeholder=" "
                   />
-                  <label>URL da capa (opcional)</label>
+                  <label>URL da capa</label>
                 </div>
 
                 <!-- Preview Image -->

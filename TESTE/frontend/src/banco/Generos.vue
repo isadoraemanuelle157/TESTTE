@@ -53,6 +53,7 @@
               <div class="combobox-input-wrapper">
                 <input 
                   v-model="form.categoria" 
+                   required
                   @focus="showCategoriaDropdown = true"
                   @blur="hideCategoriaDropdown"
                   @keydown.enter.prevent="addCustomCategoria"
@@ -120,6 +121,7 @@
         <input 
           v-model="form.color" 
           type="text" 
+           required
           class="color-input-text"
           placeholder="#6366f1"
         />
@@ -547,6 +549,19 @@ export default {
 
     // Criar ou atualizar gênero
     async salvarGenero() {
+      if(
+ !this.form.nome ||
+ !this.form.descricao ||
+ !this.form.categoria ||
+ !this.form.icon ||
+ !this.form.color
+){
+ this.mostrarMensagem(
+   "Preencha todos os campos obrigatórios",
+   "error"
+ )
+ return
+}
       this.loading = true
       this.limparMensagem()
 

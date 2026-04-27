@@ -34,7 +34,26 @@ const usuarioSchema = new mongoose.Schema({
       default: 'pendente'
     }
   }],
+  
+  generos:[{
+   type: mongoose.Schema.Types.ObjectId,
+   ref:'GeneroMusical'
+ }],
 
+ artistasFavoritos:[{
+   type: mongoose.Schema.Types.ObjectId,
+   ref:'Cantor'
+ }],
+
+ vibesFavoritas:[{
+   type: mongoose.Schema.Types.ObjectId,
+   ref:'Vibe'
+ }],
+
+ onboardingCompleto:{
+   type:Boolean,
+   default:false
+ },
 // createdAt gerenciado automaticamente pelo timestamps: true
 
   membroDesde: { type: Date, default: Date.now }

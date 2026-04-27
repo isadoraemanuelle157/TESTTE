@@ -85,10 +85,10 @@
           <div class="artist-info">
             <h3 class="artist-name">{{ artist.name }}</h3>
             <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
-            <div class="monthly-listeners">
-              <span class="listeners-count">{{ formatListeners(artist.nb_fan || artist.fans) }}</span>
-              <span class="listeners-label">fãs</span>
-            </div>
+          <div class="monthly-listeners">
+  <span class="listeners-count">{{ formatListeners(artist.nb_fan || artist.fans) }}</span>
+  <span class="listeners-label">fãs</span>
+</div>
             <button 
               class="follow-btn"
               :class="{ 'following': isFollowing(artist.id) }"
@@ -146,7 +146,7 @@
                 </div>
                 <div class="list-info">
                   <h4>{{ artist.name }}</h4>
-                  <p>{{ getArtistGenre(artist) }} • {{ formatListeners(artist.nb_fan || artist.fans) }} fãs</p>
+<p>{{ getArtistGenre(artist) }} • {{ formatListeners(artist.nb_fan || artist.fans) }} fãs</p>
                 </div>
                 <button 
                   class="list-follow-btn"
@@ -206,20 +206,19 @@ async mounted() {
 
   methods: {
     // ============ API DEEZER ============
-    async loadCantoresFromDB() {
+async loadCantoresFromDB() {
   try {
     const response = await fetch('http://localhost:3002/cantores')
     const data = await response.json()
 
-    // converter para formato parecido com Deezer
     return data.map(cantor => ({
       id: cantor._id,
       name: cantor.nome,
       picture: cantor.foto || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
       picture_medium: cantor.foto,
       picture_big: cantor.foto,
-      nb_fan: cantor.totalSeguidores || 0,
-      source: 'db', // 🔥 importante para diferenciar
+      nb_fan: cantor.totalSeguidores || 0,   // ← seguidoresBase + seguidores.length
+      source: 'db',
       generos: cantor.generos || []
     }))
 
@@ -251,12 +250,12 @@ updateArtistInList(artistId, newData = {}) {
 },
 
 updateFollowersCount(artist, isNowFollowing) {
-  if (!artist.nb_fan) artist.nb_fan = 0;
+  const current = parseInt(artist.nb_fan) || 0
 
   if (isNowFollowing) {
-    artist.nb_fan++;
+    artist.nb_fan = current + 1
   } else {
-    artist.nb_fan = Math.max(0, artist.nb_fan - 1);
+    artist.nb_fan = Math.max(0, current - 1)
   }
 },
 

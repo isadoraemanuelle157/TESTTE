@@ -23,12 +23,13 @@ const musicaSchema = new mongoose.Schema({
   decada: { type: String },
 
   generos: {
-    type: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Genero'
-    }],
-    default: []
-  },
+  type: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Genero'
+  }],
+  required: true,
+  validate: v => v.length > 0
+},
 
   albuns: {
     type: [{
@@ -38,13 +39,14 @@ const musicaSchema = new mongoose.Schema({
     default: []
   },
 
-  cantores: {
-    type: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Cantor'
-    }],
-    default: []
-  }
+ cantores: {
+  type: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Cantor'
+  }],
+  required: true,
+  validate: v => v.length > 0
+},
 
 }, {
   timestamps: true

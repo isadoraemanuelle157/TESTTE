@@ -224,9 +224,12 @@ const updateUser = async (id, data) => {
     localizacao,
     email,
     website,
-    generos,
     perfilPrivado,
-    mostrarAtividade
+    mostrarAtividade,
+     generos,
+ artistasFavoritos,
+ vibesFavoritas,
+ onboardingCompleto
   } = data
 
   const updateData = {}
@@ -239,9 +242,19 @@ const updateUser = async (id, data) => {
   if (localizacao !== undefined) updateData.localizacao = localizacao
   if (email !== undefined) updateData.email = email
   if (website !== undefined) updateData.website = website
-  if (generos !== undefined) updateData.generos = generos
   if (perfilPrivado !== undefined) updateData.perfilPrivado = perfilPrivado
   if (mostrarAtividade !== undefined) updateData.mostrarAtividade = mostrarAtividade
+  if(generos !== undefined)
+ updateData.generos = generos
+
+if(artistasFavoritos !== undefined)
+ updateData.artistasFavoritos = artistasFavoritos
+
+if(vibesFavoritas !== undefined)
+ updateData.vibesFavoritas = vibesFavoritas
+
+if(onboardingCompleto !== undefined)
+ updateData.onboardingCompleto = onboardingCompleto
 
   const user = await Usuario.findByIdAndUpdate(
     id,

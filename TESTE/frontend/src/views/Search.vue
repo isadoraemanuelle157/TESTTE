@@ -1141,7 +1141,8 @@ async loadPopularArtists() {
       fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
       fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
       fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/generos`).then(r => r.json()),
+      fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`)
+.then(r=>r.json()),
       fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
         headers: authHeaders
       })
@@ -1196,17 +1197,19 @@ async loadPopularArtists() {
     }
 
     // CANTORES LOCAIS
-    if (Array.isArray(localCantores)) {
-      results.push(...localCantores.map(c => ({
-        id: c._id,
-        name: c.nome,
-        picture: c.foto,
-         ano: c.ano, // 🔥 IMPORTANTE
-    decada: a.ano ? this.getDecadeFromYear(a.ano) : null,
-        type: 'artist',
-        source: 'local'
-      })))
-    }
+ // CANTORES LOCAIS
+if (Array.isArray(localCantores)) {
+  results.push(...localCantores.map(c => ({
+    id: c._id,
+    name: c.nome,
+    picture: c.foto,
+    nb_fan: c.totalSeguidores || 0,        // ← ADICIONADO
+    ano: c.ano,
+    decada: c.ano ? this.getDecadeFromYear(c.ano) : null,  // ← CORRIGIDO: c.ano
+    type: 'artist',
+    source: 'local'
+  })))
+}
 
 // ÁLBUNS LOCAIS
     if (Array.isArray(localAlbuns)) {
@@ -1225,18 +1228,75 @@ async loadPopularArtists() {
     }
 
     // GÊNEROS
-    if (Array.isArray(localGeneros)) {
-      results.push(...localGeneros.map(g => ({
-        id: g._id,
-        name: g.nome,
-        description: g.descricao,
-        icon: g.icon,
-        color: g.color,
-        categoria: g.categoria,
-        type: 'genre',
-        source: 'local'
-      })))
+if (Array.isArray(localGeneros)) {
+
+  localGeneros.forEach(g=>{
+    // músicas do gênero
+    if(g.musicas?.length){
+      results.push(
+       ...g.musicas.map(m=>({
+          id:m._id,
+          title:m.nome,
+          artist:{
+             name:m.cantores?.map(c=>c.nome).join(', ')
+          },
+          album:{
+             title:m.albuns?.[0]?.nome || '',
+             cover:m.albuns?.[0]?.foto || ''
+          },
+          cover:m.foto,
+          preview:m.link,
+          ano:m.ano,
+          decada:m.ano
+            ? this.getDecadeFromYear(m.ano)
+            : null,
+          type:'track',
+          source:'local'
+       }))
+      )
     }
+
+    // albuns do gênero
+    if(g.albuns?.length){
+      results.push(
+       ...g.albuns.map(a=>({
+         id:a._id,
+         title:a.nome,
+         artist:{
+            name:a.cantor?.nome || ''
+         },
+         cover:a.foto,
+         ano:a.ano,
+         decada:a.ano
+           ? this.getDecadeFromYear(a.ano)
+           : null,
+         type:'album',
+         source:'local'
+       }))
+      )
+    }
+
+    // cantores do gênero
+    if(g.cantores?.length){
+      results.push(
+       ...g.cantores.map(c=>({
+         id:c._id,
+         name:c.nome,
+         picture:c.foto,
+         nb_fan:c.totalSeguidores || 0,
+         ano:c.ano,
+         decada:c.ano
+           ? this.getDecadeFromYear(c.ano)
+           : null,
+         type:'artist',
+         source:'local'
+       }))
+      )
+    }
+
+  })
+
+}
 
     // DEEZER
     if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
@@ -1331,6 +1391,7 @@ searchByDecade(decadeName) {
           id: c._id,
           name: c.nome,
           picture: c.foto,
+            nb_fan: c.totalSeguidores || 0,  
           ano: c.ano,
           decada: this.getDecadeFromYear(c.ano),
           type: 'artist',
@@ -1431,6 +1492,7 @@ searchByYear(year) {
       id: c._id,
       name: c.nome,
       picture: c.foto,
+       nb_fan: c.totalSeguidores || 0,
       ano: c.ano,
       type: 'artist',
       source: 'local'

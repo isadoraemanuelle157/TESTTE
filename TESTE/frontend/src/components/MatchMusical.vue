@@ -221,18 +221,29 @@
 
           <div class="form-group">
             <label>Estilos musicais favoritos (selecione até 3)</label>
-            <div class="genre-selector">
-              <button 
-                v-for="genre in availableGenres" 
-                :key="genre"
-                @click="toggleGenre(genre)"
-                class="genre-select-btn"
-                :class="{ active: onboardingData.favoriteGenres.includes(genre) }"
-                :disabled="!onboardingData.favoriteGenres.includes(genre) && onboardingData.favoriteGenres.length >= 3"
-              >
-                {{ genre }}
-              </button>
-            </div>
+        <div class="genre-selector">
+  <button 
+    v-for="genre in availableGenres"
+    :key="genre._id"
+    @click="toggleGenre(genre)"
+    class="genre-select-btn"
+    :class="{ active: isGenreSelected(genre._id) }"
+    :disabled="
+      !isGenreSelected(genre._id) &&
+      onboardingData.favoriteGenres.length >= 3
+    "
+    :style="{
+      borderColor: genre.color,
+      color: isGenreSelected(genre._id) ? '#fff' : genre.color,
+      background: isGenreSelected(genre._id)
+        ? genre.color
+        : 'transparent'
+    }"
+  >
+    <span>{{ genre.icon }}</span>
+    {{ genre.nome }}
+  </button>
+</div>
             <span class="input-hint" :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }">
               {{ onboardingData.favoriteGenres.length }}/3 selecionados
             </span>
@@ -584,16 +595,16 @@
 
               <div class="music-preferences">
                 <h4>Preferências Musicais</h4>
-                <div class="genres-cloud">
-                  <span 
-                    v-for="genre in topGenres" 
-                    :key="genre.name" 
-                    class="genre-cloud-tag"
-                    :style="{ fontSize: 0.8 + genre.weight * 0.5 + 'rem' }"
-                  >
-                    {{ genre.name }}
-                  </span>
-                </div>
+              <div class="genres-cloud">
+  <span
+    v-for="genre in favoriteGenreObjects"
+    :key="genre._id"
+    class="genre-cloud-tag"
+    :style="{ background: genre.color }"
+  >
+    {{ genre.icon }} {{ genre.nome }}
+  </span>
+</div>
               </div>
 
               <!-- Favorites Section -->
@@ -819,8 +830,8 @@ export default {
         bio: '',
         favoriteGenres: []
       },
-      availableGenres: ['Pop', 'Rock', 'Hip-Hop', 'Eletrônica', 'Indie', 'R&B', 'Jazz', 'Clássica', 'Reggae', 'Funk', 'Sertanejo', 'MPB', 'Metal', 'K-Pop', 'Latin'],
-      
+      availableGenres: [],
+loadingGenres: false,
       // App state
       currentIndex: 0,
       dragOffset: 0,
@@ -877,6 +888,12 @@ export default {
   },
 
   computed: {
+    favoriteGenreObjects(){
+ return this.availableGenres.filter(g =>
+   this.currentUser.favoriteGenres?.includes(g._id)
+ )
+},
+
     visibleSongs() {
       return this.songs.slice(this.currentIndex, this.currentIndex + 3)
     },
@@ -920,16 +937,74 @@ export default {
   },
 
   mounted() {
-    // Check if user already has a profile in localStorage
-    const savedProfile = localStorage.getItem('musicalMatchProfile')
-    if (savedProfile) {
-      this.currentUser = JSON.parse(savedProfile)
-      this.hasProfile = true
-      this.fetchSongsFromDeezer()
-    }
-  },
+     this.fetchGenres()
+
+  // Check if user already has a profile in localStorage
+  const savedProfile = localStorage.getItem('musicalMatchProfile')
+
+  if (savedProfile) {
+    this.currentUser = JSON.parse(savedProfile)
+    this.hasProfile = true
+    this.fetchSongsFromDeezer()
+  }
+},
 
   methods: {
+async fetchGenres() {
+  try {
+    this.loadingGenres = true
+
+    const response = await fetch('http://localhost:3002/generos')
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar gêneros')
+    }
+
+    const data = await response.json()
+
+    let generos = []
+
+    // se backend retornar array normal
+    if (Array.isArray(data)) {
+      generos = data
+    }
+
+    // se retornar objeto agrupado, pega TODAS categorias do objeto
+    else if (data && typeof data === 'object') {
+      generos = Object.values(data).flat()
+    }
+
+    // remover duplicados
+    const ids = new Set()
+
+    this.availableGenres = generos
+      .filter(g => {
+        if (!g?._id || ids.has(g._id)) return false
+        ids.add(g._id)
+        return true
+      })
+      .sort((a,b)=>
+        (b.popularidade || 0) - (a.popularidade || 0)
+      )
+      .map(g => ({
+        _id: g._id,
+        nome: g.nome,
+        icon: g.icon || '🎵',
+        color: g.color || '#8b5cf6'
+      }))
+
+    console.log(
+      'Total gêneros:',
+      this.availableGenres.length,
+      this.availableGenres
+    )
+
+  } catch (error) {
+    console.error('Erro ao carregar gêneros:', error)
+  } finally {
+    this.loadingGenres = false
+  }
+},
     // Onboarding methods
     nextStep() {
       if (this.onboardingStep < 4) {
@@ -966,14 +1041,23 @@ export default {
       this.onboardingData.avatar = `https://i.pravatar.cc/300?img=${n + 10}`
     },
     
-    toggleGenre(genre) {
-      const index = this.onboardingData.favoriteGenres.indexOf(genre)
-      if (index > -1) {
-        this.onboardingData.favoriteGenres.splice(index, 1)
-      } else if (this.onboardingData.favoriteGenres.length < 3) {
-        this.onboardingData.favoriteGenres.push(genre)
-      }
-    },
+  toggleGenre(genre){
+ const id = genre._id
+
+ const index =
+   this.onboardingData.favoriteGenres.indexOf(id)
+
+ if(index > -1){
+   this.onboardingData.favoriteGenres.splice(index,1)
+ }
+ else if(this.onboardingData.favoriteGenres.length < 3){
+   this.onboardingData.favoriteGenres.push(id)
+ }
+},
+
+isGenreSelected(id){
+ return this.onboardingData.favoriteGenres.includes(id)
+},
     
     async finishOnboarding() {
       this.creatingProfile = true
@@ -983,15 +1067,13 @@ export default {
       
       // Set current user
       this.currentUser = {
-        name: this.onboardingData.name,
-        age: this.onboardingData.age,
-        avatar: this.onboardingData.avatar,
-        bio: this.onboardingData.bio,
-        location: this.onboardingData.location
-      }
-      
-      // Save to localStorage
-      localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
+ name: this.onboardingData.name,
+ age: this.onboardingData.age,
+ avatar: this.onboardingData.avatar,
+ bio: this.onboardingData.bio,
+ location: this.onboardingData.location,
+ favoriteGenres: this.onboardingData.favoriteGenres
+}
       
       this.hasProfile = true
       this.creatingProfile = false
@@ -999,6 +1081,26 @@ export default {
       // Load songs
       this.fetchSongsFromDeezer()
     },
+    async finishOnboarding(){
+
+ this.creatingProfile=true
+
+ await api.put(
+ `/usuarios/${this.user.id}`,
+ {
+   bio:this.onboardingData.bio,
+   localizacao:this.onboardingData.location,
+   generos:this.onboardingData.favoriteGenres,
+   onboardingCompleto:true,
+   procurandoMatch:true
+ }
+ )
+
+ await this.buscarSugestoes()
+
+ this.hasProfile=true
+ this.creatingProfile=false
+},
 
     // Logout methods
     confirmLogout() {
@@ -1024,13 +1126,14 @@ export default {
         bio: '',
         favoriteGenres: []
       }
-      this.currentUser = {
-        name: '',
-        age: null,
-        avatar: '',
-        bio: '',
-        location: ''
-      }
+ this.currentUser = {
+  name:'',
+  age:null,
+  avatar:'',
+  bio:'',
+  location:'',
+  favoriteGenres:[]
+}
       this.likedSongs = []
       this.favorites = []
       this.matches = []

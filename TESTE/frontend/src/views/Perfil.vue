@@ -599,7 +599,7 @@
                 <h4>{{ playlist.nome }}</h4>
                 <p>{{ playlist.descricao || 'Sem descrição' }}</p>
                 <div class="playlist-meta-large">
-                  <span><i class="fa fa-music"></i> {{ playlist.musicas.length }} músicas</span>
+                <span><i class="fa fa-music"></i> {{ playlist.totalMusicas }} músicas</span>
                   <span><i class="fa fa-clock-o"></i> {{ playlist.duracaoTotal || '0 min' }}</span>
                   <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
                 </div>
@@ -625,7 +625,7 @@
             <div class="section-header">
               <div class="header-title">
                 <h3><i class="fa fa-history"></i> Histórico de Reprodução</h3>
-                <span class="count-badge">{{ formatNumber(historicoCompleto.length) }} reproduções</span>
+              <span class="count-badge">{{ formatNumber(filteredHistorico.length) }} reproduções</span>
               </div>
               <div class="header-actions">
                 <button class="btn-clear" @click="clearHistory" v-if="historicoCompleto.length > 0 && isOwnProfile">
@@ -634,7 +634,7 @@
               </div>
             </div>
            
-            <div class="history-timeline" v-if="historicoCompleto.length > 0">
+          <div class="history-timeline" v-if="filteredHistorico.length > 0">
               <div
                 v-for="(item, index) in groupedHistory"
                 :key="index"
@@ -754,14 +754,14 @@
               <div class="header-title">
                 <h3><i class="fa fa-star"></i> Seus Favoritos</h3>
                 <span class="count-badge">
-                  {{ favoritosRecentes.length }} itens
+                 {{ filteredFavoritos.length }} itens
                 </span>
               </div>
             </div>
 
-            <div class="music-list-detailed" v-if="favoritosRecentes.length > 0">
+          <div class="music-list-detailed" v-if="filteredFavoritos.length > 0">
               <div
-                v-for="(item, index) in favoritosRecentes"
+                v-for="(item, index) in filteredFavoritos"
                 :key="`${item.type}-${item.id || item._id}`"
                 class="music-row"
                 @dblclick="abrirFavorito(item)"
@@ -1678,60 +1678,68 @@ isDefaultAvatar() {
              !this.formErrors.username
     },
    
-    filteredMusicas() {
-      let musicas = [...this.musicasFavoritas]
-     
-      if (this.activeFilter !== 'all') {
-        const now = Date.now()
-        const limits = {
-          week: 7 * 24 * 60 * 60 * 1000,
-          month: 30 * 24 * 60 * 60 * 1000,
-          year: 365 * 24 * 60 * 60 * 1000
-        }
-        musicas = musicas.filter(m => {
-          const data = new Date(m.dataCurtida || m.adicionadoEm)
-          return (now - data.getTime()) < limits[this.activeFilter]
-        })
-      }
-     
-      if (this.selectedGenres.length > 0) {
-        musicas = musicas.filter(m => this.selectedGenres.some(g => m.genero?.includes(g)))
-      }
-     
-      musicas.sort((a, b) => {
-        const dateA = new Date(a.dataCurtida || a.adicionadoEm)
-        const dateB = new Date(b.dataCurtida || b.adicionadoEm)
-        return this.sortDesc ? dateB - dateA : dateA - dateB
-      })
-     
-      return musicas
-    },
+  filteredMusicas() {
+  let musicas = [...this.musicasFavoritas]
+
+  musicas = musicas.filter(m => this.matchesActivePeriod(this.getItemDate(m)))
+  musicas = musicas.filter(m => this.matchesSelectedGenres(m))
+
+  return this.sortByDate(musicas)
+},
    
-    filteredPlaylists() {
-      return this.todasPlaylists.filter(p => {
-        if (p.privacidade === 'Privada' && !this.isOwnProfile) return false
-        return true
-      })
-    },
-   
-    groupedHistory() {
-      const groups = {}
-      this.historicoCompleto.forEach(item => {
-        const date = new Date(item.data).toLocaleDateString('pt-BR', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        })
-        if (!groups[date]) groups[date] = []
-        groups[date].push(item)
-      })
-     
-      return Object.entries(groups).map(([date, items]) => ({
-        date: date.charAt(0).toUpperCase() + date.slice(1),
-        items
-      }))
-    },
+  filteredPlaylists() {
+  let playlists = [...this.todasPlaylists].filter(p => {
+    if (p.privacidade === 'Privada' && !this.isOwnProfile) return false
+    return true
+  })
+
+  playlists = playlists.filter(p => this.matchesActivePeriod(this.getItemDate(p)))
+  playlists = playlists.filter(p => this.matchesSelectedGenres(p))
+
+  return this.sortByDate(playlists)
+},
+
+filteredHistorico() {
+  let historico = [...this.historicoCompleto]
+
+  historico = historico.filter(item => this.matchesActivePeriod(this.getItemDate(item)))
+  historico = historico.filter(item => this.matchesSelectedGenres(item))
+
+  return this.sortByDate(historico)
+},
+
+filteredFavoritos() {
+  let favoritos = [...this.favoritos]
+
+  favoritos = favoritos.filter(item => this.matchesActivePeriod(this.getItemDate(item)))
+  favoritos = favoritos.filter(item => this.matchesSelectedGenres(item))
+
+  return this.sortByDate(favoritos)
+},
+
+   groupedHistory() {
+  const groups = {}
+
+  this.filteredHistorico.forEach(item => {
+    const rawDate = this.parseValidDate(this.getItemDate(item))
+    if (!rawDate) return
+
+    const date = rawDate.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+
+    if (!groups[date]) groups[date] = []
+    groups[date].push(item)
+  })
+
+  return Object.entries(groups).map(([date, items]) => ({
+    date: date.charAt(0).toUpperCase() + date.slice(1),
+    items
+  }))
+},
 
     storyProgressStyle() {
       return {
@@ -1786,6 +1794,84 @@ this.generateFunAvatars()
   },
 
   methods: {
+    getItemDate(item) {
+  return (
+    item?.dataCurtida ||
+    item?.dataFavoritado ||
+    item?.createdAt ||
+    item?.updatedAt ||
+    item?.adicionadoEm ||
+    item?.data ||
+    null
+  )
+},
+
+parseValidDate(value) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+},
+
+getStartOfPeriod(period) {
+  const now = new Date()
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+
+  if (period === 'week') {
+    // Semana começando na segunda-feira
+    const day = start.getDay() // 0 = domingo, 1 = segunda...
+    const diff = day === 0 ? 6 : day - 1
+    start.setDate(start.getDate() - diff)
+    return start
+  }
+
+  if (period === 'month') {
+    start.setDate(1)
+    return start
+  }
+
+  if (period === 'year') {
+    start.setMonth(0, 1)
+    return start
+  }
+
+  return null
+},
+
+matchesActivePeriod(dateValue) {
+  if (this.activeFilter === 'all') return true
+
+  const itemDate = this.parseValidDate(dateValue)
+  if (!itemDate) return false
+
+  const periodStart = this.getStartOfPeriod(this.activeFilter)
+  if (!periodStart) return true
+
+  return itemDate >= periodStart
+},
+
+matchesSelectedGenres(item) {
+  if (!this.selectedGenres.length) return true
+
+  const itemGenres = Array.isArray(item.generos)
+    ? item.generos
+    : item.genero
+      ? [item.genero]
+      : []
+
+  return this.selectedGenres.some(selected =>
+    itemGenres.some(g => String(g).toLowerCase() === String(selected).toLowerCase())
+  )
+},
+
+sortByDate(items) {
+  return [...items].sort((a, b) => {
+    const dateA = this.parseValidDate(this.getItemDate(a)) || new Date(0)
+    const dateB = this.parseValidDate(this.getItemDate(b)) || new Date(0)
+    return this.sortDesc ? dateB - dateA : dateA - dateB
+  })
+},
+
 generateArtisticAvatars() {
   const palettes = [
     ['#667eea', '#764ba2'],
@@ -2612,16 +2698,20 @@ selectFunAvatar(avatar) {
 
       const data = await res.json() || []
 
-      this.todasPlaylists = data.map(p => ({
-        _id: p._id,
-        nome: p.nome,
-        cover: p.cover || p.capa || 'https://via.placeholder.com/150',
-        musicas: p.musicas?.length || 0,
-        privacidade: p.privacidade || (p.privada ? 'Privada' : 'Pública'),
-        descricao: p.descricao || '',
-        duracaoTotal: p.duracaoTotal || '0 min',
-        curtidas: p.curtidas || 0
-      }))
+   this.todasPlaylists = data.map(p => ({
+  _id: p._id,
+  nome: p.nome,
+  cover: p.cover || p.capa || 'https://via.placeholder.com/150',
+  musicas: Array.isArray(p.musicas) ? p.musicas : [],
+  totalMusicas: Array.isArray(p.musicas) ? p.musicas.length : 0,
+  privacidade: p.privacidade || (p.privada ? 'Privada' : 'Pública'),
+  descricao: p.descricao || '',
+  duracaoTotal: p.duracaoTotal || '0 min',
+  curtidas: p.curtidas || 0,
+  createdAt: p.createdAt || p.updatedAt || null,
+  generos: p.generos || []
+}))
+
       this.minhasPlaylists = data
       this.playlistsRecentes = data.slice(0, 4)
       this.estatisticas.playlists = data.length

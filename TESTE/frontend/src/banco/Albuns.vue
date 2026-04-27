@@ -261,14 +261,15 @@
             <div class="form-row">
               <div class="input-wrap" :class="{ 'active': focused === 'foto', 'filled': form.foto }">
                 <span class="input-emoji">🖼️</span>
-                <input 
-                  v-model="form.foto" 
-                  type="text"
-                  @focus="focused = 'foto'"
-                  @blur="focused = null"
-                  placeholder=" "
-                />
-                <label>URL da capa (opcional)</label>
+              <input 
+ v-model="form.foto"
+ type="text"
+ required
+ @focus="focused = 'foto'"
+ @blur="focused = null"
+ placeholder=" "
+/>
+                <label>URL da capa</label>
                 <div class="input-glow"></div>
               </div>
             </div>
@@ -543,7 +544,7 @@ export default {
         nome: "",
         descricao: "",
         foto: "",
-        ano:"",
+        ano: null,
         cantor: "",
         musicas: [],
         generos: []
@@ -551,7 +552,7 @@ export default {
     }
   },
 
-  computed: {
+  computed: {  
 totalTracks() {
   return this.albuns.reduce((total, album) => {
     return total + (Array.isArray(album.musicas) ? album.musicas.length : 0)
@@ -742,22 +743,42 @@ getGeneroNome(id) {
       this.form.generos = this.form.generos.filter(g => g !== id)
     },
 
-  async salvarAlbum() {
+ async salvarAlbum() {
   this.saving = true
 
   try {
- const payload = {
+    // 🔧 CONVERTER TIPOS antes de enviar
+    const payload = {
       nome: this.form.nome?.trim(),
       descricao: this.form.descricao?.trim(),
-      foto: this.form.foto?.trim() || this.defaultCover,
-      ano: this.form.ano || null,
-      cantor: this.form.cantor || null,
-      musicas: Array.isArray(this.form.musicas) ? this.form.musicas : [],
-      generos: Array.isArray(this.form.generos) ? this.form.generos : []
+      foto: this.form.foto?.trim(),
+      ano: this.form.ano ? Number(this.form.ano) : null,  // ← converter para número
+      cantor: this.form.cantor || null,                    // ← null se vazio
+      musicas: Array.isArray(this.form.musicas) ? this.form.musicas.filter(Boolean) : [],
+      generos: Array.isArray(this.form.generos) ? this.form.generos.filter(Boolean) : []
     }
 
-    if (!payload.nome || !payload.descricao || !payload.cantor) {
-      this.showToast('Preencha nome, descrição e cantor', 'error')
+    // Validação frontend (mostra qual campo falta)
+    const camposObrigatorios = {
+      'Nome do álbum': payload.nome,
+      'Descrição': payload.descricao,
+      'URL da capa': payload.foto,
+      'Ano': payload.ano,
+      'Cantor': payload.cantor,
+      'Músicas': payload.musicas.length > 0,
+      'Gêneros': payload.generos.length > 0
+    }
+
+    const camposVazios = Object.entries(camposObrigatorios)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key)
+
+    if (camposVazios.length > 0) {
+      this.showToast(
+        `Campos obrigatórios: ${camposVazios.join(', ')}`,
+        'error'
+      )
+      this.saving = false
       return
     }
 
@@ -773,7 +794,10 @@ getGeneroNome(id) {
 
     this.reset()
   } catch (err) {
-    this.showToast(err.response?.data?.error || 'Erro ao salvar', 'error')
+    // Mostra erro específico do backend
+    const msg = err.response?.data?.error || err.message || 'Erro ao salvar'
+    this.showToast(msg, 'error')
+    console.error('Erro completo:', err.response?.data)
   } finally {
     this.saving = false
   }

@@ -65,10 +65,24 @@ const remove = async (req, res) => {
   }
 }
 
+const search = async(req,res)=>{
+ try{
+   const resultado =
+      await generoService.searchGeneroCompleto(req.query.q || '')
+
+   res.json(resultado)
+ }catch(error){
+   res.status(500).json({
+      error:error.message
+   })
+ }
+}
+
 module.exports = {
   create,
   list,
   getById,
   update,
-  remove
+  remove, 
+  search
 }

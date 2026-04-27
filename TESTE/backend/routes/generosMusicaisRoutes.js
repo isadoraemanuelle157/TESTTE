@@ -3,6 +3,7 @@ const router = express.Router()
 
 const generoController = require('../controllers/GenerosMusicaisController')
 
+router.get('/search', generoController.search)
 // CRUD
 router.post('/', generoController.create)
 router.get('/', generoController.list)

@@ -130,39 +130,37 @@
       }} fãs
     </span>
 
-    <span v-if="cantor.albuns && cantor.albuns.length > 0" class="artist-chip">
-      💿 {{ cantor.albuns.length }} álbum(ns)
-    </span>
+<span class="artist-chip">
+  💿 {{ Array.isArray(cantor.albuns) ? cantor.albuns.length : 0 }} álbum(ns)
+</span>
 
-    <span v-if="cantor.generos && cantor.generos.length" class="artist-chip">
-      🎸 {{
-        cantor.generos
-          .map(g => typeof g === 'object' ? g.nome : getGeneroNome(g))
-          .filter(Boolean)
-          .join(', ')
-      }}
-    </span>
+<span class="artist-chip">
+  🎸
+  <template v-if="Array.isArray(cantor.generos) && cantor.generos.length > 0">
+    {{
+      cantor.generos
+        .map(g => typeof g === 'object' ? g.nome : getGeneroNome(g))
+        .filter(Boolean)
+        .join(', ')
+    }}
+    ({{ cantor.generos.length }})
+  </template>
+  <template v-else>
+    0 gênero(s)
+  </template>
+</span>
 
-    <span v-if="cantor.musicas && cantor.musicas.length" class="artist-chip">
-      🎵 {{
-        cantor.musicas
-          .slice(0, 2)
-          .map(m => typeof m === 'object' ? m.nome : getMusicaNome(m))
-          .filter(Boolean)
-          .join(', ')
-      }}
-      <template v-if="cantor.musicas.length > 2">
-        +{{ cantor.musicas.length - 2 }}
-      </template>
-    </span>
+<span class="artist-chip">
+  🎵 {{ Array.isArray(cantor.musicas) ? cantor.musicas.length : 0 }} música(s)
+</span>
   </div>
 
 <p class="artist-date">
-    <span v-if="cantor.ano">📅 Desde {{ cantor.ano }}</span>
-    <span v-else>📅 Ano não informado</span>
-    <span class="date-separator">•</span>
-    Adicionado em {{ formatarData(cantor.createdAt) }}
-  </p>
+  <span v-if="cantor.ano">📅 Desde {{ cantor.ano }}s</span>
+  <span v-else>📅 Ano não informado</span>
+  <span class="date-separator">•</span>
+  Adicionado em {{ formatarData(cantor.createdAt) }}
+</p>
 
   <div class="artist-actions">
 
@@ -213,49 +211,55 @@
               <div class="form-column">
                 <div class="upload-soundup">
                   <div 
-                    class="upload-circle" 
-                    @click="triggerFileInput"
-                    :class="{ 'has-image': previewFoto || form.foto }"
-                  >
-                    <img 
-                      v-if="previewFoto || form.foto" 
-                      :src="previewFoto || form.foto" 
-                      alt="Preview"
-                    />
-                    <div v-else class="upload-placeholder">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                      </svg>
-                      <span>Escolher foto</span>
-                    </div>
-                    <div class="upload-hover soundup-gradient">
-                      <span>Alterar</span>
-                    </div>
-                  </div>
-                  
-                  <input 
-                    ref="fileInput"
-                    type="file" 
-                    accept="image/*" 
-                    @change="handleFileChange"
-                    hidden
-                  />
-                  
-                  <button 
-                    v-if="previewFoto || form.foto" 
-                    type="button" 
-                    @click="removerFoto"
-                    class="btn-remove"
-                  >
-                    Remover foto
-                  </button>
+  class="upload-circle" 
+  @click="triggerFileInput"
+  :class="{ 'has-image': previewFoto || form.foto }"
+>
+  <img 
+    v-if="previewFoto || form.foto" 
+    :src="previewFoto || form.foto" 
+    alt="Preview"
+  />
+
+  <div v-else class="upload-placeholder">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="17 8 12 3 7 8"></polyline>
+      <line x1="12" y1="3" x2="12" y2="15"></line>
+    </svg>
+    <span>Escolher foto</span>
+  </div>
+
+  <div class="upload-hover soundup-gradient">
+    <span>{{ previewFoto || form.foto ? 'Alterar' : 'Escolher foto' }}</span>
+  </div>
+
+  <button
+    v-if="previewFoto || form.foto"
+    type="button"
+    class="upload-delete-btn"
+    @click.stop="removerFoto"
+    title="Excluir foto"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  </button>
+</div>
+
+<input 
+  ref="fileInput"
+  type="file" 
+  accept="image/*" 
+  @change="handleFileChange"
+  hidden
+/>
                 </div>
 
                 <div class="form-soundup">
                   <div class="input-group">
-                    <label>Nome do Artista</label>
+                    <label>Nome do Artista *</label>
                     <input 
                       v-model="form.nome" 
                       type="text" 
@@ -266,7 +270,7 @@
                   </div>
 
                   <div class="input-group">
-                    <label>URL da imagem (opcional)</label>
+                    <label>Foto do artista *</label>
                     <input 
                       v-model="form.foto" 
                       type="url" 
@@ -275,7 +279,7 @@
                     />
                   </div>
             <div class="input-group">
-    <label>Seguidores/Fãs iniciais</label>
+    <label>Seguidores/Fãs iniciais *</label>
     <input 
       v-model="form.seguidoresBase"
       type="text"
@@ -283,16 +287,19 @@
     />
   </div>
 
-  <div class="input-group">
-    <label>Ano de início da carreira</label>
-    <input 
-      v-model="form.ano"
-      type="number"
-      min="1900"
-      max="2100"
-      placeholder="Ex: 2005"
-    />
-  </div>
+<div class="input-group">
+  <label>Ano de início da carreira *</label>
+  <select v-model="form.ano">
+    <option value="" disabled selected hidden>Selecione a década</option>
+    <option
+      v-for="ano in anosDisponiveis"
+      :key="ano"
+      :value="ano"
+    >
+      {{ ano }}s
+    </option>
+  </select>
+</div>
                 </div>
               </div>
                 
@@ -304,41 +311,47 @@
     <div class="selection-header">
       <h3>
         <span class="header-icon">🎸</span>
-        Gêneros
-        <span class="count-badge" v-if="form.generos.length > 0">{{ form.generos.length }}</span>
+        Gêneros *
+       <span class="count-badge">{{ form.generos.length }}</span>
       </h3>
     </div>
     
     <!-- Tags Selecionadas -->
-    <div class="selected-tags-container" v-if="form.generos.length > 0">
-      <span 
-        v-for="generoId in form.generos" 
-        :key="generoId" 
-        class="selection-tag genero-tag"
-      >
-        {{ getGeneroNome(generoId) }}
-        <button 
-          type="button"
-          @click="removeGenero(generoId)" 
-          class="tag-remove"
-        >×</button>
-      </span>
-    </div>
+<div class="selected-tags-container" v-if="form.generos.length > 0">
+  <span 
+    v-for="generoId in form.generos" 
+    :key="normalizeMongoId(generoId)" 
+    class="selection-tag genero-tag"
+  >
+    {{ getGeneroNome(generoId) }}
+    <button 
+      type="button"
+      @click="removeGenero(generoId)" 
+      class="tag-remove"
+    >×</button>
+  </span>
+</div>
     
     <!-- Dropdown de Gêneros -->
-    <div class="dropdown-wrapper" :class="{ open: dropdownOpen === 'generos' }">
-      <div 
-        class="dropdown-trigger" 
-        @click="toggleDropdown('generos')"
-      >
-        <span class="trigger-text">
-          {{ form.generos.length > 0 ? 'Adicionar mais gêneros...' : 'Selecionar gêneros...' }}
-        </span>
-        <span class="trigger-arrow" :class="{ open: dropdownOpen === 'generos' }">▼</span>
-      </div>
-      
-      <transition name="dropdown">
-        <div v-if="dropdownOpen === 'generos'" class="dropdown-menu" @click.stop>
+ <div class="dropdown-wrapper" :class="{ open: dropdownOpen.generos }">
+  <div 
+    class="dropdown-trigger" 
+    @click="toggleDropdown('generos')"
+  >
+    <span class="trigger-text">
+      {{ form.generos.length > 0 ? 'Adicionar mais gêneros...' : 'Selecionar gêneros...' }}
+    </span>
+
+ <div class="trigger-right">
+  <span class="trigger-count">
+    {{ form.generos.length }}
+  </span>
+  <span class="trigger-arrow" :class="{ open: dropdownOpen.generos }">▼</span>
+</div>
+  </div>
+
+  <transition name="dropdown">
+    <div v-if="dropdownOpen.generos" class="dropdown-menu" @click.stop>
           <div class="dropdown-search">
             <input 
               v-model="searchGeneros" 
@@ -346,26 +359,28 @@
               @click.stop
             />
           </div>
-          <div class="dropdown-options">
-            <label
-              v-for="genero in filteredGeneros"
-              :key="genero._id"
-              class="dropdown-option"
-              :class="{ selected: form.generos.includes(genero._id) }"
-            >
-              <input 
-                type="checkbox" 
-                :value="genero._id" 
-                v-model="form.generos"
-                @click.stop
-              />
-              <span class="check-icon">✓</span>
-              <span class="option-text">{{ genero.nome }}</span>
-            </label>
-            <div v-if="filteredGeneros.length === 0" class="no-results">
-              Nenhum gênero encontrado
-            </div>
-          </div>
+      <div class="dropdown-options">
+  <label
+    v-for="genero in filteredGeneros"
+    :key="genero._id"
+    class="dropdown-option"
+    :class="{ selected: isGeneroSelecionado(genero._id) }"
+  >
+    <input 
+      type="checkbox"
+      :value="genero._id"
+      :checked="isGeneroSelecionado(genero._id)"
+      @change="toggleGeneroSelection(genero._id)"
+      @click.stop
+    />
+    <span class="check-icon">✓</span>
+    <span class="option-text">{{ genero.nome }}</span>
+  </label>
+
+  <div v-if="filteredGeneros.length === 0" class="no-results">
+    Nenhum gênero encontrado
+  </div>
+</div>
         </div>
       </transition>
     </div>
@@ -376,8 +391,8 @@
     <div class="selection-header">
       <h3>
         <span class="header-icon">🎵</span>
-        Músicas
-        <span class="count-badge" v-if="form.musicas.length > 0">{{ form.musicas.length }}</span>
+        Músicas *
+       <span class="count-badge">{{ form.musicas.length }}</span>
       </h3>
       <!-- 🔥 NOVO BOTÃO ADICIONADO -->
       <button 
@@ -410,19 +425,25 @@
     </div>
     
     <!-- Dropdown de Músicas -->
-    <div class="dropdown-wrapper" :class="{ open: dropdownOpen === 'musicas' }">
-      <div 
-        class="dropdown-trigger" 
-        @click="toggleDropdown('musicas')"
-      >
-        <span class="trigger-text">
-          {{ form.musicas.length > 0 ? 'Adicionar mais músicas...' : 'Selecionar músicas...' }}
-        </span>
-        <span class="trigger-arrow" :class="{ open: dropdownOpen === 'musicas' }">▼</span>
-      </div>
-      
-      <transition name="dropdown">
-        <div v-if="dropdownOpen === 'musicas'" class="dropdown-menu" @click.stop>
+<div class="dropdown-wrapper" :class="{ open: dropdownOpen.musicas }">
+  <div 
+    class="dropdown-trigger" 
+    @click="toggleDropdown('musicas')"
+  >
+    <span class="trigger-text">
+      {{ form.musicas.length > 0 ? 'Adicionar mais músicas...' : 'Selecionar músicas...' }}
+    </span>
+
+<div class="trigger-right">
+  <span class="trigger-count">
+    {{ form.musicas.length }}
+  </span>
+  <span class="trigger-arrow" :class="{ open: dropdownOpen.musicas }">▼</span>
+</div>
+  </div>
+  
+  <transition name="dropdown">
+    <div v-if="dropdownOpen.musicas" class="dropdown-menu" @click.stop>
           <div class="dropdown-search">
             <input 
               v-model="searchMusicas" 
@@ -460,8 +481,8 @@
     <div class="selection-header">
       <h3>
         <span class="header-icon">💿</span>
-        Álbuns
-        <span class="count-badge" v-if="form.albuns.length > 0">{{ form.albuns.length }}</span>
+        Álbuns (opcional)
+    <span class="count-badge">{{ form.albuns.length }}</span>
       </h3>
       <!-- 🔥 BOTÃO NOVO MANTIDO -->
       <button 
@@ -478,19 +499,25 @@
     </div>
     
     <!-- 🔥 DROPDOWN DE SELEÇÃO DE ÁLBUNS ADICIONADO -->
-    <div class="dropdown-wrapper" :class="{ open: dropdownOpen === 'albuns' }">
-      <div 
-        class="dropdown-trigger" 
-        @click="toggleDropdown('albuns')"
-      >
-        <span class="trigger-text">
-          {{ form.albuns.length > 0 ? 'Adicionar mais álbuns...' : 'Selecionar álbuns existentes...' }}
-        </span>
-        <span class="trigger-arrow" :class="{ open: dropdownOpen === 'albuns' }">▼</span>
-      </div>
-      
-      <transition name="dropdown">
-        <div v-if="dropdownOpen === 'albuns'" class="dropdown-menu" @click.stop>
+  <div class="dropdown-wrapper" :class="{ open: dropdownOpen.albuns }">
+  <div 
+    class="dropdown-trigger" 
+    @click="toggleDropdown('albuns')"
+  >
+    <span class="trigger-text">
+      {{ form.albuns.length > 0 ? 'Adicionar mais álbuns...' : 'Selecionar álbuns existentes...' }}
+    </span>
+
+<div class="trigger-right">
+  <span class="trigger-count">
+    {{ form.albuns.length }}
+  </span>
+  <span class="trigger-arrow" :class="{ open: dropdownOpen.albuns }">▼</span>
+</div>
+  </div>
+  
+  <transition name="dropdown">
+    <div v-if="dropdownOpen.albuns" class="dropdown-menu" @click.stop>
           <div class="dropdown-search">
             <input 
               v-model="searchAlbuns" 
@@ -811,7 +838,11 @@ export default {
       cantorParaExcluir: null,
       
       // Controle de Dropdowns
-      dropdownOpen: null,
+     dropdownOpen: {
+  generos: false,
+  musicas: false,
+  albuns: false
+},
       searchGeneros: '',
       searchMusicas: '',
       searchAlbuns: '',
@@ -854,11 +885,26 @@ computed: {
     return this.cantores.length
   },
 
-  filteredGeneros() {
-    if (!this.searchGeneros) return this.generos
-    const s = this.searchGeneros.toLowerCase()
-    return this.generos.filter(g => g.nome.toLowerCase().includes(s))
+  totalCantores() {
+    return this.cantores.length
   },
+
+  anosDisponiveis() {
+    const decadas = []
+    for (let i = 1920; i <= 2020; i += 10) {
+      decadas.push(i)
+    }
+    return decadas
+  },
+
+filteredGeneros() {
+  const lista = Array.isArray(this.generos) ? this.generos : []
+
+  if (!this.searchGeneros) return lista
+
+  const s = this.searchGeneros.toLowerCase()
+  return lista.filter(g => (g.nome || '').toLowerCase().includes(s))
+},
 
   filteredAlbuns() {
     if (!this.searchAlbuns) return this.albunsDisponiveis
@@ -890,8 +936,48 @@ computed: {
   methods: {
     // Controle de Dropdowns
     toggleDropdown(type) {
-      this.dropdownOpen = this.dropdownOpen === type ? null : type
-    },
+  this.dropdownOpen[type] = !this.dropdownOpen[type]
+},
+
+normalizarListaGeneros(payload) {
+  if (Array.isArray(payload)) return payload
+
+  if (!payload || typeof payload !== 'object') return []
+
+  return Object.values(payload)
+    .flatMap(item => Array.isArray(item) ? item : [])
+    .filter(g => g && g._id)
+},
+
+isGeneroSelecionado(generoId) {
+  const idNormalizado = this.normalizeMongoId(generoId)
+
+  return Array.isArray(this.form.generos) && this.form.generos.some(g => {
+    return this.normalizeMongoId(g) === idNormalizado
+  })
+},
+
+toggleGeneroSelection(generoId) {
+  const idNormalizado = this.normalizeMongoId(generoId)
+  const jaSelecionado = this.isGeneroSelecionado(idNormalizado)
+
+  if (jaSelecionado) {
+    this.form.generos = this.form.generos.filter(g => {
+      return this.normalizeMongoId(g) !== idNormalizado
+    })
+  } else {
+    this.form.generos.push(idNormalizado)
+  }
+},
+
+fecharTodosDropdowns() {
+ this.dropdownOpen = {
+  generos: false,
+  musicas: false,
+  albuns: false
+}
+},
+
     normalizeMongoId(value) {
   if (!value) return null
 
@@ -905,11 +991,12 @@ computed: {
 },
 
 
-    handleClickOutside(e) {
-      if (!e.target.closest('.dropdown-wrapper')) {
-        this.dropdownOpen = null
-      }
-    },
+ handleClickOutside(e) {
+  if (!e.target.closest('.dropdown-wrapper')) {
+    this.fecharTodosDropdowns()
+  }
+},
+
 formatarSeguidores(total) {
   if (!total) return '0'
   if (total >= 1000000) {
@@ -974,16 +1061,24 @@ async toggleSeguirCantor(cantor) {
 },
 
     getGeneroNome(id) {
-      return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
-    },
+  const idNormalizado = this.normalizeMongoId(id)
+
+  return this.generos.find(g => {
+    return this.normalizeMongoId(g._id) === idNormalizado
+  })?.nome || 'Desconhecido'
+},
 
     getMusicaNome(id) {
       return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
     },
 
     removeGenero(id) {
-      this.form.generos = this.form.generos.filter(g => g !== id)
-    },
+  const idNormalizado = this.normalizeMongoId(id)
+
+  this.form.generos = this.form.generos.filter(g => {
+    return this.normalizeMongoId(g) !== idNormalizado
+  })
+},
 
     removeMusica(id) {
       this.form.musicas = this.form.musicas.filter(m => m !== id)
@@ -1245,16 +1340,18 @@ fecharModalMusica() {
       }
     },
 
-    async carregarGeneros() {
-      try {
-        const response = await fetch('http://localhost:3002/generos')
-        if (!response.ok) throw new Error('Erro ao carregar gêneros')
-        this.generos = await response.json()
-      } catch (error) {
-        console.error('Erro ao carregar gêneros:', error)
-        this.generos = []
-      }
-    },
+   async carregarGeneros() {
+  try {
+    const response = await fetch('http://localhost:3002/generos')
+    if (!response.ok) throw new Error('Erro ao carregar gêneros')
+
+    const data = await response.json()
+    this.generos = this.normalizarListaGeneros(data)
+  } catch (error) {
+    console.error('Erro ao carregar gêneros:', error)
+    this.generos = []
+  }
+},
 
     async carregarMusicas() {
       try {
@@ -1268,7 +1365,21 @@ fecharModalMusica() {
     },
 
     async salvarCantor() {
-      if (!this.form.nome.trim()) return
+      if (
+ !this.form.nome.trim() ||
+ !this.form.foto.trim() ||
+ !this.form.ano ||
+ !this.form.seguidoresBase ||
+ this.form.generos.length === 0 ||
+ this.form.musicas.length === 0
+) {
+ this.mostrarToast(
+   'Preencha todos os campos obrigatórios (álbum é opcional)',
+   'error',
+   '⚠️'
+ )
+ return
+}
 
       try {
         this.salvando = true
@@ -1279,7 +1390,7 @@ fecharModalMusica() {
           fotoUrl = await this.converterParaBase64(this.arquivoSelecionado)
         }
 
-        const dadosCantor = {
+    const dadosCantor = {
   nome: this.form.nome?.trim(),
   foto: fotoUrl?.trim?.() || fotoUrl || '',
   ano: this.form.ano || null,
@@ -1291,7 +1402,12 @@ fecharModalMusica() {
         .map(m => typeof m === 'object' ? m._id : m)
         .filter(Boolean)
     : [],
-      seguidoresBase: this.form.seguidoresBase
+  albuns: Array.isArray(this.form.albuns)
+    ? this.form.albuns
+        .map(a => typeof a === 'object' ? a._id : a)
+        .filter(Boolean)
+    : [],
+  seguidoresBase: this.form.seguidoresBase
 }
 
         let response
@@ -1443,45 +1559,69 @@ fecharModalMusica() {
 async editarCantor(cantor) {
   try {
     this.modoEdicao = true
-    this.showModal = true
+    this.cantorEditando = null
+    this.resetForm()
 
-    // 🔥 BUSCA COMPLETA DO BACKEND
-    const response = await fetch(`http://localhost:3002/cantores/${cantor._id}`)
-    if (!response.ok) throw new Error('Erro ao buscar cantor')
+    await Promise.all([
+      this.generos.length ? Promise.resolve() : this.carregarGeneros(),
+      this.musicas.length ? Promise.resolve() : this.carregarMusicas(),
+      this.albunsDisponiveis.length ? Promise.resolve() : this.carregarAlbunsDisponiveis()
+    ])
 
-    const cantorCompleto = await response.json()
-    this.cantorEditando = cantorCompleto
+    const [cantorResponse, albunsResponse] = await Promise.all([
+      fetch(`http://localhost:3002/cantores/${cantor._id}`),
+      fetch(`http://localhost:3002/albuns?cantor=${cantor._id}`)
+    ])
 
-    // 🔥 NORMALIZAÇÃO CORRETA
-   this.form = {
-      nome: cantorCompleto.nome || '',
-      foto: cantorCompleto.foto || '',
-      ano: cantorCompleto.ano || '',
+    if (!cantorResponse.ok) {
+      throw new Error('Erro ao buscar cantor')
+    }
 
-      generos: Array.isArray(cantorCompleto.generos)
-        ? cantorCompleto.generos.map(g => typeof g === 'object' ? g._id : g)
+    const cantorCompleto = await cantorResponse.json()
+    const albunsDoCantor = albunsResponse.ok ? await albunsResponse.json() : []
+
+    const cantorBase = {
+      ...cantor,
+      ...cantorCompleto
+    }
+
+    this.cantorEditando = cantorBase
+
+    this.form = {
+      nome: cantorBase.nome || '',
+      foto: cantorBase.foto || '',
+      ano: cantorBase.ano || '',
+
+      generos: Array.isArray(cantorBase.generos)
+  ? [...new Set(cantorBase.generos.map(g => this.normalizeMongoId(g)).filter(Boolean))]
+  : [],
+
+      musicas: Array.isArray(cantorBase.musicas)
+        ? cantorBase.musicas.map(m => this.normalizeMongoId(m)).filter(Boolean)
         : [],
 
-      musicas: Array.isArray(cantorCompleto.musicas)
-        ? cantorCompleto.musicas.map(m => typeof m === 'object' ? m._id : m)
-        : [],
-
-      albuns: Array.isArray(cantorCompleto.albuns)
-        ? cantorCompleto.albuns.map(a => ({
+      albuns: Array.isArray(albunsDoCantor)
+        ? albunsDoCantor.map(a => ({
             _id: a._id,
-            nome: a.nome,
+            nome: a.nome || '',
             descricao: a.descricao || '',
             foto: a.foto || ''
           }))
         : [],
 
-      seguidoresBase: cantorCompleto.seguidoresBase ?? ''
+      seguidoresBase: cantorBase.seguidoresBase ?? ''
     }
 
     this.previewFoto = null
     this.arquivoSelecionado = null
-    this.dropdownOpen = null
 
+    this.dropdownOpen = {
+      generos: false,
+      musicas: false,
+      albuns: false
+    }
+
+    this.showModal = true
   } catch (error) {
     console.error(error)
     this.mostrarToast('Erro ao carregar dados do artista', 'error', '❌')
@@ -1489,10 +1629,12 @@ async editarCantor(cantor) {
   }
 },
 
-    fecharModal() {
-      this.showModal = false
-      this.resetForm()
-    },
+fecharModal() {
+  this.showModal = false
+  this.modoEdicao = false
+  this.cantorEditando = null
+  this.resetForm()
+},
 
 resetForm() {
   this.form = { 
@@ -1504,9 +1646,16 @@ resetForm() {
     musicas: [],
     seguidoresBase: ''
   }
+
   this.previewFoto = null
   this.arquivoSelecionado = null
-  this.dropdownOpen = null
+
+  this.dropdownOpen = {
+    generos: false,
+    musicas: false,
+    albuns: false
+  }
+
   this.searchGeneros = ''
   this.searchMusicas = ''
   this.searchAlbuns = ''
@@ -1810,7 +1959,7 @@ resetForm() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 2rem;
-  align-items: stretch; /* 👈 importante */
+  align-items: stretch; /* 👈 todos os cards na mesma altura */
   position: relative;
   z-index: 1;
 }
@@ -1826,9 +1975,9 @@ resetForm() {
   border: 1px solid rgba(37, 99, 235, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-   justify-content: space-between; /* 👈 distribui conteúdo igual */
-  height: 100%; /* 👈 garante mesma altura */
+ justify-content: flex-start !important;
+  height: auto !important;
+  gap: 0.75rem;
 }
 
 .artist-card:hover {
@@ -1840,9 +1989,11 @@ resetForm() {
 
 /* Circle Container */
 .circle-container {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
+  width: 140px;
+  max-width: 140px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  flex-shrink: 0;
 }
 
 .circle-glow {
@@ -2013,7 +2164,8 @@ resetForm() {
 .artist-name {
   font-size: 1rem;
   font-weight: 700;
-  margin: 0 0 0.5rem 0;
+  margin: 0;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2027,6 +2179,28 @@ resetForm() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.trigger-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.trigger-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
 }
 
 .verified-badge {
@@ -2072,6 +2246,32 @@ resetForm() {
 .add-card {
   background: transparent;
   border: 2px dashed rgba(37, 99, 235, 0.2);
+
+    /* centralização */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+
+.add-card .artist-name,
+.add-card .artist-meta {
+  text-align: center;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.add-card .artist-name{
+  margin-top: .8rem;
+  font-size: 1.05rem;
+}
+
+.add-card .artist-meta{
+  justify-content: center; /* caso continue com display:flex */
+  color: var(--soundup-gray);
 }
 
 .add-card:hover {
@@ -2244,6 +2444,39 @@ resetForm() {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.upload-circle {
+  position: relative;
+}
+
+.upload-delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.95);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  z-index: 3;
+  transition: all 0.2s ease;
+}
+
+.upload-delete-btn:hover {
+  transform: scale(1.08);
+  background: #ef4444;
+}
+
+.upload-delete-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .albums-column {
@@ -2767,6 +3000,7 @@ resetForm() {
   gap: 1rem;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  height: 100%; /* 👈 garante que o grid stretch funcione */
 }
 
 .artist-card::before {
@@ -2792,13 +3026,17 @@ resetForm() {
 .artist-card-body {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  margin-top: 0;
+  gap: 0.45rem;
   position: relative;
   z-index: 1;
+  flex-grow: 1; /* 👈 ocupa todo espaço disponível */
+  justify-content: flex-start;
 }
 
 .artist-top-line {
   display: flex;
+   margin-top: 0.2rem;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
@@ -2847,6 +3085,7 @@ resetForm() {
 
 .artist-date {
   margin: 0;
+   margin-top: 0.15rem;
   font-size: 0.8rem;
   color: #94a3b8;
 }
@@ -2856,7 +3095,8 @@ resetForm() {
   justify-content: center;
   align-items: center;
   gap: 0.75rem;
-  margin-top: 0.5rem;
+  margin-top: auto; /* 👈 empurra para o fundo do card */
+  padding-top: 0.5rem;
   position: relative;
   z-index: 3;
 }
@@ -3053,6 +3293,57 @@ resetForm() {
 
 .input-group input::placeholder {
   color: var(--soundup-gray);
+}
+
+/* Select estilizado igual inputs */
+.input-group select {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  padding-right: 3rem;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background:
+    linear-gradient(rgba(10,10,26,.65), rgba(10,10,26,.65)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
+  color: var(--soundup-white);
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all .25s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(96,165,250,.05);
+}
+
+/* Hover */
+.input-group select:hover{
+  border-color: rgba(59,130,246,.45);
+  background-color: rgba(10,10,26,.75);
+}
+
+/* Focus igual inputs */
+.input-group select:focus{
+  outline: none;
+  border-color: #2563eb;
+  background-color: rgba(10,10,26,.85);
+  box-shadow:
+    0 0 0 3px rgba(37,99,235,.12),
+    0 8px 20px rgba(37,99,235,.08);
+}
+
+/* Placeholder option */
+.input-group select option{
+  background: #0a0a1a;
+  color: #fff;
+}
+
+/* opção desabilitada */
+.input-group select option[disabled]{
+  color: #94a3b8;
 }
 
 /* Album Preview */
@@ -3260,6 +3551,7 @@ resetForm() {
   .artists-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1rem;
+     align-items: start;
   }
 
   .artist-card {
