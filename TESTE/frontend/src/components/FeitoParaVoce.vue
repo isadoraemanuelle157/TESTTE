@@ -13,38 +13,28 @@
     </div>
 
     <!-- Header Global -->
-    <header class="global-header">
-      <div class="logo">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-        </svg>
-        <span>SoundUp</span>
-      </div>
-     
-      <!-- Steps Indicator -->
-      <div class="steps-nav">
-        <div
-          v-for="step in 3"
-          :key="step"
-          class="step-dot"
-          :class="{
-            active: currentStep === step,
-            completed: currentStep > step
-          }"
-          @click="currentStep > step && goToStep(step)"
-        >
-          <span class="step-number">{{ step }}</span>
-          <svg v-if="currentStep > step" class="check-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-          </svg>
-        </div>
-        <div class="connector-line" :style="{ width: ((currentStep - 1) / 2 * 100) + '%' }"></div>
-      </div>
+ <header class="global-header onboarding-header">
+  <div class="progress-steps">
+    <div class="step completed">
+      <div class="step-number">1</div>
+      <span class="step-label">Conta</span>
+    </div>
 
-      <button class="btn-skip-header" @click="skipOnboarding">
-        Pular
-      </button>
-    </header>
+    <div class="step-line completed"></div>
+
+    <div class="step completed">
+      <div class="step-number">2</div>
+      <span class="step-label">Perfil</span>
+    </div>
+
+    <div class="step-line completed"></div>
+
+    <div class="step active">
+      <div class="step-number">3</div>
+      <span class="step-label">Preferências</span>
+    </div>
+  </div>
+</header>
 
     <!-- Main Content Area - TELA TOTAL -->
     <main class="content-area">
@@ -587,15 +577,13 @@ this.selectedVibes=
 
  async finishOnboarding(){
  try{
-   const usuario = JSON.parse(
-      localStorage.getItem("usuario")
-   )
+  const userId = usuario._id || usuario.id
 
    const token = localStorage.getItem("token")
 
    // 1) salva preferências no usuário
    await fetch(
-      `http://localhost:3002/usuarios/${usuario.id}`,
+      `http://localhost:3002/usuarios/${userId}`,
       {
         method:"PUT",
         headers:{

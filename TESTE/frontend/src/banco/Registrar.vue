@@ -11,19 +11,26 @@
 
     <div class="card" :class="{ 'loading-state': loading }">
       <!-- Progress Steps -->
-      <div class="progress-steps">
-        <div class="step active">
-          <div class="step-number">1</div>
-          <span class="step-label">Conta</span>
-        </div>
-        <div class="step-line"></div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <span class="step-label">Perfil</span>
-        </div>
-      </div>
+     <div class="progress-steps">
+  <div class="step active">
+    <div class="step-number">1</div>
+    <span class="step-label">Conta</span>
+  </div>
 
+  <div class="step-line"></div>
 
+  <div class="step">
+    <div class="step-number">2</div>
+    <span class="step-label">Perfil</span>
+  </div>
+
+  <div class="step-line"></div>
+
+  <div class="step">
+    <div class="step-number">3</div>
+    <span class="step-label">Preferências</span>
+  </div>
+</div>
       <!-- Logo/Icon Section -->
       <div class="brand-section">
         <div class="logo-wrapper">
@@ -179,7 +186,6 @@
   </div>
 </template>
 
-
 <script>
 import axios from "axios"
 
@@ -289,7 +295,6 @@ localStorage.setItem("token", token) // 🔥 ADICIONAR
   }
 }
 </script>
-
 
 <style scoped>
 * {

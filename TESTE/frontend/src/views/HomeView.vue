@@ -295,7 +295,7 @@
             v-for="(genre, index) in genres.slice(0, 8)"
             :key="'genre-'+genre.id"
             class="category-tile"
-            @click="navigateToSearch(genre.name, 'genre', genre.id)"
+            @click="navigateToSearch(genre.name)"
             :style="{ background: genreGradients[index % genreGradients.length] }"
           >
             <div class="category-content">
@@ -495,7 +495,7 @@
       </section>
 
       <!-- LOADING STATE -->
-      <div v-if="!chartTracks.length" class="skeleton"></div>
+      <<div v-if="!chartTracks.length" class="skeleton"></div>
 
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">
@@ -620,66 +620,21 @@ export default {
   },
 
   methods: {
-    findGenreIdByName(name) {
-  if (!name || !Array.isArray(this.genres)) return null
-
-  const normalize = (str) =>
-    String(str || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-
-  const target = normalize(name)
-
-  const aliases = {
-    'hip hop': ['hip hop', 'hip-hop', 'rap', 'hip hop/rap'],
-    'eletronica': ['eletronica', 'electro', 'electronic', 'dance'],
-    'mpb': ['mpb', 'musica brasileira'],
-    'funk': ['funk'],
-    'sertanejo': ['sertanejo'],
-    'pop': ['pop'],
-    'rock': ['rock'],
-    'jazz': ['jazz']
-  }
-
-  const accepted = aliases[target] || [target]
-
-  const found = this.genres.find(g => {
-    const genreName = normalize(g.name)
-    return accepted.includes(genreName)
-  })
-
-  return found?.id || null
-},
-
     // ============ NAVIGATION ============
     
-navigateToSearch(query, type = 'genre', genreId = null) {
-  const resolvedGenreId = genreId || this.findGenreIdByName(query)
-
-  const routeQuery = {
-    q: query,
-    type,
-    from: 'home'
-  }
-
-  if (resolvedGenreId) {
-    routeQuery.genreId = resolvedGenreId
-  }
-
-  if (this.$router) {
-    this.$router.push({
-      path: '/search',
-      query: routeQuery
-    })
-  } else {
-    const params = new URLSearchParams(routeQuery).toString()
-    window.location.href = `http://localhost:5173/search?${params}`
-  }
-
-  this.showToast('Busca', `Abrindo top 5 de ${query}`, 'info', 'fa fa-search')
-},
+    navigateToSearch(query) {
+      // Navega para a rota de busca com o parâmetro de query
+      if (this.$router) {
+        this.$router.push({ 
+          path: '/search', 
+          query: { q: query } 
+        })
+      } else {
+        // Fallback para navegação direta se router não estiver disponível
+        window.location.href = `http://localhost:5173/search?q=${encodeURIComponent(query)}`
+      }
+      this.showToast('Busca', `Pesquisando por: ${query}`, 'info', 'fa fa-search')
+    },
 
     // ============ API LOADING ============
     

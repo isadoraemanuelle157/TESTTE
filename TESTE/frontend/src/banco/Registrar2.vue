@@ -10,17 +10,26 @@
 
     <div class="card" :class="{ 'loading-state': loading }">
       <!-- Progress Steps -->
-      <div class="progress-steps">
-        <div class="step completed">
-          <div class="step-number">1</div>
-          <span class="step-label">Conta</span>
-        </div>
-        <div class="step-line completed"></div>
-        <div class="step active">
-          <div class="step-number">2</div>
-          <span class="step-label">Perfil</span>
-        </div>
-      </div>
+     <div class="progress-steps">
+  <div class="step completed">
+    <div class="step-number">1</div>
+    <span class="step-label">Conta</span>
+  </div>
+
+  <div class="step-line completed"></div>
+
+  <div class="step active">
+    <div class="step-number">2</div>
+    <span class="step-label">Perfil</span>
+  </div>
+
+  <div class="step-line"></div>
+
+  <div class="step">
+    <div class="step-number">3</div>
+    <span class="step-label">Preferências</span>
+  </div>
+</div>
 
       <!-- Header -->
       <div class="brand-section">
@@ -168,7 +177,7 @@
         <!-- Submit Button -->
         <button type="submit" :disabled="loading || !isValid" class="submit-btn">
           <span class="btn-content" v-if="!loading">
-            <span>Finalizar</span>
+            <span>Próximo</span>
             <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>

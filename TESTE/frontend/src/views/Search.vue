@@ -301,9 +301,11 @@
           <!-- Top Músicas -->
           <div class="top-section" v-if="chartTracks.length > 0">
             <div class="top-header">
-              <h3>Top Músicas Brasil</h3>
-              <button @click="searchAndGo('Top Brasil')" class="view-all">Ver todas</button>
-            </div>
+  <h3>{{ topSectionTitle }}</h3>
+  <button @click="searchAndGo(currentTopCategory)" class="view-all">
+    Ver todas
+  </button>
+</div>
             <div class="top-tracks">
               <div
                 v-for="(track, index) in chartTracks.slice(0, 5)"
@@ -371,46 +373,6 @@
                 {{ filter }}
               </button>
             </div>
-            <div
-  v-if="searchContextType === 'genre' && topGenreTracks.length > 0"
-  class="top-section genre-top-section"
->
-  <div class="top-header">
-    <h3>Top 5 de {{ lastSearch }}</h3>
-    <button class="view-all" @click="activeFilter = 'Músicas'">Ver músicas</button>
-  </div>
-
-  <div class="top-tracks">
-    <div
-      v-for="(track, index) in topGenreTracks"
-      :key="`genre-top-${track.id}-${index}`"
-      class="track-card"
-      @click="playTrack(track)"
-    >
-      <span class="track-number">{{ index + 1 }}</span>
-      <img :src="getBestImage(track)" :alt="getResultTitle(track)" />
-
-      <div class="track-info">
-        <span class="track-name">{{ getResultTitle(track) }}</span>
-        <span class="track-artist">{{ getResultSubtitle(track) }}</span>
-      </div>
-
-      <button
-        class="btn-like-track"
-        @click.stop="toggleLikeTrack(track)"
-        :class="{ liked: isTrackLiked(track.id) }"
-        :title="isTrackLiked(track.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
-      >
-        <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-      </button>
-
-      <button class="track-play">
-        <i class="fa fa-play"></i>
-      </button>
-    </div>
-  </div>
-</div>
-
           </div>
 
           <div v-if="filteredResults.length === 0" class="no-results">
@@ -517,12 +479,11 @@ export default {
       isLoading: false,
       activeCategoryTab: 'genres',
 
+        currentTopCategory: 'Brasil',
+
       // importante
       searchTimeout: null,
       quickCategories: [],
-
-      searchContextType: null,
-      topGenreTracks: [],
 
       // Curtidas
       likedTracks: [],
@@ -655,16 +616,10 @@ export default {
   },
 
   computed: {
-    watch: {
-  '$route.query': {
-    immediate: true,
-    async handler(query) {
-      const routeQuery = (query.q || '').trim()
-      if (!routeQuery) return
-
-      await this.applyRouteSearch(query)
-    }
-  }
+  topSectionTitle() {
+  return this.currentTopCategory && this.currentTopCategory !== 'Brasil'
+    ? `Top músicas de ${this.currentTopCategory}`
+    : 'Top Músicas Brasil'
 },
 
 filteredResults() {
@@ -776,115 +731,37 @@ filteredResults() {
     }
   },
 
-  mounted() {
-    document.addEventListener('click', this.handleClickOutside)
-    this.loadInitialData()
-    this.loadLikedTracks()
-    this.loadFavoritas()
-    this.loadVibes()
-    this.loadGeneros()
-    this.loadHistory()
-  },
+mounted() {
+  document.addEventListener('click', this.handleClickOutside)
+
+  const initialCategory = this.$route?.query?.q || 'Brasil'
+  this.currentTopCategory = initialCategory
+  this.searchQuery = this.$route?.query?.q || ''
+
+  this.loadInitialData(initialCategory)
+  this.loadLikedTracks()
+  this.loadFavoritas()
+  this.loadVibes()
+  this.loadGeneros()
+  this.loadHistory()
+},
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
     if (this.searchTimeout) clearTimeout(this.searchTimeout)
   },
+watch: {
+  '$route.query.q': {
+    immediate: false,
+    handler(newValue) {
+      const category = newValue || 'Brasil'
+      this.currentTopCategory = category
+      this.loadTopTracksByCategory(category)
+    }
+  }
+},
 
   methods: {
-    async applyRouteSearch(routeQuery) {
-  const q = (routeQuery.q || '').trim()
-  if (!q) return
-
-  this.searchQuery = q
-  this.lastSearch = q
-  this.hasSearched = true
-  this.showSuggestions = false
-  this.showHistory = false
-  this.showCategoriesDropdown = false
-  this.searchContextType = routeQuery.type || this.detectSearchType(q)
-  this.activeFilter = this.searchContextType === 'genre' ? 'Músicas' : 'Todos'
-  this.topGenreTracks = []
-
-  await this.searchAll(q)
-  this.buildGenreTop5()
-},
-
-detectSearchType(query) {
-  const q = (query || '').toLowerCase().trim()
-
-  const nomesGenerosDB = Array.isArray(this.generosDB)
-    ? this.generosDB.map(g => (g.nome || '').toLowerCase().trim())
-    : []
-
-  const nomesQuick = Array.isArray(this.quickCategories)
-    ? this.quickCategories.map(g => (g || '').toLowerCase().trim())
-    : []
-
-  const nomesFixos = [
-    'pop',
-    'rock',
-    'hip hop',
-    'hip-hop',
-    'eletrônica',
-    'eletronica',
-    'sertanejo',
-    'funk',
-    'mpb',
-    'jazz',
-    'pagode',
-    'forró',
-    'forro',
-    'samba',
-    'gospel',
-    'indie',
-    'trap',
-    'house',
-    'techno',
-    'trance'
-  ]
-
-  const allGenres = [...nomesGenerosDB, ...nomesQuick, ...nomesFixos]
-
-  return allGenres.includes(q) ? 'genre' : null
-},
-
-buildGenreTop5() {
-  if (this.searchContextType !== 'genre') {
-    this.topGenreTracks = []
-    return
-  }
-
-  const onlyTracks = this.searchResults.filter(item => item.type === 'track')
-
-  const unique = []
-  const seen = new Set()
-
-  for (const track of onlyTracks) {
-    const key = `${track.source || 'unknown'}-${track.id}`
-    if (!seen.has(key)) {
-      seen.add(key)
-      unique.push(track)
-    }
-  }
-
-  this.topGenreTracks = unique.slice(0, 5)
-},
-
-deduplicateResults(results) {
-  const unique = []
-  const seen = new Set()
-
-  for (const item of results) {
-    const key = `${item.type || 'unknown'}-${item.source || 'unknown'}-${item.id || Math.random()}`
-    if (!seen.has(key)) {
-      seen.add(key)
-      unique.push(item)
-    }
-  }
-
-  return unique
-},
     // ===== SISTEMA DE CURTIDAS =====
     
     // Carregar músicas curtidas do localStorage
@@ -1232,24 +1109,32 @@ handleResultClick(result) {
     },
 
     // API Methods
-    async loadInitialData() {
+async loadInitialData(category = 'Brasil') {
   await Promise.all([
-    this.loadChartTracks(),
+    this.loadTopTracksByCategory(category),
     this.loadPopularArtists()
   ])
 },
 
-    async loadChartTracks() {
-      try {
-        const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
-        const data = await response.json()
-        if (data.data) {
-          this.chartTracks = data.data
-        }
-      } catch (error) {
-        console.error('Erro ao carregar chart:', error)
-      }
-    },
+async loadTopTracksByCategory(category = 'Brasil') {
+  try {
+    this.currentTopCategory = category || 'Brasil'
+
+    let url = `${this.DEEZER_API}/chart/0/tracks?limit=10`
+
+    if (category && category !== 'Brasil') {
+      url = `${this.DEEZER_API}/search/track?q=${encodeURIComponent(category)}&limit=10`
+    }
+
+    const response = await fetch(url)
+    const data = await response.json()
+
+    this.chartTracks = Array.isArray(data.data) ? data.data : []
+  } catch (error) {
+    console.error('Erro ao carregar top da categoria:', error)
+    this.chartTracks = []
+  }
+},
 
 async loadPopularArtists() {
   try {
@@ -1451,8 +1336,7 @@ if (Array.isArray(localGeneros)) {
     if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
     if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
 
-    this.searchResults = this.deduplicateResults(results)
-
+    this.searchResults = results
   } catch (err) {
     console.error(err)
     this.searchResults = []
@@ -1897,38 +1781,34 @@ handleInput() {
       this.showHistory = false
     },
 
-async performSearch(searchType = null) {
-  const query = this.searchQuery.trim()
-  if (!query) return
-
-  if (/^\d{4}$/.test(query)) {
-    const year = parseInt(query)
-    if (year >= 1900 && year <= 2100) {
-      this.searchContextType = null
-      this.topGenreTracks = []
-      this.searchByYear(query)
+ async performSearch() {
+      const query = this.searchQuery.trim()
+      if (!query) return
+      
+      // Se for um ano (4 dígitos entre 1900-2100), buscar por ano
+      if (/^\d{4}$/.test(query)) {
+        const year = parseInt(query)
+        if (year >= 1900 && year <= 2100) {
+          this.searchByYear(query)
+          await this.saveHistory(query)
+          await this.loadHistory()
+          return
+        }
+      }
+      
+      this.lastSearch = query
+      this.hasSearched = true
+      this.showSuggestions = false
+      this.showHistory = false
+      this.showCategoriesDropdown = false
+      
+      // Save to history
       await this.saveHistory(query)
       await this.loadHistory()
-      return
-    }
-  }
-
-  this.lastSearch = query
-  this.hasSearched = true
-  this.showSuggestions = false
-  this.showHistory = false
-  this.showCategoriesDropdown = false
-
-  this.searchContextType = searchType || this.detectSearchType(query)
-  this.activeFilter = this.searchContextType === 'genre' ? 'Músicas' : 'Todos'
-
-  await this.saveHistory(query)
-  await this.loadHistory()
-
-  await this.searchAll(query)
-  this.buildGenreTop5()
-},
-
+      
+      await this.searchAll(query)
+    },
+    
     async saveHistory(termo) {
   try {
     const token = localStorage.getItem("token")
@@ -1947,10 +1827,12 @@ async performSearch(searchType = null) {
   }
 },
 
-    searchAndGo(term) {
-      this.searchQuery = term
-      this.performSearch()
-    },
+searchAndGo(term) {
+  this.currentTopCategory = term || 'Brasil'
+  this.searchQuery = term
+  this.loadTopTracksByCategory(this.currentTopCategory)
+  this.performSearch()
+},
 
   searchArtist(artistName, artistId) {
   if (artistId) {
