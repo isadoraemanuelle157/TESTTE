@@ -12,6 +12,7 @@ router.get('/search', cantorController.search)
 router.patch('/:id/seguir', authMiddleware, cantorController.seguir)
 router.patch('/:id/deixar-seguir', authMiddleware, cantorController.deixarSeguir)
 
+router.get('/:id/shows', cantorController.getShowsByCantor)
 router.get('/:id', cantorController.getById)
     router.put('/:id', cantorController.update)         // Atualizar
     router.delete('/:id', cantorController.remove)      // Deletar

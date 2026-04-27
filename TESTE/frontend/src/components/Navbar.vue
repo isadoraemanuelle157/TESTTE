@@ -1,7 +1,14 @@
 <template>
-  <nav class="navbar" :class="{ scrolled: isScrolled }">
+ <nav 
+  class="navbar" 
+  :class="{ 
+    scrolled: isScrolled, 
+    hidden: isHidden,
+    'sidebar-open': sidebarOpen
+  }"
+>
     <div class="navbar-content">
-      <div class="navbar-brand" @click="$router.push('/')">
+      <div class="navbar-brand" @click="goToHomeOrDashboard">
         <div class="brand-icon">
           <i class="fa fa-headphones"></i>
         </div>
@@ -360,6 +367,10 @@ export default {
   name: 'Navbar',
 
   props: {
+      sidebarOpen: {
+    type: Boolean,
+    default: false
+  },
     showBrand: {
       type: Boolean,
       default: true
@@ -376,6 +387,8 @@ export default {
     const router = useRouter()
 
     const isScrolled = ref(false)
+    const isHidden = ref(false)
+    let lastScrollY = 0
     const showNotifications = ref(false)
     const showUserMenu = ref(false)
     const isSearchFocused = ref(false)
@@ -578,7 +591,16 @@ export default {
     }
 
     const handleScroll = () => {
-      isScrolled.value = window.scrollY > 20
+      const currentScrollY = window.scrollY
+      isScrolled.value = currentScrollY > 20
+      
+      // Hide navbar when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        isHidden.value = true
+      } else {
+        isHidden.value = false
+      }
+      lastScrollY = currentScrollY
     }
 
     const toggleNotifications = async () => {
@@ -747,6 +769,15 @@ export default {
       }
     }
 
+    // ===== NOVO: Redireciona para dashboard se logado, senão para home =====
+    const goToHomeOrDashboard = () => {
+      if (isLoggedIn.value) {
+        router.push('/dashboard')
+      } else {
+        router.push('/')
+      }
+    }
+
     const handleSearch = () => {
       if (searchQuery.value.trim()) {
         emit('search', searchQuery.value)
@@ -890,6 +921,7 @@ export default {
 
     return {
       isScrolled,
+      isHidden,
       showNotifications,
       showUserMenu,
       isSearchFocused,
@@ -915,6 +947,7 @@ export default {
       fecharNotifModal,
       mostrarToast,
       fecharToast,
+      goToHomeOrDashboard,
       handleSearch,
       handleLogin,
       handleRegister,
@@ -936,11 +969,19 @@ export default {
 .navbar {
   position: fixed;
   top: 0;
-  left: 260px;
+  left: 0;
   right: 0;
   height: 70px;
   z-index: 1000;
   transition: all 0.3s ease;
+}
+
+.navbar.sidebar-open {
+  left: 260px;
+}
+
+.navbar.hidden {
+  transform: translateY(-100%);
 }
 
 .navbar::before {
@@ -974,6 +1015,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
+    padding-left: 90px;
 }
 
 /* ===== BRAND ===== */

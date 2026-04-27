@@ -29,6 +29,7 @@ import Vibe from '@/banco/Vibe.vue'
 import SelecionarAvatar from '@/components/SelecionarAvatar.vue'
 import PerfilUsuario from '@/views/PerfilUsuario.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
+import DetalheCantor from '@/views/DetalheCantor.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -196,6 +197,12 @@ const router = createRouter({
       path: '/cantor',
       name: 'cantor',
       component: Cantor,
+    },
+     {
+      path: '/cantor/:id',
+      name: 'DetalheCantor',
+      component: DetalheCantor,
+      props: true,
     },
   ],
 })

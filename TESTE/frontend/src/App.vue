@@ -29,7 +29,7 @@
     ></div>
 
     <div class="main" :class="{ 'full-width': !sidebarOpen }">
-      <Navbar/>
+      <Navbar :sidebarOpen="sidebarOpen" />
       <div class="content">
         <router-view />
       </div>

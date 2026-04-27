@@ -3,6 +3,8 @@ const Album = require('../models/Album')
 const Genero = require('../models/generosMusicais')
 const Musica = require('../models/Musicas')
 const Usuario = require('../models/Usuario')
+const Show = require('../models/Show')
+const Follow = require('../models/Follow')
 
 const normalizeIds = (value) => {
   if (!value) return []
@@ -284,6 +286,49 @@ const getDecada = (ano) => {
   return `Anos ${base}`
 }
 
+const getCantorDetalhes = async (cantorId, usuarioId = null) => {
+  const cantor = await Cantor.findById(cantorId)
+    .populate('generos', '_id nome')
+    .populate('musicas', '_id nome foto link duracao')
+    .populate('albuns', '_id nome descricao foto')
+
+  if (!cantor) throw new Error('Cantor não encontrado')
+
+  const hoje = new Date()
+
+  const [showsProximos, showsPassados] = await Promise.all([
+    Show.find({
+      cantor: cantorId,
+      data: { $gte: hoje },
+      status: 'agendado'
+    }).sort({ data: 1 }),
+
+    Show.find({
+      cantor: cantorId,
+      data: { $lt: hoje }
+    }).sort({ data: -1 }).limit(10)
+  ])
+
+  let isFollowing = false
+
+  if (usuarioId) {
+    const follow = await Follow.findOne({
+      seguidor_id: usuarioId,
+      seguindo_id: cantorId,
+      tipo: 'cantor'
+    }).lean()
+
+    isFollowing = !!follow
+  }
+
+  return {
+    cantor,
+    showsProximos,
+    showsPassados,
+    isFollowing
+  }
+}
+
 module.exports = {
   createCantor,
   getCantores,
@@ -295,5 +340,6 @@ module.exports = {
   searchCantores,
    addAlbumToCantor,
   seguirCantor,
-  deixarSeguirCantor
+  deixarSeguirCantor,
+    getCantorDetalhes
 }

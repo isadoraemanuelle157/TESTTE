@@ -1,4 +1,5 @@
 const cantorService = require('../services/cantorService')
+const Show = require('../models/Show')
 
 // CRIAR CANTOR
 const create = async (req, res) => {
@@ -156,6 +157,19 @@ const deixarSeguir = async (req, res) => {
   }
 }
 
+const getShowsByCantor = async (req, res) => {
+  try {
+    const shows = await Show.find({
+      cantor: req.params.id,
+      status: 'agendado'
+    }).sort({ data: 1 })
+
+    res.json(shows)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   create,
   list,
@@ -165,6 +179,7 @@ module.exports = {
   remove,
   addAlbum,
   search,
-    seguir,
-  deixarSeguir
+  seguir,
+  deixarSeguir,
+   getShowsByCantor
 }

@@ -135,12 +135,12 @@
           
           <div class="modal-body">
             <div class="artists-list">
-              <div
-                v-for="artist in artists"
-                :key="artist.id"
-                class="list-item"
-                @click="goToArtistFromModal(artist)"
-              >
+           <div 
+  v-for="cantor in cantores" 
+  :key="cantor._id" 
+  class="artist-card"
+  @click="abrirPaginaCantor(cantor._id)"
+>
                 <div class="list-image">
                   <img :src="artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError">
                 </div>
@@ -205,6 +205,9 @@ async mounted() {
   },
 
   methods: {
+    abrirPaginaCantor(id) {
+  this.$router.push({ name: 'CantorDetalhe', params: { id } })
+},
     // ============ API DEEZER ============
 async loadCantoresFromDB() {
   try {

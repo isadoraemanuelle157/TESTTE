@@ -17,6 +17,17 @@ const formatarSeguidores = (total) => {
 const cantorSchema = new mongoose.Schema({
   nome: { type: String, required: true, trim: true },
   foto: { type: String, default: '' },
+    banner: { type: String, default: '' },
+
+  bio: { type: String, default: '' },
+  sobre: { type: String, default: '' },
+  origem: { type: String, default: '' },
+  pais: { type: String, default: '' },
+
+  instagram: { type: String, default: '' },
+  spotifyUrl: { type: String, default: '' },
+  youtubeUrl: { type: String, default: '' },
+  siteOficial: { type: String, default: '' },
 
   albuns: {
     type: [{
