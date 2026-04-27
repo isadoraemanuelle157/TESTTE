@@ -607,7 +607,6 @@ export default {
 .music-player {
   position: fixed;
   bottom: 0;
-  left: 261px;
   right: 0;
   height: 90px;
   background: linear-gradient(180deg, #0a0a1a 0%, #050508 100%);
@@ -624,7 +623,6 @@ export default {
 .music-player-empty {
   position: fixed;
   bottom: 0;
-  left: 261px;
   right: 0;
   height: 70px;
   background: linear-gradient(180deg, #0a0a1a 0%, #050508 100%);
@@ -634,6 +632,16 @@ export default {
   justify-content: center;
   z-index: 999;
   font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.music-player,
+.music-player-empty {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  transition: left 0.3s ease;
 }
 
 .empty-content {
@@ -984,6 +992,12 @@ export default {
   opacity: 0;
   cursor: pointer;
   margin: 0;
+}
+
+/* Quando sidebar estiver aberto */
+.app.sidebar-open .music-player,
+.app.sidebar-open .music-player-empty {
+  left: 260px;
 }
 
 /* Responsivo */
