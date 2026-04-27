@@ -35,17 +35,21 @@
       </div>
     </div>
 
+      <MusicPlayer />
+
   </div>
 </template>
 
 <script>
 import Sidebar from "@/components/Sidebar.vue"
 import Navbar from "@/components/Navbar.vue"
+import MusicPlayer from "@/components/MusicPlayer.vue"
 
 export default {
   components: {
     Sidebar,
-    Navbar
+    Navbar,
+    MusicPlayer
   },
   
   data() {
