@@ -6,12 +6,15 @@ const usuarioSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   senha: { type: String, required: true },
 
+  idade: { type: Number, min: 18, max: 100, default: null },
+
   bio: { type: String, default: '' },
   avatar: { type: String, default: null },
   cover: { type: String, default: null },
   localizacao: { type: String, default: '' },
 
   website: { type: String, default: '' },
+
   generos: { type: [String], default: [] },
 
   // AGORA: controla acesso ao perfil

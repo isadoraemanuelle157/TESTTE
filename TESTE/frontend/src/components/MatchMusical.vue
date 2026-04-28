@@ -813,6 +813,8 @@
 </template>
 
 <script>
+import api from '@/services/api'
+
 export default {
   name: 'MusicalMatch',
   
@@ -936,20 +938,90 @@ loadingGenres: false,
     }
   },
 
-  mounted() {
-     this.fetchGenres()
+ async mounted() {
+  await this.fetchGenres()
 
-  // Check if user already has a profile in localStorage
   const savedProfile = localStorage.getItem('musicalMatchProfile')
-
   if (savedProfile) {
     this.currentUser = JSON.parse(savedProfile)
     this.hasProfile = true
-    this.fetchSongsFromDeezer()
+
+    await Promise.all([
+      this.buscarSugestoes(),
+      this.buscarCurtidas(),
+      this.buscarFavoritos(),
+      this.buscarMatches()
+    ])
+  } else {
+    this.loading = false
   }
 },
 
   methods: {
+    async buscarSugestoes() {
+  try {
+    this.loading = true
+    const { data } = await api.get('/matches/sugestoes')
+
+    this.songs = (data.cards || []).map(track => ({
+      id: track.id || track.deezerId,
+      deezerId: track.deezerId || track.id,
+      title: track.title || track.titulo,
+      artist: track.artist || { name: track.artista },
+      album: track.album || {
+        title: '',
+        cover_medium: track.cover || track.capa,
+        cover_small: track.cover || track.capa
+      },
+      cover: track.cover || track.capa,
+      duration: track.duration || track.duracao,
+      preview: track.preview,
+      genre: track.genre || ''
+    }))
+
+    this.currentIndex = 0
+  } catch (error) {
+    console.error('Erro ao buscar sugestões:', error)
+    this.songs = []
+  } finally {
+    this.loading = false
+  }
+},
+
+async buscarCurtidas() {
+  try {
+    const { data } = await api.get('/matches/curtidas', {
+      params: { tipo: 'like' }
+    })
+
+    this.likedSongs = (data.curtidas || []).map(item => item.musica)
+  } catch (error) {
+    console.error('Erro ao buscar curtidas:', error)
+  }
+},
+
+async buscarFavoritos() {
+  try {
+    const { data } = await api.get('/matches/curtidas', {
+      params: { tipo: 'favorite' }
+    })
+
+    this.favorites = (data.curtidas || []).map(item => item.musica)
+  } catch (error) {
+    console.error('Erro ao buscar favoritos:', error)
+  }
+},
+
+async buscarMatches() {
+  try {
+    const { data } = await api.get('/matches/matches')
+    this.matches = data.matches || []
+    this.unreadMatches = data.naoVistos || 0
+  } catch (error) {
+    console.error('Erro ao buscar matches:', error)
+  }
+},
+
 async fetchGenres() {
   try {
     this.loadingGenres = true
@@ -1059,47 +1131,54 @@ isGenreSelected(id){
  return this.onboardingData.favoriteGenres.includes(id)
 },
     
-    async finishOnboarding() {
-      this.creatingProfile = true
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      // Set current user
-      this.currentUser = {
- name: this.onboardingData.name,
- age: this.onboardingData.age,
- avatar: this.onboardingData.avatar,
- bio: this.onboardingData.bio,
- location: this.onboardingData.location,
- favoriteGenres: this.onboardingData.favoriteGenres
-}
-      
-      this.hasProfile = true
-      this.creatingProfile = false
-      
-      // Load songs
-      this.fetchSongsFromDeezer()
-    },
-    async finishOnboarding(){
+   async finishOnboarding() {
+  try {
+    this.creatingProfile = true
 
- this.creatingProfile=true
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const userId = user.id || user._id
 
- await api.put(
- `/usuarios/${this.user.id}`,
- {
-   bio:this.onboardingData.bio,
-   localizacao:this.onboardingData.location,
-   generos:this.onboardingData.favoriteGenres,
-   onboardingCompleto:true,
-   procurandoMatch:true
- }
- )
+    if (!userId) {
+      throw new Error('Usuário logado não encontrado')
+    }
 
- await this.buscarSugestoes()
+    const { data } = await api.put(`/usuarios/${userId}`, {
+      nome: this.onboardingData.name,
+      idade: this.onboardingData.age,
+      avatar: this.onboardingData.avatar,
+      bio: this.onboardingData.bio,
+      localizacao: this.onboardingData.location,
+      generos: this.onboardingData.favoriteGenres,
+      onboardingCompleto: true
+    })
 
- this.hasProfile=true
- this.creatingProfile=false
+    const updatedUser = data.user
+
+    this.currentUser = {
+      id: updatedUser.id,
+      name: updatedUser.nome,
+      age: updatedUser.idade,
+      avatar: updatedUser.avatar,
+      bio: updatedUser.bio,
+      location: updatedUser.localizacao,
+      favoriteGenres: updatedUser.generos || []
+    }
+
+    localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
+
+    this.hasProfile = true
+
+    await Promise.all([
+      this.buscarSugestoes(),
+      this.buscarCurtidas(),
+      this.buscarFavoritos(),
+      this.buscarMatches()
+    ])
+  } catch (error) {
+    console.error('Erro ao finalizar onboarding:', error)
+  } finally {
+    this.creatingProfile = false
+  }
 },
 
     // Logout methods
@@ -1184,10 +1263,9 @@ isGenreSelected(id){
       }
     },
 
-    loadMoreSongs() {
-      this.currentIndex = 0
-      this.fetchSongsFromDeezer()
-    },
+async loadMoreSongs() {
+  await this.buscarSugestoes()
+},
 
     loadFallbackData() {
       // Keep some fallback data in case API fails
@@ -1269,51 +1347,69 @@ isGenreSelected(id){
       this.swipingRight = false
     },
 
-    swipeLeft() {
-      this.currentIndex++
-      this.animateCard('left')
-    },
+swipeLeft() {
+  this.currentIndex++
+  this.animateCard('left')
+},
 
-    swipeRight() {
-      const currentSong = this.songs[this.currentIndex]
-      this.likedSongs.push(currentSong)
-      this.currentIndex++
-      this.animateCard('right')
-      
-      // Check for matches after 3 likes
-      if (this.likedSongs.length >= 3 && this.matches.length === 0) {
-        this.generateMatches()
-      }
-      
-      // Random match chance after each like
-      if (this.likedSongs.length > 3 && Math.random() > 0.6) {
-        setTimeout(() => {
-          this.addNewMatch()
-        }, 800)
-      }
-    },
+   async swipeRight() {
+  try {
+    const currentSong = this.songs[this.currentIndex]
+    if (!currentSong) return
+
+    await api.post('/matches/curtidas', {
+      track: currentSong,
+      tipo: 'like'
+    })
+
+    this.likedSongs.push(currentSong)
+    this.currentIndex++
+    this.animateCard('right')
+
+    await this.buscarMatches()
+
+    if (this.matches.length > 0) {
+      this.lastMatch = this.matches[0]
+      this.showMatchNotification = true
+
+      setTimeout(() => {
+        this.showMatchNotification = false
+      }, 5000)
+    }
+  } catch (error) {
+    console.error('Erro ao curtir música:', error)
+  }
+},
 
     // Toggle favorite (star button)
-    toggleFavorite() {
-      const currentSong = this.songs[this.currentIndex]
-      if (!currentSong) return
-      
-      const index = this.favorites.findIndex(f => f.id === currentSong.id)
-      
-      if (index > -1) {
-        // Remove from favorites
-        this.favorites.splice(index, 1)
-      } else {
-        // Add to favorites
-        this.favorites.push(currentSong)
-        this.lastFavorited = currentSong
-        this.showFavoriteToast = true
-        
-        setTimeout(() => {
-          this.showFavoriteToast = false
-        }, 3000)
-      }
-    },
+  async toggleFavorite() {
+  try {
+    const currentSong = this.songs[this.currentIndex]
+    if (!currentSong) return
+
+    const index = this.favorites.findIndex(f => f.id === currentSong.id)
+
+    if (index > -1) {
+      await api.delete(`/matches/curtidas/${currentSong.id}`)
+      this.favorites.splice(index, 1)
+    } else {
+      await api.post('/matches/curtidas', {
+        track: currentSong,
+        tipo: 'favorite'
+      })
+
+      this.favorites.push(currentSong)
+      this.lastFavorited = currentSong
+      this.showFavoriteToast = true
+
+      setTimeout(() => {
+        this.showFavoriteToast = false
+      }, 3000)
+    }
+  } catch (error) {
+    console.error('Erro ao favoritar música:', error)
+  }
+},
 
     isFavorite(song) {
       if (!song) return false
@@ -1332,17 +1428,15 @@ isGenreSelected(id){
       this.toggleFavorite()
     },
 
-    unlikeSong(song) {
-      const index = this.likedSongs.findIndex(s => s.id === song.id)
-      if (index > -1) {
-        this.likedSongs.splice(index, 1)
-        // Recalculate matches based on remaining likes
-        if (this.likedSongs.length < 3) {
-          this.matches = []
-          this.unreadMatches = 0
-        }
-      }
-    },
+   async unlikeSong(song) {
+  try {
+    await api.delete(`/matches/curtidas/${song.id}`)
+    this.likedSongs = this.likedSongs.filter(s => s.id !== song.id)
+    await this.buscarMatches()
+  } catch (error) {
+    console.error('Erro ao remover curtida:', error)
+  }
+},
 
     generateMatches() {
       const mockUsers = [
@@ -1506,19 +1600,36 @@ isGenreSelected(id){
       }
     },
 
-    saveProfile() {
-      this.currentUser = {
-        ...this.currentUser,
-        name: this.editForm.name,
-        age: this.editForm.age,
-        bio: this.editForm.bio,
-        location: this.editForm.location,
-        avatar: this.editForm.avatar
-      }
-      // Update localStorage
-      localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
-      this.isEditing = false
-    },
+    async saveProfile() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const userId = user.id || user._id
+
+    const { data } = await api.put(`/usuarios/${userId}`, {
+      nome: this.editForm.name,
+      idade: this.editForm.age,
+      bio: this.editForm.bio,
+      localizacao: this.editForm.location,
+      avatar: this.editForm.avatar
+    })
+
+    const updatedUser = data.user
+
+    this.currentUser = {
+      ...this.currentUser,
+      name: updatedUser.nome,
+      age: updatedUser.idade,
+      bio: updatedUser.bio,
+      location: updatedUser.localizacao,
+      avatar: updatedUser.avatar
+    }
+
+    localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
+    this.isEditing = false
+  } catch (error) {
+    console.error('Erro ao salvar perfil:', error)
+  }
+},
 
     triggerFileInput() {
       this.$refs.fileInput.click()
@@ -1535,11 +1646,22 @@ isGenreSelected(id){
       }
     },
 
-    closeMatches() {
-      this.unreadMatches = 0
-      this.matches.forEach(m => m.unread = false)
-      this.showMatches = false
-    },
+async closeMatches() {
+  try {
+    const unread = this.matches.filter(m => m.unread)
+
+    await Promise.all(
+      unread.map(match => api.put(`/matches/matches/${match.id}/visto`))
+    )
+
+    this.matches = this.matches.map(m => ({ ...m, unread: false }))
+    this.unreadMatches = 0
+    this.showMatches = false
+  } catch (error) {
+    console.error('Erro ao marcar matches como vistos:', error)
+    this.showMatches = false
+  }
+},
 
     openMatchDetail(match) {
       console.log('View profile:', match.user.name)
@@ -1549,10 +1671,20 @@ isGenreSelected(id){
       this.matches = this.matches.filter(m => m.id !== match.id)
     },
 
-    startChat(match) {
-      console.log('Start chat with:', match.user.name)
-      this.showMatches = false
-    },
+async startChat(match) {
+  try {
+    if (match.status === 'pendente') {
+      await api.put(`/matches/matches/${match.id}/responder`, {
+        resposta: 'aceito'
+      })
+    }
+
+    this.showMatches = false
+    console.log('Abrir chat do match:', match.id)
+  } catch (error) {
+    console.error('Erro ao iniciar conversa:', error)
+  }
+},
 
     viewMatch() {
       this.showMatchNotification = false

@@ -218,6 +218,7 @@ const updateUser = async (id, data) => {
   const {
     nome,
     username,
+    idade,
     bio,
     avatar,
     cover,
@@ -236,6 +237,7 @@ const updateUser = async (id, data) => {
 
   if (nome !== undefined) updateData.nome = nome
   if (username !== undefined) updateData.username = username
+  if (idade !== undefined) updateData.idade = idade
   if (bio !== undefined) updateData.bio = bio
   if (avatar !== undefined) updateData.avatar = avatar
   if (cover !== undefined) updateData.cover = cover
