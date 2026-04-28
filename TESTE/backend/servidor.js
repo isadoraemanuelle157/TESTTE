@@ -19,7 +19,7 @@ const followRoutes = require('./routes/followRoutes')
 const historicoRoutes = require('./routes/historicoRoutes')
 const notificacaoRoutes = require('./routes/notificacaoRoutes')
 const privacidadeAtividadeRoutes = require('./routes/privacidadeAtividadeRoutes')
-
+const matchRoutes = require('./routes/matchRoutes')
 
 // MIDDLEWARES
 app.use(cors())
@@ -40,6 +40,7 @@ app.use('/follows', followRoutes)
 app.use('/historico', historicoRoutes)
 app.use('/notificacoes', notificacaoRoutes)
 app.use('/privacidade', privacidadeAtividadeRoutes)
+app.use('/match', matchRoutes)
 
 // SERVIDOR
 app.listen(3002, () => {
