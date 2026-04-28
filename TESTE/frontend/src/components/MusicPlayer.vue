@@ -154,13 +154,6 @@
     ></audio>
   </div>
   
-  <!-- ESTADO VAZIO -->
-  <div v-else class="music-player-empty">
-    <div class="empty-content">
-      <i class="fa fa-music"></i>
-      <span>Nenhuma música tocando</span>
-    </div>
-  </div>
 </template>
 
 <script>
@@ -604,6 +597,22 @@ export default {
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
+.player-fade-enter-active,
+.player-fade-leave-active {
+  transition: all 0.4s ease;
+}
+
+.player-fade-enter-from,
+.player-fade-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.player-fade-enter-to,
+.player-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
 .music-player {
   position: fixed;
   bottom: 0;

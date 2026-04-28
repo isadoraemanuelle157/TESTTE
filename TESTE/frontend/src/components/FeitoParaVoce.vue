@@ -6,34 +6,68 @@
         class="bg-layer"
         v-for="(layer, index) in 3"
         :key="index"
-        :class="{ active: currentStep === index + 1 }"
+        :class="{ active: headerStep === 1 }"
         :style="getBgStyle(index + 1)"
       ></div>
       <div class="noise-overlay"></div>
     </div>
 
     <!-- Header Global -->
- <header class="global-header onboarding-header">
-  <div class="progress-steps">
-    <div class="step completed">
-      <div class="step-number">1</div>
-      <span class="step-label">Conta</span>
-    </div>
+<header class="global-header onboarding-header">
+<div class="progress-steps">
 
-    <div class="step-line completed"></div>
-
-    <div class="step completed">
-      <div class="step-number">2</div>
-      <span class="step-label">Perfil</span>
-    </div>
-
-    <div class="step-line completed"></div>
-
-    <div class="step active">
-      <div class="step-number">3</div>
-      <span class="step-label">Preferências</span>
-    </div>
+  <!-- STEP 1 -->
+  <div
+    class="step"
+    :class="{
+      completed: headerStep > 1,
+      active: headerStep === 1
+    }"
+  >
+    <div class="step-number">1</div>
+    <span class="step-label">Conta</span>
   </div>
+
+  <div
+    class="step-line"
+    :class="{ completed: headerStep > 1 }"
+  >
+    <svg class="arrow-icon" viewBox="0 0 24 24">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+  </div>
+
+  <!-- STEP 2 -->
+  <div
+    class="step"
+    :class="{
+      completed: headerStep > 2,
+      active: headerStep === 2
+    }"
+  >
+    <div class="step-number">2</div>
+    <span class="step-label">Perfil</span>
+  </div>
+
+  <div
+    class="step-line"
+    :class="{ completed: headerStep > 2 }"
+  >
+    <svg class="arrow-icon" viewBox="0 0 24 24">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+  </div>
+
+  <!-- STEP 3 -->
+  <div
+    class="step"
+    :class="{ active: headerStep === 3 }"
+  >
+    <div class="step-number">3</div>
+    <span class="step-label">Preferências</span>
+  </div>
+
+</div>
 </header>
 
     <!-- Main Content Area - TELA TOTAL -->
@@ -291,6 +325,7 @@
 </template>
 
 <script>
+import Swal from "sweetalert2"
 export default {
   name: "Onboarding",
   data() {
@@ -317,6 +352,9 @@ async mounted(){
 },
 
   computed: {
+    headerStep() {
+  return 3
+},
     genreProgress() {
       return Math.min((this.selectedGenres.length / 3) * 100, 100)
     },
@@ -575,68 +613,82 @@ this.selectedVibes=
       }
     },
 
- async finishOnboarding(){
+async finishOnboarding(){
  try{
-  const userId = usuario._id || usuario.id
 
-   const token = localStorage.getItem("token")
+  const usuario = JSON.parse(localStorage.getItem("usuario"))
+  const userId = usuario?._id || usuario?.id
+  const token = localStorage.getItem("token")
 
-   // 1) salva preferências no usuário
-   await fetch(
-      `http://localhost:3002/usuarios/${userId}`,
-      {
-        method:"PUT",
+  if(!userId){
+    throw new Error("Usuário não encontrado")
+  }
+
+  // salvar preferências
+  await fetch(`http://localhost:3002/usuarios/${userId}`, {
+    method:"PUT",
+    headers:{
+      "Content-Type":"application/json",
+      Authorization:`Bearer ${token}`
+    },
+    body: JSON.stringify({
+      generos: this.selectedGenres.map(g=>g.id),
+      artistasFavoritos: this.selectedArtists.map(a=>a.id),
+      vibesFavoritas: this.selectedVibes.map(v=>v.id),
+      onboardingCompleto:true
+    })
+  })
+
+  // favoritos
+  await Promise.all(
+    this.selectedArtists.map(artist =>
+      fetch(`http://localhost:3002/favoritas/${artist.id}/favoritar`, {
+        method:"POST",
         headers:{
           "Content-Type":"application/json",
           Authorization:`Bearer ${token}`
         },
-        body: JSON.stringify({
-          generos:
-            this.selectedGenres.map(g=>g.id),
+        body: JSON.stringify({ tipo:"cantor" })
+      })
+    )
+  )
 
-          artistasFavoritos:
-            this.selectedArtists.map(a=>a.id),
+  // salvar local
+  localStorage.setItem(
+    "artistasFavoritos",
+    JSON.stringify(this.selectedArtists.map(a=>a.id))
+  )
 
-          vibesFavoritas:
-            this.selectedVibes.map(v=>v.id),
+  // 🔥 ALERTA TOP
+  await Swal.fire({
+    title: "Conta criada com sucesso! 🎉",
+    text: "Seu perfil está pronto. Bora ouvir música!",
+    icon: "success",
+    background: "#121212",
+    color: "#fff",
+    confirmButtonText: "Ir para o Dashboard 🚀",
+    confirmButtonColor: "#1DB954",
+    timer: 2500,
+    timerProgressBar: true,
+    showClass: {
+      popup: "animate__animated animate__zoomIn"
+    },
+    hideClass: {
+      popup: "animate__animated animate__fadeOut"
+    }
+  })
 
-          onboardingCompleto:true
-        })
-      }
-   )
-
-
-   // 2) cria favoritos dos artistas escolhidos
-   await Promise.all(
-     this.selectedArtists.map(artist =>
-       fetch(
-         `http://localhost:3002/favoritas/${artist.id}/favoritar`,
-         {
-           method:"POST",
-           headers:{
-             "Content-Type":"application/json",
-             Authorization:`Bearer ${token}`
-           },
-           body: JSON.stringify({
-             tipo:"cantor"
-           })
-         }
-       )
-     )
-   )
-
-   // opcional: salva localmente para refletir rápido em outras páginas
-   localStorage.setItem(
-      "artistasFavoritos",
-      JSON.stringify(
-        this.selectedArtists.map(a=>a.id)
-      )
-   )
-
-   this.$router.push('/dashboard')
+  // 👉 depois do alert, redireciona
+  this.$router.push('/dashboard')
 
  }catch(err){
    console.error(err)
+
+   Swal.fire({
+     title: "Erro 😢",
+     text: "Não foi possível finalizar o cadastro",
+     icon: "error"
+   })
  }
 }
   }
@@ -671,7 +723,44 @@ this.selectedVibes=
   z-index: 0;
   pointer-events: none;
 }
+.progress-steps {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
+.step-line {
+  position: relative;
+  width: 60px;
+  height: 2px;
+  background: rgba(255,255,255,0.2);
+  transition: all 0.3s;
+}
+
+.step-line::after {
+  display: none;
+}
+
+/* Quando completa */
+.step-line.completed {
+  background: #1DB954;
+}
+
+.step-line.completed::after {
+  border-color: #1DB954;
+}
+
+.arrow-icon {
+  width: 28px;
+  height: 28px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s;
+}
+
+.step-line.completed .arrow-icon {
+  color: #1DB954;
+  transform: scale(1.1);
+}
 .bg-layer {
   position: absolute;
   inset: 0;
@@ -693,13 +782,14 @@ this.selectedVibes=
 /* Header Global */
 .global-header {
   position: fixed;
-  top: 0;
+  top: 70px;
   left: 0;
   right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+ justify-content: center; /* 👈 CENTRALIZA */
+
   padding: 16px 32px;
   background: rgba(10, 10, 10, 0.8);
   backdrop-filter: blur(20px);
@@ -815,7 +905,7 @@ this.selectedVibes=
   flex: 1;
   position: relative;
   z-index: 1;
-  margin-top: 70px;
+  margin-top: 110px;
   margin-bottom: 140px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1343,7 +1433,42 @@ this.selectedVibes=
   margin-bottom: 10px;
   line-height: 1.4;
 }
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.4;
+  transition: all 0.3s;
+}
 
+.step.active {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.step.completed {
+  opacity: 1;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.step.active .step-number {
+  background: #1DB954;
+}
+
+.step.completed .step-number {
+  background: #1DB954;
+}
 .vibe-tags {
   display: flex;
   flex-wrap: wrap;

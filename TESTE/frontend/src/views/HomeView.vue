@@ -495,7 +495,7 @@
       </section>
 
       <!-- LOADING STATE -->
-      <<div v-if="!chartTracks.length" class="skeleton"></div>
+      <div v-if="!chartTracks.length" class="skeleton"></div>
 
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">

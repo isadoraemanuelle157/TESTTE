@@ -9,7 +9,13 @@
     </div>
 
     <div class="card" :class="{ 'loading-state': loading }">
-      <!-- Progress Steps -->
+
+       <button class="back-btn" @click="voltar">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M15 18l-6-6 6-6"/>
+  </svg>
+</button>
+<!-- Progress Steps -->
      <div class="progress-steps">
   <div class="step completed">
     <div class="step-number">1</div>
@@ -280,6 +286,9 @@ export default {
     triggerAvatarUpload() {
       this.$refs.avatarInput.click()
     },
+    voltar() {
+  this.$router.push('/registrar')
+},
     
     handleAvatarChange(event) {
       const file = event.target.files[0]
@@ -441,7 +450,39 @@ export default {
   overflow: hidden;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  z-index: 20;
+}
 
+.back-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.back-btn:hover {
+  background: rgba(99, 102, 241, 0.2);
+  color: white;
+  transform: translateX(-3px);
+}
+
+.back-btn:active {
+  transform: scale(0.95);
+}
 /* Background Shapes */
 .bg-shapes {
   position: absolute;
