@@ -74,6 +74,10 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
+    if (String(req.user.id) !== String(req.params.id)) {
+      return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
+    }
+
     const user = await userService.updateUser(req.params.id, req.body)
 
     if (!user) {

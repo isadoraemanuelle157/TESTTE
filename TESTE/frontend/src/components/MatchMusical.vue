@@ -1,1145 +1,1169 @@
-<template>
-  <div class="musical-match">
-    <!-- ONBOARDING / PROFILE CREATION FLOW -->
-    <div v-if="!hasProfile" class="onboarding-flow">
-      <!-- Step 1: Welcome -->
-      <div v-if="onboardingStep === 1" class="onboarding-step welcome-step">
-        <div class="onboarding-content">
-          <div class="logo-large">
-            <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon-large">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-          </div>
-          <h1 class="welcome-title">Musical Match</h1>
-          <p class="welcome-subtitle">Conecte-se através da música</p>
-          
-          <div class="features-preview">
-            <div class="feature-item">
-              <div class="feature-icon">🎵</div>
-              <span>Descubra músicas</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-icon">❤️</div>
-              <span>Curta suas favoritas</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-icon">👥</div>
-              <span>Encontre matches</span>
-            </div>
-          </div>
-
-          <button @click="nextStep" class="btn-primary btn-large">
-            Começar
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 2: Basic Info -->
-      <div v-else-if="onboardingStep === 2" class="onboarding-step">
-        <div class="onboarding-header">
-          <button @click="prevStep" class="back-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-            </svg>
-          </button>
-          <div class="step-indicator">
-            <span class="step-dot active"></span>
-            <span class="step-dot active"></span>
-            <span class="step-dot"></span>
-            <span class="step-dot"></span>
-          </div>
-          <div class="placeholder"></div>
-        </div>
-
-        <div class="onboarding-content compact">
-          <h2 class="step-title">Vamos criar seu perfil</h2>
-          <p class="step-subtitle">Como devemos te chamar?</p>
-
-          <div class="form-group">
-            <label for="onboarding-name">Nome</label>
-            <input 
-              id="onboarding-name"
-              v-model="onboardingData.name" 
-              type="text" 
-              class="onboarding-input"
-              placeholder="Seu nome"
-              maxlength="30"
-            >
-            <span class="input-hint">{{ onboardingData.name.length }}/30</span>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group half">
-              <label for="onboarding-age">Idade</label>
-              <input 
-                id="onboarding-age"
-                v-model.number="onboardingData.age" 
-                type="number" 
-                class="onboarding-input"
-                placeholder="18"
-                min="18"
-                max="100"
-              >
-            </div>
-            <div class="form-group half">
-              <label for="onboarding-location">Cidade</label>
-              <input 
-                id="onboarding-location"
-                v-model="onboardingData.location" 
-                type="text" 
-                class="onboarding-input"
-                placeholder="São Paulo, SP"
-              >
-            </div>
-          </div>
-
-          <button 
-            @click="nextStep" 
-            class="btn-primary btn-large"
-            :disabled="!canProceedStep2"
-          >
-            Continuar
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 3: Photo -->
-      <div v-else-if="onboardingStep === 3" class="onboarding-step">
-        <div class="onboarding-header">
-          <button @click="prevStep" class="back-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-            </svg>
-          </button>
-          <div class="step-indicator">
-            <span class="step-dot active"></span>
-            <span class="step-dot active"></span>
-            <span class="step-dot active"></span>
-            <span class="step-dot"></span>
-          </div>
-          <div class="placeholder"></div>
-        </div>
-
-        <div class="onboarding-content compact">
-          <h2 class="step-title">Sua foto</h2>
-          <p class="step-subtitle">Escolha uma foto que te represente</p>
-
-          <div class="photo-upload-area">
-            <div v-if="!onboardingData.avatar" class="upload-placeholder" @click="triggerOnboardingFileInput">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+  <template>
+    <div class="musical-match">
+      <!-- ONBOARDING / PROFILE CREATION FLOW -->
+      <div v-if="!hasProfile" class="onboarding-flow">
+        <!-- Step 1: Welcome -->
+        <div v-if="onboardingStep === 1" class="onboarding-step welcome-step">
+          <div class="onboarding-content">
+            <div class="logo-large">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon-large">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
-              <span>Clique para adicionar foto</span>
-              <small>Ou arraste uma imagem aqui</small>
             </div>
-            
-            <div v-else class="photo-preview-container">
-              <img :src="onboardingData.avatar" alt="Preview" class="photo-preview-large">
-              <button @click="removePhoto" class="remove-photo-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                </svg>
-              </button>
+            <h1 class="welcome-title">Musical Match</h1>
+            <p class="welcome-subtitle">Conecte-se através da música</p>
+
+            <div class="features-preview">
+              <div class="feature-item">
+                <div class="feature-icon">🎵</div>
+                <span>Descubra músicas</span>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">❤️</div>
+                <span>Curta suas favoritas</span>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">👥</div>
+                <span>Encontre matches</span>
+              </div>
             </div>
-            
-            <input 
-              ref="onboardingFileInput" 
-              type="file" 
-              accept="image/*" 
-              @change="handleOnboardingFileChange" 
-              class="hidden-input"
-            >
-          </div>
 
-          <div class="avatar-presets">
-            <p>Ou escolha um avatar:</p>
-            <div class="preset-avatars">
-              <button 
-                v-for="n in 6" 
-                :key="n"
-                @click="selectPresetAvatar(n)"
-                class="preset-avatar-btn"
-                :class="{ active: onboardingData.avatar === `https://i.pravatar.cc/300?img=${n + 10}` }"
-              >
-                <img :src="`https://i.pravatar.cc/300?img=${n + 10}`" alt="Avatar option">
-              </button>
-            </div>
-          </div>
-
-          <button 
-            @click="nextStep" 
-            class="btn-primary btn-large"
-            :disabled="!onboardingData.avatar"
-          >
-            Continuar
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 4: Bio & Music Preferences -->
-      <div v-else-if="onboardingStep === 4" class="onboarding-step">
-        <div class="onboarding-header">
-          <button @click="prevStep" class="back-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-            </svg>
-          </button>
-          <div class="step-indicator">
-            <span class="step-dot active"></span>
-            <span class="step-dot active"></span>
-            <span class="step-dot active"></span>
-            <span class="step-dot active"></span>
-          </div>
-          <div class="placeholder"></div>
-        </div>
-
-        <div class="onboarding-content compact">
-          <h2 class="step-title">Quase lá!</h2>
-          <p class="step-subtitle">Conte um pouco sobre você e seus gostos musicais</p>
-
-          <div class="form-group">
-            <label for="onboarding-bio">Bio</label>
-            <textarea 
-              id="onboarding-bio"
-              v-model="onboardingData.bio" 
-              class="onboarding-textarea"
-              placeholder="Fale sobre você, seus estilos musicais favoritos, artistas preferidos..."
-              rows="3"
-              maxlength="150"
-            ></textarea>
-            <span class="input-hint">{{ onboardingData.bio.length }}/150</span>
-          </div>
-
-          <div class="form-group">
-            <label>Estilos musicais favoritos (selecione até 3)</label>
-        <div class="genre-selector">
-  <button 
-    v-for="genre in availableGenres"
-    :key="genre._id"
-    @click="toggleGenre(genre)"
-    class="genre-select-btn"
-    :class="{ active: isGenreSelected(genre._id) }"
-    :disabled="
-      !isGenreSelected(genre._id) &&
-      onboardingData.favoriteGenres.length >= 3
-    "
-    :style="{
-      borderColor: genre.color,
-      color: isGenreSelected(genre._id) ? '#fff' : genre.color,
-      background: isGenreSelected(genre._id)
-        ? genre.color
-        : 'transparent'
-    }"
-  >
-    <span>{{ genre.icon }}</span>
-    {{ genre.nome }}
-  </button>
-</div>
-            <span class="input-hint" :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }">
-              {{ onboardingData.favoriteGenres.length }}/3 selecionados
-            </span>
-          </div>
-
-          <button 
-            @click="finishOnboarding" 
-            class="btn-primary btn-large btn-finish"
-            :disabled="!canFinish"
-          >
-            <span v-if="creatingProfile">Criando perfil...</span>
-            <span v-else>
-              Começar a usar
+            <button @click="nextStep" class="btn-primary btn-large">
+              Começar
               <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                 <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
               </svg>
-            </span>
-          </button>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Basic Info -->
+        <div v-else-if="onboardingStep === 2" class="onboarding-step">
+          <div class="onboarding-header">
+            <button @click="prevStep" class="back-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            <div class="step-indicator">
+              <span class="step-dot active"></span>
+              <span class="step-dot active"></span>
+              <span class="step-dot"></span>
+              <span class="step-dot"></span>
+            </div>
+            <div class="placeholder"></div>
+          </div>
+
+          <div class="onboarding-content compact">
+            <h2 class="step-title">Vamos criar seu perfil</h2>
+            <p class="step-subtitle">Como devemos te chamar?</p>
+
+            <div class="form-group">
+              <label for="onboarding-name">Nome</label>
+              <input
+                id="onboarding-name"
+                v-model="onboardingData.name"
+                type="text"
+                class="onboarding-input"
+                placeholder="Seu nome"
+                maxlength="30"
+              >
+              <span class="input-hint">{{ onboardingData.name.length }}/30</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group half">
+                <label for="onboarding-age">Idade</label>
+                <input
+                  id="onboarding-age"
+                  v-model.number="onboardingData.age"
+                  type="number"
+                  class="onboarding-input"
+                  placeholder="18"
+                  min="18"
+                  max="100"
+                >
+              </div>
+              <div class="form-group half">
+                <label for="onboarding-location">Cidade</label>
+                <input
+                  id="onboarding-location"
+                  v-model="onboardingData.location"
+                  type="text"
+                  class="onboarding-input"
+                  placeholder="São Paulo, SP"
+                >
+              </div>
+            </div>
+
+            <button
+              @click="nextStep"
+              class="btn-primary btn-large"
+              :disabled="!canProceedStep2"
+            >
+              Continuar
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Photo -->
+        <div v-else-if="onboardingStep === 3" class="onboarding-step">
+          <div class="onboarding-header">
+            <button @click="prevStep" class="back-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            <div class="step-indicator">
+              <span class="step-dot active"></span>
+              <span class="step-dot active"></span>
+              <span class="step-dot active"></span>
+              <span class="step-dot"></span>
+            </div>
+            <div class="placeholder"></div>
+          </div>
+
+          <div class="onboarding-content compact">
+            <h2 class="step-title">Sua foto</h2>
+            <p class="step-subtitle">Escolha uma foto que te represente</p>
+
+            <div class="photo-upload-area">
+              <div v-if="!onboardingData.avatar" class="upload-placeholder" @click="triggerOnboardingFileInput">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                  <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                </svg>
+                <span>Clique para adicionar foto</span>
+                <small>Ou arraste uma imagem aqui</small>
+              </div>
+
+              <div v-else class="photo-preview-container">
+                <img :src="onboardingData.avatar" alt="Preview" class="photo-preview-large">
+                <button @click="removePhoto" class="remove-photo-btn">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+
+              <input
+                ref="onboardingFileInput"
+                type="file"
+                accept="image/*"
+                @change="handleOnboardingFileChange"
+                class="hidden-input"
+              >
+            </div>
+
+            <div class="avatar-presets">
+              <p>Ou escolha um avatar:</p>
+              <div class="preset-avatars">
+                <button
+                  v-for="n in 6"
+                  :key="n"
+                  @click="selectPresetAvatar(n)"
+                  class="preset-avatar-btn"
+                  :class="{ active: onboardingData.avatar === `https://i.pravatar.cc/300?img=${n + 10}` }"
+                >
+                  <img :src="`https://i.pravatar.cc/300?img=${n + 10}`" alt="Avatar option">
+                </button>
+              </div>
+            </div>
+
+            <button
+              @click="nextStep"
+              class="btn-primary btn-large"
+              :disabled="!onboardingData.avatar"
+            >
+              Continuar
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 4: Bio & Music Preferences -->
+        <div v-else-if="onboardingStep === 4" class="onboarding-step">
+          <div class="onboarding-header">
+            <button @click="prevStep" class="back-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+              </svg>
+            </button>
+            <div class="step-indicator">
+              <span class="step-dot active"></span>
+              <span class="step-dot active"></span>
+              <span class="step-dot active"></span>
+              <span class="step-dot active"></span>
+            </div>
+            <div class="placeholder"></div>
+          </div>
+
+          <div class="onboarding-content compact">
+            <h2 class="step-title">Quase lá!</h2>
+            <p class="step-subtitle">Conte um pouco sobre você e seus gostos musicais</p>
+
+            <div class="form-group">
+              <label for="onboarding-bio">Bio</label>
+              <textarea
+                id="onboarding-bio"
+                v-model="onboardingData.bio"
+                class="onboarding-textarea"
+                placeholder="Fale sobre você, seus estilos musicais favoritos, artistas preferidos..."
+                rows="3"
+                maxlength="150"
+              ></textarea>
+              <span class="input-hint">{{ onboardingData.bio.length }}/150</span>
+            </div>
+
+            <div class="form-group">
+              <label>Estilos musicais favoritos (selecione até 3)</label>
+              <div class="genre-selector">
+                <button
+                  v-for="genre in availableGenres"
+                  :key="genre._id"
+                  @click="toggleGenre(genre)"
+                  class="genre-select-btn"
+                  :class="{ active: isGenreSelected(genre._id) }"
+                  :disabled="
+                    !isGenreSelected(genre._id) &&
+                    onboardingData.favoriteGenres.length >= 3
+                  "
+                  :style="{
+                    borderColor: genre.color,
+                    color: isGenreSelected(genre._id) ? '#fff' : genre.color,
+                    background: isGenreSelected(genre._id)
+                      ? genre.color
+                      : 'transparent'
+                  }"
+                >
+                  <span>{{ genre.icon }}</span>
+                  {{ genre.nome }}
+                </button>
+              </div>
+              <span class="input-hint" :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }">
+                {{ onboardingData.favoriteGenres.length }}/3 selecionados
+              </span>
+            </div>
+
+            <button
+              @click="finishOnboarding"
+              class="btn-primary btn-large btn-finish"
+              :disabled="!canFinish"
+            >
+              <span v-if="creatingProfile">Criando perfil...</span>
+              <span v-else>
+                Começar a usar
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                </svg>
+              </span>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- MAIN APP (Only shown after profile creation) -->
-    <template v-else>
-      <!-- Header -->
-      <header class="match-header">
-        <div class="header-content">
-          <div class="logo">
-            <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-            <span class="logo-text">Musical Match</span>
-          </div>
-          
-          <div class="header-actions">
-            <button class="icon-btn" @click="showMatches = true" :disabled="matches.length === 0">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+      <!-- MAIN APP -->
+      <template v-else>
+        <header class="match-header">
+          <div class="header-content">
+            <div class="logo">
+              <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
-              <span v-if="unreadMatches > 0" class="badge">{{ unreadMatches }}</span>
-              <span v-if="matches.length === 0" class="lock-icon">🔒</span>
-            </button>
-            
-            <button class="icon-btn profile-btn" @click="openProfile">
-              <img :src="currentUser.avatar" alt="Profile" class="avatar-small">
-            </button>
-          </div>
-        </div>
-      </header>
+              <span class="logo-text">Musical Match</span>
+            </div>
 
-      <!-- Main Content -->
-      <main class="match-main">
-        <!-- Loading State -->
-        <div v-if="loading" class="empty-state">
-          <div class="vinyl-animation">
-            <div class="vinyl"></div>
-          </div>
-          <h2>Carregando músicas...</h2>
-          <p>Buscando as melhores tracks do Deezer</p>
-        </div>
+            <div class="header-actions">
+              <button class="icon-btn" @click="showMatches = true" :disabled="matches.length === 0">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+                <span v-if="unreadMatches > 0" class="badge">{{ unreadMatches }}</span>
+                <span v-if="matches.length === 0" class="lock-icon">🔒</span>
+              </button>
 
-        <!-- Empty State -->
-        <div v-else-if="currentIndex >= songs.length" class="empty-state">
-          <div class="empty-illustration">
+              <button class="icon-btn profile-btn" @click="openProfile">
+                <img :src="currentUser.avatar" alt="Profile" class="avatar-small">
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main class="match-main">
+          <div v-if="loading" class="empty-state">
             <div class="vinyl-animation">
               <div class="vinyl"></div>
             </div>
+            <h2>Carregando músicas...</h2>
+            <p>Buscando as melhores tracks para você</p>
           </div>
-          <h2>Você explorou todas as músicas!</h2>
-          <p>Descubra seus matches musicais ou volte mais tarde para novas recomendações</p>
-          <div class="empty-actions">
-            <button v-if="matches.length > 0" @click="showMatches = true" class="btn-primary">
-              Ver Meus Matches ({{ matches.length }})
-            </button>
-            <button @click="loadMoreSongs" class="btn-secondary">
-              Carregar Mais
-            </button>
-          </div>
-        </div>
 
-        <!-- Song Cards Stack -->
-        <div v-else class="cards-wrapper">
-          <div class="cards-container">
-            <div 
-              v-for="(song, index) in visibleSongs" 
-              :key="song.id"
-              class="song-card"
-              :class="{ 
-                'top-card': index === visibleSongs.length - 1,
-                'swiping-left': swipingLeft && index === visibleSongs.length - 1,
-                'swiping-right': swipingRight && index === visibleSongs.length - 1
-              }"
-              :style="getCardStyle(index)"
-              @mousedown="startDrag"
-              @touchstart="startDrag"
-              @mousemove="onDrag"
-              @touchmove="onDrag"
-              @mouseup="endDrag"
-              @touchend="endDrag"
-              @mouseleave="endDrag"
-            >
-              <!-- Card Image / Player -->
-              <div class="card-media">
-                <img :src="song.cover || song.album?.cover_medium || 'https://e-cdns-images.dzcdn.net/images/cover/default/500x500.jpg'" :alt="song.title" class="cover-image">
-                
-                <!-- Audio Visualizer -->
-                <div v-if="currentPlaying === song.id" class="visualizer">
-                  <div v-for="n in 5" :key="n" class="bar" :style="{ 
-                    animationDelay: n * 0.1 + 's',
-                    height: Math.random() * 40 + 20 + 'px'
-                  }"></div>
+          <div v-else-if="currentIndex >= songs.length" class="empty-state">
+            <div class="empty-illustration">
+              <div class="vinyl-animation">
+                <div class="vinyl"></div>
+              </div>
+            </div>
+            <h2>Você explorou todas as músicas!</h2>
+            <p>Descubra seus matches musicais ou volte mais tarde para novas recomendações</p>
+            <div class="empty-actions">
+              <button v-if="matches.length > 0" @click="showMatches = true" class="btn-primary">
+                Ver Meus Matches ({{ matches.length }})
+              </button>
+              <button @click="loadMoreSongs" class="btn-secondary">
+                Carregar Mais
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="cards-wrapper">
+            <div class="cards-container">
+              <div
+                v-for="(song, index) in visibleSongs"
+                :key="song.id"
+                class="song-card"
+                :class="{
+                  'top-card': index === visibleSongs.length - 1,
+                  'swiping-left': swipingLeft && index === visibleSongs.length - 1,
+                  'swiping-right': swipingRight && index === visibleSongs.length - 1
+                }"
+                :style="getCardStyle(index)"
+                @mousedown="startDrag"
+                @touchstart="startDrag"
+                @mousemove="onDrag"
+                @touchmove="onDrag"
+                @mouseup="endDrag"
+                @touchend="endDrag"
+                @mouseleave="endDrag"
+              >
+                <div class="card-media">
+                  <img :src="song.cover || song.album?.cover_medium || 'https://e-cdns-images.dzcdn.net/images/cover/default/500x500.jpg'" :alt="song.title" class="cover-image">
+
+                  <div v-if="currentPlaying === song.id" class="visualizer">
+                    <div
+                      v-for="n in 5"
+                      :key="n"
+                      class="bar"
+                      :style="{
+                        animationDelay: n * 0.1 + 's',
+                        height: Math.random() * 40 + 20 + 'px'
+                      }"
+                    ></div>
+                  </div>
+
+                  <button
+                    class="play-overlay-btn"
+                    @click.stop="togglePlay(song)"
+                    :class="{ playing: currentPlaying === song.id }"
+                  >
+                    <svg v-if="currentPlaying !== song.id" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                  </button>
+
+                  <div class="swipe-indicator like" :class="{ active: dragOffset > 50 }">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <span>CURTIR</span>
+                  </div>
+
+                  <div class="swipe-indicator skip" :class="{ active: dragOffset < -50 }">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                    <span>PULAR</span>
+                  </div>
+
+                  <div v-if="isFavorite(song)" class="favorite-badge">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
                 </div>
 
-                <!-- Play Button Overlay -->
-                <button 
-                  class="play-overlay-btn" 
-                  @click.stop="togglePlay(song)"
-                  :class="{ playing: currentPlaying === song.id }"
-                >
-                  <svg v-if="currentPlaying !== song.id" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                  </svg>
-                </button>
+                <div class="card-info">
+                  <div class="song-header">
+                    <h2 class="song-title">{{ song.title }}</h2>
+                    <span v-if="currentPlaying === song.id" class="now-playing-badge">Tocando</span>
+                  </div>
+                  <p class="song-artist">{{ song.artist?.name || song.artist }}</p>
 
-                <!-- Swipe Indicators -->
-                <div class="swipe-indicator like" :class="{ active: dragOffset > 50 }">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                  <span>CURTIR</span>
+                  <div class="song-details">
+                    <span class="genre-tag">{{ song.album?.title || song.genre }}</span>
+                    <span class="duration">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                      </svg>
+                      {{ formatDuration(song.duration) }}
+                    </span>
+                  </div>
+
+                  <div v-if="currentPlaying === song.id" class="progress-container">
+                    <div class="progress-bar">
+                      <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+                    </div>
+                    <div class="time-display">
+                      <span>{{ formatTime(currentTime) }}</span>
+                      <span>{{ formatDuration(song.duration) }}</span>
+                    </div>
+                  </div>
                 </div>
-                
-                <div class="swipe-indicator skip" :class="{ active: dragOffset < -50 }">
+              </div>
+            </div>
+
+            <div class="action-buttons-container">
+              <div class="action-buttons">
+                <button class="action-btn skip" @click="swipeLeft" aria-label="Pular">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                   </svg>
-                  <span>PULAR</span>
-                </div>
+                </button>
 
-                <!-- Favorite Badge -->
-                <div v-if="isFavorite(song)" class="favorite-badge">
+                <button class="action-btn super-like" @click="toggleFavorite" :class="{ active: isFavorite(currentSong) }" aria-label="Favoritar">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                   </svg>
-                </div>
+                </button>
+
+                <button class="action-btn like" @click="swipeRight" aria-label="Curtir">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
               </div>
 
-              <!-- Card Info -->
-              <div class="card-info">
-                <div class="song-header">
-                  <h2 class="song-title">{{ song.title }}</h2>
-                  <span v-if="currentPlaying === song.id" class="now-playing-badge">Tocando</span>
-                </div>
-                <p class="song-artist">{{ song.artist?.name || song.artist }}</p>
-                
-                <div class="song-details">
-                  <span class="genre-tag">{{ song.album?.title || song.genre }}</span>
-                  <span class="duration">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                    </svg>
-                    {{ formatDuration(song.duration) }}
-                  </span>
-                </div>
-
-                <!-- Progress Bar -->
-                <div v-if="currentPlaying === song.id" class="progress-container">
-                  <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: progress + '%' }"></div>
-                  </div>
-                  <div class="time-display">
-                    <span>{{ formatTime(currentTime) }}</span>
-                    <span>{{ formatDuration(song.duration) }}</span>
-                  </div>
-                </div>
-              </div>
+              <p class="instructions">
+                Arraste para os lados ou use os botões
+                <span v-if="matches.length === 0" class="unlock-hint">• Desbloqueie matches curtindo músicas</span>
+              </p>
             </div>
           </div>
+        </main>
+      </template>
 
-          <!-- Action Buttons - Fixed Position -->
-          <div class="action-buttons-container">
-            <div class="action-buttons">
-              <button class="action-btn skip" @click="swipeLeft" aria-label="Pular">
+      <!-- Matches Modal -->
+      <Transition name="modal">
+        <div v-if="showMatches" class="modal-overlay" @click.self="closeMatches">
+          <div class="modal-content matches-modal">
+            <div class="modal-header">
+              <div class="header-title">
+                <h3>Seus Matches Musicais</h3>
+                <span v-if="matches.length > 0" class="match-count">{{ matches.length }} pessoa{{ matches.length !== 1 ? 's' : '' }}</span>
+              </div>
+              <button @click="closeMatches" class="close-btn">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
               </button>
-              
-              <button class="action-btn super-like" @click="toggleFavorite" :class="{ active: isFavorite(currentSong) }" aria-label="Favoritar">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-              </button>
-              
-              <button class="action-btn like" @click="swipeRight" aria-label="Curtir">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-              </button>
             </div>
 
-            <p class="instructions">
-              Arraste para os lados ou use os botões
-              <span v-if="matches.length === 0" class="unlock-hint">• Desbloqueie matches curtindo músicas</span>
-            </p>
-          </div>
-        </div>
-      </main>
-    </template>
-
-    <!-- Matches Modal -->
-    <Transition name="modal">
-      <div v-if="showMatches" class="modal-overlay" @click.self="closeMatches">
-        <div class="modal-content matches-modal">
-          <div class="modal-header">
-            <div class="header-title">
-              <h3>Seus Matches Musicais</h3>
-              <span v-if="matches.length > 0" class="match-count">{{ matches.length }} pessoa{{ matches.length !== 1 ? 's' : '' }}</span>
-            </div>
-            <button @click="closeMatches" class="close-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-            </button>
-          </div>
-          
-          <div class="modal-body">
-            <div v-if="matches.length === 0" class="empty-matches">
-              <div class="lock-animation">🔒</div>
-              <h4>Matches bloqueados</h4>
-              <p>Curta pelo menos 3 músicas para desbloquear seus matches musicais!</p>
-              <div class="progress-lock">
-                <div class="progress-bar-lock">
-                  <div class="fill" :style="{ width: (likedSongs.length / 3) * 100 + '%' }"></div>
+            <div class="modal-body">
+              <div v-if="matches.length === 0" class="empty-matches">
+                <div class="lock-animation">🔒</div>
+                <h4>Matches bloqueados</h4>
+                <p>Curta pelo menos 3 músicas para desbloquear seus matches musicais!</p>
+                <div class="progress-lock">
+                  <div class="progress-bar-lock">
+                    <div class="fill" :style="{ width: Math.min((likedSongs.length / 3) * 100, 100) + '%' }"></div>
+                  </div>
+                  <span>{{ likedSongs.length }}/3 músicas</span>
                 </div>
-                <span>{{ likedSongs.length }}/3 músicas</span>
               </div>
-            </div>
-            
-            <div v-else class="matches-list">
-              <div v-for="match in matches" :key="match.id" class="match-card" @click="openMatchDetail(match)">
-                <div class="match-header-card">
-                  <div class="match-avatars">
-                    <img :src="currentUser.avatar" alt="You" class="avatar you">
-                    <img :src="match.user.avatar" alt="Match" class="avatar them">
-                    <div class="compatibility-badge">{{ match.compatibility }}%</div>
-                  </div>
-                  <div class="match-actions">
-                    <button class="icon-btn-small" @click.stop="removeMatch(match)">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                
-                <div class="match-info">
-                  <h4>{{ match.user.name }}, {{ match.user.age }}</h4>
-                  <p class="match-location" v-if="match.user.location">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                    </svg>
-                    {{ match.user.location }}
-                  </p>
-                  
-                  <div class="common-songs">
-                    <h5>Músicas em comum</h5>
-                    <div class="songs-tags">
-                      <span v-for="(song, i) in match.commonSongs.slice(0, 3)" :key="i" class="song-tag">
-                        {{ song }}
-                      </span>
-                      <span v-if="match.commonSongs.length > 3" class="more-tag">+{{ match.commonSongs.length - 3 }}</span>
+
+              <div v-else class="matches-list">
+                <div v-for="match in matches" :key="match.id" class="match-card" @click="openMatchDetail(match)">
+                  <div class="match-header-card">
+                    <div class="match-avatars">
+                      <img :src="currentUser.avatar" alt="You" class="avatar you">
+                      <img :src="match.user.avatar" alt="Match" class="avatar them">
+                      <div class="compatibility-badge">{{ match.compatibility }}%</div>
+                    </div>
+                    <div class="match-actions">
+                      <button class="icon-btn-small" @click.stop="removeMatch(match)">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
-                  <div class="match-genres">
-                    <span v-for="genre in match.commonGenres" :key="genre" class="genre-pill">
-                      {{ genre }}
+                  <div class="match-info">
+                    <h4>{{ match.user.name }}, {{ match.user.age }}</h4>
+                    <p class="match-location" v-if="match.user.location">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                      </svg>
+                      {{ match.user.location }}
+                    </p>
+
+                    <div class="common-songs">
+                      <h5>Músicas em comum</h5>
+                      <div class="songs-tags">
+                        <span v-for="(song, i) in match.commonSongs.slice(0, 3)" :key="i" class="song-tag">
+                          {{ song }}
+                        </span>
+                        <span v-if="match.commonSongs.length > 3" class="more-tag">+{{ match.commonSongs.length - 3 }}</span>
+                      </div>
+                    </div>
+
+                    <div class="match-genres">
+                      <span v-for="genre in match.commonGenres" :key="genre" class="genre-pill">
+                        {{ genre }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button class="chat-btn-main" @click.stop="startChat(match)">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                    </svg>
+                    Iniciar Conversa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Profile Modal with Edit -->
+      <Transition name="modal">
+        <div v-if="showProfile" class="modal-overlay" @click.self="closeProfile">
+          <div class="modal-content profile-modal-full">
+            <div class="modal-header">
+              <h3>{{ isEditing ? 'Editar Perfil' : 'Meu Perfil' }}</h3>
+              <div class="header-actions-modal">
+                <button v-if="!isEditing" @click="startEdit" class="btn-text">
+                  Editar
+                </button>
+                <button @click="closeProfile" class="close-btn">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="modal-body profile-body">
+              <div v-if="!isEditing" class="profile-view">
+                <div class="profile-hero">
+                  <div class="avatar-container">
+                    <img :src="currentUser.avatar" alt="Profile" class="profile-avatar-large">
+                    <div class="online-status"></div>
+                  </div>
+                  <h2>{{ currentUser.name }}, {{ currentUser.age }}</h2>
+                  <p class="profile-bio">{{ currentUser.bio }}</p>
+                  <p v-if="currentUser.location" class="profile-location">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    {{ currentUser.location }}
+                  </p>
+                </div>
+
+                <div class="stats-grid">
+                  <div class="stat-card">
+                    <span class="stat-number">{{ likedSongs.length }}</span>
+                    <span class="stat-label">Músicas Curtidas</span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="stat-number">{{ favorites.length }}</span>
+                    <span class="stat-label">Favoritos</span>
+                  </div>
+                  <div class="stat-card">
+                    <span class="stat-number">{{ matches.length }}</span>
+                    <span class="stat-label">Matches</span>
+                  </div>
+                </div>
+
+                <div class="music-preferences">
+                  <h4>Preferências Musicais</h4>
+                  <div class="genres-cloud">
+                    <span
+                      v-for="genre in favoriteGenreObjects"
+                      :key="genre._id"
+                      class="genre-cloud-tag"
+                      :style="{ background: genre.color }"
+                    >
+                      {{ genre.icon }} {{ genre.nome }}
                     </span>
                   </div>
                 </div>
-                
-                <button class="chat-btn-main" @click.stop="startChat(match)">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                  </svg>
-                  Iniciar Conversa
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
 
-    <!-- Profile Modal with Edit -->
-    <Transition name="modal">
-      <div v-if="showProfile" class="modal-overlay" @click.self="closeProfile">
-        <div class="modal-content profile-modal-full">
-          <div class="modal-header">
-            <h3>{{ isEditing ? 'Editar Perfil' : 'Meu Perfil' }}</h3>
-            <div class="header-actions-modal">
-              <button v-if="!isEditing" @click="startEdit" class="btn-text">
-                Editar
-              </button>
-              <button @click="closeProfile" class="close-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="modal-body profile-body">
-            <!-- View Mode -->
-            <div v-if="!isEditing" class="profile-view">
-              <div class="profile-hero">
-                <div class="avatar-container">
-                  <img :src="currentUser.avatar" alt="Profile" class="profile-avatar-large">
-                  <div class="online-status"></div>
-                </div>
-                <h2>{{ currentUser.name }}, {{ currentUser.age }}</h2>
-                <p class="profile-bio">{{ currentUser.bio }}</p>
-                <p v-if="currentUser.location" class="profile-location">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                  </svg>
-                  {{ currentUser.location }}
-                </p>
-              </div>
-
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <span class="stat-number">{{ likedSongs.length }}</span>
-                  <span class="stat-label">Músicas Curtidas</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-number">{{ favorites.length }}</span>
-                  <span class="stat-label">Favoritos</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-number">{{ matches.length }}</span>
-                  <span class="stat-label">Matches</span>
-                </div>
-              </div>
-
-              <div class="music-preferences">
-                <h4>Preferências Musicais</h4>
-              <div class="genres-cloud">
-  <span
-    v-for="genre in favoriteGenreObjects"
-    :key="genre._id"
-    class="genre-cloud-tag"
-    :style="{ background: genre.color }"
-  >
-    {{ genre.icon }} {{ genre.nome }}
-  </span>
-</div>
-              </div>
-
-              <!-- Favorites Section -->
-              <div class="recent-likes" v-if="favorites.length > 0">
-                <div class="recent-likes-header">
-                  <h4>⭐ Favoritos</h4>
-                  <span class="likes-count">{{ favorites.length }} música{{ favorites.length !== 1 ? 's' : '' }}</span>
-                </div>
-                <div class="mini-song-list">
-                  <div v-for="song in [...favorites].reverse()" :key="song.id" class="mini-song">
-                    <div class="mini-cover">
-                      <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
+                <div class="recent-likes" v-if="favorites.length > 0">
+                  <div class="recent-likes-header">
+                    <h4>⭐ Favoritos</h4>
+                    <span class="likes-count">{{ favorites.length }} música{{ favorites.length !== 1 ? 's' : '' }}</span>
+                  </div>
+                  <div class="mini-song-list">
+                    <div v-for="song in [...favorites].reverse()" :key="song.id" class="mini-song">
+                      <div class="mini-cover">
+                        <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
+                      </div>
+                      <div class="mini-info">
+                        <span class="mini-title">{{ song.title }}</span>
+                        <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
+                      </div>
+                      <button
+                        class="unlike-btn favorite-active"
+                        @click="removeFavorite(song)"
+                        title="Remover dos favoritos"
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                      </button>
                     </div>
-                    <div class="mini-info">
-                      <span class="mini-title">{{ song.title }}</span>
-                      <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
-                    </div>
-                    <button 
-                      class="unlike-btn favorite-active" 
-                      @click="removeFavorite(song)"
-                      title="Remover dos favoritos"
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                      </svg>
-                    </button>
                   </div>
                 </div>
-              </div>
 
-              <!-- Recent Likes with Unlike Button -->
-              <div class="recent-likes" v-if="likedSongs.length > 0">
-                <div class="recent-likes-header">
-                  <h4>Curtidas Recentes</h4>
-                  <span class="likes-count">{{ likedSongs.length }} música{{ likedSongs.length !== 1 ? 's' : '' }}</span>
-                </div>
-                <div class="mini-song-list">
-                  <div v-for="song in [...likedSongs].reverse()" :key="song.id" class="mini-song">
-                    <div class="mini-cover">
-                      <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
+                <div class="recent-likes" v-if="likedSongs.length > 0">
+                  <div class="recent-likes-header">
+                    <h4>Curtidas Recentes</h4>
+                    <span class="likes-count">{{ likedSongs.length }} música{{ likedSongs.length !== 1 ? 's' : '' }}</span>
+                  </div>
+                  <div class="mini-song-list">
+                    <div v-for="song in [...likedSongs].reverse()" :key="song.id" class="mini-song">
+                      <div class="mini-cover">
+                        <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
+                      </div>
+                      <div class="mini-info">
+                        <span class="mini-title">{{ song.title }}</span>
+                        <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
+                      </div>
+                      <button
+                        class="unlike-btn"
+                        @click="unlikeSong(song)"
+                        title="Remover curtida"
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                      </button>
                     </div>
-                    <div class="mini-info">
-                      <span class="mini-title">{{ song.title }}</span>
-                      <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
-                    </div>
-                    <button 
-                      class="unlike-btn" 
-                      @click="unlikeSong(song)"
-                      title="Remover curtida"
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                    </button>
                   </div>
                 </div>
-              </div>
 
-              <!-- Logout Button -->
-              <div class="logout-section">
-                <button @click="confirmLogout" class="btn-logout">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-                  </svg>
-                  Sair da conta
-                </button>
-              </div>
-            </div>
-
-            <!-- Edit Mode -->
-            <div v-else class="profile-edit">
-              <div class="edit-section">
-                <label>Foto de Perfil</label>
-                <div class="avatar-edit">
-                  <img :src="editForm.avatar" alt="Preview" class="avatar-preview">
-                  <button class="change-photo-btn" @click="triggerFileInput">
+                <div class="logout-section">
+                  <button @click="confirmLogout" class="btn-logout">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                      <path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm3 6V7h3V4h7l1.83 2H21c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V10h3zm7 9c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-3.2-5c0 1.77 1.43 3.2 3.2 3.2s3.2-1.43 3.2-3.2-1.43-3.2-3.2-3.2-3.2 1.43-3.2 3.2z"/>
+                      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
                     </svg>
-                    Alterar foto
+                    Sair da conta
                   </button>
-                  <input 
-                    ref="fileInput" 
-                    type="file" 
-                    accept="image/*" 
-                    @change="handleFileChange" 
-                    class="hidden-input"
-                  >
                 </div>
               </div>
 
-              <div class="edit-section">
-                <label for="edit-name">Nome</label>
-                <input 
-                  id="edit-name"
-                  v-model="editForm.name" 
-                  type="text" 
-                  class="edit-input"
-                  placeholder="Seu nome"
-                >
-              </div>
+              <div v-else class="profile-edit">
+                <div class="edit-section">
+                  <label>Foto de Perfil</label>
+                  <div class="avatar-edit">
+                    <img :src="editForm.avatar" alt="Preview" class="avatar-preview">
+                    <button class="change-photo-btn" @click="triggerFileInput">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm3 6V7h3V4h7l1.83 2H21c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V10h3zm7 9c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-3.2-5c0 1.77 1.43 3.2 3.2 3.2s3.2-1.43 3.2-3.2-1.43-3.2-3.2-3.2-3.2 1.43-3.2 3.2z"/>
+                      </svg>
+                      Alterar foto
+                    </button>
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      accept="image/*"
+                      @change="handleFileChange"
+                      class="hidden-input"
+                    >
+                  </div>
+                </div>
 
-              <div class="edit-row">
-                <div class="edit-section half">
-                  <label for="edit-age">Idade</label>
-                  <input 
-                    id="edit-age"
-                    v-model.number="editForm.age" 
-                    type="number" 
-                    min="18"
-                    max="100"
+                <div class="edit-section">
+                  <label for="edit-name">Nome</label>
+                  <input
+                    id="edit-name"
+                    v-model="editForm.name"
+                    type="text"
                     class="edit-input"
+                    placeholder="Seu nome"
                   >
                 </div>
-                <div class="edit-section half">
-                  <label for="edit-location">Localização</label>
-                  <input 
-                    id="edit-location"
-                    v-model="editForm.location" 
-                    type="text" 
-                    class="edit-input"
-                    placeholder="Cidade, Estado"
-                  >
+
+                <div class="edit-row">
+                  <div class="edit-section half">
+                    <label for="edit-age">Idade</label>
+                    <input
+                      id="edit-age"
+                      v-model.number="editForm.age"
+                      type="number"
+                      min="18"
+                      max="100"
+                      class="edit-input"
+                    >
+                  </div>
+                  <div class="edit-section half">
+                    <label for="edit-location">Localização</label>
+                    <input
+                      id="edit-location"
+                      v-model="editForm.location"
+                      type="text"
+                      class="edit-input"
+                      placeholder="Cidade, Estado"
+                    >
+                  </div>
                 </div>
-              </div>
 
-              <div class="edit-section">
-                <label for="edit-bio">Bio</label>
-                <textarea 
-                  id="edit-bio"
-                  v-model="editForm.bio" 
-                  class="edit-textarea"
-                  rows="3"
-                  placeholder="Conte sobre você e seus gostos musicais..."
-                  maxlength="150"
-                ></textarea>
-                <span class="char-count">{{ editForm.bio.length }}/150</span>
-              </div>
+                <div class="edit-section">
+                  <label for="edit-bio">Bio</label>
+                  <textarea
+                    id="edit-bio"
+                    v-model="editForm.bio"
+                    class="edit-textarea"
+                    rows="3"
+                    placeholder="Conte sobre você e seus gostos musicais..."
+                    maxlength="150"
+                  ></textarea>
+                  <span class="char-count">{{ editForm.bio.length }}/150</span>
+                </div>
 
-              <div class="edit-actions">
-                <button @click="cancelEdit" class="btn-secondary">Cancelar</button>
-                <button @click="saveProfile" class="btn-primary" :disabled="!isFormValid">
-                  Salvar Alterações
-                </button>
+                <div class="edit-actions">
+                  <button @click="cancelEdit" class="btn-secondary">Cancelar</button>
+                  <button @click="saveProfile" class="btn-primary" :disabled="!isFormValid">
+                    Salvar Alterações
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
 
-    <!-- Logout Confirmation Modal -->
-    <Transition name="modal">
-      <div v-if="showLogoutConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelLogout">
-        <div class="modal-content logout-confirm-modal">
-          <div class="logout-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-            </svg>
-          </div>
-          <h3>Sair da conta?</h3>
-          <p>Você precisará fazer login novamente para acessar seu perfil e matches.</p>
-          <div class="logout-actions">
-            <button @click="cancelLogout" class="btn-secondary">Cancelar</button>
-            <button @click="logout" class="btn-logout-confirm">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+      <!-- Logout Confirmation Modal -->
+      <Transition name="modal">
+        <div v-if="showLogoutConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelLogout">
+          <div class="modal-content logout-confirm-modal">
+            <div class="logout-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
               </svg>
-              Sair
-            </button>
+            </div>
+            <h3>Sair da conta?</h3>
+            <p>Você precisará fazer login novamente para acessar seu perfil e matches.</p>
+            <div class="logout-actions">
+              <button @click="cancelLogout" class="btn-secondary">Cancelar</button>
+              <button @click="logout" class="btn-logout-confirm">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+                Sair
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
 
-    <!-- Match Notification -->
-    <Transition name="toast">
-      <div v-if="showMatchNotification" class="match-toast">
-        <div class="match-toast-content">
-          <div class="match-avatars-toast">
-            <img :src="currentUser.avatar" alt="You">
-            <img :src="lastMatch?.user.avatar" alt="Match">
+      <!-- Match Notification -->
+      <Transition name="toast">
+        <div v-if="showMatchNotification" class="match-toast">
+          <div class="match-toast-content">
+            <div class="match-avatars-toast">
+              <img :src="currentUser.avatar" alt="You">
+              <img :src="lastMatch?.user.avatar" alt="Match">
+            </div>
+            <div class="match-toast-text">
+              <h4>It's a Musical Match! 🎵</h4>
+              <p>Você e {{ lastMatch?.user.name }} curtiram as mesmas músicas</p>
+            </div>
+            <button @click="viewMatch" class="btn-primary-small">Ver</button>
           </div>
-          <div class="match-toast-text">
-            <h4>It's a Musical Match! 🎵</h4>
-            <p>Você e {{ lastMatch?.user.name }} curtiram as mesmas músicas</p>
-          </div>
-          <button @click="viewMatch" class="btn-primary-small">Ver</button>
         </div>
-      </div>
-    </Transition>
+      </Transition>
 
-    <!-- Favorite Toast -->
-    <Transition name="toast">
-      <div v-if="showFavoriteToast" class="match-toast favorite-toast">
-        <div class="match-toast-content">
-          <div class="match-toast-text">
-            <h4>⭐ Adicionado aos Favoritos!</h4>
-            <p>{{ lastFavorited?.title }} foi salva nos seus favoritos</p>
+      <!-- Favorite Toast -->
+      <Transition name="toast">
+        <div v-if="showFavoriteToast" class="match-toast favorite-toast">
+          <div class="match-toast-content">
+            <div class="match-toast-text">
+              <h4>⭐ Adicionado aos Favoritos!</h4>
+              <p>{{ lastFavorited?.title }} foi salva nos seus favoritos</p>
+            </div>
+            <button @click="showFavoriteToast = false" class="btn-primary-small">OK</button>
           </div>
-          <button @click="showFavoriteToast = false" class="btn-primary-small">OK</button>
         </div>
-      </div>
-    </Transition>
-  </div>
-</template>
+      </Transition>
+    </div>
+  </template>
 
-<script>
-import api from '@/services/api'
+  <script>
+  import api from '@/services/api'
 
-export default {
-  name: 'MusicalMatch',
-  
-  data() {
-    return {
-      // Onboarding flow
-      hasProfile: false,
-      onboardingStep: 1,
-      creatingProfile: false,
-      onboardingData: {
-        name: '',
-        age: null,
-        location: '',
-        avatar: '',
-        bio: '',
-        favoriteGenres: []
-      },
-      availableGenres: [],
-loadingGenres: false,
-      // App state
-      currentIndex: 0,
-      dragOffset: 0,
-      dragStartX: 0,
-      isDragging: false,
-      swipingLeft: false,
-      swipingRight: false,
-      showMatches: false,
-      showProfile: false,
-      isEditing: false,
-      showMatchNotification: false,
-      showFavoriteToast: false,
-      showLogoutConfirm: false,
-      unreadMatches: 0,
-      currentPlaying: null,
-      progress: 0,
-      currentTime: 0,
-      progressInterval: null,
-      lastMatch: null,
-      lastFavorited: null,
-      loading: true,
-      audio: null,
-      
-      currentUser: {
-        name: '',
-        age: null,
-        avatar: '',
-        bio: '',
-        location: ''
-      },
-      
-      editForm: {
-        name: '',
-        age: null,
-        bio: '',
-        location: '',
-        avatar: ''
-      },
-      
-      songs: [],
-      likedSongs: [],
-      favorites: [],
-      matches: [],
-      
-      // Deezer API endpoints (CORS proxy needed for production)
-      deezerEndpoints: [
-        'https://api.deezer.com/chart/0/tracks?limit=20',
-        'https://api.deezer.com/search?q=pop&limit=20',
-        'https://api.deezer.com/search?q=rock&limit=20',
-        'https://api.deezer.com/search?q=hip-hop&limit=20',
-        'https://api.deezer.com/search?q=electronic&limit=20'
-      ]
-    }
-  },
+  export default {
+    name: 'MusicalMatch',
 
-  computed: {
-    favoriteGenreObjects(){
- return this.availableGenres.filter(g =>
-   this.currentUser.favoriteGenres?.includes(g._id)
- )
+    data() {
+      return {
+        hasProfile: false,
+        onboardingStep: 1,
+        creatingProfile: false,
+        onboardingData: {
+          name: '',
+          age: null,
+          location: '',
+          avatar: '',
+          bio: '',
+          favoriteGenres: []
+        },
+
+        availableGenres: [],
+        loadingGenres: false,
+
+        currentIndex: 0,
+        dragOffset: 0,
+        dragStartX: 0,
+        isDragging: false,
+        swipingLeft: false,
+        swipingRight: false,
+
+        showMatches: false,
+        showProfile: false,
+        isEditing: false,
+        showMatchNotification: false,
+        showFavoriteToast: false,
+        showLogoutConfirm: false,
+
+        unreadMatches: 0,
+        currentPlaying: null,
+        progress: 0,
+        currentTime: 0,
+        progressInterval: null,
+        lastMatch: null,
+        lastFavorited: null,
+        loading: true,
+        audio: null,
+
+        currentUser: {
+          name: '',
+          age: null,
+          avatar: '',
+          bio: '',
+          location: '',
+          favoriteGenres: []
+        },
+
+        editForm: {
+          name: '',
+          age: null,
+          bio: '',
+          location: '',
+          avatar: ''
+        },
+
+        songs: [],
+        likedSongs: [],
+        favorites: [],
+        matches: []
+      }
+    },
+
+    computed: {
+      favoriteGenreObjects() {
+        return this.availableGenres.filter(g =>
+          this.currentUser.favoriteGenres?.includes(g._id)
+        )
+      },
+
+      visibleSongs() {
+        return this.songs.slice(this.currentIndex, this.currentIndex + 3)
+      },
+
+      currentSong() {
+        return this.songs[this.currentIndex]
+      },
+
+      topGenres() {
+        const genres = {}
+        this.likedSongs.forEach(song => {
+          const genre = song.album?.title || song.genre || 'Pop'
+          genres[genre] = (genres[genre] || 0) + 1
+        })
+
+        return Object.entries(genres)
+          .map(([name, count]) => ({
+            name,
+            weight: Math.min(count * 0.15 + 0.4, 1),
+            count
+          }))
+          .sort((a, b) => b.weight - a.weight)
+      },
+
+      isFormValid() {
+        return this.editForm.name.trim().length >= 2 &&
+          this.editForm.age >= 18 &&
+          this.editForm.age <= 100 &&
+          this.editForm.bio.trim().length > 0
+      },
+
+      canProceedStep2() {
+        return this.onboardingData.name.trim().length >= 2 &&
+          this.onboardingData.age >= 18 &&
+          this.onboardingData.age <= 100
+      },
+
+      canFinish() {
+        return this.onboardingData.bio.trim().length >= 10 &&
+          this.onboardingData.favoriteGenres.length > 0
+      }
+    },
+
+async mounted() {
+  await this.fetchGenres()
+  await this.bootstrapUser()
 },
 
-    visibleSongs() {
-      return this.songs.slice(this.currentIndex, this.currentIndex + 3)
-    },
-    
-    currentSong() {
-      return this.songs[this.currentIndex]
-    },
-    
-    topGenres() {
-      const genres = {}
-      this.likedSongs.forEach(song => {
-        const genre = song.album?.title || 'Pop'
-        genres[genre] = (genres[genre] || 0) + 1
-      })
-      return Object.entries(genres)
-        .map(([name, count]) => ({ 
-          name, 
-          weight: Math.min(count * 0.15 + 0.4, 1),
-          count
-        }))
-        .sort((a, b) => b.weight - a.weight)
-    },
-    
-    isFormValid() {
-      return this.editForm.name.trim().length >= 2 && 
-             this.editForm.age >= 18 && 
-             this.editForm.age <= 100 &&
-             this.editForm.bio.trim().length > 0
-    },
-    
-    canProceedStep2() {
-      return this.onboardingData.name.trim().length >= 2 && 
-             this.onboardingData.age >= 18 && 
-             this.onboardingData.age <= 100
-    },
-    
-    canFinish() {
-      return this.onboardingData.bio.trim().length >= 10 && 
-             this.onboardingData.favoriteGenres.length > 0
+    methods: {
+      async bootstrapUser() {
+  try {
+    const savedAuthUser = JSON.parse(localStorage.getItem('user') || 'null')
+    const token = localStorage.getItem('token')
+
+    if (!savedAuthUser || !token) {
+      this.loading = false
+      this.hasProfile = false
+      return
     }
-  },
 
- async mounted() {
-  await this.fetchGenres()
+    const userId = savedAuthUser.id || savedAuthUser._id
 
-  const savedProfile = localStorage.getItem('musicalMatchProfile')
-  if (savedProfile) {
-    this.currentUser = JSON.parse(savedProfile)
-    this.hasProfile = true
+    if (!userId) {
+      this.loading = false
+      this.hasProfile = false
+      return
+    }
 
-    await Promise.all([
-      this.buscarSugestoes(),
-      this.buscarCurtidas(),
-      this.buscarFavoritos(),
-      this.buscarMatches()
-    ])
-  } else {
+    const { data } = await api.get(`/usuarios/${userId}`)
+
+    this.currentUser = this.mapApiUserToCurrentUser(data)
+
+    localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
+
+    if (data.onboardingCompleto) {
+      this.hasProfile = true
+
+      await Promise.all([
+        this.buscarSugestoes(),
+        this.buscarCurtidas(),
+        this.buscarFavoritos(),
+        this.buscarMatches()
+      ])
+    } else {
+      this.hasProfile = false
+
+      this.onboardingData.name = data.nome || ''
+      this.onboardingData.age = data.idade || null
+      this.onboardingData.location = data.localizacao || ''
+      this.onboardingData.avatar = data.avatar || ''
+      this.onboardingData.bio = data.bio || ''
+      this.onboardingData.favoriteGenres = this.extractGenreIds(data.generos || [])
+
+      this.loading = false
+    }
+  } catch (error) {
+    console.error('Erro ao carregar usuário logado:', error)
     this.loading = false
+    this.hasProfile = false
   }
 },
 
-  methods: {
-    async buscarSugestoes() {
+      extractGenreIds(generos) {
+        if (!Array.isArray(generos)) return []
+        return generos.map(g => typeof g === 'object' ? g._id : g).filter(Boolean)
+      },
+
+      mapApiUserToCurrentUser(apiUser) {
+        return {
+          name: apiUser?.nome || apiUser?.name || '',
+          age: apiUser?.idade || apiUser?.age || null,
+          avatar: apiUser?.avatar || '',
+          bio: apiUser?.bio || '',
+          location: apiUser?.localizacao || apiUser?.location || '',
+          favoriteGenres: this.extractGenreIds(apiUser?.generos || apiUser?.favoriteGenres || [])
+        }
+      },
+
+      normalizeSong(track) {
+        return {
+          id: track.id || track.trackId || track.deezerId || track._id,
+          trackId: track.trackId || track.deezerId || track.id || track._id,
+          title: track.title || track.titulo || track.nome,
+          artist: track.artist || { name: track.artista || 'Artista desconhecido' },
+          album: track.album || {
+            title: track.genre || '',
+            cover_medium: track.cover || track.capa || track.foto || '',
+            cover_small: track.cover || track.capa || track.foto || ''
+          },
+          cover: track.cover || track.capa || track.foto || '',
+          duration: track.duration || track.duracao || 0,
+          preview: track.preview || '',
+          genre: track.genre || ''
+        }
+      },
+
+     async buscarSugestoes() {
   try {
     this.loading = true
+
     const { data } = await api.get('/matches/sugestoes')
 
-    this.songs = (data.cards || []).map(track => ({
-      id: track.id || track.deezerId,
-      deezerId: track.deezerId || track.id,
-      title: track.title || track.titulo,
-      artist: track.artist || { name: track.artista },
-      album: track.album || {
-        title: '',
-        cover_medium: track.cover || track.capa,
-        cover_small: track.cover || track.capa
-      },
-      cover: track.cover || track.capa,
-      duration: track.duration || track.duracao,
-      preview: track.preview,
-      genre: track.genre || ''
-    }))
+    const cards = Array.isArray(data?.cards) ? data.cards : []
 
+    this.songs = cards.map(track => this.normalizeSong(track))
     this.currentIndex = 0
+
+    console.log('Sugestões carregadas:', this.songs.length)
   } catch (error) {
-    console.error('Erro ao buscar sugestões:', error)
+    console.error('Erro ao buscar sugestões:', error?.response?.data || error)
     this.songs = []
   } finally {
     this.loading = false
   }
 },
 
-async buscarCurtidas() {
-  try {
-    const { data } = await api.get('/matches/curtidas', {
-      params: { tipo: 'like' }
-    })
+      async buscarCurtidas() {
+        try {
+          const { data } = await api.get('/matches/curtidas', {
+            params: { tipo: 'like' }
+          })
+          this.likedSongs = (data.curtidas || []).map(item => this.normalizeSong(item.musica))
+        } catch (error) {
+          console.error('Erro ao buscar curtidas:', error)
+        }
+      },
 
-    this.likedSongs = (data.curtidas || []).map(item => item.musica)
-  } catch (error) {
-    console.error('Erro ao buscar curtidas:', error)
-  }
-},
+      async buscarFavoritos() {
+        try {
+          const { data } = await api.get('/matches/curtidas', {
+            params: { tipo: 'favorite' }
+          })
+          this.favorites = (data.curtidas || []).map(item => this.normalizeSong(item.musica))
+        } catch (error) {
+          console.error('Erro ao buscar favoritos:', error)
+        }
+      },
 
-async buscarFavoritos() {
-  try {
-    const { data } = await api.get('/matches/curtidas', {
-      params: { tipo: 'favorite' }
-    })
+      async buscarMatches() {
+        try {
+          const { data } = await api.get('/matches')
+          this.matches = data.matches || []
+          this.unreadMatches = data.naoVistos || 0
+        } catch (error) {
+          console.error('Erro ao buscar matches:', error)
+        }
+      },
 
-    this.favorites = (data.curtidas || []).map(item => item.musica)
-  } catch (error) {
-    console.error('Erro ao buscar favoritos:', error)
-  }
-},
+      async fetchGenres() {
+        try {
+          this.loadingGenres = true
+          const { data } = await api.get('/generos')
 
-async buscarMatches() {
-  try {
-    const { data } = await api.get('/matches/matches')
-    this.matches = data.matches || []
-    this.unreadMatches = data.naoVistos || 0
-  } catch (error) {
-    console.error('Erro ao buscar matches:', error)
-  }
-},
+          let generos = []
 
-async fetchGenres() {
-  try {
-    this.loadingGenres = true
+          if (Array.isArray(data)) {
+            generos = data
+          } else if (data && typeof data === 'object') {
+            generos = Object.values(data).flat()
+          }
 
-    const response = await fetch('http://localhost:3002/generos')
+          const ids = new Set()
 
-    if (!response.ok) {
-      throw new Error('Erro ao buscar gêneros')
-    }
+          this.availableGenres = generos
+            .filter(g => {
+              const id = g?._id || g?.id
+              if (!id || ids.has(id)) return false
+              ids.add(id)
+              return true
+            })
+            .sort((a, b) => (b.popularidade || 0) - (a.popularidade || 0))
+            .map(g => ({
+              _id: g._id || g.id,
+              nome: g.nome,
+              icon: g.icon || '🎵',
+              color: g.color || '#8b5cf6'
+            }))
+        } catch (error) {
+          console.error('Erro ao carregar gêneros:', error)
+          this.availableGenres = [
+            { _id: '1', nome: 'Pop', icon: '🎤', color: '#ec4899' },
+            { _id: '2', nome: 'Rock', icon: '🎸', color: '#ef4444' },
+            { _id: '3', nome: 'Hip Hop', icon: '🎧', color: '#8b5cf6' },
+            { _id: '4', nome: 'Eletrônica', icon: '🎹', color: '#06b6d4' },
+            { _id: '5', nome: 'Sertanejo', icon: '🤠', color: '#f59e0b' },
+            { _id: '6', nome: 'MPB', icon: '🎷', color: '#10b981' }
+          ]
+        } finally {
+          this.loadingGenres = false
+        }
+      },
 
-    const data = await response.json()
+      nextStep() {
+        if (this.onboardingStep < 4) this.onboardingStep++
+      },
 
-    let generos = []
+      prevStep() {
+        if (this.onboardingStep > 1) this.onboardingStep--
+      },
 
-    // se backend retornar array normal
-    if (Array.isArray(data)) {
-      generos = data
-    }
+      triggerOnboardingFileInput() {
+        this.$refs.onboardingFileInput?.click()
+      },
 
-    // se retornar objeto agrupado, pega TODAS categorias do objeto
-    else if (data && typeof data === 'object') {
-      generos = Object.values(data).flat()
-    }
+      handleOnboardingFileChange(e) {
+        const file = e.target.files?.[0]
+        if (!file) return
 
-    // remover duplicados
-    const ids = new Set()
-
-    this.availableGenres = generos
-      .filter(g => {
-        if (!g?._id || ids.has(g._id)) return false
-        ids.add(g._id)
-        return true
-      })
-      .sort((a,b)=>
-        (b.popularidade || 0) - (a.popularidade || 0)
-      )
-      .map(g => ({
-        _id: g._id,
-        nome: g.nome,
-        icon: g.icon || '🎵',
-        color: g.color || '#8b5cf6'
-      }))
-
-    console.log(
-      'Total gêneros:',
-      this.availableGenres.length,
-      this.availableGenres
-    )
-
-  } catch (error) {
-    console.error('Erro ao carregar gêneros:', error)
-  } finally {
-    this.loadingGenres = false
-  }
-},
-    // Onboarding methods
-    nextStep() {
-      if (this.onboardingStep < 4) {
-        this.onboardingStep++
-      }
-    },
-    
-    prevStep() {
-      if (this.onboardingStep > 1) {
-        this.onboardingStep--
-      }
-    },
-    
-    triggerOnboardingFileInput() {
-      this.$refs.onboardingFileInput.click()
-    },
-    
-    handleOnboardingFileChange(e) {
-      const file = e.target.files[0]
-      if (file) {
         const reader = new FileReader()
-        reader.onload = (event) => {
+        reader.onload = event => {
           this.onboardingData.avatar = event.target.result
         }
         reader.readAsDataURL(file)
-      }
-    },
-    
-    removePhoto() {
-      this.onboardingData.avatar = ''
-    },
-    
-    selectPresetAvatar(n) {
-      this.onboardingData.avatar = `https://i.pravatar.cc/300?img=${n + 10}`
-    },
-    
-  toggleGenre(genre){
- const id = genre._id
+      },
 
- const index =
-   this.onboardingData.favoriteGenres.indexOf(id)
+      removePhoto() {
+        this.onboardingData.avatar = ''
+      },
 
- if(index > -1){
-   this.onboardingData.favoriteGenres.splice(index,1)
- }
- else if(this.onboardingData.favoriteGenres.length < 3){
-   this.onboardingData.favoriteGenres.push(id)
- }
-},
+      selectPresetAvatar(n) {
+        this.onboardingData.avatar = `https://i.pravatar.cc/300?img=${n + 10}`
+      },
 
-isGenreSelected(id){
- return this.onboardingData.favoriteGenres.includes(id)
-},
-    
-   async finishOnboarding() {
+      toggleGenre(genre) {
+        const id = genre._id
+        const index = this.onboardingData.favoriteGenres.indexOf(id)
+
+        if (index > -1) {
+          this.onboardingData.favoriteGenres.splice(index, 1)
+        } else if (this.onboardingData.favoriteGenres.length < 3) {
+          this.onboardingData.favoriteGenres.push(id)
+        }
+      },
+
+      isGenreSelected(id) {
+        return this.onboardingData.favoriteGenres.includes(id)
+      },
+
+      async finishOnboarding() {
   try {
     this.creatingProfile = true
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const user = JSON.parse(localStorage.getItem("usuario"))
     const userId = user.id || user._id
 
     if (!userId) {
-      throw new Error('Usuário logado não encontrado')
+      throw new Error('Usuário logado não encontrado. Faça login novamente.')
     }
 
     const { data } = await api.put(`/usuarios/${userId}`, {
@@ -1154,19 +1178,15 @@ isGenreSelected(id){
 
     const updatedUser = data.user
 
-    this.currentUser = {
-      id: updatedUser.id,
-      name: updatedUser.nome,
-      age: updatedUser.idade,
-      avatar: updatedUser.avatar,
-      bio: updatedUser.bio,
-      location: updatedUser.localizacao,
-      favoriteGenres: updatedUser.generos || []
-    }
+    this.currentUser = this.mapApiUserToCurrentUser(updatedUser)
+    this.hasProfile = true
 
     localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
-
-    this.hasProfile = true
+    localStorage.setItem('user', JSON.stringify({
+      ...user,
+      ...updatedUser,
+      id: updatedUser.id || updatedUser._id || userId
+    }))
 
     await Promise.all([
       this.buscarSugestoes(),
@@ -1176,539 +1196,437 @@ isGenreSelected(id){
     ])
   } catch (error) {
     console.error('Erro ao finalizar onboarding:', error)
+    alert(error.response?.data?.error || error.message || 'Erro ao criar perfil')
   } finally {
     this.creatingProfile = false
   }
 },
 
-    // Logout methods
-    confirmLogout() {
-      this.showLogoutConfirm = true
-    },
-    
-    cancelLogout() {
-      this.showLogoutConfirm = false
-    },
-    
-    logout() {
-      // Clear all data
-      localStorage.removeItem('musicalMatchProfile')
-      
-      // Reset all state
-      this.hasProfile = false
-      this.onboardingStep = 1
-      this.onboardingData = {
-        name: '',
-        age: null,
-        location: '',
-        avatar: '',
-        bio: '',
-        favoriteGenres: []
-      }
- this.currentUser = {
-  name:'',
-  age:null,
-  avatar:'',
-  bio:'',
-  location:'',
-  favoriteGenres:[]
-}
-      this.likedSongs = []
-      this.favorites = []
-      this.matches = []
-      this.unreadMatches = 0
-      this.currentIndex = 0
-      this.showProfile = false
-      this.showLogoutConfirm = false
-      
-      // Stop any playing audio
-      this.stopAudio()
-    },
+      confirmLogout() {
+        this.showLogoutConfirm = true
+      },
 
-    // Fetch songs from Deezer API
-    async fetchSongsFromDeezer() {
-      this.loading = true
-      try {
-        // Try multiple endpoints to get variety
-        const randomEndpoint = this.deezerEndpoints[Math.floor(Math.random() * this.deezerEndpoints.length)]
-        
-        // Using corsfix proxy to handle CORS
-        const proxyUrl = 'https://proxy.corsfix.com/?'
-        const response = await fetch(proxyUrl + randomEndpoint)
-        
-        if (!response.ok) throw new Error('Failed to fetch')
-        
-        const data = await response.json()
-        
-        // Format Deezer tracks to match our app structure
-        const tracks = (data.data || []).map(track => ({
-          id: track.id,
-          title: track.title,
-          artist: track.artist,
-          album: track.album,
-          cover: track.album?.cover_medium,
-          duration: track.duration,
-          preview: track.preview, // 30s preview URL
-          genre: track.album?.title || 'Music',
-          rank: track.rank
-        }))
-        
-        // Shuffle and set
-        this.songs = this.shuffleArray(tracks)
-        this.loading = false
-      } catch (error) {
-        console.error('Error fetching from Deezer:', error)
-        // Fallback to mock data if API fails
-        this.loadFallbackData()
-      }
-    },
+      cancelLogout() {
+        this.showLogoutConfirm = false
+      },
 
-async loadMoreSongs() {
-  await this.buscarSugestoes()
-},
+      logout() {
+        localStorage.removeItem('musicalMatchProfile')
+        localStorage.removeItem('user')
+        localStorage.removeItem('token')
 
-    loadFallbackData() {
-      // Keep some fallback data in case API fails
-      this.songs = [
-        {
-          id: 1,
-          title: 'Die With A Smile',
-          artist: { name: 'Lady Gaga & Bruno Mars' },
-          album: { title: 'Hit Pop', cover_medium: null },
-          cover: null,
-          duration: 195,
-          preview: null,
-          genre: 'Pop'
+        this.hasProfile = false
+        this.onboardingStep = 1
+        this.onboardingData = {
+          name: '',
+          age: null,
+          location: '',
+          avatar: '',
+          bio: '',
+          favoriteGenres: []
         }
-      ]
-      this.loading = false
-    },
 
-    shuffleArray(array) {
-      const newArray = [...array]
-      for (let i = newArray.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [newArray[i], newArray[j]] = [newArray[j], newArray[i]]
-      }
-      return newArray
-    },
-
-    getCardStyle(index) {
-      const isTop = index === this.visibleSongs.length - 1
-      const offset = this.visibleSongs.length - 1 - index
-      
-      if (isTop && this.isDragging) {
-        const rotate = this.dragOffset * 0.08
-        const opacity = 1 - Math.abs(this.dragOffset) / 500
-        return {
-          transform: `translateX(${this.dragOffset}px) rotate(${rotate}deg)`,
-          opacity: Math.max(opacity, 0.5),
-          zIndex: 10
+        this.currentUser = {
+          name: '',
+          age: null,
+          avatar: '',
+          bio: '',
+          location: '',
+          favoriteGenres: []
         }
-      }
-      
-      return {
-        transform: `translateY(${offset * 12}px) scale(${1 - offset * 0.04}) rotate(${offset * 2}deg)`,
-        zIndex: index,
-        opacity: 1 - offset * 0.15
-      }
-    },
 
-    startDrag(e) {
-      if (this.currentPlaying) {
+        this.likedSongs = []
+        this.favorites = []
+        this.matches = []
+        this.unreadMatches = 0
+        this.currentIndex = 0
+        this.songs = []
+        this.showProfile = false
+        this.showLogoutConfirm = false
+
         this.stopAudio()
-      }
-      this.isDragging = true
-      this.dragStartX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
-    },
+      },
 
-    onDrag(e) {
-      if (!this.isDragging) return
-      e.preventDefault()
-      const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
-      this.dragOffset = x - this.dragStartX
-      
-      this.swipingRight = this.dragOffset > 50
-      this.swipingLeft = this.dragOffset < -50
-    },
+      async loadMoreSongs() {
+        await this.buscarSugestoes()
+      },
 
-    endDrag() {
-      if (!this.isDragging) return
-      
-      if (this.dragOffset > 120) {
-        this.swipeRight()
-      } else if (this.dragOffset < -120) {
-        this.swipeLeft()
-      }
-      
-      this.isDragging = false
-      this.dragOffset = 0
-      this.swipingLeft = false
-      this.swipingRight = false
-    },
+      getCardStyle(index) {
+        const isTop = index === this.visibleSongs.length - 1
+        const offset = this.visibleSongs.length - 1 - index
 
-swipeLeft() {
-  this.currentIndex++
-  this.animateCard('left')
-},
-
-   async swipeRight() {
-  try {
-    const currentSong = this.songs[this.currentIndex]
-    if (!currentSong) return
-
-    await api.post('/matches/curtidas', {
-      track: currentSong,
-      tipo: 'like'
-    })
-
-    this.likedSongs.push(currentSong)
-    this.currentIndex++
-    this.animateCard('right')
-
-    await this.buscarMatches()
-
-    if (this.matches.length > 0) {
-      this.lastMatch = this.matches[0]
-      this.showMatchNotification = true
-
-      setTimeout(() => {
-        this.showMatchNotification = false
-      }, 5000)
-    }
-  } catch (error) {
-    console.error('Erro ao curtir música:', error)
-  }
-},
-
-    // Toggle favorite (star button)
-  async toggleFavorite() {
-  try {
-    const currentSong = this.songs[this.currentIndex]
-    if (!currentSong) return
-
-    const index = this.favorites.findIndex(f => f.id === currentSong.id)
-
-    if (index > -1) {
-      await api.delete(`/matches/curtidas/${currentSong.id}`)
-      this.favorites.splice(index, 1)
-    } else {
-      await api.post('/matches/curtidas', {
-        track: currentSong,
-        tipo: 'favorite'
-      })
-
-      this.favorites.push(currentSong)
-      this.lastFavorited = currentSong
-      this.showFavoriteToast = true
-
-      setTimeout(() => {
-        this.showFavoriteToast = false
-      }, 3000)
-    }
-  } catch (error) {
-    console.error('Erro ao favoritar música:', error)
-  }
-},
-
-    isFavorite(song) {
-      if (!song) return false
-      return this.favorites.some(f => f.id === song.id)
-    },
-
-    removeFavorite(song) {
-      const index = this.favorites.findIndex(f => f.id === song.id)
-      if (index > -1) {
-        this.favorites.splice(index, 1)
-      }
-    },
-
-    superLike() {
-      // Now same as favorite
-      this.toggleFavorite()
-    },
-
-   async unlikeSong(song) {
-  try {
-    await api.delete(`/matches/curtidas/${song.id}`)
-    this.likedSongs = this.likedSongs.filter(s => s.id !== song.id)
-    await this.buscarMatches()
-  } catch (error) {
-    console.error('Erro ao remover curtida:', error)
-  }
-},
-
-    generateMatches() {
-      const mockUsers = [
-        { name: 'Ana', age: 22, avatar: 'https://i.pravatar.cc/300?img=5', location: 'Rio de Janeiro, RJ' },
-        { name: 'Pedro', age: 25, avatar: 'https://i.pravatar.cc/300?img=3', location: 'São Paulo, SP' },
-        { name: 'Julia', age: 23, avatar: 'https://i.pravatar.cc/300?img=9', location: 'Belo Horizonte, MG' }
-      ]
-      
-      const commonSongs = this.likedSongs.slice(0, 3).map(s => s.title)
-      
-      this.matches = mockUsers.map((user, index) => ({
-        id: Date.now() + index,
-        user,
-        compatibility: 85 + Math.floor(Math.random() * 14),
-        commonSongs: commonSongs.slice(0, 2 + Math.floor(Math.random() * 2)),
-        commonGenres: [...new Set(this.likedSongs.map(s => s.album?.title || 'Pop'))].slice(0, 2),
-        unread: true
-      }))
-      
-      this.unreadMatches = this.matches.length
-      this.showMatchNotification = true
-      this.lastMatch = this.matches[0]
-      
-      setTimeout(() => {
-        this.showMatchNotification = false
-      }, 5000)
-    },
-
-    addNewMatch() {
-      const names = ['Maria', 'Lucas', 'Beatriz', 'Gabriel', 'Sofia']
-      const randomName = names[Math.floor(Math.random() * names.length)]
-      const newMatch = {
-        id: Date.now(),
-        user: {
-          name: randomName,
-          age: 20 + Math.floor(Math.random() * 10),
-          avatar: `https://i.pravatar.cc/300?img=${Math.floor(Math.random() * 70)}`,
-          location: 'Brasil'
-        },
-        compatibility: 75 + Math.floor(Math.random() * 20),
-        commonSongs: this.likedSongs.slice(-2).map(s => s.title),
-        commonGenres: [this.likedSongs[this.likedSongs.length - 1]?.album?.title || 'Pop'],
-        unread: true
-      }
-      
-      this.matches.unshift(newMatch)
-      this.unreadMatches++
-      this.lastMatch = newMatch
-      this.showMatchNotification = true
-      
-      setTimeout(() => {
-        this.showMatchNotification = false
-      }, 5000)
-    },
-
-    togglePlay(song) {
-      if (this.currentPlaying === song.id) {
-        this.stopAudio()
-      } else {
-        this.playAudio(song)
-      }
-    },
-
-    playAudio(song) {
-      this.stopAudio()
-      
-      if (song.preview) {
-        // Play Deezer preview
-        this.audio = new Audio(song.preview)
-        this.audio.play()
-        this.currentPlaying = song.id
-        
-        this.audio.addEventListener('ended', () => {
-          this.stopAudio()
-        })
-        
-        // Simulate progress
-        this.progressInterval = setInterval(() => {
-          this.progress += 2
-          this.currentTime += 0.6
-          
-          if (this.progress >= 100) {
-            this.stopAudio()
+        if (isTop && this.isDragging) {
+          const rotate = this.dragOffset * 0.08
+          const opacity = 1 - Math.abs(this.dragOffset) / 500
+          return {
+            transform: `translateX(${this.dragOffset}px) rotate(${rotate}deg)`,
+            opacity: Math.max(opacity, 0.5),
+            zIndex: 10
           }
-        }, 100)
-      } else {
-        // Fallback simulation
-        this.currentPlaying = song.id
+        }
+
+        return {
+          transform: `translateY(${offset * 12}px) scale(${1 - offset * 0.04}) rotate(${offset * 2}deg)`,
+          zIndex: index,
+          opacity: 1 - offset * 0.15
+        }
+      },
+
+      startDrag(e) {
+        if (this.currentPlaying) this.stopAudio()
+        this.isDragging = true
+        this.dragStartX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
+      },
+
+      onDrag(e) {
+        if (!this.isDragging) return
+        e.preventDefault()
+
+        const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
+        this.dragOffset = x - this.dragStartX
+        this.swipingRight = this.dragOffset > 50
+        this.swipingLeft = this.dragOffset < -50
+      },
+
+      endDrag() {
+        if (!this.isDragging) return
+
+        if (this.dragOffset > 120) {
+          this.swipeRight()
+        } else if (this.dragOffset < -120) {
+          this.swipeLeft()
+        }
+
+        this.isDragging = false
+        this.dragOffset = 0
+        this.swipingLeft = false
+        this.swipingRight = false
+      },
+
+      swipeLeft() {
+        this.currentIndex++
+        this.animateCard('left')
+      },
+
+      async swipeRight() {
+        try {
+          const currentSong = this.songs[this.currentIndex]
+          if (!currentSong) return
+
+          await api.post('/matches/curtidas', {
+            track: currentSong,
+            tipo: 'like'
+          })
+
+          if (!this.likedSongs.some(s => String(s.id) === String(currentSong.id))) {
+            this.likedSongs.push(currentSong)
+          }
+
+          this.currentIndex++
+          this.animateCard('right')
+
+          const prevMatchIds = this.matches.map(m => m.id)
+          await this.buscarMatches()
+
+          const newMatch = this.matches.find(m => !prevMatchIds.includes(m.id))
+          if (newMatch) {
+            this.lastMatch = newMatch
+            this.showMatchNotification = true
+
+            setTimeout(() => {
+              this.showMatchNotification = false
+            }, 5000)
+          }
+        } catch (error) {
+          console.error('Erro ao curtir música:', error)
+        }
+      },
+
+      async toggleFavorite() {
+        try {
+          const currentSong = this.songs[this.currentIndex]
+          if (!currentSong) return
+
+          const index = this.favorites.findIndex(f => String(f.id) === String(currentSong.id))
+
+          if (index > -1) {
+            await api.delete(`/matches/curtidas/${currentSong.id}`, {
+              params: { tipo: 'favorite' }
+            })
+            this.favorites.splice(index, 1)
+          } else {
+            await api.post('/matches/curtidas', {
+              track: currentSong,
+              tipo: 'favorite'
+            })
+
+            this.favorites.push(currentSong)
+            this.lastFavorited = currentSong
+            this.showFavoriteToast = true
+
+            setTimeout(() => {
+              this.showFavoriteToast = false
+            }, 3000)
+          }
+        } catch (error) {
+          console.error('Erro ao favoritar música:', error)
+        }
+      },
+
+      isFavorite(song) {
+        if (!song) return false
+        return this.favorites.some(f => String(f.id) === String(song.id))
+      },
+
+      async removeFavorite(song) {
+        try {
+          await api.delete(`/matches/curtidas/${song.id}`, {
+            params: { tipo: 'favorite' }
+          })
+          this.favorites = this.favorites.filter(f => String(f.id) !== String(song.id))
+        } catch (error) {
+          console.error('Erro ao remover favorito:', error)
+        }
+      },
+
+      superLike() {
+        this.toggleFavorite()
+      },
+
+      async unlikeSong(song) {
+        try {
+          await api.delete(`/matches/curtidas/${song.id}`, {
+            params: { tipo: 'like' }
+          })
+          this.likedSongs = this.likedSongs.filter(s => String(s.id) !== String(song.id))
+          await this.buscarMatches()
+        } catch (error) {
+          console.error('Erro ao remover curtida:', error)
+        }
+      },
+
+      togglePlay(song) {
+        if (this.currentPlaying === song.id) {
+          this.stopAudio()
+        } else {
+          this.playAudio(song)
+        }
+      },
+
+      playAudio(song) {
+        this.stopAudio()
+
+        if (song.preview) {
+          this.audio = new Audio(song.preview)
+          this.audio.play()
+          this.currentPlaying = song.id
+
+          this.audio.addEventListener('ended', () => {
+            this.stopAudio()
+          })
+
+          this.progressInterval = setInterval(() => {
+            this.progress += 2
+            this.currentTime += 0.6
+
+            if (this.progress >= 100) {
+              this.stopAudio()
+            }
+          }, 100)
+        } else {
+          this.currentPlaying = song.id
+          this.progress = 0
+          this.currentTime = 0
+
+          this.progressInterval = setInterval(() => {
+            this.progress += 0.5
+            this.currentTime += 0.5
+
+            if (this.progress >= 100) {
+              this.stopAudio()
+            }
+          }, 100)
+        }
+      },
+
+      stopAudio() {
+        if (this.audio) {
+          this.audio.pause()
+          this.audio = null
+        }
+
+        if (this.progressInterval) {
+          clearInterval(this.progressInterval)
+          this.progressInterval = null
+        }
+
+        this.currentPlaying = null
         this.progress = 0
         this.currentTime = 0
-        
-        this.progressInterval = setInterval(() => {
-          this.progress += 0.5
-          this.currentTime += 0.5
+      },
+
+      formatDuration(seconds) {
+        if (!seconds) return '0:00'
+        const mins = Math.floor(seconds / 60)
+        const secs = Math.floor(seconds % 60)
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+      },
+
+      formatTime(seconds) {
+        const mins = Math.floor(seconds / 60)
+        const secs = Math.floor(seconds % 60)
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+      },
+
+      openProfile() {
+        this.showProfile = true
+        this.isEditing = false
+      },
+
+      closeProfile() {
+        if (this.isEditing) this.cancelEdit()
+        this.showProfile = false
+      },
+
+      startEdit() {
+        this.editForm = {
+          name: this.currentUser.name,
+          age: this.currentUser.age,
+          bio: this.currentUser.bio,
+          location: this.currentUser.location,
+          avatar: this.currentUser.avatar
+        }
+        this.isEditing = true
+      },
+
+      cancelEdit() {
+        this.isEditing = false
+        this.editForm = {
+          name: '',
+          age: null,
+          bio: '',
+          location: '',
+          avatar: ''
+        }
+      },
+
+      async saveProfile() {
+        try {
+          const user = JSON.parse(localStorage.getItem("usuario"))
           
-          if (this.progress >= 100) {
-            this.stopAudio()
+          const userId = user.id || user._id
+
+          if (!userId) {
+            throw new Error('Usuário não encontrado no localStorage')
           }
-        }, 100)
-      }
-    },
 
-    stopAudio() {
-      if (this.audio) {
-        this.audio.pause()
-        this.audio = null
-      }
-      if (this.progressInterval) {
-        clearInterval(this.progressInterval)
-        this.progressInterval = null
-      }
-      this.currentPlaying = null
-      this.progress = 0
-      this.currentTime = 0
-    },
+          const { data } = await api.put(`/usuarios/${userId}`, {
+            nome: this.editForm.name,
+            idade: this.editForm.age,
+            bio: this.editForm.bio,
+            localizacao: this.editForm.location,
+            avatar: this.editForm.avatar
+          })
 
-    formatDuration(seconds) {
-      if (!seconds) return '0:00'
-      const mins = Math.floor(seconds / 60)
-      const secs = Math.floor(seconds % 60)
-      return `${mins}:${secs.toString().padStart(2, '0')}`
-    },
+          const updatedUser = data.user
 
-    formatTime(seconds) {
-      const mins = Math.floor(seconds / 60)
-      const secs = Math.floor(seconds % 60)
-      return `${mins}:${secs.toString().padStart(2, '0')}`
-    },
+          this.currentUser = {
+            ...this.currentUser,
+            ...this.mapApiUserToCurrentUser(updatedUser),
+            favoriteGenres: this.currentUser.favoriteGenres
+          }
 
-    openProfile() {
-      this.showProfile = true
-      this.isEditing = false
-    },
+          localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
+          this.isEditing = false
+        } catch (error) {
+          console.error('Erro ao salvar perfil:', error)
+        }
+      },
 
-    closeProfile() {
-      if (this.isEditing) {
-        this.cancelEdit()
-      }
-      this.showProfile = false
-    },
+      triggerFileInput() {
+        this.$refs.fileInput?.click()
+      },
 
-    startEdit() {
-      this.editForm = {
-        name: this.currentUser.name,
-        age: this.currentUser.age,
-        bio: this.currentUser.bio,
-        location: this.currentUser.location,
-        avatar: this.currentUser.avatar
-      }
-      this.isEditing = true
-    },
+      handleFileChange(e) {
+        const file = e.target.files?.[0]
+        if (!file) return
 
-    cancelEdit() {
-      this.isEditing = false
-      this.editForm = {
-        name: '',
-        age: null,
-        bio: '',
-        location: '',
-        avatar: ''
-      }
-    },
-
-    async saveProfile() {
-  try {
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const userId = user.id || user._id
-
-    const { data } = await api.put(`/usuarios/${userId}`, {
-      nome: this.editForm.name,
-      idade: this.editForm.age,
-      bio: this.editForm.bio,
-      localizacao: this.editForm.location,
-      avatar: this.editForm.avatar
-    })
-
-    const updatedUser = data.user
-
-    this.currentUser = {
-      ...this.currentUser,
-      name: updatedUser.nome,
-      age: updatedUser.idade,
-      bio: updatedUser.bio,
-      location: updatedUser.localizacao,
-      avatar: updatedUser.avatar
-    }
-
-    localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
-    this.isEditing = false
-  } catch (error) {
-    console.error('Erro ao salvar perfil:', error)
-  }
-},
-
-    triggerFileInput() {
-      this.$refs.fileInput.click()
-    },
-
-    handleFileChange(e) {
-      const file = e.target.files[0]
-      if (file) {
         const reader = new FileReader()
-        reader.onload = (event) => {
+        reader.onload = event => {
           this.editForm.avatar = event.target.result
         }
         reader.readAsDataURL(file)
+      },
+
+      async closeMatches() {
+        try {
+          const unread = this.matches.filter(m => m.unread)
+
+          await Promise.all(
+            unread.map(match => api.put(`/matches/${match.id}/visto`))
+          )
+
+          this.matches = this.matches.map(m => ({ ...m, unread: false }))
+          this.unreadMatches = 0
+          this.showMatches = false
+        } catch (error) {
+          console.error('Erro ao marcar matches como vistos:', error)
+          this.showMatches = false
+        }
+      },
+
+      openMatchDetail(match) {
+        console.log('Ver detalhe do match:', match)
+      },
+
+      async removeMatch(match) {
+        try {
+          await api.delete(`/matches/${match.id}`)
+          this.matches = this.matches.filter(m => m.id !== match.id)
+          this.unreadMatches = this.matches.filter(m => m.unread).length
+        } catch (error) {
+          console.error('Erro ao remover match:', error)
+        }
+      },
+
+      async startChat(match) {
+        try {
+          if (match.status === 'pendente') {
+            await api.put(`/matches/${match.id}/responder`, {
+              resposta: 'aceito'
+            })
+          }
+
+          this.showMatches = false
+          console.log('Abrir chat do match:', match.id)
+        } catch (error) {
+          console.error('Erro ao iniciar conversa:', error)
+        }
+      },
+
+      viewMatch() {
+        this.showMatchNotification = false
+        this.showMatches = true
+      },
+
+      resetSongs() {
+        this.currentIndex = 0
+        this.likedSongs = []
+        this.matches = []
+        this.unreadMatches = 0
+        this.buscarSugestoes()
+      },
+
+      animateCard() {
+        // animação via CSS
       }
     },
 
-async closeMatches() {
-  try {
-    const unread = this.matches.filter(m => m.unread)
-
-    await Promise.all(
-      unread.map(match => api.put(`/matches/matches/${match.id}/visto`))
-    )
-
-    this.matches = this.matches.map(m => ({ ...m, unread: false }))
-    this.unreadMatches = 0
-    this.showMatches = false
-  } catch (error) {
-    console.error('Erro ao marcar matches como vistos:', error)
-    this.showMatches = false
-  }
-},
-
-    openMatchDetail(match) {
-      console.log('View profile:', match.user.name)
-    },
-
-    removeMatch(match) {
-      this.matches = this.matches.filter(m => m.id !== match.id)
-    },
-
-async startChat(match) {
-  try {
-    if (match.status === 'pendente') {
-      await api.put(`/matches/matches/${match.id}/responder`, {
-        resposta: 'aceito'
-      })
+    beforeUnmount() {
+      this.stopAudio()
     }
-
-    this.showMatches = false
-    console.log('Abrir chat do match:', match.id)
-  } catch (error) {
-    console.error('Erro ao iniciar conversa:', error)
   }
-},
-
-    viewMatch() {
-      this.showMatchNotification = false
-      this.showMatches = true
-    },
-
-    resetSongs() {
-      this.currentIndex = 0
-      this.likedSongs = []
-      this.matches = []
-      this.unreadMatches = 0
-      this.fetchSongsFromDeezer()
-    },
-
-    animateCard(direction) {
-      // CSS handles the animation
-    }
-  },
-
-  beforeUnmount() {
-    this.stopAudio()
-  }
-}
-</script>
+  </script>
 
 <style scoped>
 * {

@@ -160,24 +160,26 @@ const getUsers = async () => {
 
 const getUserById = async (id, currentUserId) => {
   const user = await Usuario.findById(id, '-senha')
+    .populate('generos', 'nome icon color popularidade')
+
   if (!user) return null
 
   const formatted = formatUser(user)
   const isOwner = sameId(formatted.id, currentUserId)
 
-  // 🔓 BASE PÚBLICA (SEMPRE VEM) — inclui bio
   const basePublic = {
     id: formatted.id,
     nome: formatted.nome,
     username: formatted.username,
     avatar: formatted.avatar,
     cover: formatted.cover || null,
-    bio: formatted.bio || '',        // ← SEMPRE visível
+    bio: formatted.bio || '',
     membroDesde: formatted.membroDesde || null,
-    perfilPrivado: formatted.perfilPrivado
+    perfilPrivado: formatted.perfilPrivado,
+    onboardingCompleto: formatted.onboardingCompleto || false,
+    generos: formatted.generos || []
   }
 
-  // 🔓 Se não é privado ou é dono → acesso total
   if (!formatted.perfilPrivado || isOwner) {
     return {
       ...formatted,
@@ -186,7 +188,6 @@ const getUserById = async (id, currentUserId) => {
     }
   }
 
-  // 🔍 Verifica se já segue
   const follow = await Follow.findOne({
     seguidor_id: currentUserId,
     seguindo_id: id,
@@ -201,12 +202,10 @@ const getUserById = async (id, currentUserId) => {
     }
   }
 
-  // ⏳ Verifica solicitação pendente
   const solicitacaoPendente = user.solicitacoesSeguir?.some(
     s => sameId(s.usuario, currentUserId) && s.status === 'pendente'
   )
 
-  // 🔒 PERFIL PRIVADO BLOQUEADO — bio já está no basePublic
   return {
     ...basePublic,
     acessoLiberado: false,
@@ -227,10 +226,10 @@ const updateUser = async (id, data) => {
     website,
     perfilPrivado,
     mostrarAtividade,
-     generos,
- artistasFavoritos,
- vibesFavoritas,
- onboardingCompleto
+    generos,
+    artistasFavoritos,
+    vibesFavoritas,
+    onboardingCompleto
   } = data
 
   const updateData = {}
@@ -246,23 +245,16 @@ const updateUser = async (id, data) => {
   if (website !== undefined) updateData.website = website
   if (perfilPrivado !== undefined) updateData.perfilPrivado = perfilPrivado
   if (mostrarAtividade !== undefined) updateData.mostrarAtividade = mostrarAtividade
-  if(generos !== undefined)
- updateData.generos = generos
-
-if(artistasFavoritos !== undefined)
- updateData.artistasFavoritos = artistasFavoritos
-
-if(vibesFavoritas !== undefined)
- updateData.vibesFavoritas = vibesFavoritas
-
-if(onboardingCompleto !== undefined)
- updateData.onboardingCompleto = onboardingCompleto
+  if (generos !== undefined) updateData.generos = generos
+  if (artistasFavoritos !== undefined) updateData.artistasFavoritos = artistasFavoritos
+  if (vibesFavoritas !== undefined) updateData.vibesFavoritas = vibesFavoritas
+  if (onboardingCompleto !== undefined) updateData.onboardingCompleto = onboardingCompleto
 
   const user = await Usuario.findByIdAndUpdate(
     id,
     updateData,
     { new: true, select: '-senha' }
-  )
+  ).populate('generos', 'nome icon color popularidade')
 
   return formatUser(user)
 }

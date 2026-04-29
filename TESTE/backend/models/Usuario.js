@@ -15,13 +15,7 @@ const usuarioSchema = new mongoose.Schema({
 
   website: { type: String, default: '' },
 
-  generos: { type: [String], default: [] },
-
-  // AGORA: controla acesso ao perfil
   perfilPrivado: { type: Boolean, default: false },
-
-  // pode continuar existindo por compatibilidade de front,
-  // mas não será mais usado como bloqueio global
   mostrarAtividade: { type: Boolean, default: true },
 
   seguindo: [{
@@ -40,7 +34,7 @@ const usuarioSchema = new mongoose.Schema({
   
   generos:[{
    type: mongoose.Schema.Types.ObjectId,
-   ref:'GeneroMusical'
+   ref:'Genero'
  }],
 
  artistasFavoritos:[{
@@ -57,7 +51,6 @@ const usuarioSchema = new mongoose.Schema({
    type:Boolean,
    default:false
  },
-// createdAt gerenciado automaticamente pelo timestamps: true
 
   membroDesde: { type: Date, default: Date.now }
 }, { 
