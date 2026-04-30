@@ -396,50 +396,68 @@ parseDuration(durationStr) {
 },
 
     async favoritarMusica(musica) {
-      this.closeMenu()
+  this.closeMenu()
 
-      try {
-        const token = localStorage.getItem("token")
+  try {
+    const token = localStorage.getItem("token")
 
-        const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ tipo: "musica" })
-        })
+    const body = {
+      tipo: "musica"
+    }
 
-        if (!res.ok) throw new Error("Erro ao favoritar")
-
-        const data = await res.json()
-
-        if (data.favorited) {
-          this.showToast({
-            title: "⭐ Favoritada!",
-            message: `"${musica.title}" adicionada aos favoritos`,
-            type: "success",
-            icon: "fa fa-star"
-          })
-          window.dispatchEvent(new Event('favoritas-updated'))
-        } else {
-          this.showToast({
-            title: "Removida",
-            message: `"${musica.title}" removida dos favoritos`,
-            type: "info",
-            icon: "fa fa-star-o"
-          })
-        }
-      } catch (err) {
-        console.error(err)
-        this.showToast({
-          title: "Erro",
-          message: "Não foi possível favoritar",
-          type: "error",
-          icon: "fa fa-times"
-        })
+    // Se for externa, envia source e dadosMusica
+    if (musica.source && musica.source !== 'local') {
+      body.source = musica.source
+      body.dadosMusica = {
+        titulo: musica.title || 'Sem título',
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: this.parseDuration(musica.duration),
+        ano: musica.ano || null,
+        album: musica.album || ''
       }
-    },
+    }
+
+    const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) throw new Error("Erro ao favoritar")
+
+    const data = await res.json()
+
+    if (data.favorited) {
+      this.showToast({
+        title: "⭐ Favoritada!",
+        message: `"${musica.title}" adicionada aos favoritos`,
+        type: "success",
+        icon: "fa fa-star"
+      })
+      window.dispatchEvent(new Event('favoritas-updated'))
+    } else {
+      this.showToast({
+        title: "Removida",
+        message: `"${musica.title}" removida dos favoritos`,
+        type: "info",
+        icon: "fa fa-star-o"
+      })
+    }
+  } catch (err) {
+    console.error(err)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível favoritar",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  }
+},
 
     async removerCurtida(musica, index) {
       try {

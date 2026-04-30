@@ -415,7 +415,7 @@ cantoresCount() {
       return past.toLocaleDateString('pt-BR')
     },
 
-   async carregarFavoritas() {
+ async carregarFavoritas() {
   this.loading = true
   try {
     const token = localStorage.getItem("token")
@@ -427,6 +427,22 @@ cantoresCount() {
     const data = await res.json()
 
     this.favoritas = data.map(f => {
+      // ========== MÚSICA EXTERNA ==========
+      if (f.musicaExterna) {
+        return {
+          id: f.musicaExterna.id,           // ID do Spotify/Deezer
+          title: f.musicaExterna.nome,
+          subtitle: f.musicaExterna.artista,
+          cover: f.musicaExterna.capa,
+          url: f.musicaExterna.previewUrl,
+          duration: f.musicaExterna.duration,
+          source: f.musicaExterna.source,     // 'spotify' ou 'deezer'
+          addedAt: f.createdAt,
+          type: "musica",
+          isExternal: true                    // Flag importante!
+        }
+      }
+
       if (f.musica) {
         return {
           id: f.musica._id,
@@ -436,7 +452,8 @@ cantoresCount() {
           url: f.musica.link,
           duration: f.musica.duracao,
           addedAt: f.createdAt,
-          type: "musica"
+          type: "musica",
+          isExternal: false
         }
       }
 
@@ -487,25 +504,47 @@ cantoresCount() {
   }
 },
 
-    async remover(item) {
-      try {
-        const token = localStorage.getItem("token")
-        const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ tipo: item.type })
-        })
-        if (!res.ok) throw new Error('Erro ao remover')
-        this.favoritas = this.favoritas.filter(f => f.id !== item.id)
-        this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
-      } catch (err) {
-        console.error(err)
-        this.showToast('Erro ao remover favorito', 'error')
-      }
-    },
+   async remover(item) {
+  try {
+    const token = localStorage.getItem("token")
+    
+    const body = {
+      tipo: item.type
+    }
+
+    // Se for música externa, envia source
+    if (item.isExternal && item.source) {
+      body.source = item.source
+      // Na remoção, não precisa enviar dadosMusica
+    }
+
+    console.log('Removendo favorita:', { id: item.id, body })
+
+    const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    })
+    
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      console.error('Erro do servidor:', errData)
+      throw new Error(errData.error || 'Erro ao remover')
+    }
+    
+    const data = await res.json()
+    
+    this.favoritas = this.favoritas.filter(f => f.id !== item.id)
+    this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
+  } catch (err) {
+    console.error(err)
+    this.showToast('Erro ao remover favorito', 'error')
+  }
+},
+
     play(item) {
       if (item.type !== "musica") return
       window.dispatchEvent(new CustomEvent("play-song", {
