@@ -8,7 +8,7 @@
     </div>
 
     <!-- Estado Vazio -->
-    <div v-if="musicas.length === 0" class="empty-state">
+    <div v-if="musicas.length === 0 && !isLoading" class="empty-state">
       <div class="empty-icon">
         <i class="fa fa-heart-o"></i>
       </div>
@@ -19,28 +19,43 @@
       </button>
     </div>
 
+    <!-- Loading -->
+    <div v-if="isLoading" class="loading-state">
+      <div class="spinner"></div>
+      <span>Carregando suas curtidas...</span>
+    </div>
+
     <!-- Lista de Músicas -->
-    <div v-else class="music-list">
+    <div v-if="musicas.length > 0" class="music-list">
       <div class="list-header">
         <button class="btn-play-all" @click="playAll">
           <i class="fa fa-play"></i> Tocar todas
         </button>
       </div>
 
-      <div v-for="(musica, index) in musicas" :key="musica.id" class="music-card" @dblclick="playMusic(index)">
+      <div 
+        v-for="(musica, index) in musicas" 
+        :key="`${musica.source}-${musica.id}`" 
+        class="music-card" 
+        @dblclick="playMusic(index)"
+      >
         <div class="music-number">{{ index + 1 }}</div>
         
-        <img :src="musica.cover" :alt="musica.title" />
+        <img :src="musica.cover || '/default-cover.png'" :alt="musica.title" />
         
         <div class="music-info">
           <h3>{{ musica.title }}</h3>
-          <p>{{ musica.artist }} • {{ musica.album }}</p>
+          <p>
+            {{ musica.artist }}
+            <span v-if="musica.album"> • {{ musica.album }}</span>
+           
+          </p>
         </div>
 
         <div class="music-actions">
           <button 
             class="btn-like active" 
-            @click="removerCurtida(musica)"
+            @click="removerCurtida(musica, index)"
             title="Remover dos curtidos"
           >
             <i class="fa fa-heart"></i>
@@ -63,8 +78,6 @@
                 :style="getDropdownPosition(index)"
                 ref="dropdownMenus"
               >
-              
-                
                 <!-- Opções -->
                 <div class="dropdown-options">
                   <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
@@ -123,48 +136,46 @@
         </button>
       </div>
     </transition>
+
     <!-- MODAL PLAYLIST -->
-<transition name="fade">
-  <div v-if="showPlaylistModal" class="modal-overlay">
-    <div class="modal">
-      
-      <div class="modal-header">
-        <h3>Adicionar à playlist</h3>
-        <button @click="showPlaylistModal = false">
-          <i class="fa fa-times"></i>
-        </button>
-      </div>
+    <transition name="fade">
+      <div v-if="showPlaylistModal" class="modal-overlay" @click.self="showPlaylistModal = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Adicionar à playlist</h3>
+            <button @click="showPlaylistModal = false">
+              <i class="fa fa-times"></i>
+            </button>
+          </div>
 
-      <div class="modal-body">
-        <div v-if="playlists.length === 0" class="empty-playlists">
-          <p>Você não tem playlists ainda</p>
-        </div>
-
-        <div v-else class="playlist-list">
-          <div 
-            v-for="playlist in playlists" 
-            :key="playlist._id"
-            class="playlist-item"
-          >
-            <div>
-              <strong>{{ playlist.nome }}</strong>
-              <p>{{ playlist.musicas.length }} músicas</p>
+          <div class="modal-body">
+            <div v-if="playlists.length === 0" class="empty-playlists">
+              <p>Você não tem playlists ainda</p>
             </div>
 
-            <button 
-              class="btn-add"
-              @click="adicionarNaPlaylist(playlist._id)"
-            >
-              Adicionar
-            </button>
+            <div v-else class="playlist-list">
+              <div 
+                v-for="playlist in playlists" 
+                :key="playlist._id"
+                class="playlist-item"
+              >
+                <div>
+                  <strong>{{ playlist.nome }}</strong>
+                  <p>{{ playlist.musicas?.length || 0 }} músicas</p>
+                </div>
+
+                <button 
+                  class="btn-add"
+                  @click="adicionarNaPlaylist(playlist._id)"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-    </div>
-  </div>
-</transition>
-
+    </transition>
   </div>
 </template>
 
@@ -175,6 +186,7 @@ export default {
   data() {
     return {
       musicas: [],
+      isLoading: false,
       ultimaMusicaRemovida: null,
       ultimoIndiceRemovido: null,
       activeMenuIndex: null,
@@ -194,24 +206,36 @@ export default {
   },
 
   mounted() {
-    const user = JSON.parse(localStorage.getItem("usuario"))
+    const user = JSON.parse(localStorage.getItem("usuario") || "{}")
     this.usuarioId = user?._id || user?.id
 
     this.carregarCurtidas()
+    
+    // Atualiza quando voltar pra página
     window.addEventListener('focus', this.carregarCurtidas)
     document.addEventListener('click', this.handleClickOutside)
+    
+    // Escuta evento de curtidas atualizadas
+    window.addEventListener('curtidas-updated', this.carregarCurtidas)
+    window.addEventListener('likes-updated', this.carregarCurtidas)
   },
 
   beforeUnmount() {
     window.removeEventListener('focus', this.carregarCurtidas)
-    window.removeEventListener('storage', this.handleStorageChange)
     document.removeEventListener('click', this.handleClickOutside)
+    window.removeEventListener('curtidas-updated', this.carregarCurtidas)
+    window.removeEventListener('likes-updated', this.carregarCurtidas)
   },
 
   methods: {
     async carregarCurtidas() {
+      this.isLoading = true
       try {
         const token = localStorage.getItem("token")
+        if (!token) {
+          this.musicas = []
+          return
+        }
 
         const res = await fetch(`http://localhost:3002/curtidas`, {
           headers: {
@@ -222,29 +246,30 @@ export default {
         if (!res.ok) {
           const text = await res.text()
           console.error("Erro API:", text)
+          this.musicas = []
           return
         }
 
         const data = await res.json()
 
-        // adapta pro formato do seu front
+        // A API agora retorna array unificado com { id, nome, artist, cover, url, source, ... }
         this.musicas = data.map(c => ({
-          id: c.musica?._id,
-          title: c.musica?.nome,
-          artist: c.musica?.cantores?.[0]?.nome || 'Artista',
-          cover: c.musica?.foto,
-          url: c.musica?.link,
-          duration: 180
+          id: c.id,
+          title: c.nome,
+          artist: c.artist || 'Artista desconhecido',
+          album: c.album || '',
+          cover: c.cover,
+          url: c.url,
+          source: c.source || 'local',
+          duration: c.duration || 180,
+          ano: c.ano || null
         }))
 
       } catch (err) {
-        console.error(err)
-      }
-    },
-    
-    handleStorageChange(e) {
-      if (e.key === 'curtidas') {
-        this.carregarCurtidas()
+        console.error("Erro ao carregar curtidas:", err)
+        this.musicas = []
+      } finally {
+        this.isLoading = false
       }
     },
 
@@ -264,7 +289,8 @@ export default {
     handleClickOutside(event) {
       const dropdowns = this.$refs.dropdownContainers
       if (dropdowns) {
-        const clickedInside = dropdowns.some(container => 
+        const containers = Array.isArray(dropdowns) ? dropdowns : [dropdowns]
+        const clickedInside = containers.some(container => 
           container && container.contains(event.target)
         )
         if (!clickedInside) {
@@ -274,7 +300,6 @@ export default {
     },
 
     getDropdownPosition(index) {
-      // Posicionamento inteligente baseado na posição do card
       return {}
     },
 
@@ -285,13 +310,9 @@ export default {
 
       try {
         const token = localStorage.getItem("token")
-
         const res = await fetch(`http://localhost:3002/playlists`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
-
         const data = await res.json()
         this.playlists = data
       } catch (err) {
@@ -305,9 +326,7 @@ export default {
 
         await fetch(`http://localhost:3002/playlists/${playlistId}/musicas/${this.musicaSelecionada.id}`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
 
         this.showToast({
@@ -318,7 +337,6 @@ export default {
         })
 
         this.showPlaylistModal = false
-
       } catch (err) {
         console.error(err)
       }
@@ -336,9 +354,7 @@ export default {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            tipo: "musica"
-          })
+          body: JSON.stringify({ tipo: "musica" })
         })
 
         if (!res.ok) throw new Error("Erro ao favoritar")
@@ -352,7 +368,6 @@ export default {
             type: "success",
             icon: "fa fa-star"
           })
-          // Dispara evento para atualizar a página de favoritas
           window.dispatchEvent(new Event('favoritas-updated'))
         } else {
           this.showToast({
@@ -362,7 +377,6 @@ export default {
             icon: "fa fa-star-o"
           })
         }
-
       } catch (err) {
         console.error(err)
         this.showToast({
@@ -374,37 +388,99 @@ export default {
       }
     },
 
-    async removerCurtida(musica) {
+    async removerCurtida(musica, index) {
       try {
         const token = localStorage.getItem("token")
+        if (!token) {
+          this.showToast({
+            title: "Login necessário",
+            message: "Faça login para gerenciar suas curtidas",
+            type: "info",
+            icon: "fa fa-info-circle"
+          })
+          return
+        }
 
-        await fetch(`http://localhost:3002/musicas/${musica.id}/curtir`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+        // Salva para possível desfazer
+        this.ultimaMusicaRemovida = musica
+        this.ultimoIndiceRemovido = index
 
-        // remove do front
-        this.musicas = this.musicas.filter(m => m.id !== musica.id)
+        // Remove do front imediatamente (UX mais fluida)
+        this.musicas.splice(index, 1)
 
-        this.showToast({
-          title: "Removida dos curtidos",
-          message: `"${musica.title}" foi removida`,
-          type: "info",
-          icon: "fa fa-heart-broken"
-        })
+ const body = {
+  source: musica.source || 'local'
+}
+
+// 🔥 SE FOR EXTERNA → precisa mandar dadosMusica
+if (musica.source !== 'local') {
+  body.dadosMusica = {
+    titulo: musica.title,
+    artista: musica.artist,
+    capa: musica.cover || '',
+    previewUrl: musica.url || '',
+    duration: musica.duration || 30,
+    ano: musica.ano || null,
+    album: musica.album || ''
+  }
+}
+
+const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(body)
+})
+
+        const data = await res.json()
+
+        if (data.liked === false) {
+          // Curtida removida com sucesso
+          this.showToast({
+            title: "Removida dos curtidos",
+            message: `"${musica.title}" foi removida`,
+            type: "info",
+            icon: "fa fa-heart-broken",
+            showUndo: true,
+            duration: 5000
+          })
+        } else {
+          // Se voltou liked: true, algo deu errado, restaura
+          this.musicas.splice(index, 0, musica)
+          this.showToast({
+            title: "Erro",
+            message: "Não foi possível remover a curtida",
+            type: "error",
+            icon: "fa fa-times"
+          })
+        }
+
         window.dispatchEvent(new Event('likes-updated'))
+        window.dispatchEvent(new Event('curtidas-updated'))
 
       } catch (err) {
-        console.error(err)
+        console.error("Erro ao remover curtida:", err)
+        // Restaura a música em caso de erro
+        if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
+          this.musicas.splice(this.ultimoIndiceRemovido, 0, this.ultimaMusicaRemovida)
+        }
+        this.showToast({
+          title: "Erro",
+          message: "Erro ao remover curtida. Tente novamente.",
+          type: "error",
+          icon: "fa fa-times"
+        })
       }
     },
 
     desfazerRemocao() {
       if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
         this.musicas.splice(this.ultimoIndiceRemovido, 0, this.ultimaMusicaRemovida)
-        localStorage.setItem("curtidas", JSON.stringify(this.musicas))
+        
+        // Re-curtir a música (chama a API novamente)
+        this.recurtirMusica(this.ultimaMusicaRemovida)
         
         this.showToast({
           title: "Ação desfeita",
@@ -417,6 +493,42 @@ export default {
         
         this.ultimaMusicaRemovida = null
         this.ultimoIndiceRemovido = null
+      }
+    },
+
+    async recurtirMusica(musica) {
+      try {
+        const token = localStorage.getItem("token")
+        
+        const body = {
+          source: musica.source || 'local'
+        }
+
+        // Se for externa, precisa enviar os dados novamente
+        if (musica.source !== 'local') {
+          body.dadosMusica = {
+            titulo: musica.title,
+            artista: musica.artist,
+            capa: musica.cover || '',
+            previewUrl: musica.url || '',
+            duration: musica.duration || 30,
+            ano: musica.ano || null,
+            album: musica.album || ''
+          }
+        }
+
+        await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        window.dispatchEvent(new Event('likes-updated'))
+      } catch (err) {
+        console.error("Erro ao recurtir:", err)
       }
     },
 
@@ -447,8 +559,9 @@ export default {
         title: musica.title,
         artist: musica.artist,
         cover: musica.cover,
-        url: musica.preview || musica.url,
+        url: musica.url,
         duration: musica.duration || 30,
+        source: musica.source,
         type: 'liked'
       }
       
@@ -460,8 +573,9 @@ export default {
             title: m.title,
             artist: m.artist,
             cover: m.cover,
-            url: m.preview || m.url,
+            url: m.url,
             duration: m.duration || 30,
+            source: m.source,
             type: 'liked'
           })),
           index: index,
@@ -490,13 +604,9 @@ export default {
   position: relative;
   width: 100%;
   min-height: 100vh;
-
-  /* 🔥 ocupa toda a tela */
   margin: 0;
   padding: 30px 60px;
-
   box-sizing: border-box;
-
   color: #f8fafc;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
@@ -531,46 +641,30 @@ export default {
   border-radius: 20px;
   backdrop-filter: blur(10px);
 }
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.7);
+
+/* Loading State */
+.loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  padding: 80px 20px;
+  gap: 16px;
+  color: #94a3b8;
 }
 
-.modal {
-  background: #121212;
-  padding: 20px;
-  border-radius: 12px;
-  width: 400px;
-  max-height: 70vh;
-  overflow-y: auto;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(236, 72, 153, 0.2);
+  border-top-color: #ec4899;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
-.playlist-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  padding: 10px;
-  background: #1e1e1e;
-  border-radius: 8px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-
-.btn-add {
-  background: #1db954;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-}
-
 
 /* Estado Vazio */
 .empty-state {
@@ -725,6 +819,26 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.source-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.source-badge.spotify {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+}
+
+.source-badge.deezer {
+  background: rgba(239, 89, 60, 0.15);
+  color: #ef593c;
 }
 
 .music-actions {
@@ -1000,6 +1114,86 @@ export default {
 .dropdown-close:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #f8fafc;
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  background: #121212;
+  padding: 20px;
+  border-radius: 12px;
+  width: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #f8fafc;
+}
+
+.modal-header button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.playlist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #1e1e1e;
+  border-radius: 8px;
+}
+
+.playlist-item strong {
+  color: #f8fafc;
+  display: block;
+}
+
+.playlist-item p {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.btn-add {
+  background: #1db954;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-weight: 600;
+}
+
+.empty-playlists {
+  text-align: center;
+  color: #94a3b8;
+  padding: 20px;
 }
 
 /* ===== TOAST NOTIFICATION ===== */

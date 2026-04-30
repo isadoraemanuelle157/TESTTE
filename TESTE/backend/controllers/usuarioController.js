@@ -137,21 +137,46 @@ const getPublicCurtidas = async (req, res) => {
       return res.status(403).json({ message: "Curtidas ocultas para você" })
     }
 
+    // Busca curtidas locais e externas
     const Curtida = require('../models/Curtida')
-    const curtidas = await Curtida.find({ usuario: id })
-      .populate('musica')
-      .limit(50)
-      .sort({ createdAt: -1 })
+    const CurtidaExterna = require('../models/CurtidaExterna')
 
-    const musicas = curtidas.map(c => ({
+    const [curtidasLocais, curtidasExternas] = await Promise.all([
+      Curtida.find({ usuario: id })
+        .populate({
+          path: 'musica',
+          populate: { path: 'cantores', select: 'nome' }
+        })
+        .limit(50)
+        .sort({ createdAt: -1 }),
+      CurtidaExterna.find({ usuario: id })
+        .limit(50)
+        .sort({ createdAt: -1 })
+    ])
+
+    const musicasLocais = curtidasLocais.map(c => ({
       id: c.musica?._id,
       nome: c.musica?.nome,
       artist: c.musica?.cantores?.map(cant => cant.nome).join(', ') || 'Artista desconhecido',
       cover: c.musica?.foto,
-      url: c.musica?.link
+      url: c.musica?.link,
+      source: 'local'
     })).filter(m => m.id)
 
-    res.json(musicas)
+    const musicasExternas = curtidasExternas.map(c => ({
+      id: c.musicaId,
+      nome: c.dadosMusica.titulo,
+      artist: c.dadosMusica.artista,
+      cover: c.dadosMusica.capa,
+      url: c.dadosMusica.previewUrl,
+      source: c.source,
+      duration: c.dadosMusica.duration,
+      ano: c.dadosMusica.ano,
+      album: c.dadosMusica.album
+    }))
+
+    res.json([...musicasLocais, ...musicasExternas])
+    
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
