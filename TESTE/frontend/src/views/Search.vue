@@ -414,10 +414,10 @@
   <i :class="isTrackLiked(result.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
 </button>
 
-<!-- Álbum = estrela -->
+<!-- Álbum = estrela (LOCAL E DEEZER) -->
 <button 
-  v-else-if="result.type === 'album' && result.source === 'local'"
-  class="btn-like-result"
+  v-else-if="result.type === 'album'"
+  class="btn-like-result btn-star"
   @click.stop="toggleFavoriteItem(result)"
   :class="{ liked: isAlbumFavorited(result.id) }"
   :title="isAlbumFavorited(result.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
@@ -425,10 +425,10 @@
   <i :class="isAlbumFavorited(result.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
 </button>
 
-<!-- Artista = estrela -->
+<!-- Artista = estrela (LOCAL E DEEZER) -->
 <button 
-  v-else-if="result.type === 'artist' && result.source === 'local'"
-  class="btn-like-result"
+  v-else-if="result.type === 'artist'"
+  class="btn-like-result btn-star"
   @click.stop="toggleFavoriteItem(result)"
   :class="{ liked: isArtistFavorited(result.id) }"
   :title="isArtistFavorited(result.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
@@ -964,65 +964,71 @@ getDecadeRange(decadeName) {
       return this.favoriteArtists.includes(String(artistId))
     },
 
-    async toggleFavoriteItem(item) {
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          this.showToast("Faça login para favoritar", "info")
-          return
-        }
+  async toggleFavoriteItem(item) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast("Faça login para favoritar", "info")
+      return
+    }
 
-        // só favoritar itens locais
-        if (item.source !== 'local') {
-          this.showToast("Só é possível favoritar artistas e álbuns cadastrados no sistema", "info")
-          return
-        }
-
-        const tipo = item.type === 'album' ? 'album' : 'cantor'
-
-        const res = await fetch(`http://localhost:3002/favoritas/${String(item.id)}/favoritar`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ tipo })
-        })
-
-        const data = await res.json()
-
-        if (item.type === 'album') {
-          if (data.favorited) {
-            if (!this.favoriteAlbums.includes(String(item.id))) {
-              this.favoriteAlbums.push(String(item.id))
-            }
-            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-          } else {
-            this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(item.id))
-            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
-          }
-        }
-
-        if (item.type === 'artist') {
-          if (data.favorited) {
-            if (!this.favoriteArtists.includes(String(item.id))) {
-              this.favoriteArtists.push(String(item.id))
-            }
-            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-          } else {
-            this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(item.id))
-            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
-          }
-        }
-
-        // Dispara evento para atualizar outras páginas
-        window.dispatchEvent(new Event('favoritas-updated'))
-
-      } catch (err) {
-        console.error(err)
-        this.showToast("Erro ao favoritar item", "error")
+    const tipo = item.type === 'album' ? 'album' : 'cantor'
+    
+    const body = { tipo }
+    
+    // Se for item da API externa (Deezer), envia source e dados
+    if (item.source === 'deezer') {
+      body.source = 'deezer'
+      body.dadosItem = {
+        titulo: item.title || item.name || 'Sem título',
+        artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
+        capa: this.getBestImage(item) || '',
+        ano: item.ano || null
       }
-    },
+    }
+
+    const res = await fetch(`http://localhost:3002/favoritas/${String(item.id)}/favoritar`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+
+    const data = await res.json()
+
+    if (item.type === 'album') {
+      if (data.favorited) {
+        if (!this.favoriteAlbums.includes(String(item.id))) {
+          this.favoriteAlbums.push(String(item.id))
+        }
+        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+      } else {
+        this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(item.id))
+        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+      }
+    }
+
+    if (item.type === 'artist') {
+      if (data.favorited) {
+        if (!this.favoriteArtists.includes(String(item.id))) {
+          this.favoriteArtists.push(String(item.id))
+        }
+        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+      } else {
+        this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(item.id))
+        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+      }
+    }
+
+    window.dispatchEvent(new Event('favoritas-updated'))
+
+  } catch (err) {
+    console.error(err)
+    this.showToast("Erro ao favoritar item", "error")
+  }
+},
 
 handleResultClick(result) {
   if (result.type === 'track') {
@@ -3020,6 +3026,20 @@ html, body, #app {
   font-size: 14px;
   font-weight: 700;
   color: #fff;
+}
+
+.btn-star {
+  color: #fbbf24 !important;
+}
+
+.btn-star:hover {
+  background: rgba(251, 191, 36, 0.9) !important;
+  color: #0a0a0f !important;
+}
+
+.btn-star.liked {
+  background: rgba(251, 191, 36, 0.9) !important;
+  color: #0a0a0f !important;
 }
 
 .activity-desc {

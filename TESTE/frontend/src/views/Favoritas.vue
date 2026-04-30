@@ -9,7 +9,6 @@
       <div class="header-top">
         <div class="header-title">
           <div class="header-icon">
-            <!-- ÍCONE TOTAL: Coração + Onda Sonora -->
             <svg viewBox="0 0 24 24" fill="none" class="custom-icon">
               <defs>
                 <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -25,7 +24,7 @@
           </div>
           <div class="header-text">
             <h1>Minhas Favoritas</h1>
-            <p class="header-subtitle">Suas músicas e playlists preferidas em um só lugar</p>
+            <p class="header-subtitle">Suas músicas, álbuns e artistas preferidos em um só lugar</p>
           </div>
         </div>
         <div class="header-actions">
@@ -103,30 +102,32 @@
           <span class="stat-value">{{ playlistsCount }}</span>
           <span class="stat-label">Playlists</span>
         </div>
-</div>
-    <div class="stat-card">
-  <div class="stat-icon album">
-    <svg viewBox="0 0 24 24" fill="none" class="stat-svg">
-      <circle cx="12" cy="12" r="9" fill="#f59e0b"/>
-      <circle cx="12" cy="12" r="3" fill="#fff" opacity="0.8"/>
-    </svg>
-  </div>
-  <div class="stat-info">
-    <span class="stat-value">{{ albunsCount }}</span>
-    <span class="stat-label">Álbuns</span>
-  </div>
-</div>
-<div class="stat-card">
-  <div class="stat-icon artist">
-    <svg viewBox="0 0 24 24" fill="none" class="stat-svg">
-      <circle cx="12" cy="8" r="4" fill="#6366f1"/>
-      <path d="M4 20c0-4 4-6 8-6s8 2 8 6" fill="#818cf8"/>
-    </svg>
-  </div>
-  <div class="stat-info">
-    <span class="stat-value">{{ cantoresCount }}</span>
-    <span class="stat-label">Artistas</span>
-  </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon album">
+          <svg viewBox="0 0 24 24" fill="none" class="stat-svg">
+            <circle cx="12" cy="12" r="9" fill="#f59e0b"/>
+            <circle cx="12" cy="12" r="3" fill="#fff" opacity="0.8"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ albunsCount }}</span>
+          <span class="stat-label">Álbuns</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon artist">
+          <svg viewBox="0 0 24 24" fill="none" class="stat-svg">
+            <circle cx="12" cy="8" r="4" fill="#6366f1"/>
+            <path d="M4 20c0-4 4-6 8-6s8 2 8 6" fill="#818cf8"/>
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{{ cantoresCount }}</span>
+          <span class="stat-label">Artistas</span>
+        </div>
       </div>
     </div>
 
@@ -153,12 +154,19 @@
         Playlists
       </button>
       <button class="filter-tab" :class="{ active: filtroAtivo === 'album' }" @click="filtroAtivo = 'album'">
-  Álbuns
-</button>
-
-<button class="filter-tab" :class="{ active: filtroAtivo === 'cantor' }" @click="filtroAtivo = 'cantor'">
-  Artistas
-</button>
+        <svg viewBox="0 0 24 24" fill="currentColor" class="tab-icon">
+          <circle cx="12" cy="12" r="9" fill="currentColor"/>
+          <circle cx="12" cy="12" r="3" fill="#fff" opacity="0.8"/>
+        </svg>
+        Álbuns
+      </button>
+      <button class="filter-tab" :class="{ active: filtroAtivo === 'cantor' }" @click="filtroAtivo = 'cantor'">
+        <svg viewBox="0 0 24 24" fill="currentColor" class="tab-icon">
+          <circle cx="12" cy="8" r="4" fill="currentColor"/>
+          <path d="M4 20c0-4 4-6 8-6s8 2 8 6" fill="currentColor" opacity="0.6"/>
+        </svg>
+        Artistas
+      </button>
       <button class="filter-tab" :class="{ active: filtroAtivo === 'recentes' }" @click="filtroAtivo = 'recentes'">
         <svg viewBox="0 0 24 24" fill="currentColor" class="tab-icon">
           <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
@@ -192,12 +200,12 @@
           </svg>
         </div>
         <h3>{{ favoritas.length === 0 ? 'Nenhuma favorita ainda' : 'Nenhum resultado encontrado' }}</h3>
-        <p>{{ favoritas.length === 0 ? 'Comece a explorar e adicione músicas e playlists aos seus favoritos para vê-las aqui!' : 'Tente mudar o filtro para ver outros itens.' }}</p>
+        <p>{{ favoritas.length === 0 ? 'Comece a explorar e adicione músicas, álbuns e artistas aos seus favoritos!' : 'Tente mudar o filtro para ver outros itens.' }}</p>
         <button class="btn-explore" @click="$router.push('/search')">
           <svg viewBox="0 0 24 24" fill="currentColor" class="btn-icon">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
           </svg>
-          Explorar Músicas
+          Explorar
         </button>
       </div>
     </transition>
@@ -224,11 +232,23 @@
             <svg v-if="item.type === 'musica'" viewBox="0 0 24 24" fill="currentColor" class="badge-icon">
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
             </svg>
+            <svg v-else-if="item.type === 'album'" viewBox="0 0 24 24" fill="currentColor" class="badge-icon">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="3" fill="white" opacity="0.8"/>
+            </svg>
+            <svg v-else-if="item.type === 'cantor'" viewBox="0 0 24 24" fill="currentColor" class="badge-icon">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M4 20c0-4 4-6 8-6s8 2 8 6"/>
+            </svg>
             <svg v-else viewBox="0 0 24 24" fill="currentColor" class="badge-icon">
               <rect x="3" y="6" width="14" height="2" rx="1"/>
               <rect x="3" y="11" width="10" height="2" rx="1"/>
               <rect x="3" y="16" width="6" height="2" rx="1"/>
             </svg>
+          </div>
+          <!-- Badge de API externa -->
+          <div v-if="item.isExternal" class="external-badge" :class="item.source">
+            {{ item.source === 'deezer' ? 'DZ' : 'SP' }}
           </div>
         </div>
 
@@ -249,51 +269,48 @@
               {{ tempoDecorrido(item.addedAt) }}
             </span>
           </div>
-         <div class="info-meta" v-else-if="item.type === 'playlist'">
-  <span>
-    <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
-      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-    </svg>
-    {{ item.trackCount || 0 }} músicas
-  </span>
-  <span>
-    <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
-      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-    </svg>
-    {{ item.totalDuration || tempoDecorrido(item.addedAt) }}
-  </span>
-</div>
-
-<div class="info-meta" v-else-if="item.type === 'album'">
-  <span>
-    <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
-      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-    </svg>
-    {{ item.trackCount || 0 }} músicas
-  </span>
-  <span>
-    <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
-      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-    </svg>
-    {{ tempoDecorrido(item.addedAt) }}
-  </span>
-</div>
-
-<div class="info-meta" v-else-if="item.type === 'cantor'">
-  <span>
-    <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
-      <path d="M12 12c2.7 0 4.8-2.2 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8V22h19.2v-2.8c0-3.2-6.4-4.8-9.6-4.8z"/>
-    </svg>
-    Artista favorito
-  </span>
-  <span>
-    <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
-      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-    </svg>
-    {{ tempoDecorrido(item.addedAt) }}
-  </span>
-</div>
-
+          <div class="info-meta" v-else-if="item.type === 'playlist'">
+            <span>
+              <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              </svg>
+              {{ item.trackCount || 0 }} músicas
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+              </svg>
+              {{ item.totalDuration || tempoDecorrido(item.addedAt) }}
+            </span>
+          </div>
+          <div class="info-meta" v-else-if="item.type === 'album'">
+            <span>
+              <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
+                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+              </svg>
+              {{ item.trackCount || 0 }} músicas
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+              </svg>
+              {{ tempoDecorrido(item.addedAt) }}
+            </span>
+          </div>
+          <div class="info-meta" v-else-if="item.type === 'cantor'">
+            <span>
+              <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
+                <path d="M12 12c2.7 0 4.8-2.2 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8V22h19.2v-2.8c0-3.2-6.4-4.8-9.6-4.8z"/>
+              </svg>
+              Artista favorito
+            </span>
+            <span>
+              <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+              </svg>
+              {{ tempoDecorrido(item.addedAt) }}
+            </span>
+          </div>
         </div>
 
         <div class="acoes">
@@ -303,7 +320,33 @@
             </svg>
           </button>
 
-          <button class="btn btn-favorite" @click.stop="remover(item)" title="Remover dos favoritos">
+          <!-- ⭐ ESTRELA para Álbuns -->
+          <button 
+            v-if="item.type === 'album'" 
+            class="btn btn-favorite btn-star" 
+            @click.stop="remover(item)" 
+            title="Remover dos favoritos"
+          >
+            <i class="fa fa-star"></i>
+          </button>
+
+          <!-- ⭐ ESTRELA para Artistas -->
+          <button 
+            v-if="item.type === 'cantor'" 
+            class="btn btn-favorite btn-star" 
+            @click.stop="remover(item)" 
+            title="Remover dos favoritos"
+          >
+            <i class="fa fa-star"></i>
+          </button>
+
+          <!-- ❤️ CORAÇÃO para Músicas e Playlists -->
+          <button 
+            v-if="item.type === 'musica' || item.type === 'playlist'" 
+            class="btn btn-favorite" 
+            @click.stop="remover(item)" 
+            title="Remover dos favoritos"
+          >
             <svg viewBox="0 0 24 24" fill="currentColor" class="heart-icon">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
@@ -363,11 +406,11 @@ export default {
       return this.favoritas.filter(f => f.type === 'playlist').length
     },
     albunsCount() {
-  return this.favoritas.filter(f => f.type === 'album').length
-},
-cantoresCount() {
-  return this.favoritas.filter(f => f.type === 'cantor').length
-},
+      return this.favoritas.filter(f => f.type === 'album').length
+    },
+    cantoresCount() {
+      return this.favoritas.filter(f => f.type === 'cantor').length
+    },
 
     favoritasFiltradas() {
       if (this.filtroAtivo === 'todos') return this.favoritas
@@ -415,135 +458,163 @@ cantoresCount() {
       return past.toLocaleDateString('pt-BR')
     },
 
- async carregarFavoritas() {
-  this.loading = true
-  try {
-    const token = localStorage.getItem("token")
-    const res = await fetch("http://localhost:3002/favoritas", {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    async carregarFavoritas() {
+      this.loading = true
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch("http://localhost:3002/favoritas", {
+          headers: { Authorization: `Bearer ${token}` }
+        })
 
-    if (!res.ok) throw new Error('Erro ao carregar favoritas')
-    const data = await res.json()
+        if (!res.ok) throw new Error('Erro ao carregar favoritas')
+        const data = await res.json()
 
-    this.favoritas = data.map(f => {
-      // ========== MÚSICA EXTERNA ==========
-      if (f.musicaExterna) {
-        return {
-          id: f.musicaExterna.id,           // ID do Spotify/Deezer
-          title: f.musicaExterna.nome,
-          subtitle: f.musicaExterna.artista,
-          cover: f.musicaExterna.capa,
-          url: f.musicaExterna.previewUrl,
-          duration: f.musicaExterna.duration,
-          source: f.musicaExterna.source,     // 'spotify' ou 'deezer'
-          addedAt: f.createdAt,
-          type: "musica",
-          isExternal: true                    // Flag importante!
-        }
+        this.favoritas = data.map(f => {
+          // ========== MÚSICA EXTERNA ==========
+          if (f.musicaExterna) {
+            return {
+              id: f.musicaExterna.id,
+              title: f.musicaExterna.nome,
+              subtitle: f.musicaExterna.artista,
+              cover: f.musicaExterna.capa,
+              url: f.musicaExterna.previewUrl,
+              duration: f.musicaExterna.duration,
+              source: f.musicaExterna.source,
+              addedAt: f.createdAt,
+              type: "musica",
+              isExternal: true
+            }
+          }
+
+          // ========== ÁLBUM EXTERNO ==========
+          if (f.albumExterno) {
+            return {
+              id: f.albumExterno.id,
+              title: f.albumExterno.nome,
+              subtitle: f.albumExterno.artista,
+              cover: f.albumExterno.capa,
+              source: f.albumExterno.source,
+              addedAt: f.createdAt,
+              type: "album",
+              isExternal: true
+            }
+          }
+
+          // ========== ARTISTA EXTERNO ==========
+          if (f.cantorExterno) {
+            return {
+              id: f.cantorExterno.id,
+              title: f.cantorExterno.nome,
+              subtitle: "Artista",
+              cover: f.cantorExterno.capa || f.cantorExterno.foto,
+              source: f.cantorExterno.source,
+              addedAt: f.createdAt,
+              type: "cantor",
+              isExternal: true
+            }
+          }
+
+          // ========== LOCAIS ==========
+          if (f.musica) {
+            return {
+              id: f.musica._id,
+              title: f.musica.nome,
+              subtitle: f.musica.cantores?.[0]?.nome || "Artista Desconhecido",
+              cover: f.musica.foto,
+              url: f.musica.link,
+              duration: f.musica.duracao,
+              addedAt: f.createdAt,
+              type: "musica",
+              isExternal: false
+            }
+          }
+
+          if (f.playlist) {
+            return {
+              id: f.playlist._id,
+              title: f.playlist.nome,
+              subtitle: f.playlist.descricao || "Playlist",
+              cover: f.playlist.capa,
+              trackCount: f.playlist.quantidadeMusicas,
+              totalDuration: f.playlist.duracaoTotal,
+              addedAt: f.createdAt,
+              type: "playlist"
+            }
+          }
+
+          if (f.album) {
+            return {
+              id: f.album._id,
+              title: f.album.nome,
+              subtitle: f.album.cantor?.nome || "Álbum",
+              cover: f.album.foto,
+              trackCount: f.album.musicas?.length || 0,
+              addedAt: f.createdAt,
+              type: "album"
+            }
+          }
+
+          if (f.cantor) {
+            return {
+              id: f.cantor._id,
+              title: f.cantor.nome,
+              subtitle: "Artista",
+              cover: f.cantor.foto,
+              addedAt: f.createdAt,
+              type: "cantor"
+            }
+          }
+
+          return null
+        }).filter(Boolean)
+
+      } catch (err) {
+        console.error(err)
+        this.showToast('Erro ao carregar favoritas', 'error')
+      } finally {
+        this.loading = false
       }
+    },
 
-      if (f.musica) {
-        return {
-          id: f.musica._id,
-          title: f.musica.nome,
-          subtitle: f.musica.cantores?.[0]?.nome || "Artista Desconhecido",
-          cover: f.musica.foto,
-          url: f.musica.link,
-          duration: f.musica.duracao,
-          addedAt: f.createdAt,
-          type: "musica",
-          isExternal: false
+    async remover(item) {
+      try {
+        const token = localStorage.getItem("token")
+        
+        const body = {
+          tipo: item.type
         }
-      }
 
-      if (f.playlist) {
-        return {
-          id: f.playlist._id,
-          title: f.playlist.nome,
-          subtitle: f.playlist.descricao || "Playlist",
-          cover: f.playlist.capa,
-          trackCount: f.playlist.quantidadeMusicas,
-          totalDuration: f.playlist.duracaoTotal,
-          addedAt: f.createdAt,
-          type: "playlist"
+        // Se for item externo, envia source
+        if (item.isExternal && item.source) {
+          body.source = item.source
         }
-      }
 
-      if (f.album) {
-        return {
-          id: f.album._id,
-          title: f.album.nome,
-          subtitle: f.album.cantor?.nome || "Álbum",
-          cover: f.album.foto,
-          trackCount: f.album.musicas?.length || 0,
-          addedAt: f.createdAt,
-          type: "album"
+        console.log('Removendo favorita:', { id: item.id, body })
+
+        const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        })
+        
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          console.error('Erro do servidor:', errData)
+          throw new Error(errData.error || 'Erro ao remover')
         }
+        
+        const data = await res.json()
+        
+        this.favoritas = this.favoritas.filter(f => f.id !== item.id)
+        this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
+      } catch (err) {
+        console.error(err)
+        this.showToast('Erro ao remover favorito', 'error')
       }
-
-      if (f.cantor) {
-        return {
-          id: f.cantor._id,
-          title: f.cantor.nome,
-          subtitle: "Artista",
-          cover: f.cantor.foto,
-          addedAt: f.createdAt,
-          type: "cantor"
-        }
-      }
-
-      return null
-    }).filter(Boolean)
-
-  } catch (err) {
-    console.error(err)
-    this.showToast('Erro ao carregar favoritas', 'error')
-  } finally {
-    this.loading = false
-  }
-},
-
-   async remover(item) {
-  try {
-    const token = localStorage.getItem("token")
-    
-    const body = {
-      tipo: item.type
-    }
-
-    // Se for música externa, envia source
-    if (item.isExternal && item.source) {
-      body.source = item.source
-      // Na remoção, não precisa enviar dadosMusica
-    }
-
-    console.log('Removendo favorita:', { id: item.id, body })
-
-    const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    })
-    
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
-      console.error('Erro do servidor:', errData)
-      throw new Error(errData.error || 'Erro ao remover')
-    }
-    
-    const data = await res.json()
-    
-    this.favoritas = this.favoritas.filter(f => f.id !== item.id)
-    this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
-  } catch (err) {
-    console.error(err)
-    this.showToast('Erro ao remover favorito', 'error')
-  }
-},
+    },
 
     play(item) {
       if (item.type !== "musica") return
@@ -567,13 +638,11 @@ cantoresCount() {
       this.$router.push(`/playlist/${item.id}`)
     },
     abrirAlbum(item) {
-  this.$router.push(`/album/${item.id}`)
-},
-
-abrirCantor(item) {
-  this.$router.push(`/cantor/${item.id}`)
-},
-
+      this.$router.push(`/album/${item.id}`)
+    },
+    abrirCantor(item) {
+      this.$router.push(`/cantor/${item.id}`)
+    },
     tocarTudo() {
       const musicas = this.favoritas.filter(f => f.type === 'musica')
       if (musicas.length === 0) {
@@ -594,6 +663,7 @@ abrirCantor(item) {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1116,9 +1186,44 @@ abrirCantor(item) {
   color: white;
 }
 
+.type-badge.album {
+  background: rgba(245, 158, 11, 0.9);
+  color: white;
+}
+
+.type-badge.cantor {
+  background: rgba(99, 102, 241, 0.9);
+  color: white;
+}
+
 .badge-icon {
   width: 12px;
   height: 12px;
+}
+
+/* Badge de API externa */
+.external-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.external-badge.deezer {
+  background: rgba(255, 255, 255, 0.9);
+  color: #000;
+}
+
+.external-badge.spotify {
+  background: rgba(29, 185, 84, 0.9);
+  color: #fff;
 }
 
 .info {
@@ -1216,6 +1321,19 @@ abrirCantor(item) {
 .btn-favorite:hover {
   background: #ec4899;
   color: white;
+  transform: scale(1.1);
+}
+
+/* ⭐ Estrela para Álbuns e Artistas */
+.btn-star {
+  background: rgba(251, 191, 36, 0.15) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(251, 191, 36, 0.3) !important;
+}
+
+.btn-star:hover {
+  background: #fbbf24 !important;
+  color: #0a0a0f !important;
   transform: scale(1.1);
 }
 
