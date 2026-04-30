@@ -1,33 +1,22 @@
 <template>
   <div class="playlist-container">
     
-    <!-- MODO LISTA: Mostra todas as playlists criadas -->
+    <!-- MODO LISTA -->
     <div v-if="currentView === 'list'" class="playlists-list-view">
       <div class="list-header">
         <h1>Minhas Playlists</h1>
         <button class="btn-create-new" @click="startCreate">
-          <i class="fa fa-plus"></i>
-          Criar Playlist
+          <i class="fa fa-plus"></i> Criar Playlist
         </button>
       </div>
 
-      <!-- Grid de Playlists -->
       <div v-if="playlists.length > 0" class="playlists-grid">
-        <div 
-          v-for="playlist in playlists" 
-          :key="playlist.id"
-          class="playlist-card"
-          @click="openPlaylist(playlist)"
-        >
+        <div v-for="playlist in playlists" :key="playlist.id" class="playlist-card" @click="openPlaylist(playlist)">
           <div class="card-cover">
             <img v-if="playlist.image" :src="playlist.image" alt="Capa" />
-            <div v-else class="cover-default">
-              <i class="fa fa-music"></i>
-            </div>
+            <div v-else class="cover-default"><i class="fa fa-music"></i></div>
             <div class="play-overlay">
-              <button class="btn-play-card" @click.stop="playPlaylist(playlist)">
-                <i class="fa fa-play"></i>
-              </button>
+              <button class="btn-play-card" @click.stop="playPlaylist(playlist)"><i class="fa fa-play"></i></button>
             </div>
           </div>
           <div class="card-info">
@@ -36,504 +25,179 @@
               <i :class="playlist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
               {{ playlist.songs.length }} {{ playlist.songs.length === 1 ? 'música' : 'músicas' }}
             </p>
-            <p class="card-desc" v-if="playlist.description">{{ playlist.description }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Estado Vazio -->
       <div v-else class="empty-playlists">
-        <div class="empty-illustration">
-          <i class="fa fa-headphones"></i>
-          <div class="sound-waves">
-            <span></span><span></span><span></span>
-          </div>
-        </div>
         <h2>Nenhuma playlist ainda</h2>
         <p>Crie sua primeira playlist e organize suas músicas favoritas</p>
       </div>
     </div>
 
-    <!-- MODO CRIAÇÃO: Formulário de nova playlist -->
+    <!-- MODO CRIAÇÃO -->
     <div v-else-if="currentView === 'create'" class="create-view">
-      <button class="btn-back" @click="backToList">
-        <i class="fa fa-arrow-left"></i>
-        Voltar
-      </button>
-
+      <button class="btn-back" @click="backToList"><i class="fa fa-arrow-left"></i> Voltar</button>
       <div class="create-mode">
-        <div class="create-header">
-          <h1>Criar nova playlist</h1>
-          <p>Configure sua playlist antes de começar a adicionar músicas</p>
-        </div>
-
+        <h1>Criar nova playlist</h1>
         <div class="create-form">
-          <!-- Upload de Capa -->
           <div class="cover-upload" @click="triggerImageUpload">
-            <input 
-              type="file" 
-              ref="imageInput" 
-              accept="image/*" 
-              @change="handleImageUpload" 
-              hidden 
-            />
-            
+            <input type="file" ref="imageInput" accept="image/*" @change="handleImageUpload" hidden />
             <div v-if="playlistImage" class="preview-container">
               <img :src="playlistImage" alt="Preview" />
-              <div class="change-overlay">
-                <i class="fa fa-camera"></i>
-                <span>Alterar foto</span>
-              </div>
             </div>
-            
-            <div v-else class="upload-placeholder">
-              <div class="upload-icon">
-                <i class="fa fa-music"></i>
-                <div class="plus-badge">+</div>
-              </div>
-              <span class="upload-text">Escolher foto</span>
-              <small>Opcional</small>
-            </div>
+            <div v-else class="upload-placeholder"><i class="fa fa-music"></i><span>Escolher foto</span></div>
           </div>
-
-          <!-- Campos do Formulário -->
           <div class="form-fields">
             <div class="field-group">
-              <label for="playlist-name">Nome da playlist *</label>
-              <input 
-                id="playlist-name"
-                type="text" 
-                v-model="playlistTitle" 
-                placeholder="Ex: Minhas Favoritas"
-                maxlength="100"
-                @keyup.enter="createPlaylist"
-                ref="titleInput"
-              />
-              <span class="char-count">{{ playlistTitle.length }}/100</span>
+              <label>Nome da playlist *</label>
+              <input type="text" v-model="playlistTitle" placeholder="Ex: Minhas Favoritas" maxlength="100" ref="titleInput" />
             </div>
-
             <div class="field-group">
-              <label for="playlist-desc">Descrição</label>
-              <textarea 
-                id="playlist-desc"
-                v-model="playlistDescription" 
-                placeholder="Adicione uma descrição opcional..."
-                maxlength="300"
-                rows="3"
-              ></textarea>
-              <span class="char-count">{{ playlistDescription.length }}/300</span>
+              <label>Descrição</label>
+              <textarea v-model="playlistDescription" placeholder="Descrição opcional..." maxlength="300" rows="3"></textarea>
             </div>
-
-            <div class="field-group privacy-group">
-              <label>Privacidade</label>
-              <div class="privacy-options">
-                <button 
-                  class="privacy-btn"
-                  :class="{ active: isPublic }"
-                  @click="isPublic = true"
-                >
-                  <i class="fa fa-globe"></i>
-                  <div class="privacy-info">
-                    <strong>Pública</strong>
-                    <small>Todos podem ver</small>
-                  </div>
-                </button>
-                <button 
-                  class="privacy-btn"
-                  :class="{ active: !isPublic }"
-                  @click="isPublic = false"
-                >
-                  <i class="fa fa-lock"></i>
-                  <div class="privacy-info">
-                    <strong>Privada</strong>
-                    <small>Só você vê</small>
-                  </div>
-                </button>
-              </div>
+            <div class="privacy-options">
+              <button :class="{ active: isPublic }" @click="isPublic = true"><i class="fa fa-globe"></i> Pública</button>
+              <button :class="{ active: !isPublic }" @click="isPublic = false"><i class="fa fa-lock"></i> Privada</button>
             </div>
           </div>
         </div>
-
-        <!-- Ações -->
         <div class="create-actions">
-          <button class="btn-secondary" @click="cancelCreate">
-            Cancelar
-          </button>
-          <button 
-            class="btn-primary" 
-            @click="createPlaylist"
-            :disabled="!playlistTitle.trim()"
-            :class="{ loading: isLoading }"
-          >
-            <span v-if="!isLoading">
-              <i class="fa fa-plus"></i>
-              Criar playlist
-            </span>
-            <span v-else class="spinner">
-              <i class="fa fa-circle-o-notch fa-spin"></i>
-              Criando...
-            </span>
+          <button class="btn-secondary" @click="cancelCreate">Cancelar</button>
+          <button class="btn-primary" @click="createPlaylist" :disabled="!playlistTitle.trim()">
+            <i class="fa fa-plus"></i> Criar playlist
           </button>
         </div>
       </div>
     </div>
 
-    <!-- MODO VISUALIZAÇÃO: Playlist já criada -->
+    <!-- MODO VISUALIZAÇÃO -->
     <div v-else-if="currentView === 'view'" class="view-mode">
-      <button class="btn-back" @click="backToList">
-        <i class="fa fa-arrow-left"></i>
-        Voltar para Playlists
-      </button>
+      <button class="btn-back" @click="backToList"><i class="fa fa-arrow-left"></i> Voltar</button>
       
-      <!-- Header da Playlist -->
-      <div class="playlist-header" :class="{ 'edit-mode-active': editMode }">
-        <div class="playlist-cover" @click="editMode && triggerImageUpload()">
+      <div class="playlist-header">
+        <div class="playlist-cover">
           <img v-if="currentPlaylist.image" :src="currentPlaylist.image" alt="Capa" />
-          <div v-else class="cover-default large">
-            <i class="fa fa-music"></i>
-          </div>
-          <div v-if="editMode" class="edit-overlay">
-            <i class="fa fa-pencil"></i>
-            <span>Alterar capa</span>
-          </div>
-          <input 
-            v-if="editMode"
-            type="file" 
-            ref="imageInput" 
-            accept="image/*" 
-            @change="handleImageUpload" 
-            hidden 
-          />
+          <div v-else class="cover-default large"><i class="fa fa-music"></i></div>
         </div>
-
         <div class="playlist-info">
-          <span class="playlist-type" v-if="!editMode">
+          <span class="playlist-type">
             <i :class="currentPlaylist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
             Playlist {{ currentPlaylist.isPublic ? 'pública' : 'privada' }}
           </span>
-          
-          <!-- MODO EDIÇÃO: Header editável -->
-          <div v-if="editMode" class="edit-mode-indicator">
-            <i class="fa fa-pencil-square-o"></i>
-            <span>Editando playlist</span>
+          <h1 class="playlist-title">{{ currentPlaylist.title }}</h1>
+          <p v-if="currentPlaylist.description" class="playlist-description">{{ currentPlaylist.description }}</p>
+          <div class="playlist-meta">
+            <span><i class="fa fa-user-circle"></i> {{ currentPlaylist.authorName }}</span>
+            <span>•</span>
+            <span>{{ currentPlaylist.songs.length }} músicas</span>
+            <span v-if="totalDuration">• {{ totalDuration }}</span>
           </div>
-
-          <h1 v-if="!editMode" class="playlist-title">{{ currentPlaylist.title }}</h1>
-          
-          <!-- Input de título estilizado no modo edição -->
-          <div v-else class="edit-field title-field">
-            <label>Nome da playlist</label>
-            <input 
-              type="text" 
-              v-model="editTitle" 
-              class="edit-title-input"
-              maxlength="100"
-              placeholder="Nome da playlist"
-            />
-            <span class="edit-char-count">{{ editTitle.length }}/100</span>
-          </div>
-          
-          <p v-if="!editMode && currentPlaylist.description" class="playlist-description">
-            {{ currentPlaylist.description }}
-          </p>
-          
-          <!-- Textarea de descrição estilizada no modo edição -->
-          <div v-else-if="editMode" class="edit-field desc-field">
-            <label>Descrição</label>
-            <textarea 
-              v-model="editDescription" 
-              class="edit-desc-input"
-              maxlength="300"
-              rows="2"
-              placeholder="Descrição opcional..."
-            ></textarea>
-            <span class="edit-char-count">{{ editDescription.length }}/300</span>
-          </div>
-          
-          <!-- Privacidade no modo edição -->
-          <div v-if="editMode" class="edit-privacy-section">
-            <label>Privacidade</label>
-            <div class="edit-privacy-options">
-              <button 
-                :class="{ active: editIsPublic }"
-                @click="editIsPublic = true"
-              >
-                <i class="fa fa-globe"></i>
-                <span>Pública</span>
-              </button>
-              <button 
-                :class="{ active: !editIsPublic }"
-                @click="editIsPublic = false"
-              >
-                <i class="fa fa-lock"></i>
-                <span>Privada</span>
-              </button>
-            </div>
-          </div>
-          
-          <div class="playlist-meta" v-if="!editMode">
-            <span class="meta-item author">
-              <i class="fa fa-user-circle"></i> {{ currentPlaylist.authorName }}
-            </span>
-            <span class="meta-dot">•</span>
-            <span class="meta-item">{{ currentPlaylist.songs.length }} {{ currentPlaylist.songs.length === 1 ? 'música' : 'músicas' }}</span>
-            <span v-if="totalDuration" class="meta-dot">•</span>
-            <span v-if="totalDuration" class="meta-item">{{ totalDuration }}</span>
-          </div>
-        </div>
-
-        <!-- Botões de Ação do Header -->
-        <div class="header-actions">
-          <button 
-            v-if="!editMode" 
-            class="btn-icon" 
-            @click="startEdit"
-            title="Editar detalhes"
-          >
-            <i class="fa fa-pencil"></i>
-          </button>
-          <template v-else>
-            <button class="btn-text" @click="cancelEdit">
-              <i class="fa fa-times"></i>
-              Cancelar
-            </button>
-            <button class="btn-primary small" @click="saveEdit">
-              <i class="fa fa-check"></i>
-              Salvar
-            </button>
-          </template>
         </div>
       </div>
 
-      <!-- Controles - SEMPRE VISÍVEIS -->
       <div class="playlist-controls">
-       <button 
-  class="btn-play-big" 
-  @click="playAll" 
-  :disabled="!currentPlaylist.songs.length"
-  :title="!currentPlaylist.songs.length ? 'Adicione músicas para tocar' : 'Tocar playlist'"
->
-  <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
-</button>
-        
-        <button  
-  class="btn-icon" 
-  @click.stop="toggleFavorita"
-          :class="{ liked: currentPlaylist.isFavorita }"
-          title="Favoritar playlist"
-        >
+        <button class="btn-play-big" @click="playAll" :disabled="!currentPlaylist.songs.length">
+          <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
+        </button>
+        <button class="btn-icon" @click="toggleFavorita" :class="{ liked: currentPlaylist.isFavorita }">
           <i :class="currentPlaylist.isFavorita ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
         </button>
-        
-        <!-- DROPDOWN DE OPÇÕES CORRIGIDO -->
         <div class="dropdown-wrapper" v-click-outside="closeOptions">
-          <button 
-            class="btn-icon" 
-            @click.stop="toggleOptions" 
-            title="Mais opções"
-          >
-            <i class="fa fa-ellipsis-h"></i>
-          </button>
+          <button class="btn-icon" @click.stop="toggleOptions"><i class="fa fa-ellipsis-h"></i></button>
           <div v-show="showOptions" class="options-dropdown">
-            <div class="option-item" @click="sharePlaylist">
-              <i class="fa fa-share-alt"></i> Compartilhar
-            </div>
-            <div class="option-item" @click="startEdit">
-              <i class="fa fa-pencil"></i> Editar detalhes
-            </div>
-            <div class="option-item" @click="collaborativeMode">
-              <i class="fa fa-users"></i> Tornar colaborativa
-            </div>
+            <div class="option-item" @click="sharePlaylist"><i class="fa fa-share-alt"></i> Compartilhar</div>
+            <div class="option-item" @click="startEdit"><i class="fa fa-pencil"></i> Editar</div>
             <div class="option-divider"></div>
-            <div class="option-item danger" @click="confirmDeleteFromMenu">
-              <i class="fa fa-trash-o"></i> Excluir playlist
-            </div>
+            <div class="option-item danger" @click="confirmDeleteFromMenu"><i class="fa fa-trash-o"></i> Excluir</div>
           </div>
         </div>
       </div>
 
-      <!-- Adicionar Músicas -->
+      <!-- Busca -->
       <div class="add-songs-section">
-        <h3>
-          <i class="fa fa-plus-circle"></i>
-          {{ currentPlaylist.songs.length === 0 ? 'Adicione sua primeira música' : 'Adicionar músicas' }}
-        </h3>
-        
-        <div class="search-box" :class="{ 'is-focused': searchFocused, 'is-loading': isSearching }">
+        <h3><i class="fa fa-plus-circle"></i> Adicionar músicas</h3>
+        <div class="search-box">
           <i class="fa fa-search"></i>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            :placeholder="currentPlaylist.songs.length === 0 ? 'Busque uma música no Deezer...' : 'Buscar músicas, artistas no Deezer...'"
-           @input="debouncedSearch"
-            @focus="searchFocused = true"
-            @blur="searchFocused = false"
-          />
-          <i v-if="isSearching" class="fa fa-circle-o-notch fa-spin search-spinner"></i>
-          <button v-else-if="searchQuery" class="clear-search" @click="clearSearch">
-            <i class="fa fa-times"></i>
-          </button>
-        </div>
-        
-        <div v-if="searchError" class="search-error">
-          <i class="fa fa-exclamation-circle"></i>
-          {{ searchError }}
+          <input type="text" v-model="searchQuery" placeholder="Buscar músicas, artistas..." @input="debouncedSearch" />
+          <button v-if="searchQuery" class="clear-search" @click="clearSearch"><i class="fa fa-times"></i></button>
         </div>
       </div>
 
-      <!-- Resultados da Busca Deezer -->
+      <!-- Resultados da Busca -->
       <div v-if="searchResults.length > 0" class="search-results">
-        <div class="results-header">
-          <span>Resultados do Deezer</span>
-          <small>{{ searchResults.length }} encontradas</small>
-        </div>
-        <div 
-          v-for="(song, index) in searchResults" 
-          :key="'search-'+song.id"
-          class="result-item"
-        >
-          <img :src="song.cover" class="result-cover" alt="" />
+        <div v-for="song in searchResults" :key="song.id+'-'+song.source" class="result-item">
+          <img :src="song.cover || '/default-cover.png'" class="result-cover" />
           <div class="result-info">
             <span class="result-title">{{ song.title }}</span>
             <span class="result-artist">{{ song.artist }} • {{ song.album }}</span>
+            <span v-if="song.source !== 'local'" class="result-source" :class="song.source">{{ song.source }}</span>
           </div>
-          <span class="result-duration">{{ song.duration }}</span>
-          <button class="btn-add" @click="addSong(song)" :disabled="isSongAdded(song.id)">
-            <i :class="isSongAdded(song.id) ? 'fa fa-check' : 'fa fa-plus'"></i>
+          <button class="btn-add" @click="addSong(song)" :disabled="isSongAdded(song)">
+            <i :class="isSongAdded(song) ? 'fa fa-check' : 'fa fa-plus'"></i>
           </button>
         </div>
       </div>
 
-      <!-- Lista de Músicas da Playlist -->
+      <!-- Lista de Músicas -->
       <div v-if="currentPlaylist.songs.length > 0" class="songs-section">
         <div class="songs-header">
-          <span>#</span>
-          <span>Título</span>
-          <span>Álbum</span>
-          <span><i class="fa fa-clock-o"></i></span>
-          <span></span>
+          <span>#</span><span>Título</span><span>Álbum</span><span><i class="fa fa-clock-o"></i></span><span></span>
         </div>
-        
-        <div 
-          v-for="(song, index) in currentPlaylist.songs" 
-          :key="song.id"
-          class="song-item"
-          :class="{ playing: currentPlayingIndex === index && isPlaying }"
-          @dblclick="playSong(index)"
-        >
+        <div v-for="(song, index) in currentPlaylist.songs" :key="(song.source||'local')+'-'+song.id" 
+             class="song-item" :class="{ playing: currentPlayingIndex === index && isPlaying }" @dblclick="playSong(index)">
           <span class="song-number">
-            <i v-if="currentPlayingIndex === index && isPlaying" class="fa fa-volume-up animate-pulse"></i>
+            <i v-if="currentPlayingIndex === index && isPlaying" class="fa fa-volume-up"></i>
             <span v-else>{{ index + 1 }}</span>
           </span>
-          
           <div class="song-title">
-            <img :src="song.cover" alt="" />
+            <img :src="song.cover || '/default-cover.png'" />
             <div>
               <div :class="{ active: currentPlayingIndex === index }">{{ song.title }}</div>
               <small>{{ song.artist }}</small>
+              <span v-if="song.source && song.source !== 'local'" class="song-source-badge" :class="song.source">{{ song.source }}</span>
             </div>
           </div>
-          
           <span class="song-album">{{ song.album }}</span>
           <span class="song-duration">{{ song.duration }}</span>
-          
-          <button class="btn-remove" @click="confirmRemoveSong(index)" title="Remover">
-            <i class="fa fa-times"></i>
-          </button>
+          <button class="btn-remove" @click="confirmRemoveSong(index)"><i class="fa fa-times"></i></button>
         </div>
       </div>
 
-      <!-- Estado Vazio -->
       <div v-else class="empty-state">
-        <div class="empty-icon">
-          <i class="fa fa-music"></i>
-          <div class="pulse-ring"></div>
-        </div>
+        <i class="fa fa-music"></i>
         <h3>Sua playlist está vazia</h3>
-        <p>Use a busca acima para adicionar suas músicas favoritas do Deezer</p>
+        <p>Use a busca acima para adicionar músicas</p>
       </div>
     </div>
 
-    <!-- Toast Notification Aprimorado -->
-    <div v-if="toast.show" class="toast" :class="[toast.type, { 'toast-exit': toast.exiting }]">
-      <div class="toast-icon">
-        <i :class="toast.icon"></i>
-      </div>
-      <div class="toast-content">
-        <div class="toast-title" v-if="toast.title">{{ toast.title }}</div>
-        <div class="toast-message">{{ toast.message }}</div>
-      </div>
-      <button class="toast-close" @click="hideToast">
-        <i class="fa fa-times"></i>
-      </button>
-      <div class="toast-progress" :style="{ animationDuration: toast.duration + 'ms' }"></div>
+    <!-- Toast -->
+    <div v-if="toast.show" class="toast" :class="toast.type">
+      <i :class="toast.icon"></i>
+      <span>{{ toast.message }}</span>
     </div>
 
-    <!-- Modal de Confirmação de Exclusão de Playlist -->
+    <!-- Modal Excluir Playlist -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDelete">
       <div class="delete-modal" @click.stop>
-        <div class="modal-icon">
-          <i class="fa fa-exclamation-triangle"></i>
-        </div>
         <h3>Excluir playlist?</h3>
-        <p>
-          Tem certeza que deseja excluir <strong>"{{ playlistToDelete?.title || currentPlaylist?.title }}"</strong>?
-          <br>
-          <span class="modal-warning">Esta ação não pode ser desfeita.</span>
-        </p>
+        <p>Tem certeza que deseja excluir "{{ playlistToDelete?.title }}"?</p>
         <div class="modal-actions">
-          <button class="btn-secondary" @click="cancelDelete">
-            Cancelar
-          </button>
-          <button class="btn-danger" @click="executeDelete" :disabled="isDeleting">
-            <span v-if="!isDeleting">
-              <i class="fa fa-trash-o"></i>
-              Sim, excluir
-            </span>
-            <span v-else class="spinner">
-              <i class="fa fa-circle-o-notch fa-spin"></i>
-              Excluindo...
-            </span>
-          </button>
+          <button class="btn-secondary" @click="cancelDelete">Cancelar</button>
+          <button class="btn-danger" @click="executeDelete">Excluir</button>
         </div>
       </div>
     </div>
 
-    <!-- Modal de Confirmação de Exclusão de Música Aprimorado -->
+    <!-- Modal Remover Música -->
     <div v-if="showRemoveSongModal" class="modal-overlay" @click="cancelRemoveSong">
-      <div class="delete-modal song-delete-modal" @click.stop>
-        <div class="modal-icon song-icon">
-          <i class="fa fa-music"></i>
-          <div class="remove-icon">
-            <i class="fa fa-times"></i>
-          </div>
-        </div>
+      <div class="delete-modal" @click.stop>
         <h3>Remover música?</h3>
-        <div class="song-preview" v-if="songToRemove">
-          <img :src="songToRemove.cover" alt="" class="song-preview-img" />
-          <div class="song-preview-info">
-            <strong>{{ songToRemove.title }}</strong>
-            <span>{{ songToRemove.artist }}</span>
-          </div>
-        </div>
-        <p class="remove-warning">
-          <i class="fa fa-info-circle"></i>
-          Esta música será removida da sua playlist. Você pode adicioná-la novamente depois.
-        </p>
+        <p>"{{ songToRemove?.title }}" será removida da playlist.</p>
         <div class="modal-actions">
-          <button class="btn-secondary" @click="cancelRemoveSong">
-            Cancelar
-          </button>
-          <button class="btn-danger btn-remove-song" @click="executeRemoveSong" :disabled="isRemovingSong">
-            <span v-if="!isRemovingSong">
-              <i class="fa fa-trash-o"></i>
-              Remover
-            </span>
-            <span v-else class="spinner">
-              <i class="fa fa-circle-o-notch fa-spin"></i>
-              Removendo...
-            </span>
-          </button>
+          <button class="btn-secondary" @click="cancelRemoveSong">Cancelar</button>
+          <button class="btn-danger" @click="executeRemoveSong">Remover</button>
         </div>
       </div>
     </div>
@@ -544,9 +208,7 @@
 const clickOutside = {
   mounted(el, binding) {
     el._clickOutside = (event) => {
-      if (!(el === event.target || el.contains(event.target))) {
-        binding.value()
-      }
+      if (!(el === event.target || el.contains(event.target))) binding.value()
     }
     document.addEventListener('click', el._clickOutside)
   },
@@ -562,19 +224,17 @@ export default {
   data() {
     return {
       DEEZER_API: 'https://proxy.corsfix.com/?https://api.deezer.com',
+      SPOTIFY_PROXY: 'http://localhost:3002/spotify',
       
       currentView: 'list',
       playlists: [],
       favoritas: [],
       currentPlaylist: null,
       
-      // Modal de exclusão de playlist
       showDeleteModal: false,
       playlistToDelete: null,
       isDeleting: false,
-      deleteFromView: false,
       
-      // Modal de exclusão de música
       showRemoveSongModal: false,
       songToRemove: null,
       songToRemoveIndex: null,
@@ -588,7 +248,6 @@ export default {
       playlistDescription: "",
       playlistImage: null,
       isPublic: true,
-      authorName: "Você",
       
       editTitle: "",
       editDescription: "",
@@ -601,54 +260,39 @@ export default {
       searchError: null,
       
       searchResults: [],
-      backupData: {},
       searchTimer: null,
       
-      // PLAYER DE ÁUDIO REAL
       audioPlayer: null,
       currentPlayingIndex: null,
       isPlaying: false,
       currentTrack: null,
       
-      // Toast aprimorado
-      toast: {
-        show: false,
-        message: '',
-        title: '',
-        type: 'success',
-        icon: 'fa fa-check',
-        duration: 3000,
-        exiting: false,
-        timer: null
-      }
+      toast: { show: false, message: '', type: 'success', icon: 'fa fa-check', timer: null }
     }
   },
 
   computed: {
     totalDuration() {
-      if (!this.currentPlaylist || this.currentPlaylist.songs.length === 0) return ""
-
+      if (!this.currentPlaylist || !this.currentPlaylist.songs.length) return ""
       const totalSeconds = this.currentPlaylist.songs.reduce((acc, s) => {
-        const duration = s.duration || s.duracao
-
-        if (!duration || typeof duration !== 'string' || !duration.includes(':')) {
-          return acc
+        const d = s.duration
+        if (!d) return acc
+        if (typeof d === 'number') return acc + d
+        if (typeof d === 'string' && d.includes(':')) {
+          const [m, sec] = d.split(':').map(Number)
+          return acc + ((m || 0) * 60 + (sec || 0))
         }
-
-        const [m, sec] = duration.split(':').map(Number)
-        return acc + ((m || 0) * 60 + (sec || 0))
+        return acc
       }, 0)
-
       const hours = Math.floor(totalSeconds / 3600)
       const mins = Math.floor((totalSeconds % 3600) / 60)
-
       return hours > 0 ? `${hours}h ${mins}min` : `${mins}min`
     }
   },
 
   async mounted() {
-    await this.loadPlaylists()   // espera carregar playlists
-    await this.loadFavoritas()   // só depois marca favoritas
+    await this.loadPlaylists()
+    await this.loadFavoritas()
     this.initAudioPlayer()
   },
 
@@ -656,182 +300,85 @@ export default {
     if (this.audioPlayer) {
       this.audioPlayer.pause()
       this.audioPlayer.src = ''
-      this.audioPlayer.removeEventListener('ended', this.handleTrackEnded)
-      this.audioPlayer.removeEventListener('play', this.handleAudioPlay)
-      this.audioPlayer.removeEventListener('pause', this.handleAudioPause)
-      this.audioPlayer.removeEventListener('error', this.handleAudioError)
     }
   },
 
   methods: {
-    // ===== INICIALIZAR PLAYER DE ÁUDIO REAL =====
+    // ===== PLAYER =====
     initAudioPlayer() {
       this.audioPlayer = new Audio()
-      
-      // Event listeners do player
-      this.audioPlayer.addEventListener('ended', this.handleTrackEnded)
-      this.audioPlayer.addEventListener('play', this.handleAudioPlay)
-      this.audioPlayer.addEventListener('pause', this.handleAudioPause)
-      this.audioPlayer.addEventListener('error', this.handleAudioError)
-      this.audioPlayer.addEventListener('canplay', () => {
-        console.log('Áudio pronto para tocar')
+      this.audioPlayer.addEventListener('ended', () => {
+        if (this.currentPlaylist && this.currentPlayingIndex < this.currentPlaylist.songs.length - 1) {
+          this.playSong(this.currentPlayingIndex + 1)
+        } else {
+          this.isPlaying = false
+          this.currentPlayingIndex = null
+        }
       })
-    },
-    
-    handleTrackEnded() {
-      // Tocar próxima música automaticamente
-      if (this.currentPlaylist && this.currentPlayingIndex < this.currentPlaylist.songs.length - 1) {
-        this.playSong(this.currentPlayingIndex + 1)
-      } else {
+      this.audioPlayer.addEventListener('play', () => this.isPlaying = true)
+      this.audioPlayer.addEventListener('pause', () => this.isPlaying = false)
+      this.audioPlayer.addEventListener('error', () => {
+        this.showToast({ message: 'Erro ao reproduzir', type: 'error' })
         this.isPlaying = false
-        this.currentPlayingIndex = null
-      }
-    },
-    
-    handleAudioPlay() {
-      this.isPlaying = true
-    },
-    
-    handleAudioPause() {
-      this.isPlaying = false
-    },
-    
-    handleAudioError(e) {
-      console.error('Erro no áudio:', e)
-      this.showToast({
-        title: 'Erro',
-        message: 'Não foi possível reproduzir esta música',
-        type: 'error',
-        icon: 'fa fa-exclamation-circle'
       })
-      this.isPlaying = false
     },
     
-    // ===== REPRODUÇÃO REAL DE MÚSICA =====
     async playSong(index) {
-      if (!this.currentPlaylist || !this.currentPlaylist.songs[index]) return
-      
+      if (!this.currentPlaylist?.songs[index]) return
       const song = this.currentPlaylist.songs[index]
       
-      // Se clicou na mesma música que está tocando, pausar/continuar
-      if (this.currentPlayingIndex === index && this.currentTrack?.deezerId === song.deezerId) {
-        if (this.isPlaying) {
-          this.audioPlayer.pause()
-        } else {
-          await this.audioPlayer.play()
-        }
+      if (this.currentPlayingIndex === index && this.currentTrack?.id === song.id) {
+        this.isPlaying ? this.audioPlayer.pause() : this.audioPlayer.play()
         return
       }
       
-      // Parar música anterior
       this.audioPlayer.pause()
       this.audioPlayer.src = ''
-      
       this.currentPlayingIndex = index
       this.currentTrack = song
       
-      // Usar URL de preview do Deezer (30 segundos)
-      const previewUrl = song.preview
-      
+      const previewUrl = song.preview || song.url || song.link
       if (!previewUrl) {
-        this.showToast({
-          title: 'Indisponível',
-          message: 'Preview não disponível para esta música',
-          type: 'warning',
-          icon: 'fa fa-info-circle'
-        })
+        this.showToast({ message: 'Preview indisponível', type: 'warning' })
         return
       }
       
       try {
-        // Configurar e tocar
         this.audioPlayer.src = previewUrl
-        this.audioPlayer.volume = 0.5 // Volume padrão 50%
-        
+        this.audioPlayer.volume = 0.5
         await this.audioPlayer.play()
-        
-        // Notificar outros componentes (player global)
-        window.dispatchEvent(new CustomEvent('playlist-playback-started', {
-          detail: {
-            song: song,
-            playlist: this.currentPlaylist,
-            index: index
-          }
-        }))
-        
       } catch (err) {
-        console.error('Erro ao tocar:', err)
-        this.showToast({
-          title: 'Erro',
-          message: 'Erro ao reproduzir música. Tente novamente.',
-          type: 'error',
-          icon: 'fa fa-exclamation-circle'
-        })
+        this.showToast({ message: 'Erro ao reproduzir', type: 'error' })
         this.isPlaying = false
       }
     },
     
     normalizeSong(song) {
       if (!song) return null
-
       return {
-        id: song._id || song.id,
-        deezerId: song.deezerId || song._id || song.id,
+        id: String(song._id || song.id || song.musicaId),
         title: song.title || song.nome || 'Sem título',
         artist: song.artist || (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
         album: song.album || song.albuns?.[0]?.nome || 'Sem álbum',
         duration: song.duration || song.duracao || '0:00',
         cover: song.cover || song.foto || '',
-        preview: song.preview || song.link || '',
-        isFromDB: song.isFromDB ?? true
-      }
-    },
-    
-    togglePlay() {
-      if (!this.currentTrack && this.currentPlaylist?.songs.length > 0) {
-        // Se não tem música selecionada, tocar a primeira
-        this.playSong(0)
-      } else if (this.currentTrack) {
-        // Toggle play/pause
-        if (this.isPlaying) {
-          this.audioPlayer.pause()
-        } else {
-          this.audioPlayer.play()
-        }
+        preview: song.preview || song.link || song.url || '',
+        source: song.source || 'local'
       }
     },
     
     playAll() {
-      if (this.currentPlaylist?.songs.length === 0) {
-        this.showToast({
-          title: 'Playlist vazia',
-          message: 'Adicione músicas à playlist para poder ouvir',
-          type: 'warning',
-          icon: 'fa fa-info-circle'
-        })
+      if (!this.currentPlaylist?.songs.length) {
+        this.showToast({ message: 'Playlist vazia', type: 'warning' })
         return
       }
-      
-      if (this.isPlaying) {
-        this.togglePlay()
-      } else {
-        this.playSong(0)
-      }
+      this.isPlaying ? this.audioPlayer.pause() : this.playSong(0)
     },
     
     playPlaylist(playlist) {
       this.openPlaylist(playlist)
       if (playlist.songs.length > 0) {
-        this.$nextTick(() => {
-          this.playSong(0)
-        })
-      } else {
-        this.showToast({
-          title: 'Playlist vazia',
-          message: 'Adicione músicas à playlist para poder ouvir',
-          type: 'warning',
-          icon: 'fa fa-info-circle'
-        })
+        this.$nextTick(() => this.playSong(0))
       }
     },
     
@@ -839,20 +386,15 @@ export default {
     startCreate() {
       this.resetForm()
       this.currentView = 'create'
-      this.$nextTick(() => {
-        this.$refs.titleInput?.focus()
-      })
+      this.$nextTick(() => this.$refs.titleInput?.focus())
     },
-    
     backToList() {
-      // Não parar a música ao voltar para a lista
       this.currentView = 'list'
       this.currentPlaylist = null
       this.editMode = false
       this.clearSearch()
       this.showOptions = false
     },
-    
     openPlaylist(playlist) {
       this.currentPlaylist = playlist
       this.currentView = 'view'
@@ -863,90 +405,39 @@ export default {
     // ===== CRIAÇÃO =====
     async createPlaylist() {
       if (!this.playlistTitle.trim()) return
-
       this.isLoading = true
-
       try {
-        const user = JSON.parse(localStorage.getItem('usuario'))
-        const userId = user?._id || user?.id
-
-        if (!userId) {
-          this.showToast({
-            title: 'Erro',
-            message: 'Usuário não autenticado',
-            type: 'error'
-          })
-          return
-        }
-        
         const token = localStorage.getItem("token")
         const res = await fetch('http://localhost:3002/playlists', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
             nome: this.playlistTitle,
             descricao: this.playlistDescription,
             capa: this.playlistImage,
-            publica: this.isPublic,
+            publica: this.isPublic
           })
         })
-
-        const data = await res.json()
-
+        await res.json()
         await this.loadPlaylists()
-
-        // AVISA O PERFIL
         window.dispatchEvent(new Event('playlist-updated'))
+        this.showToast({ message: 'Playlist criada!', type: 'success' })
         this.backToList()
-
-        this.showToast({
-          title: 'Sucesso!',
-          message: 'Playlist salva no banco!',
-          type: 'success',
-          icon: 'fa fa-check-circle'
-        })
-
-        this.backToList()
-
       } catch (err) {
-        console.error(err)
-        this.showToast({
-          title: 'Erro',
-          message: 'Erro ao salvar no banco',
-          type: 'error'
-        })
+        this.showToast({ message: 'Erro ao criar playlist', type: 'error' })
+      } finally {
+        this.isLoading = false
       }
-
-      this.isLoading = false
     },
 
     async loadPlaylists() {
-      const user = JSON.parse(localStorage.getItem('usuario'))
-      const userId = user?._id || user?.id
-
-      if (!userId) {
-        this.showToast({
-          title: 'Erro',
-          message: 'Usuário não autenticado',
-          type: 'error'
-        })
-        return
-      }
-
       const token = localStorage.getItem("token")
-
       const res = await fetch(`http://localhost:3002/playlists`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       })
-
       const data = await res.json()
-
       const safeArray = Array.isArray(data) ? data : []
+      const user = JSON.parse(localStorage.getItem('usuario') || '{}')
 
       this.playlists = safeArray.map(p => ({
         id: p._id || p.id,
@@ -954,8 +445,7 @@ export default {
         description: p.descricao || '',
         image: p.capa || null,
         isPublic: p.publica,
-        isFavorita: false, // IMPORTANTE
-        totalCurtidas: 0,
+        isFavorita: false,
         songs: Array.isArray(p.musicas)
           ? p.musicas.map(m => this.normalizeSong(m)).filter(Boolean)
           : [],
@@ -966,33 +456,15 @@ export default {
     async loadFavoritas() {
       try {
         const token = localStorage.getItem("token")
-
         const res = await fetch(`http://localhost:3002/favoritas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
-
         const data = await res.json()
-
-        this.favoritas = data
-          .filter(f => f.playlist)
-          .map(f => ({
-            id: f.playlist._id,
-            title: f.playlist.nome,
-            description: f.playlist.descricao,
-            image: f.playlist.capa,
-            songs: f.playlist.musicas || []
-          }))
-
-        // marca playlists como favoritas
+        this.favoritas = data.filter(f => f.playlist).map(f => ({ id: f.playlist._id }))
         this.playlists.forEach(p => {
           p.isFavorita = this.favoritas.some(f => f.id === p.id)
         })
-
-      } catch (err) {
-        console.error(err)
-      }
+      } catch (err) { console.error(err) }
     },
 
     cancelCreate() {
@@ -1001,7 +473,6 @@ export default {
       }
       this.backToList()
     },
-    
     resetForm() {
       this.playlistTitle = ""
       this.playlistDescription = ""
@@ -1016,34 +487,21 @@ export default {
       this.editDescription = this.currentPlaylist.description
       this.editImage = this.currentPlaylist.image
       this.editIsPublic = this.currentPlaylist.isPublic
-      this.backupData = { ...this.currentPlaylist }
       this.editMode = true
       this.showOptions = false
     },
-    
-    cancelEdit() {
-      this.editMode = false
-    },
+    cancelEdit() { this.editMode = false },
     
     async saveEdit() {
       if (!this.editTitle.trim()) {
-        this.showToast({
-          title: 'Atenção',
-          message: 'O título é obrigatório',
-          type: 'warning'
-        })
+        this.showToast({ message: 'Título obrigatório', type: 'warning' })
         return
       }
-
       try {
         const token = localStorage.getItem("token")
-
         const res = await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
             nome: this.editTitle.trim(),
             descricao: this.editDescription.trim(),
@@ -1051,38 +509,20 @@ export default {
             publica: this.editIsPublic
           })
         })
-
         const data = await res.json()
-
-        // atualizar no front com dados reais
         this.currentPlaylist.title = data.nome
         this.currentPlaylist.description = data.descricao
         this.currentPlaylist.image = data.capa
         this.currentPlaylist.isPublic = data.publica
-
         this.editMode = false
-
-        this.showToast({
-          title: 'Atualizado!',
-          message: 'Playlist salva no banco',
-          type: 'success'
-        })
-
+        this.showToast({ message: 'Playlist atualizada!', type: 'success' })
       } catch (err) {
-        console.error(err)
-        this.showToast({
-          title: 'Erro',
-          message: 'Erro ao atualizar playlist',
-          type: 'error'
-        })
+        this.showToast({ message: 'Erro ao atualizar', type: 'error' })
       }
     },
     
     // ===== IMAGEM =====
-    triggerImageUpload() {
-      this.$refs.imageInput.click()
-    },
-    
+    triggerImageUpload() { this.$refs.imageInput.click() },
     handleImageUpload(event) {
       const file = event.target.files[0]
       if (file) {
@@ -1098,8 +538,7 @@ export default {
         reader.readAsDataURL(file)
       }
     },
-    
-    // ===== BUSCA DEEZER API =====
+// ===== BUSCA (Local + Spotify + Deezer) =====
     debouncedSearch() {
       clearTimeout(this.searchTimer)
       this.searchTimer = setTimeout(() => this.searchMusicas(), 400)
@@ -1107,50 +546,78 @@ export default {
     
     async searchMusicas() {
       if (this.searchQuery.length < 2) return
-
       this.isSearching = true
       this.searchError = null
+      this.searchResults = []
 
       try {
-        // BUSCA NO SEU BACKEND
-        const res = await fetch(`http://localhost:3002/musicas/search?q=${this.searchQuery}`)
-        const dbMusicas = await res.json()
-
+        // 1. BUSCA LOCAL
+        const token = localStorage.getItem("token")
+        const resLocal = await fetch(
+          `http://localhost:3002/musicas/search?q=${encodeURIComponent(this.searchQuery)}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        const dbMusicas = await resLocal.json()
         const safeArray = Array.isArray(dbMusicas) ? dbMusicas : []
 
         const formattedDb = safeArray.map(m => ({
           id: m._id,
-          deezerId: m._id,
           title: m.nome,
           artist: m.cantores?.map(c => c.nome).join(', ') || 'Desconhecido',
           album: m.albuns?.[0]?.nome || 'Sem álbum',
-          duration: m.duracao,
+          duration: this.formatDuration(m.duracao),
           cover: m.foto,
           preview: m.link,
+          source: 'local',
           isFromDB: true
         }))
 
-        // DEEZER
-        const response = await fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=5`)
-        const data = await response.json()
+        // 2. BUSCA SPOTIFY
+        let spotifyResults = []
+        try {
+          const resSpotify = await fetch(
+            `${this.SPOTIFY_PROXY}/search?q=${encodeURIComponent(this.searchQuery)}&type=track&limit=5&market=BR`
+          )
+          const spotifyData = await resSpotify.json()
+          if (spotifyData?.tracks?.items) {
+            spotifyResults = spotifyData.tracks.items.map(track => ({
+              id: track.id,
+              title: track.name,
+              artist: track.artists?.map(a => a.name).join(', ') || 'Desconhecido',
+              album: track.album?.name || 'Sem álbum',
+              duration: this.formatDuration(Math.floor((track.duration_ms || 0) / 1000)),
+              cover: track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || '',
+              preview: track.preview_url || '',
+              source: 'spotify',
+              isFromDB: false
+            }))
+          }
+        } catch (e) { console.warn('Spotify error:', e.message) }
 
-        const deezer = data.data.map(track => ({
-          id: track.id,
-          title: track.title,
-          artist: track.artist.name,
-          album: track.album.title,
-          duration: this.formatDuration(track.duration),
-          cover: track.album.cover_small,
-          preview: track.preview,
-          deezerId: track.id,
-          isFromDB: false
-        }))
+        // 3. BUSCA DEEZER
+        let deezerResults = []
+        try {
+          const resDeezer = await fetch(
+            `${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=5`
+          )
+          const deezerData = await resDeezer.json()
+          if (deezerData.data) {
+            deezerResults = deezerData.data.map(track => ({
+              id: track.id,
+              title: track.title,
+              artist: track.artist?.name || 'Desconhecido',
+              album: track.album?.title || 'Sem álbum',
+              duration: this.formatDuration(track.duration),
+              cover: track.album?.cover_small || '',
+              preview: track.preview || '',
+              source: 'deezer',
+              isFromDB: false
+            }))
+          }
+        } catch (e) { console.warn('Deezer error:', e.message) }
 
-        // JUNTA OS DOIS
-        this.searchResults = [...formattedDb, ...deezer]
-
+        this.searchResults = [...formattedDb, ...spotifyResults, ...deezerResults]
       } catch (err) {
-        console.error(err)
         this.searchError = 'Erro ao buscar músicas'
       } finally {
         this.isSearching = false
@@ -1158,8 +625,10 @@ export default {
     },
     
     formatDuration(seconds) {
-      const mins = Math.floor(seconds / 60)
-      const secs = seconds % 60
+      if (!seconds) return '0:00'
+      if (typeof seconds === 'string' && seconds.includes(':')) return seconds
+      const mins = Math.floor(Number(seconds) / 60)
+      const secs = Number(seconds) % 60
       return `${mins}:${secs.toString().padStart(2, '0')}`
     },
     
@@ -1169,42 +638,115 @@ export default {
       this.searchError = null
     },
     
-    isSongAdded(deezerId) {
-      return this.currentPlaylist.songs.some(s => s.deezerId === deezerId)
+    isSongAdded(song) {
+      if (!this.currentPlaylist) return false
+      return this.currentPlaylist.songs.some(s => 
+        String(s.id) === String(song.id) && (s.source || 'local') === (song.source || 'local')
+      )
     },
     
-    // ===== MÚSICAS =====
+    // ===== ADICIONAR MÚSICA =====
     async addSong(song) {
-      try {
-        const token = localStorage.getItem("token")
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast({ message: 'Faça login para adicionar', type: 'info' })
+      return
+    }
 
-        if (song.isFromDB) {
-          await fetch(`http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${song.id}`, {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          })
-        }
+const body = { 
+  source: song.source && song.source !== 'local' ? song.source : 'local'
+}
 
-        await this.loadPlaylists()
-        window.dispatchEvent(new Event('playlist-updated'))
-
-        const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
-        this.currentPlaylist = updated
-
-      } catch (err) {
-        console.error(err)
+    // Se for externa, envia dados completos
+    if (song.source && song.source !== 'local') {
+      // ✅ CORREÇÃO: Validar e converter duration corretamente
+      const durationInSeconds = this.parseDuration(song.duration)
+      
+      body.dadosMusica = {
+        titulo: song.title || 'Sem título',
+        artista: song.artist || 'Desconhecido',
+        capa: song.cover || '',
+        previewUrl: song.preview || song.url || '',
+        duration: Number.isFinite(durationInSeconds) ? durationInSeconds : 30,
+        ano: song.ano || null,
+        album: song.album || ''
       }
-    },
-    
-    // ===== REMOÇÃO DE MÚSICA COM MODAL =====
+      
+      // ✅ DEBUG: Verifique no console se os dados estão corretos
+      console.log('Enviando música externa:', {
+        musicaId: song.id,
+        source: song.source,
+        dadosMusica: body.dadosMusica
+      })
+    }
+
+    const res = await fetch(
+      `http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${song.id}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      }
+    )
+
+    // ✅ CORREÇÃO: Melhor tratamento de erro
+    if (!res.ok) {
+      let errMessage = 'Erro ao adicionar'
+      try {
+        const errData = await res.json()
+        errMessage = errData.error || errData.message || `Erro ${res.status}`
+        console.error('Erro do servidor:', errData)
+      } catch (e) {
+        errMessage = `Erro ${res.status}: ${res.statusText}`
+      }
+      throw new Error(errMessage)
+    }
+
+    await this.loadPlaylists()
+    const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
+    if (updated) this.currentPlaylist = updated
+
+    window.dispatchEvent(new Event('playlist-updated'))
+    this.showToast({ message: `"${song.title}" adicionada!`, type: 'success' })
+
+  } catch (err) {
+    console.error('Erro completo:', err)
+    this.showToast({ message: err.message || 'Erro ao adicionar', type: 'error' })
+  }
+},
+
+parseDuration(durationStr) {
+  if (!durationStr) return 30
+  if (typeof durationStr === 'number') {
+    return Number.isFinite(durationStr) ? Math.floor(durationStr) : 30
+  }
+  if (typeof durationStr === 'string') {
+    // Se já estiver no formato mm:ss
+    if (durationStr.includes(':')) {
+      const parts = durationStr.split(':').map(Number)
+      if (parts.length === 2) {
+        const [m, s] = parts
+        if (Number.isFinite(m) && Number.isFinite(s)) {
+          return (m * 60) + s
+        }
+      }
+    }
+    // Se for um número em string
+    const num = parseInt(durationStr, 10)
+    if (Number.isFinite(num)) return num
+  }
+  return 30 // fallback seguro
+},
+    // ===== REMOVER MÚSICA =====
     confirmRemoveSong(index) {
       this.songToRemoveIndex = index
       this.songToRemove = this.currentPlaylist.songs[index]
       this.showRemoveSongModal = true
     },
-    
     cancelRemoveSong() {
       this.showRemoveSongModal = false
       this.songToRemove = null
@@ -1213,208 +755,118 @@ export default {
     
     async executeRemoveSong() {
       if (this.songToRemoveIndex === null) return
-      
       this.isRemovingSong = true
       
-      await new Promise(resolve => setTimeout(resolve, 400))
-      
-      const removedSong = this.currentPlaylist.songs[this.songToRemoveIndex]
-      
-      // Se estiver tocando essa música, parar
-      if (this.currentPlayingIndex === this.songToRemoveIndex) {
-        this.audioPlayer.pause()
-        this.audioPlayer.src = ''
-        this.isPlaying = false
-        this.currentPlayingIndex = null
-        this.currentTrack = null
+      try {
+        const token = localStorage.getItem("token")
+        const song = this.currentPlaylist.songs[this.songToRemoveIndex]
+
+// ✅ NOVO
+const idToRemove = song.externalId || song.id
+        
+        if (this.currentPlayingIndex === this.songToRemoveIndex) {
+          this.audioPlayer.pause()
+          this.audioPlayer.src = ''
+          this.isPlaying = false
+          this.currentPlayingIndex = null
+        }
+
+        const body = { source: song.source || 'local' }
+
+        const res = await fetch(
+         `http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${idToRemove}`,
+          {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(body)
+          }
+        )
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || 'Erro ao remover')
+        }
+
+        await this.loadPlaylists()
+        const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
+        if (updated) this.currentPlaylist = updated
+
+        this.showToast({ message: `"${song.title}" removida`, type: 'info' })
+
+      } catch (err) {
+        this.showToast({ message: err.message || 'Erro ao remover', type: 'error' })
+      } finally {
+        this.isRemovingSong = false
+        this.showRemoveSongModal = false
+        this.songToRemove = null
+        this.songToRemoveIndex = null
       }
-      
-      this.currentPlaylist.songs.splice(this.songToRemoveIndex, 1)
-      
-      this.isRemovingSong = false
-      this.showRemoveSongModal = false
-      
-      // Toast aprimorado de remoção
-      this.showToast({
-        title: 'Música removida',
-        message: `"${removedSong.title}" foi removida da playlist`,
-        type: 'info',
-        icon: 'fa fa-trash',
-        duration: 4000
-      })
-      
-      this.songToRemove = null
-      this.songToRemoveIndex = null
     },
     
-    // ===== CONTROLES =====
+    // ===== FAVORITAR =====
     async toggleFavorita() {
       try {
         const token = localStorage.getItem("token")
-
         const res = await fetch(
           `http://localhost:3002/favoritas/${this.currentPlaylist.id}/favoritar`,
           {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              tipo: 'playlist'
-            })
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ tipo: 'playlist' })
           }
         )
-
         const data = await res.json()
-
         this.currentPlaylist.isFavorita = data.favorited
-
         const playlist = this.playlists.find(p => p.id === this.currentPlaylist.id)
         if (playlist) playlist.isFavorita = data.favorited
-
-        if (data.favorited) {
-          if (!this.favoritas.some(f => f.id === this.currentPlaylist.id)) {
-            this.favoritas.push(this.currentPlaylist)
-          }
-        } else {
-          this.favoritas = this.favoritas.filter(f => f.id !== this.currentPlaylist.id)
-        }
-
-        this.showToast({
-          title: data.favorited ? 'Favoritada ❤️' : 'Removida 💔',
-          message: this.currentPlaylist.title,
-          type: 'success'
-        })
-
-        // Dispara evento para atualizar outras páginas
+        this.showToast({ message: data.favorited ? 'Favoritada ❤️' : 'Removida 💔', type: 'success' })
         window.dispatchEvent(new Event('favoritas-updated'))
-
       } catch (err) {
-        console.error(err)
-        this.showToast({
-          title: 'Erro',
-          message: 'Erro ao favoritar playlist',
-          type: 'error'
-        })
+        this.showToast({ message: 'Erro ao favoritar', type: 'error' })
       }
     },
     
-    // ===== DROPDOWN OPÇÕES =====
-    toggleOptions() {
-      this.showOptions = !this.showOptions
-      console.log('Dropdown toggle:', this.showOptions)
-    },
+    // ===== DROPDOWN =====
+    toggleOptions() { this.showOptions = !this.showOptions },
+    closeOptions() { this.showOptions = false },
     
-    closeOptions() {
-      if (this.showOptions) {
-        this.showOptions = false
-        console.log('Dropdown fechado')
-      }
-    },
-    
-    // ===== OPÇÕES =====
     sharePlaylist() {
-      const url = `${window.location.origin}/playlist/${this.currentPlaylist.id}`
-      navigator.clipboard?.writeText(url)
-      this.showToast({
-        title: 'Link copiado!',
-        message: 'O link da playlist foi copiado para a área de transferência',
-        type: 'success',
-        icon: 'fa fa-link'
-      })
-      this.showOptions = false
-    },
-    
-    collaborativeMode() {
-      this.showToast({
-        title: 'Em breve',
-        message: 'O modo colaborativo estará disponível em breve!',
-        type: 'info',
-        icon: 'fa fa-users'
-      })
+      navigator.clipboard?.writeText(`${window.location.origin}/playlist/${this.currentPlaylist.id}`)
+      this.showToast({ message: 'Link copiado!', type: 'success' })
       this.showOptions = false
     },
     
     // ===== EXCLUIR PLAYLIST =====
     confirmDeleteFromMenu() {
-      this.deleteFromView = true
       this.playlistToDelete = this.currentPlaylist
       this.showDeleteModal = true
       this.showOptions = false
     },
-    
     cancelDelete() {
       this.showDeleteModal = false
       this.playlistToDelete = null
-      this.deleteFromView = false
     },
-    
     async executeDelete() {
       try {
         const token = localStorage.getItem("token")
-
         await fetch(`http://localhost:3002/playlists/${this.playlistToDelete.id}`, {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
-        
         this.playlists = this.playlists.filter(p => p.id !== this.playlistToDelete.id)
-
-        this.showToast({
-          title: 'Excluída!',
-          message: 'Playlist removida do banco',
-          type: 'success'
-        })
-        
+        this.showToast({ message: 'Playlist excluída', type: 'success' })
         window.dispatchEvent(new Event('playlist-updated'))
         this.backToList()
-
       } catch (err) {
-        console.error(err)
+        this.showToast({ message: 'Erro ao excluir', type: 'error' })
       }
     },
     
-    
-    // ===== TOAST APRIMORADO =====
-    showToast({ message, type = 'success', icon = 'fa fa-check', title = '', duration = 3000 }) {
-      // Clear existing toast
-      if (this.toast.timer) {
-        clearTimeout(this.toast.timer)
-      }
-      
-      this.toast = {
-        show: true,
-        message,
-        title,
-        type,
-        icon,
-        duration,
-        exiting: false,
-        timer: null
-      }
-      
-      // Auto hide
-      this.toast.timer = setTimeout(() => {
-        this.hideToast()
-      }, duration)
-    },
-    
-    hideToast() {
-      if (!this.toast.show) return
-      
-      this.toast.exiting = true
-      
-      setTimeout(() => {
-        this.toast.show = false
-        this.toast.exiting = false
-        if (this.toast.timer) {
-          clearTimeout(this.toast.timer)
-          this.toast.timer = null
-        }
-      }, 300)
+    // ===== TOAST =====
+    showToast({ message, type = 'success', icon = 'fa fa-check', title = '' }) {
+      if (this.toast.timer) clearTimeout(this.toast.timer)
+      this.toast = { show: true, message, title, type, icon, timer: null }
+      this.toast.timer = setTimeout(() => { this.toast.show = false }, 3000)
     }
   }
 }

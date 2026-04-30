@@ -228,6 +228,22 @@ export default {
   },
 
   methods: {
+parseDuration(durationStr) {
+  if (!durationStr) return 30
+  if (typeof durationStr === 'number') {
+    return Number.isFinite(durationStr) ? Math.floor(durationStr) : 30
+  }
+  if (typeof durationStr === 'string') {
+    if (durationStr.includes(':')) {
+      const [m, s] = durationStr.split(':').map(Number)
+      if (Number.isFinite(m) && Number.isFinite(s)) return (m * 60) + s
+    }
+    const num = parseInt(durationStr, 10)
+    if (Number.isFinite(num)) return num
+  }
+  return 30
+},
+
     async carregarCurtidas() {
       this.isLoading = true
       try {
@@ -320,27 +336,64 @@ export default {
       }
     },
     
-    async adicionarNaPlaylist(playlistId) {
-      try {
-        const token = localStorage.getItem("token")
+   async adicionarNaPlaylist(playlistId) {
+  try {
+    const token = localStorage.getItem("token")
+    const musica = this.musicaSelecionada
 
-        await fetch(`http://localhost:3002/playlists/${playlistId}/musicas/${this.musicaSelecionada.id}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` }
-        })
+    // ✅ MONTAR O BODY CORRETAMENTE
+    const body = {
+      source: musica.source || 'local'
+    }
 
-        this.showToast({
-          title: "Adicionado!",
-          message: `"${this.musicaSelecionada.title}" foi adicionada à playlist`,
-          type: "success",
-          icon: "fa fa-check"
-        })
-
-        this.showPlaylistModal = false
-      } catch (err) {
-        console.error(err)
+    // Se for externa, envia dadosMusica completos
+    if (musica.source && musica.source !== 'local') {
+      body.dadosMusica = {
+        titulo: musica.title || 'Sem título',
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: this.parseDuration(musica.duration),
+        ano: musica.ano || null,
+        album: musica.album || ''
       }
-    },
+    }
+
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',  // ✅ ESSENCIAL
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)  // ✅ ENVIAR O BODY
+      }
+    )
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    this.showToast({
+      title: "Adicionado!",
+      message: `"${musica.title}" foi adicionada à playlist`,
+      type: "success",
+      icon: "fa fa-check"
+    })
+
+    this.showPlaylistModal = false
+  } catch (err) {
+    console.error(err)
+    this.showToast({
+      title: "Erro",
+      message: err.message || "Não foi possível adicionar",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  }
+},
 
     async favoritarMusica(musica) {
       this.closeMenu()

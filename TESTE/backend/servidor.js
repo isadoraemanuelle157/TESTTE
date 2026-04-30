@@ -54,71 +54,6 @@ async function getSpotifyToken() {
 }
 
 // ============================================
-// 🎵 DEEZER CONFIGURAÇÃO
-// ============================================
-const DEEZER_API_URL = 'https://api.deezer.com'
-
-/**
- * Busca música no Deezer e retorna preview URL
- */
-async function searchDeezerTrack(query, artist = '') {
-  try {
-    const searchQuery = artist ? `${query} artist:"${artist}"` : query
-    console.log('🔍 Buscando no Deezer:', searchQuery)
-    
-    const response = await axios.get(`${DEEZER_API_URL}/search`, {
-      params: { q: searchQuery, limit: 5 },
-      timeout: 10000
-    })
-    
-    if (response.data?.data?.length > 0) {
-      const track = response.data.data.find(t => t.preview) || response.data.data[0]
-      console.log('✅ Deezer encontrado:', track.title, '- Preview:', track.preview ? 'SIM' : 'NÃO')
-      return {
-        id: track.id,
-        title: track.title,
-        artist: track.artist?.name,
-        preview: track.preview,
-        cover: track.album?.cover_medium || track.album?.cover,
-        duration: track.duration,
-        link: track.link
-      }
-    }
-    console.log('⚠️ Deezer: nenhum resultado')
-    return null
-  } catch (error) {
-    console.error('❌ Erro ao buscar no Deezer:', error.message)
-    return null
-  }
-}
-
-/**
- * Busca preview direto por ID do Deezer
- */
-async function getDeezerPreview(trackId) {
-  try {
-    const response = await axios.get(`${DEEZER_API_URL}/track/${trackId}`, {
-      timeout: 10000
-    })
-    
-    if (response.data?.preview) {
-      return {
-        id: response.data.id,
-        title: response.data.title,
-        artist: response.data.artist?.name,
-        preview: response.data.preview,
-        cover: response.data.album?.cover_medium,
-        duration: response.data.duration
-      }
-    }
-    return null
-  } catch (error) {
-    console.error('❌ Erro ao buscar preview Deezer:', error.message)
-    return null
-  }
-}
-
-// ============================================
 // IMPORTA ROTAS EXISTENTES (com try-catch)
 // ============================================
 function safeRequire(path) {
@@ -304,89 +239,6 @@ app.get('/spotify/artists/popular', async (req, res) => {
 })
 
 // ============================================
-// 🎵 ROTAS DO DEEZER (PROXY)
-// ============================================
-
-/**
- * GET /deezer/search?q=nome+da+música&artist=nome+do+artista
- */
-app.get('/deezer/search', async (req, res) => {
-  try {
-    const { q, artist } = req.query
-    
-    if (!q || q.trim().length === 0) {
-      return res.status(400).json({ error: 'Parâmetro "q" é obrigatório' })
-    }
-    
-    const result = await searchDeezerTrack(q.trim(), artist)
-    
-    if (!result) {
-      return res.status(404).json({ error: 'Música não encontrada no Deezer' })
-    }
-    
-    res.json(result)
-  } catch (error) {
-    console.error('❌ Erro na busca Deezer:', error.message)
-    res.status(500).json({ error: 'Erro ao buscar no Deezer', details: error.message })
-  }
-})
-
-/**
- * GET /deezer/track/:id
- */
-app.get('/deezer/track/:id', async (req, res) => {
-  try {
-    const { id } = req.params
-    const result = await getDeezerPreview(id)
-    
-    if (!result) {
-      return res.status(404).json({ error: 'Música não encontrada no Deezer' })
-    }
-    
-    res.json(result)
-  } catch (error) {
-    console.error('❌ Erro ao buscar track Deezer:', error.message)
-    res.status(500).json({ error: 'Erro ao buscar no Deezer', details: error.message })
-  }
-})
-
-/**
- * GET /deezer/preview-proxy?url=URL_DO_PREVIEW
- * Proxy para streaming do preview (resolve CORS)
- */
-app.get('/deezer/preview-proxy', async (req, res) => {
-  try {
-    const { url } = req.query
-    
-    if (!url) {
-      return res.status(400).json({ error: 'URL do preview é obrigatória' })
-    }
-    
-    if (!url.includes('deezer.com') && !url.includes('cdn-preview-')) {
-      return res.status(400).json({ error: 'URL inválida' })
-    }
-    
-    const response = await axios.get(url, {
-      responseType: 'stream',
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    })
-    
-    res.set('Content-Type', 'audio/mpeg')
-    res.set('Content-Length', response.headers['content-length'])
-    res.set('Accept-Ranges', 'bytes')
-    res.set('Cache-Control', 'public, max-age=3600')
-    
-    response.data.pipe(res)
-  } catch (error) {
-    console.error('❌ Erro no proxy Deezer:', error.message)
-    res.status(500).json({ error: 'Erro ao proxyar áudio', details: error.message })
-  }
-})
-
-// ============================================
 // 🎵 RESOLVER URL DE ÁUDIO PARA MÚSICA LOCAL
 // ============================================
 
@@ -423,24 +275,6 @@ app.get('/musicas/:id/audio', async (req, res) => {
     if (!musica) {
       console.log('⚠️ Música não encontrada no banco, tentando buscar por ID:', id)
       trackName = id  // Usa o ID como query de busca
-    }
-    
-    // 1. Tenta buscar no Deezer primeiro
-    console.log('🔍 Buscando no Deezer:', trackName, artistName)
-    const deezerResult = await searchDeezerTrack(trackName, artistName)
-    
-    if (deezerResult?.preview) {
-      console.log('✅ Preview encontrado no Deezer!')
-      return res.json({
-        source: 'deezer',
-        url: deezerResult.preview,
-        proxyUrl: `${API_BASE_URL}/deezer/preview-proxy?url=${encodeURIComponent(deezerResult.preview)}`,
-        title: deezerResult.title,
-        artist: deezerResult.artist,
-        cover: deezerResult.cover,
-        duration: deezerResult.duration,
-        isPreview: true
-      })
     }
     
     // 2. Tenta buscar no Spotify
@@ -566,11 +400,6 @@ app.listen(PORT, () => {
   console.log('   GET /spotify/artist/:id')
   console.log('   GET /spotify/album/:id')
   console.log('   GET /spotify/artists/popular')
-  console.log('')
-  console.log('🎵 Rotas Deezer:')
-  console.log('   GET /deezer/search?q=...')
-  console.log('   GET /deezer/track/:id')
-  console.log('   GET /deezer/preview-proxy?url=...')
   console.log('')
   console.log('🎵 Rota de Áudio:')
   console.log('   GET /musicas/:id/audio')
