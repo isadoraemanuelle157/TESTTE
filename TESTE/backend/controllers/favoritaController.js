@@ -35,12 +35,6 @@ const toggle = async (req, res) => {
     }
 
     // ========== ITENS LOCAIS (musica, playlist, album, cantor) ==========
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ 
-        error: 'ID inválido',
-        message: 'Para músicas externas, envie source: "spotify" ou "deezer" no body'
-      })
-    }
 
     if (!['musica', 'playlist', 'album', 'cantor'].includes(tipo)) {
       return res.status(400).json({ error: 'Tipo inválido' })

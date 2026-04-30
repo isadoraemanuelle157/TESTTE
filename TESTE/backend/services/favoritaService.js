@@ -2,12 +2,14 @@ const Favorita = require('../models/Favorita')
 const FavoritaExterna = require('../models/FavoritaExterna')
 
 const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantorId }) => {
+  // Verifica se pelo menos um ID válido foi enviado
   const hasValidId = musicaId || playlistId || albumId || cantorId
   
   if (!hasValidId) {
     throw new Error('Nenhum item válido foi enviado para favoritar')
   }
 
+  // Constrói a query dinamicamente apenas com os campos que existem
   const query = { usuario: usuarioId }
   
   if (musicaId) query.musica = musicaId
@@ -15,6 +17,7 @@ const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantor
   if (albumId) query.album = albumId
   if (cantorId) query.cantor = cantorId
 
+  // Verifica se já existe favorito com esses critérios
   const existing = await Favorita.findOne(query)
 
   if (existing) {
@@ -22,6 +25,7 @@ const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantor
     return { favorited: false }
   }
 
+  // Cria o documento apenas com os campos necessários
   const newFavoritaData = { usuario: usuarioId }
   if (musicaId) newFavoritaData.musica = musicaId
   if (playlistId) newFavoritaData.playlist = playlistId
@@ -34,7 +38,7 @@ const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantor
 }
 
 // ========== FAVORITAS EXTERNAS (Spotify/Deezer) ==========
-const toggleFavoritaExterna = async (usuarioId, musicaId, source, dadosMusica = {}) => {
+const toggleFavoritaExterna = async (usuarioId, musicaId, source, dadosMusica) => {
   const existing = await FavoritaExterna.findOne({
     usuario: usuarioId,
     musicaId: musicaId,
@@ -44,11 +48,6 @@ const toggleFavoritaExterna = async (usuarioId, musicaId, source, dadosMusica = 
   if (existing) {
     await existing.deleteOne()
     return { favorited: false, source: source }
-  }
-
-  // Só cria se tiver dadosMusica válidos
-  if (!dadosMusica || !dadosMusica.titulo || !dadosMusica.artista) {
-    throw new Error('Dados da música são obrigatórios para criar favorita externa')
   }
 
   await FavoritaExterna.create({
@@ -70,6 +69,7 @@ const toggleFavoritaExterna = async (usuarioId, musicaId, source, dadosMusica = 
 }
 
 const getFavoritasByUser = async (usuarioId) => {
+  // Busca favoritas locais e externas em paralelo
   const [locais, externas] = await Promise.all([
     Favorita.find({ usuario: usuarioId })
       .populate({
@@ -94,6 +94,7 @@ const getFavoritasByUser = async (usuarioId) => {
       .sort({ createdAt: -1 })
   ])
 
+  // Formata externas no mesmo padrão das locais
   const externasFormatadas = externas.map(f => ({
     _id: f._id,
     usuario: f.usuario,
@@ -101,6 +102,7 @@ const getFavoritasByUser = async (usuarioId) => {
     playlist: null,
     album: null,
     cantor: null,
+    // Campos extras para identificar como externa
     musicaExterna: {
       id: f.musicaId,
       source: f.source,
@@ -115,6 +117,7 @@ const getFavoritasByUser = async (usuarioId) => {
     createdAt: f.createdAt
   }))
 
+  // Junta tudo e ordena por data
   const todas = [...locais, ...externasFormatadas]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
