@@ -1,9 +1,8 @@
 <template>
-  <div class="home">
-    <div class="home-content">
-     
+  <div class="dashboard">
+    <div class="dashboard-content">
 
-      <!-- WELCOME SECTION COM HORÁRIO -->
+      <!-- WELCOME SECTION -->
       <section class="welcome-section">
         <div class="welcome-content">
           <h1 class="welcome-title">
@@ -12,7 +11,7 @@
             <span class="wave-emoji">👋</span>
           </h1>
           <p class="welcome-subtitle">{{ welcomeMessage }}</p>
-         
+
           <!-- Quick Stats -->
           <div class="quick-stats">
             <div class="stat-card">
@@ -55,7 +54,7 @@
         </div>
       </section>
 
-      <!-- HERO DESTACADO - CONTINUE LISTENING -->
+      <!-- HERO: CONTINUE LISTENING -->
       <div v-if="continueListening.length > 0" class="hero-banner continue-listening" :style="heroGradient">
         <div class="hero-ambient"></div>
         <div class="hero-content">
@@ -71,7 +70,7 @@
             De onde você parou
             <span class="highlight">{{ Math.round(continueListening[0].progress) }}% completo</span>
           </p>
-         
+
           <div class="hero-progress" v-if="continueListening[0]">
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: (continueListening[0].progress || 0) + '%' }"></div>
@@ -119,6 +118,125 @@
           </div>
         </div>
       </div>
+
+      <!-- SEÇÃO: MÚSICAS CURTIDAS -->
+      <section class="section curtidas-section" v-if="musicas.length > 0">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title">
+              <i class="fa fa-heart section-icon liked"></i>
+              Músicas Curtidas
+            </h2>
+            <span class="section-subtitle">{{ musicas.length }} {{ musicas.length === 1 ? 'música' : 'músicas' }} que você ama</span>
+          </div>
+          <div class="header-actions-group">
+            <button class="btn-play-all" @click="playAllCurtidas">
+              <i class="fa fa-play"></i> Tocar todas
+            </button>
+            <button class="see-all" @click="goToCurtidas">
+              Ver tudo <i class="fa fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="curtidas-list">
+          <div
+            v-for="(musica, index) in musicas.slice(0, showAllCurtidas ? musicas.length : 5)"
+            :key="`${musica.source}-${musica.id}`"
+            class="curtida-item"
+            @dblclick="playCurtida(index)"
+            :class="{ 'active': isCurrentTrack(musica) && isPlaying }"
+          >
+            <div class="curtida-number">{{ index + 1 }}</div>
+
+            <div class="curtida-cover-wrapper">
+              <img :src="musica.cover || '/default-cover.png'" :alt="musica.title" @error="handleImageError" />
+              <div class="curtida-play-overlay">
+                <i class="fa" :class="isCurrentTrack(musica) && isPlaying ? 'fa-pause' : 'fa-play'"></i>
+              </div>
+              <div class="equalizer-mini" v-if="isCurrentTrack(musica) && isPlaying">
+                <span v-for="n in 4" :key="n"></span>
+              </div>
+            </div>
+
+            <div class="curtida-info">
+              <h3 class="curtida-title">{{ musica.title }}</h3>
+              <p class="curtida-artist">
+                <span class="source-badge" :class="musica.source">
+                  <i :class="getSourceIcon(musica.source)"></i>
+                </span>
+                {{ musica.artist }}
+                <span v-if="musica.album" class="album-dot">•</span>
+                <span v-if="musica.album" class="album-name">{{ musica.album }}</span>
+              </p>
+            </div>
+
+            <div class="curtida-duration" v-if="musica.duration">
+              {{ formatTime(musica.duration) }}
+            </div>
+
+            <div class="curtida-actions">
+              <button
+                class="btn-like active"
+                @click.stop="removerCurtida(musica, index)"
+                title="Remover dos curtidos"
+              >
+                <i class="fa fa-heart"></i>
+              </button>
+
+              <div class="dropdown-container" ref="dropdownContainers">
+
+                <transition name="menu-pop">
+                  <div
+                    v-if="activeMenuIndex === index"
+                    class="modern-dropdown"
+                    ref="dropdownMenus"
+                  >
+                    <div class="dropdown-options">
+                      <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
+                        <div class="option-icon playlist-icon">
+                          <i class="fa fa-plus-square-o"></i>
+                        </div>
+                        <div class="option-content">
+                          <span class="option-label">Adicionar à playlist</span>
+                          <span class="option-hint">Escolha uma playlist existente</span>
+                        </div>
+                        <i class="fa fa-chevron-right option-arrow"></i>
+                      </button>
+
+                      <button class="dropdown-option" @click="favoritarMusica(musica)">
+                        <div class="option-icon favorite-icon">
+                          <i class="fa fa-star-o"></i>
+                        </div>
+                        <div class="option-content">
+                          <span class="option-label">Favoritar</span>
+                          <span class="option-hint">Adicionar aos favoritos especiais</span>
+                        </div>
+                        <i class="fa fa-chevron-right option-arrow"></i>
+                      </button>
+                    </div>
+
+                    <div class="dropdown-footer">
+                      <button class="dropdown-close" @click="closeMenu">
+                        <i class="fa fa-times"></i> Fechar
+                      </button>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button
+          v-if="musicas.length > 5"
+          class="btn-show-more"
+          @click="showAllCurtidas = !showAllCurtidas"
+        >
+          {{ showAllCurtidas ? 'Ver menos' : 'Ver mais' }}
+          <i class="fa" :class="showAllCurtidas ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+        </button>
+      </section>
 
       <!-- SEÇÃO: Feito para Você -->
       <section class="section" v-if="madeForYou.length > 0">
@@ -171,9 +289,9 @@
             <span class="section-count">{{ recentlyPlayed.length }} músicas</span>
           </div>
           <button class="see-all" @click="showAllRecent">
-            {{ showAllRecentTracks ? 'Ver menos' : 'Ver tudo' }}
-            <i class="fa" :class="showAllRecentTracks ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
-          </button>
+              {{ showAllRecentTracks ? 'Ver menos' : 'Ver tudo' }}
+              <i class="fa" :class="showAllRecentTracks ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
+            </button>
         </div>
         <div class="cards-row" :class="{ 'expanded': showAllRecentTracks }">
           <div
@@ -204,7 +322,7 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Suas Playlists (CONECTADA À API REAL) -->
+      <!-- SEÇÃO: Suas Playlists -->
       <section class="section" v-if="userPlaylists.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
@@ -215,11 +333,8 @@
             <span class="section-subtitle">{{ userPlaylists.length }} criadas por você</span>
           </div>
           <div class="header-actions-group">
-            <button class="btn-create" @click="createPlaylist">
-              <i class="fa fa-plus"></i> Criar Nova
-            </button>
-            <button class="see-all" @click="goToLibrary">
-              Ver biblioteca <i class="fa fa-chevron-right"></i>
+            <button class="see-all" @click="goToPlaylist">
+              Ver todos <i class="fa fa-chevron-right"></i>
             </button>
           </div>
         </div>
@@ -248,8 +363,7 @@
               <p class="card-artist">Por {{ currentUser.name }} • {{ playlist.songs?.length || 0 }} músicas</p>
             </div>
           </div>
-         
-          <!-- Card Criar Nova -->
+
           <div class="music-card create-card" @click="createPlaylist">
             <div class="create-content">
               <div class="create-icon">
@@ -508,7 +622,8 @@
       </div>
 
       <!-- LOADING STATE -->
-<div v-if="!chartTracks.length" class="skeleton"></div>
+      <div v-if="!chartTracks.length" class="skeleton"></div>
+
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">
         <div v-if="toast.visible" class="toast-notification" :class="toast.type">
@@ -526,10 +641,49 @@
         </div>
       </transition>
 
+      <!-- MODAL PLAYLIST -->
+      <transition name="fade">
+        <div v-if="showPlaylistModal" class="modal-overlay" @click.self="showPlaylistModal = false">
+          <div class="modal">
+            <div class="modal-header">
+              <h3>Adicionar à playlist</h3>
+              <button @click="showPlaylistModal = false">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              <div v-if="playlists.length === 0" class="empty-playlists-modal">
+                <p>Você não tem playlists ainda</p>
+              </div>
+
+              <div v-else class="playlist-list">
+                <div
+                  v-for="playlist in playlists"
+                  :key="playlist._id"
+                  class="playlist-item"
+                >
+                  <div>
+                    <strong>{{ playlist.nome }}</strong>
+                    <p>{{ playlist.musicas?.length || 0 }} músicas</p>
+                  </div>
+
+                  <button
+                    class="btn-add"
+                    @click="adicionarNaPlaylist(playlist._id)"
+                  >
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+
     </div>
   </div>
 </template>
-
 <script>
 export default {
   name: "Dashboard",
@@ -538,9 +692,9 @@ export default {
     return {
       // API Configuration
       DEEZER_API: 'https://api.allorigins.win/raw?url=https://api.deezer.com',
-      API_BASE_URL: 'http://localhost:3002', // 🔥 URL do seu backend
-     
-      // User State - Carrega do localStorage se disponível
+      API_BASE_URL: 'http://localhost:3002',
+
+      // User State
       currentUser: {
         id: 1,
         name: "João Silva",
@@ -550,19 +704,19 @@ export default {
         plan: "Premium",
         memberSince: "2023-01-15"
       },
-     
+
       // User Stats
       userStats: {
         hoursListened: 127,
-        likedSongs: 342,
-        playlists: 0, // 🔥 Será atualizado com dados reais
+        likedSongs: 0,
+        playlists: 0,
         streak: 15
       },
-     
+
       // UI State
       greeting: "Bom dia",
       welcomeMessage: "Pronto para descobrir novas músicas hoje?",
-     
+
       // Player State
       isPlaying: false,
       isLiked: false,
@@ -571,16 +725,17 @@ export default {
       currentAlbum: null,
       currentArtist: null,
       loading: false,
-      loadingPlaylists: false, // 🔥 Loading específico para playlists
+      loadingPlaylists: false,
       loadingMoreTracks: false,
       showAllRecentTracks: false,
       showAllPersonalContent: false,
-     
+      showAllCurtidas: false,
+
       // Audio Progress
       currentTime: 0,
       duration: 30,
       progressPercent: 0,
-     
+
       // API Data
       chartTracks: [],
       popularArtists: [],
@@ -588,19 +743,19 @@ export default {
       genres: [],
       recommendedTracks: [],
       followedArtists: [],
-     
+
       // Personalized Data
       continueListening: [],
       madeForYou: [],
       recentlyPlayed: [],
-     
-      // 🔥 Playlists reais do usuário (conectadas à API)
+
+      // Playlists reais do usuário
       userPlaylists: [],
       defaultPlaylistCover: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjE1MCIgeT0iMTcwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4=',
-     
+
       // Hero Section
       heroGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-     
+
       // Toast
       toast: {
         visible: false,
@@ -611,6 +766,17 @@ export default {
         progress: 100,
         timer: null
       },
+
+      // Curtidas (integrado do Curtidas.vue)
+      musicas: [],
+      isLoading: false,
+      ultimaMusicaRemovida: null,
+      ultimoIndiceRemovido: null,
+      activeMenuIndex: null,
+      showPlaylistModal: false,
+      playlists: [],
+      musicaSelecionada: null,
+      usuarioId: null,
 
       // Gradients
       genreGradients: [
@@ -627,67 +793,409 @@ export default {
   },
 
   mounted() {
-    // Verifica autenticação primeiro
     this.checkAuth()
-      this.loadAllData()
-   
-    // Carrega dados do usuário do localStorage se existir
+    this.loadAllData()
     this.loadUserFromStorage()
     this.updateGreeting()
+
     window.addEventListener('player-update', this.handlePlayerUpdate)
-      window.addEventListener('artists-updated', this.loadFollowedArtists)
-   
-    // 🔥 Carrega playlists reais do backend
-    this.loadFollowedArtists()
-   
-    // Atualizar saudação a cada minuto
-    setInterval(this.updateGreeting, 60000)
-      // 🔥 carrega playlists depois (sem travar)
-  setTimeout(() => {
-    this.loadUserPlaylists()
-  }, 0)
-   
-    // 🔥 Escuta eventos de atualização de playlists
+    window.addEventListener('artists-updated', this.loadFollowedArtists)
     window.addEventListener('playlist-updated', this.loadUserPlaylists)
+    window.addEventListener('curtidas-updated', this.carregarCurtidas)
+    window.addEventListener('likes-updated', this.carregarCurtidas)
+    document.addEventListener('click', this.handleClickOutside)
+
+    setInterval(this.updateGreeting, 60000)
+
+    setTimeout(() => {
+      this.loadUserPlaylists()
+      this.carregarCurtidas()
+    }, 0)
   },
 
   beforeDestroy() {
     window.removeEventListener('player-update', this.handlePlayerUpdate)
     window.removeEventListener('playlist-updated', this.loadUserPlaylists)
+    window.removeEventListener('curtidas-updated', this.carregarCurtidas)
+    window.removeEventListener('likes-updated', this.carregarCurtidas)
+    document.removeEventListener('click', this.handleClickOutside)
+
     if (this.$refs.audioPlayer) {
       this.$refs.audioPlayer.pause()
     }
     if (this.toast.timer) {
       clearInterval(this.toast.timer)
     }
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout)
+    }
   },
 
   methods: {
-    // 🔥 NOVO: Carrega playlists reais do backend
-    async loadUserPlaylists() {
-      this.loadingPlaylists = true
-     
-      try {
-        const user = JSON.parse(localStorage.getItem('usuario'))
-        const userId = user?._id || user?.id
+    // ===== CURTIDAS METHODS (do Curtidas.vue) =====
 
-        if (!userId) {
-          console.error('Usuário não autenticado')
+    getSourceIcon(source) {
+      const icons = {
+        spotify: 'fa fa-spotify',
+        deezer: 'si si-deezer',
+        local: 'fa fa-database'
+      }
+      return icons[source] || 'fa fa-music'
+    },
+
+    parseDuration(durationStr) {
+      if (!durationStr) return 30
+      if (typeof durationStr === 'number') {
+        return Number.isFinite(durationStr) ? Math.floor(durationStr) : 30
+      }
+      if (typeof durationStr === 'string') {
+        if (durationStr.includes(':')) {
+          const [m, s] = durationStr.split(':').map(Number)
+          if (Number.isFinite(m) && Number.isFinite(s)) return (m * 60) + s
+        }
+        const num = parseInt(durationStr, 10)
+        if (Number.isFinite(num)) return num
+      }
+      return 30
+    },
+
+    async carregarCurtidas() {
+      this.isLoading = true
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.musicas = []
+          this.userStats.likedSongs = 0
           return
         }
 
+        const res = await fetch(`http://localhost:3002/curtidas`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (!res.ok) {
+          const text = await res.text()
+          console.error("Erro API:", text)
+          this.musicas = []
+          this.userStats.likedSongs = 0
+          return
+        }
+
+        const data = await res.json()
+
+        this.musicas = data.map(c => ({
+          id: c.id,
+          title: c.nome,
+          artist: c.artist || 'Artista desconhecido',
+          album: c.album || '',
+          cover: c.cover,
+          url: c.url,
+          source: c.source || 'local',
+          duration: c.duration || 180,
+          ano: c.ano || null
+        }))
+
+        this.userStats.likedSongs = this.musicas.length
+
+      } catch (err) {
+        console.error("Erro ao carregar curtidas:", err)
+        this.musicas = []
+        this.userStats.likedSongs = 0
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    toggleMenu(index, event) {
+      event.stopPropagation()
+      this.activeMenuIndex = this.activeMenuIndex === index ? null : index
+    },
+
+    closeMenu() {
+      this.activeMenuIndex = null
+    },
+
+    handleClickOutside(event) {
+      const dropdowns = this.$refs.dropdownContainers
+      if (dropdowns) {
+        const containers = Array.isArray(dropdowns) ? dropdowns : [dropdowns]
+        const clickedInside = containers.some(container =>
+          container && container.contains(event.target)
+        )
+        if (!clickedInside) {
+          this.activeMenuIndex = null
+        }
+      }
+    },
+
+    async adicionarAPlaylist(musica) {
+      this.closeMenu()
+      this.musicaSelecionada = musica
+      this.showPlaylistModal = true
+
+      try {
         const token = localStorage.getItem("token")
-       
-        const res = await fetch(`${this.API_BASE_URL}/playlists`, {
-          headers: {
-            Authorization: `Bearer ${token}`
+        const res = await fetch(`http://localhost:3002/playlists`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        this.playlists = data
+      } catch (err) {
+        console.error(err)
+      }
+    },
+
+    async adicionarNaPlaylist(playlistId) {
+      try {
+        const token = localStorage.getItem("token")
+        const musica = this.musicaSelecionada
+
+        const body = { source: musica.source || 'local' }
+
+        if (musica.source && musica.source !== 'local') {
+          body.dadosMusica = {
+            titulo: musica.title || 'Sem título',
+            artista: musica.artist || 'Desconhecido',
+            capa: musica.cover || '',
+            previewUrl: musica.url || '',
+            duration: this.parseDuration(musica.duration),
+            ano: musica.ano || null,
+            album: musica.album || ''
           }
+        }
+
+        const res = await fetch(
+          `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+          }
+        )
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || `Erro ${res.status}`)
+        }
+
+        this.showToast('Adicionado!', `"${musica.title}" foi adicionada à playlist`, 'success', 'fa fa-check')
+        this.showPlaylistModal = false
+      } catch (err) {
+        console.error(err)
+        this.showToast('Erro', err.message || "Não foi possível adicionar", 'error', 'fa fa-times')
+      }
+    },
+
+    async favoritarMusica(musica) {
+      this.closeMenu()
+      try {
+        const token = localStorage.getItem("token")
+        const body = { tipo: "musica" }
+
+        if (musica.source && musica.source !== 'local') {
+          body.source = musica.source
+          body.dadosMusica = {
+            titulo: musica.title || 'Sem título',
+            artista: musica.artist || 'Desconhecido',
+            capa: musica.cover || '',
+            previewUrl: musica.url || '',
+            duration: this.parseDuration(musica.duration),
+            ano: musica.ano || null,
+            album: musica.album || ''
+          }
+        }
+
+        const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body)
+        })
+
+        if (!res.ok) throw new Error("Erro ao favoritar")
+        const data = await res.json()
+
+        if (data.favorited) {
+          this.showToast('⭐ Favoritada!', `"${musica.title}" adicionada aos favoritos`, 'success', 'fa fa-star')
+          window.dispatchEvent(new Event('favoritas-updated'))
+        } else {
+          this.showToast('Removida', `"${musica.title}" removida dos favoritos`, 'info', 'fa fa-star-o')
+        }
+      } catch (err) {
+        console.error(err)
+        this.showToast('Erro', 'Não foi possível favoritar', 'error', 'fa fa-times')
+      }
+    },
+
+    async removerCurtida(musica, index) {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.showToast('Login necessário', 'Faça login para gerenciar suas curtidas', 'info', 'fa fa-info-circle')
+          return
+        }
+
+        this.ultimaMusicaRemovida = musica
+        this.ultimoIndiceRemovido = index
+        this.musicas.splice(index, 1)
+        this.userStats.likedSongs = this.musicas.length
+
+        const body = { source: musica.source || 'local' }
+
+        if (musica.source !== 'local') {
+          body.dadosMusica = {
+            titulo: musica.title,
+            artista: musica.artist,
+            capa: musica.cover || '',
+            previewUrl: musica.url || '',
+            duration: musica.duration || 30,
+            ano: musica.ano || null,
+            album: musica.album || ''
+          }
+        }
+
+        const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        const data = await res.json()
+
+        if (data.liked === false) {
+          this.showToast('Removida dos curtidos', `"${musica.title}" foi removida`, 'info', 'fa fa-heart-broken')
+        } else {
+          this.musicas.splice(index, 0, musica)
+          this.userStats.likedSongs = this.musicas.length
+          this.showToast('Erro', 'Não foi possível remover a curtida', 'error', 'fa fa-times')
+        }
+
+        window.dispatchEvent(new Event('likes-updated'))
+        window.dispatchEvent(new Event('curtidas-updated'))
+
+      } catch (err) {
+        console.error("Erro ao remover curtida:", err)
+        if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
+          this.musicas.splice(this.ultimoIndiceRemovido, 0, this.ultimaMusicaRemovida)
+          this.userStats.likedSongs = this.musicas.length
+        }
+        this.showToast('Erro', 'Erro ao remover curtida. Tente novamente.', 'error', 'fa fa-times')
+      }
+    },
+
+    desfazerRemocao() {
+      if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
+        this.musicas.splice(this.ultimoIndiceRemovido, 0, this.ultimaMusicaRemovida)
+        this.userStats.likedSongs = this.musicas.length
+        this.recurtirMusica(this.ultimaMusicaRemovida)
+        this.showToast('Ação desfeita', `"${this.ultimaMusicaRemovida.title}" foi restaurada`, 'success', 'fa fa-check-circle')
+        this.ultimaMusicaRemovida = null
+        this.ultimoIndiceRemovido = null
+      }
+    },
+
+    async recurtirMusica(musica) {
+      try {
+        const token = localStorage.getItem("token")
+        const body = { source: musica.source || 'local' }
+
+        if (musica.source !== 'local') {
+          body.dadosMusica = {
+            titulo: musica.title,
+            artista: musica.artist,
+            capa: musica.cover || '',
+            previewUrl: musica.url || '',
+            duration: musica.duration || 30,
+            ano: musica.ano || null,
+            album: musica.album || ''
+          }
+        }
+
+        await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        window.dispatchEvent(new Event('likes-updated'))
+      } catch (err) {
+        console.error("Erro ao recurtir:", err)
+      }
+    },
+
+    playCurtida(index) {
+      const musica = this.musicas[index]
+      const playerSong = {
+        id: musica.id,
+        title: musica.title,
+        artist: musica.artist,
+        cover: musica.cover,
+        url: musica.url,
+        duration: musica.duration || 30,
+        source: musica.source,
+        type: 'liked'
+      }
+
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: this.musicas.map(m => ({
+            id: m.id,
+            title: m.title,
+            artist: m.artist,
+            cover: m.cover,
+            url: m.url,
+            duration: m.duration || 30,
+            source: m.source,
+            type: 'liked'
+          })),
+          index: index,
+          context: 'curtidas'
+        }
+      }))
+
+      this.currentTrack = playerSong
+      this.isPlaying = true
+    },
+
+    playAllCurtidas() {
+      if (this.musicas.length > 0) {
+        this.playCurtida(0)
+      }
+    },
+
+    goToCurtidas() {
+      this.$router?.push('/curtidas')
+    },
+
+    // ===== PLAYLISTS METHODS =====
+
+    async loadUserPlaylists() {
+      this.loadingPlaylists = true
+      try {
+        const user = JSON.parse(localStorage.getItem('usuario'))
+        const userId = user?._id || user?.id
+        if (!userId) return
+
+        const token = localStorage.getItem("token")
+        const res = await fetch(`${this.API_BASE_URL}/playlists`, {
+          headers: { Authorization: `Bearer ${token}` }
         })
 
         const data = await res.json()
         const safeArray = Array.isArray(data) ? data : []
 
-        // 🔥 Mapeia as playlists do backend para o formato do componente
         this.userPlaylists = safeArray.map(p => ({
           id: p._id || p.id,
           title: p.nome || p.title,
@@ -696,117 +1204,39 @@ export default {
           isPublic: p.publica !== undefined ? p.publica : p.isPublic,
           songs: Array.isArray(p.musicas) ? p.musicas : (p.songs || []),
           authorName: this.currentUser.name,
-          // Dados adicionais úteis
           createdAt: p.createdAt,
           updatedAt: p.updatedAt
         }))
 
-        // 🔥 Atualiza o contador de playlists nas estatísticas
         this.userStats.playlists = this.userPlaylists.length
 
-        console.log('✅ Playlists carregadas:', this.userPlaylists)
-
       } catch (err) {
-        console.error('❌ Erro ao carregar playlists:', err)
-        this.showToast('Erro', 'Falha ao carregar suas playlists', 'error', 'fa fa-exclamation-circle')
+        console.error('Erro ao carregar playlists:', err)
       } finally {
         this.loadingPlaylists = false
       }
     },
 
-    // 🔥 NOVO: Abre uma playlist específica
     openPlaylist(playlist) {
-      // Navega para a página da playlist ou emite evento
       this.$router?.push({ path: '/playlist', query: { id: playlist.id } })
         || this.showToast('Playlist', `Abrindo: ${playlist.title}`, 'info', 'fa fa-folder-open')
     },
 
-    // 🔥 NOVO: Criar nova playlist (redireciona)
     createPlaylist() {
       this.$router?.push('/playlist')
         || this.showToast('Criar Playlist', 'Redirecionando para criar playlist...', 'info', 'fa fa-plus')
     },
 
-    // Verifica se usuário está logado
+    // ===== AUTH & USER =====
+
     checkAuth() {
       const isLoggedIn = localStorage.getItem('isLoggedIn')
       const token = localStorage.getItem('token')
-     
       if (!isLoggedIn || !token) {
-        // Se não estiver logado, redireciona para home
         this.$router.push('/')
       }
     },
 
-async loadFollowedArtists() {
-  try {
-    const token = localStorage.getItem("token")
-
-    if (!token) {
-      this.followedArtists = []
-      return
-    }
-
-    // 🔥 1. pega os follows
-    const res = await fetch(
-      'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    )
-
-    const follows = await res.json()
-
-    // 🔥 2. extrai IDs
-    const ids = follows.map(f =>
-      String(f.seguindo_id?._id || f.seguindo_id)
-    )
-
-    // 🔥 3. busca TODOS cantores do banco
-    const resCantores = await fetch('http://localhost:3002/cantores')
-    const cantores = await resCantores.json()
-
-    // 🔥 4. filtra só os que o usuário segue
-    this.followedArtists = cantores
-      .filter(c => ids.includes(String(c._id)))
-      .map(c => ({
-        id: c._id,
-        name: c.nome,
-        picture_medium: c.foto,
-        isFollowing: true,
-        hasNewRelease: false
-      }))
-
-  } catch (error) {
-    console.error('Erro ao carregar artistas seguidos:', error)
-    this.followedArtists = []
-  }
-},
-
-    // Logout - limpa dados e vai para home
-    logout() {
-      // Limpar todos os dados do localStorage
-      localStorage.removeItem('usuario')
-      localStorage.removeItem('usuario_perfil')
-      localStorage.removeItem('token')
-      localStorage.removeItem('isLoggedIn')
-     
-      // Disparar evento de logout
-      window.dispatchEvent(new CustomEvent('user-logged-out'))
-     
-      // Mostrar toast
-      this.showToast('Até logo!', 'Você saiu da conta', 'info', 'fa fa-sign-out')
-     
-      // Redirecionar para home após logout
-      setTimeout(() => {
-        this.$router.push('/')
-      }, 1000)
-    },
-   
-    // ========== USER & UI ==========
-   
     loadUserFromStorage() {
       const storedUser = localStorage.getItem('usuario')
       if (storedUser) {
@@ -841,64 +1271,53 @@ async loadFollowedArtists() {
       }
     },
 
-    goToLibrary() {
-      this.$router?.push('/library') || this.showToast('Biblioteca', 'Abrindo sua biblioteca...', 'info')
+    goToPlaylist() {
+      this.$router?.push('/playlist') || this.showToast('Biblioteca', 'Abrindo sua biblioteca...', 'info')
     },
 
     goToArtists() {
       this.$router?.push('/artistas') || this.showToast('Artistas', 'Ver todos os artistas...', 'info')
     },
 
-    // ========== DATA LOADING ==========
+    // ===== DATA LOADING =====
 
-async loadAllData() {
-  this.loading = true
+    async loadAllData() {
+      this.loading = true
+      try {
+        await this.loadChartTracks()
+        this.generateRecommendations()
+        this.loadNewReleases()
+        this.loadGenres()
+        this.loadMockUserData()
+        this.loadFollowedArtists()
+      } catch (error) {
+        console.error(error)
+      } finally {
+        this.loading = false
+      }
+    },
 
-  try {
-    // 🔥 1. CARREGA O ESSENCIAL PRIMEIRO
-    await this.loadChartTracks()
-
-    // já mostra conteúdo rápido
-    this.generateRecommendations()
-
-    // 🔥 2. RESTO EM BACKGROUND (não trava UI)
-    this.loadNewReleases()
-    this.loadGenres()
-    this.loadMockUserData()
-
-  } catch (error) {
-    console.error(error)
-  } finally {
-    this.loading = false
-  }
-},
-
-async loadChartTracks() {
-  const cache = localStorage.getItem('dashboard_chart')
-
-  if (cache) {
-    this.chartTracks = JSON.parse(cache)
-    this.generateRecommendations()
-  }
-
-  try {
-    const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
-    const data = await response.json()
-
-    if (data.data) {
-      this.chartTracks = data.data
-      localStorage.setItem('dashboard_chart', JSON.stringify(data.data))
-    }
-  } catch (e) {}
-},
+    async loadChartTracks() {
+      const cache = localStorage.getItem('dashboard_chart')
+      if (cache) {
+        this.chartTracks = JSON.parse(cache)
+        this.generateRecommendations()
+      }
+      try {
+        const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
+        const data = await response.json()
+        if (data.data) {
+          this.chartTracks = data.data
+          localStorage.setItem('dashboard_chart', JSON.stringify(data.data))
+        }
+      } catch (e) {}
+    },
 
     async loadNewReleases() {
       try {
         const response = await fetch(`${this.DEEZER_API}/chart/0/albums?limit=10`)
         const data = await response.json()
-        if (data.data) {
-          this.newReleases = data.data
-        }
+        if (data.data) this.newReleases = data.data
       } catch (error) {
         console.error('Erro lançamentos:', error)
       }
@@ -916,8 +1335,42 @@ async loadChartTracks() {
       }
     },
 
+    async loadFollowedArtists() {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.followedArtists = []
+          return
+        }
+
+        const res = await fetch(
+          'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+
+        const follows = await res.json()
+        const ids = follows.map(f => String(f.seguindo_id?._id || f.seguindo_id))
+
+        const resCantores = await fetch('http://localhost:3002/cantores')
+        const cantores = await resCantores.json()
+
+        this.followedArtists = cantores
+          .filter(c => ids.includes(String(c._id)))
+          .map(c => ({
+            id: c._id,
+            name: c.nome,
+            picture_medium: c.foto,
+            isFollowing: true,
+            hasNewRelease: false
+          }))
+
+      } catch (error) {
+        console.error('Erro ao carregar artistas seguidos:', error)
+        this.followedArtists = []
+      }
+    },
+
     loadMockUserData() {
-      // Simulando dados do usuário logado
       this.continueListening = [
         {
           id: 101,
@@ -947,19 +1400,18 @@ async loadChartTracks() {
         { id: 205, title: "Medo Bobo", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/205/250x250.jpg", playedAt: Date.now() - 18000000 },
         { id: 206, title: "10%", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/206/250x250.jpg", playedAt: Date.now() - 21600000 }
       ]
-
     },
 
     generateRecommendations() {
       if (this.chartTracks.length > 0) {
         this.recommendedTracks = this.chartTracks.slice(0, 5).map(track => ({
           ...track,
-          match: Math.floor(Math.random() * 30) + 70 // 70-99% match
+          match: Math.floor(Math.random() * 30) + 70
         }))
       }
     },
 
-    // ========== PLAYBACK METHODS ==========
+    // ===== PLAYBACK METHODS =====
 
     playContinueListening(index) {
       const track = this.continueListening[index]
@@ -972,7 +1424,6 @@ async loadChartTracks() {
 
     playMix(mix) {
       this.showToast('Tocando Mix', mix.title, 'success', 'fa fa-music')
-      // Implementar lógica de reprodução do mix
     },
 
     playPlaylist(playlist) {
@@ -993,7 +1444,7 @@ async loadChartTracks() {
       }
 
       this.currentTrack = track
-     
+
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: track,
@@ -1002,7 +1453,7 @@ async loadChartTracks() {
           context: context
         }
       }))
-     
+
       this.$nextTick(() => {
         const audio = this.$refs.audioPlayer
         if (audio) {
@@ -1084,7 +1535,7 @@ async loadChartTracks() {
       this.currentTime = 0
     },
 
-    // ========== NAVIGATION ==========
+    // ===== NAVIGATION =====
 
     navigateToGenre(genre) {
       this.$router?.push({ path: '/genre', query: { id: genre.id } })
@@ -1116,7 +1567,7 @@ async loadChartTracks() {
       this.showToast('Carregando', 'Buscando mais lançamentos...', 'info', 'fa fa-spinner fa-spin')
     },
 
-    // ========== UTILITIES ==========
+    // ===== UTILITIES =====
 
     isCurrentTrack(track) {
       if (!this.currentTrack || !track) return false
@@ -1134,7 +1585,6 @@ async loadChartTracks() {
     },
 
     isCurrentMix(mix) {
-      // Implementar lógica se necessário
       return false
     },
 
@@ -1179,13 +1629,13 @@ async loadChartTracks() {
       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjE1MCIgeT0iMTcwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4='
     },
 
-    // ========== TOAST SYSTEM ==========
-   
+    // ===== TOAST SYSTEM =====
+
     showToast(title, message, type = 'success', icon = 'fa fa-check-circle') {
       if (this.toast.timer) {
         clearInterval(this.toast.timer)
       }
-     
+
       this.toast = {
         visible: true,
         title,
@@ -1195,11 +1645,11 @@ async loadChartTracks() {
         progress: 100,
         timer: null
       }
-     
+
       const duration = 3000
       const interval = 30
       const step = 100 / (duration / interval)
-     
+
       this.toast.timer = setInterval(() => {
         this.toast.progress -= step
         if (this.toast.progress <= 0) {
@@ -1218,64 +1668,8 @@ async loadChartTracks() {
   }
 }
 </script>
-
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
-
-/* ========== NOVO: Top Bar com User Info e Logout ========== */
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding: 0 4px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(29, 185, 84, 0.5);
-  box-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
-}
-
-.user-name {
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 71, 87, 0.15);
-  border: 1px solid rgba(255, 71, 87, 0.3);
-  color: #ff4757;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  background: rgba(255, 71, 87, 0.3);
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.2);
-}
-
-.logout-btn i {
-  font-size: 14px;
-}
 
 /* ========== ANIMATIONS ========== */
 @keyframes slideIn {
@@ -1324,13 +1718,53 @@ async loadChartTracks() {
   50% { height: 16px; }
 }
 
+@keyframes sound-wave {
+  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes menuPop {
+  from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes menuPopOut {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.9) translateY(-10px); }
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(100%) scale(0.9); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0) scale(1); }
+  to { opacity: 0; transform: translateX(100%) scale(0.9); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
 /* ========== LAYOUT BASE ========== */
-.home {
+.dashboard {
   min-height: 100vh;
   color: #fff;
   font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-   width: 100%;
-    margin-left: 0;
+  width: 100%;
+  margin-left: 0;
   background: linear-gradient(180deg, #050508 0%, #0a0a1a 30%, #0a1a3f 100%);
   padding: 24px 0 120px 0;
   display: flex;
@@ -1339,7 +1773,7 @@ async loadChartTracks() {
   overflow-x: hidden;
 }
 
-.home-content {
+.dashboard-content {
   width: 100%;
   max-width: 1200px;
   padding: 0 32px;
@@ -1400,12 +1834,14 @@ async loadChartTracks() {
   align-items: center;
   gap: 16px;
   transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
 }
 
 .stat-card:hover {
   background: rgba(255,255,255,0.08);
   transform: translateY(-2px);
   border-color: rgba(29,185,84,0.3);
+  box-shadow: 0 8px 32px rgba(29,185,84,0.1);
 }
 
 .stat-icon {
@@ -1418,6 +1854,12 @@ async loadChartTracks() {
   justify-content: center;
   color: #1db954;
   font-size: 20px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+  background: rgba(29,185,84,0.25);
 }
 
 .stat-data {
@@ -1440,7 +1882,7 @@ async loadChartTracks() {
 
 /* ========== HERO BANNER ========== */
 .hero-banner {
-  border-radius: 16px;
+  border-radius: 24px;
   padding: 48px;
   display: flex;
   align-items: center;
@@ -1744,7 +2186,6 @@ async loadChartTracks() {
 .note-1 { left: 0; animation-delay: 0s; }
 .note-2 { left: 30px; animation-delay: 1s; }
 .note-3 { left: 60px; animation-delay: 2s; }
-
 /* ========== SECTIONS ========== */
 .section {
   margin-bottom: 48px;
@@ -1796,6 +2237,7 @@ async loadChartTracks() {
 .section-icon.playlist { color: #f472b6; background: rgba(244,114,182,0.15); }
 .section-icon.rec { color: #fbbf24; background: rgba(251,191,36,0.15); }
 .section-icon.personal { color: #c084fc; background: rgba(192,132,252,0.15); }
+.section-icon.liked { color: #ec4899; background: rgba(236,72,153,0.15); }
 
 .section-title:hover .section-icon {
   transform: scale(1.1) rotate(5deg);
@@ -1842,6 +2284,27 @@ async loadChartTracks() {
   transform: scale(1.05);
 }
 
+.btn-play-all {
+  padding: 10px 20px;
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-play-all:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
+}
+
 .see-all {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.2);
@@ -1874,6 +2337,408 @@ async loadChartTracks() {
   transform: translateX(3px);
 }
 
+/* ========== CURTIDAS SECTION ========== */
+.curtidas-section {
+  background: linear-gradient(180deg, rgba(236,72,153,0.05) 0%, transparent 100%);
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid rgba(236,72,153,0.1);
+}
+
+.curtidas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.curtida-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.curtida-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(236, 72, 153, 0.3);
+  transform: translateX(4px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.curtida-item.active {
+  background: rgba(236, 72, 153, 0.08);
+  border-color: rgba(236, 72, 153, 0.4);
+}
+
+.curtida-number {
+  width: 28px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.curtida-cover-wrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.curtida-cover-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.curtida-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.curtida-item:hover .curtida-play-overlay {
+  opacity: 1;
+}
+
+.curtida-play-overlay i {
+  color: #fff;
+  font-size: 18px;
+}
+
+.equalizer-mini {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  padding: 2px 4px;
+  background: #1db954;
+  border-radius: 3px;
+  z-index: 3;
+}
+
+.equalizer-mini span {
+  width: 2px;
+  background: #000;
+  border-radius: 1px;
+  animation: equalizer 0.5s ease-in-out infinite;
+}
+
+.equalizer-mini span:nth-child(1) { animation-delay: 0s; height: 6px; }
+.equalizer-mini span:nth-child(2) { animation-delay: 0.1s; height: 12px; }
+.equalizer-mini span:nth-child(3) { animation-delay: 0.2s; height: 9px; }
+.equalizer-mini span:nth-child(4) { animation-delay: 0.3s; height: 7px; }
+
+.curtida-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.curtida-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.curtida-artist {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.source-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.source-badge.spotify {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+}
+
+.source-badge.deezer {
+  background: rgba(239, 89, 60, 0.15);
+  color: #ef593c;
+}
+
+.source-badge.local {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.album-dot {
+  color: #475569;
+}
+
+.album-name {
+  color: #64748b;
+}
+
+.curtida-duration {
+  font-size: 13px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.curtida-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.btn-like {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-like.active {
+  color: #ec4899;
+  background: rgba(236, 72, 153, 0.1);
+}
+
+.btn-like:hover {
+  transform: scale(1.1);
+  background: rgba(236, 72, 153, 0.2);
+}
+
+.dropdown-container {
+  position: relative;
+}
+
+.btn-more {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-more:hover, .btn-more.active {
+  color: #f8fafc;
+  background: rgba(255,255,255,0.1);
+  transform: rotate(90deg);
+}
+
+/* Modern Dropdown */
+.modern-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 280px;
+  background: rgba(30, 30, 46, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+  transform-origin: top right;
+}
+
+.menu-pop-enter-active {
+  animation: menuPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.menu-pop-leave-active {
+  animation: menuPopOut 0.2s ease forwards;
+}
+
+.dropdown-options {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+}
+
+.dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(4px);
+}
+
+.option-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.playlist-icon {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+  color: #60a5fa;
+}
+
+.favorite-icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+  color: #fbbf24;
+}
+
+.dropdown-option:hover .playlist-icon {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.dropdown-option:hover .favorite-icon {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.2));
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+.option-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.option-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.option-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.option-arrow {
+  color: #475569;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.dropdown-option:hover .option-arrow {
+  color: #94a3b8;
+  transform: translateX(4px);
+}
+
+.dropdown-footer {
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-close {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.dropdown-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.btn-show-more {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-show-more:hover {
+  background: rgba(255,255,255,0.06);
+  color: #f8fafc;
+  border-color: rgba(236, 72, 153, 0.3);
+}
 /* ========== CARDS ========== */
 .cards-row {
   display: grid;
@@ -2443,11 +3308,6 @@ async loadChartTracks() {
 .sound-waves span:nth-child(2) { height: 30px; animation-delay: 0.2s; }
 .sound-waves span:nth-child(3) { height: 25px; animation-delay: 0.4s; }
 
-@keyframes sound-wave {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
-  50% { transform: scaleY(1); opacity: 1; }
-}
-
 .empty-playlists h3 {
   font-size: 20px;
   color: #f8fafc;
@@ -2461,6 +3321,90 @@ async loadChartTracks() {
 
 .empty-playlists .btn-primary {
   display: inline-flex;
+}
+/* ========== MODAL ========== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  background: #121212;
+  padding: 20px;
+  border-radius: 12px;
+  width: 400px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #f8fafc;
+}
+
+.modal-header button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.empty-playlists-modal {
+  text-align: center;
+  color: #94a3b8;
+  padding: 20px;
+}
+
+.playlist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.playlist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #1e1e1e;
+  border-radius: 8px;
+}
+
+.playlist-item strong {
+  color: #f8fafc;
+  display: block;
+}
+
+.playlist-item p {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.btn-add {
+  background: #1db954;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-weight: 600;
 }
 
 /* ========== LOADING & TOAST ========== */
@@ -2652,28 +3596,6 @@ async loadChartTracks() {
   animation: toastSlideOut 0.3s ease;
 }
 
-@keyframes toastSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(100%) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes toastSlideOut {
-  from {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(100%) scale(0.9);
-  }
-}
-
 /* Embedded Player (hidden) */
 .embedded-player {
   position: fixed;
@@ -2686,9 +3608,28 @@ async loadChartTracks() {
   pointer-events: none;
 }
 
+/* Fade transition for modal */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+  height: 200px;
+  margin-bottom: 48px;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 1400px) {
-  .home-content {
+  .dashboard-content {
     max-width: 100%;
     padding: 0 24px;
   }
@@ -2698,166 +3639,192 @@ async loadChartTracks() {
   .cards-row {
     grid-template-columns: repeat(4, 1fr);
   }
- 
+
   .cards-row.expanded {
     grid-template-columns: repeat(4, 1fr);
   }
- 
+
   .categories-grid {
     grid-template-columns: repeat(3, 1fr);
   }
- 
+
   .hero-title {
     font-size: 48px;
   }
- 
+
   .quick-stats {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 1024px) {
-  .home {
+  .dashboard {
     margin-left: 200px;
     width: calc(100% - 200px);
   }
- 
+
   .hero-banner {
     flex-direction: column;
     text-align: center;
     padding: 40px 32px;
     min-height: auto;
   }
- 
+
   .hero-content {
     max-width: 100%;
     order: 2;
   }
- 
+
   .hero-image {
     order: 1;
     margin-bottom: 32px;
     flex: 0 0 auto;
   }
- 
+
   .vinyl-container {
     width: 220px;
     height: 220px;
   }
- 
+
   .hero-actions {
     justify-content: center;
   }
- 
+
   .hero-progress {
     margin: 0 auto 24px;
   }
- 
+
   .cards-row,
   .cards-row.expanded {
     grid-template-columns: repeat(3, 1fr);
   }
- 
+
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
   }
- 
+
   .welcome-title {
     font-size: 32px;
   }
- 
+
   .toast-notification {
     left: 24px;
     right: 24px;
     max-width: none;
   }
+
+  .curtida-item {
+    padding: 8px 12px;
+  }
+
+  .curtida-cover-wrapper {
+    width: 40px;
+    height: 40px;
+  }
+
+  .curtida-title {
+    font-size: 13px;
+  }
+
+  .modern-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
 }
 
 @media (max-width: 768px) {
-  .home {
+  .dashboard {
     margin-left: 0;
     width: 100%;
   }
- 
-  .home-content {
+
+  .dashboard-content {
     padding: 0 16px;
   }
- 
+
   .welcome-title {
     font-size: 28px;
   }
- 
+
   .quick-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
- 
+
   .stat-card {
     padding: 16px;
   }
- 
+
   .stat-value {
     font-size: 20px;
   }
- 
+
   .hero-banner {
     padding: 32px 24px;
     margin-bottom: 32px;
   }
- 
+
   .hero-title {
     font-size: 36px;
   }
- 
+
   .hero-artist {
     font-size: 18px;
   }
- 
+
   .hero-actions {
     flex-direction: column;
     width: 100%;
   }
- 
+
   .btn-primary,
   .btn-secondary {
     width: 100%;
     justify-content: center;
   }
- 
+
   .cards-row,
   .cards-row.expanded {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
- 
+
   .section-title {
     font-size: 20px;
   }
- 
+
   .section-icon {
     width: 36px;
     height: 36px;
     font-size: 18px;
   }
- 
+
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
- 
+
   .category-tile {
     height: 140px;
   }
- 
+
   .category-tile h3 {
     font-size: 18px;
   }
- 
+
   .vinyl-container {
     width: 180px;
     height: 180px;
   }
- 
+
   .toast-notification {
     left: 16px;
     right: 16px;
@@ -2865,18 +3832,54 @@ async loadChartTracks() {
     min-width: auto;
     padding: 12px 16px;
   }
- 
+
   .toast-icon-wrapper {
     width: 36px;
     height: 36px;
   }
- 
+
   .toast-title {
     font-size: 13px;
   }
- 
+
   .toast-message {
     font-size: 12px;
+  }
+
+  .curtidas-section {
+    padding: 16px;
+  }
+
+  .curtida-item {
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .curtida-number {
+    font-size: 12px;
+    width: 20px;
+  }
+
+  .curtida-cover-wrapper {
+    width: 36px;
+    height: 36px;
+  }
+
+  .curtida-title {
+    font-size: 13px;
+  }
+
+  .curtida-artist {
+    font-size: 11px;
+  }
+
+  .curtida-duration {
+    display: none;
+  }
+
+  .btn-like, .btn-more {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -2884,90 +3887,78 @@ async loadChartTracks() {
   .hero-banner {
     padding: 24px 16px;
   }
- 
+
   .hero-title {
     font-size: 28px;
   }
- 
+
   .hero-artist {
     font-size: 16px;
   }
- 
+
   .hero-badge {
     font-size: 10px;
     padding: 6px 12px;
   }
- 
+
   .cards-row,
   .cards-row.expanded {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
- 
+
   .music-card {
     padding: 12px;
   }
- 
+
   .card-title {
     font-size: 13px;
   }
- 
+
   .card-artist {
     font-size: 11px;
   }
- 
+
   .vinyl-container {
     width: 150px;
     height: 150px;
   }
- 
+
   .play-button-overlay {
     width: 40px;
     height: 40px;
   }
- 
+
   .play-button-overlay i {
     font-size: 16px;
   }
- 
+
   .rank-badge {
     width: 28px;
     height: 28px;
     font-size: 12px;
   }
- 
+
   .section-title {
     font-size: 18px;
   }
- 
+
   .see-all {
     font-size: 11px;
     padding: 6px 12px;
   }
- 
+
   .category-tile {
     height: 120px;
     padding: 16px;
   }
- 
+
   .category-tile h3 {
     font-size: 16px;
   }
- 
+
   .quick-stats {
     grid-template-columns: 1fr;
-  }
- 
-  /* NOVO: Ajustes para top bar no mobile */
-  .top-bar {
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
- 
-  .logout-btn {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>
