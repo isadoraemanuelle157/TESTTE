@@ -1,6 +1,7 @@
 const curtidaService = require('../services/curtidaService')
 const Curtida = require('../models/Curtida')
 const CurtidaExterna = require('../models/CurtidaExterna')
+const mongoose = require('mongoose')
 
 // ========== LISTAR TODAS AS CURTIDAS (locais + externas) ==========
 const getMinhasCurtidas = async (req, res) => {
@@ -11,7 +12,7 @@ const getMinhasCurtidas = async (req, res) => {
 
     // Formata curtidas locais
     const musicasLocais = locais.map(c => ({
-      id: c.musica?._id || c.musica?.id,
+      id: String(c.musica?._id || c.musica?.id),
       nome: c.musica?.nome,
       artist: c.musica?.cantores?.map(cant => cant.nome).join(', ') || 'Artista desconhecido',
       cover: c.musica?.foto || c.musica?.albuns?.[0]?.foto,
@@ -22,7 +23,7 @@ const getMinhasCurtidas = async (req, res) => {
 
     // Formata curtidas externas
     const musicasExternas = externas.map(c => ({
-      id: c.musicaId,
+      id: String(c.musicaId),  // <-- ID da API externa como string
       nome: c.dadosMusica.titulo,
       artist: c.dadosMusica.artista,
       cover: c.dadosMusica.capa,
@@ -58,7 +59,7 @@ const toggleCurtida = async (req, res) => {
       return res.status(400).json({ error: 'ID da música é obrigatório' })
     }
 
-    // Se for música externa (spotify/deezer)
+    // Se for música externa (deezer/spotify)
     if (source && source !== 'local') {
       if (!dadosMusica || !dadosMusica.titulo || !dadosMusica.artista) {
         return res.status(400).json({ 
@@ -69,20 +70,18 @@ const toggleCurtida = async (req, res) => {
 
       const result = await curtidaService.toggleCurtidaExterna(
         userId, 
-        musicaId, 
+        String(musicaId),  // Garante string
         source, 
         dadosMusica
       )
       return res.json(result)
     }
 
-    // Se for música local (comportamento anterior)
-    // Verifica se o ID é um ObjectId válido do MongoDB
-    const mongoose = require('mongoose')
+    // Se for música local - verifica se é ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(musicaId)) {
       return res.status(400).json({ 
         error: 'ID inválido para música local',
-        message: 'Para músicas externas, envie source: "spotify" ou "deezer" no body'
+        message: 'Para músicas externas, envie source: "deezer" ou "spotify" no body'
       })
     }
 
@@ -105,14 +104,15 @@ const isCurtida = async (req, res) => {
     let isLiked = false
 
     if (source && source !== 'local') {
+      // Verifica em externas
       const externa = await CurtidaExterna.findOne({
         usuario: userId,
-        musicaId: musicaId,
+        musicaId: String(musicaId),
         source: source
       })
       isLiked = !!externa
     } else {
-      const mongoose = require('mongoose')
+      // Verifica em locais (se for ObjectId válido)
       if (mongoose.Types.ObjectId.isValid(musicaId)) {
         const local = await Curtida.findOne({
           usuario: userId,
@@ -121,11 +121,11 @@ const isCurtida = async (req, res) => {
         isLiked = !!local
       }
       
-      // Também verifica em externas (fallback)
+      // Se não achou local, verifica em externas (fallback sem source)
       if (!isLiked) {
         const externa = await CurtidaExterna.findOne({
           usuario: userId,
-          musicaId: musicaId
+          musicaId: String(musicaId)
         })
         isLiked = !!externa
       }
@@ -158,7 +158,7 @@ const listarCurtidasPublicas = async (req, res) => {
     ])
 
     const musicasLocais = locais.map(c => ({
-      id: c.musica?._id,
+      id: String(c.musica?._id),
       nome: c.musica?.nome,
       artist: c.musica?.cantores?.map(cant => cant.nome).join(', ') || 'Artista desconhecido',
       cover: c.musica?.foto || c.musica?.albuns?.[0]?.foto,
@@ -167,7 +167,7 @@ const listarCurtidasPublicas = async (req, res) => {
     })).filter(m => m.id && m.nome)
 
     const musicasExternas = externas.map(c => ({
-      id: c.musicaId,
+      id: String(c.musicaId),
       nome: c.dadosMusica.titulo,
       artist: c.dadosMusica.artista,
       cover: c.dadosMusica.capa,

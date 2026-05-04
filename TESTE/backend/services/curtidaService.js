@@ -1,7 +1,7 @@
 const Curtida = require('../models/Curtida')
 const CurtidaExterna = require('../models/CurtidaExterna')
 
-// ========== CURTIDAS LOCAIS (existente) ==========
+// ========== CURTIDAS LOCAIS ==========
 const toggleCurtida = async (usuarioId, musicaId) => {
   const existing = await Curtida.findOne({
     usuario: usuarioId,
@@ -27,9 +27,12 @@ const countCurtidas = async (playlistId) => {
 
 // ========== CURTIDAS EXTERNAS (Spotify/Deezer) ==========
 const toggleCurtidaExterna = async (usuarioId, musicaId, source, dadosMusica) => {
+  // Garante que musicaId seja string
+  const idExterno = String(musicaId)
+
   const existing = await CurtidaExterna.findOne({
     usuario: usuarioId,
-    musicaId: musicaId,
+    musicaId: idExterno,
     source: source
   })
 
@@ -40,7 +43,7 @@ const toggleCurtidaExterna = async (usuarioId, musicaId, source, dadosMusica) =>
 
   await CurtidaExterna.create({
     usuario: usuarioId,
-    musicaId: musicaId,
+    musicaId: idExterno,  // <-- Sempre string
     source: source,
     dadosMusica: {
       titulo: dadosMusica.titulo,
@@ -68,10 +71,7 @@ const getTodasCurtidas = async (usuarioId) => {
     CurtidaExterna.find({ usuario: usuarioId }).sort({ createdAt: -1 })
   ])
 
-  return {
-    locais,
-    externas
-  }
+  return { locais, externas }
 }
 
 module.exports = {

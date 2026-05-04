@@ -765,25 +765,30 @@ watch: {
     // ===== SISTEMA DE CURTIDAS =====
     
     // Carregar músicas curtidas do localStorage
-    async loadLikedTracks() {
-      try {
-        const token = localStorage.getItem("token")
+  async loadLikedTracks() {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.likedTracks = []
+      return
+    }
 
-        const res = await fetch(`http://localhost:3002/curtidas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        const data = await res.json()
-
-        // salvar só os IDs das músicas
-        this.likedTracks = data.map(c => c.musica?._id || c.musica?.id)
-
-      } catch (err) {
-        console.error(err)
+    const res = await fetch(`http://localhost:3002/curtidas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
+
+    const data = await res.json()
+
+    // Guardar TODOS os IDs (locais e externos) como string para comparação
+    this.likedTracks = data.map(c => String(c.id)).filter(Boolean)
+
+  } catch (err) {
+    console.error("Erro ao carregar curtidas:", err)
+    this.likedTracks = []
+  }
+},
 
     async loadVibes() {
   try {
@@ -855,31 +860,61 @@ searchVibe(vibe) {
   this.performSearch()
 },
 
-    async loadFavoritas() {
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) return
+  async loadFavoritas() {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.favoriteAlbums = []
+      this.favoriteArtists = []
+      return
+    }
 
-        const res = await fetch(`http://localhost:3002/favoritas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        const data = await res.json()
-
-        this.favoriteAlbums = data
-          .filter(f => f.album && f.album._id)
-          .map(f => String(f.album._id))
-
-        this.favoriteArtists = data
-          .filter(f => f.cantor && f.cantor._id)
-          .map(f => String(f.cantor._id))
-
-      } catch (err) {
-        console.error("Erro ao carregar favoritas:", err)
+    const res = await fetch(`http://localhost:3002/favoritas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
+
+    const data = await res.json()
+
+    // Extrair IDs de álbuns favoritados (locais e externos)
+    this.favoriteAlbums = data
+      .filter(f => {
+        // Local: f.album existe e tem _id
+        if (f.album && f.album._id) return true
+        // Externo: f.albumExterno existe
+        if (f.albumExterno) return true
+        return false
+      })
+      .map(f => {
+        if (f.album && f.album._id) return String(f.album._id)
+        if (f.albumExterno) return String(f.albumExterno.id)
+        return null
+      })
+      .filter(Boolean)
+
+    // Extrair IDs de artistas favoritados (locais e externos)
+    this.favoriteArtists = data
+      .filter(f => {
+        // Local: f.cantor existe e tem _id
+        if (f.cantor && f.cantor._id) return true
+        // Externo: f.cantorExterno existe
+        if (f.cantorExterno) return true
+        return false
+      })
+      .map(f => {
+        if (f.cantor && f.cantor._id) return String(f.cantor._id)
+        if (f.cantorExterno) return String(f.cantorExterno.id)
+        return null
+      })
+      .filter(Boolean)
+
+  } catch (err) {
+    console.error("Erro ao carregar favoritas:", err)
+    this.favoriteAlbums = []
+    this.favoriteArtists = []
+  }
+},
 
 async loadGeneros() {
   try {
@@ -956,15 +991,17 @@ getDecadeRange(decadeName) {
   return ranges[decadeName] || null
 },
 
-    isAlbumFavorited(albumId) {
-      return this.favoriteAlbums.includes(String(albumId))
-    },
+  isAlbumFavorited(albumId) {
+  if (!albumId) return false
+  return this.favoriteAlbums.some(id => String(id) === String(albumId))
+},
 
-    isArtistFavorited(artistId) {
-      return this.favoriteArtists.includes(String(artistId))
-    },
+isArtistFavorited(artistId) {
+  if (!artistId) return false
+  return this.favoriteArtists.some(id => String(id) === String(artistId))
+},
 
-  async toggleFavoriteItem(item) {
+async toggleFavoriteItem(item) {
   try {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -972,22 +1009,38 @@ getDecadeRange(decadeName) {
       return
     }
 
-    const tipo = item.type === 'album' ? 'album' : 'cantor'
-    
+    const itemId = item.id
+    const isDeezer = item.source === 'deezer'
+    const isLocal = item.source === 'local'
+
+    // Determinar tipo do item
+    let tipo = ''
+    if (item.type === 'album') tipo = 'album'
+    else if (item.type === 'artist') tipo = 'cantor'
+    else {
+      this.showToast("Tipo de item não suportado", "error")
+      return
+    }
+
+    // Montar body
     const body = { tipo }
-    
-    // Se for item da API externa (Deezer), envia source e dados
-    if (item.source === 'deezer') {
+
+    if (isDeezer) {
       body.source = 'deezer'
       body.dadosItem = {
         titulo: item.title || item.name || 'Sem título',
         artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
         capa: this.getBestImage(item) || '',
-        ano: item.ano || null
+        previewUrl: item.preview || '',
+        duration: item.duration || 0,
+        ano: item.ano || null,
+        album: item.album?.title || ''
       }
+    } else if (isLocal) {
+      body.source = 'local'
     }
 
-    const res = await fetch(`http://localhost:3002/favoritas/${String(item.id)}/favoritar`, {
+    const res = await fetch(`http://localhost:3002/favoritas/${String(itemId)}/favoritar`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1000,24 +1053,24 @@ getDecadeRange(decadeName) {
 
     if (item.type === 'album') {
       if (data.favorited) {
-        if (!this.favoriteAlbums.includes(String(item.id))) {
-          this.favoriteAlbums.push(String(item.id))
+        if (!this.favoriteAlbums.includes(String(itemId))) {
+          this.favoriteAlbums.push(String(itemId))
         }
         this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
       } else {
-        this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(item.id))
+        this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
         this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
       }
     }
 
     if (item.type === 'artist') {
       if (data.favorited) {
-        if (!this.favoriteArtists.includes(String(item.id))) {
-          this.favoriteArtists.push(String(item.id))
+        if (!this.favoriteArtists.includes(String(itemId))) {
+          this.favoriteArtists.push(String(itemId))
         }
         this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
       } else {
-        this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(item.id))
+        this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
         this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
       }
     }
@@ -1025,7 +1078,7 @@ getDecadeRange(decadeName) {
     window.dispatchEvent(new Event('favoritas-updated'))
 
   } catch (err) {
-    console.error(err)
+    console.error("Erro ao favoritar item:", err)
     this.showToast("Erro ao favoritar item", "error")
   }
 },
@@ -1072,39 +1125,71 @@ handleResultClick(result) {
   })
 }, 
     // Verificar se uma música está curtida
-    isTrackLiked(trackId) {
-      return this.likedTracks.some(id => String(id) === String(trackId))
-    },
+   isTrackLiked(trackId) {
+  if (!trackId) return false
+  return this.likedTracks.some(id => String(id) === String(trackId))
+},
     
     // Curtir/descurtir uma música
-    async toggleLikeTrack(track) {
-      try {
-        const token = localStorage.getItem("token")
+   async toggleLikeTrack(track) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast("Faça login para curtir músicas", "info")
+      return
+    }
 
-        const res = await fetch(
-          `http://localhost:3002/musicas/${track.id}/curtir`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        )
-
-        const data = await res.json()
-
-        if (data.liked) {
-          this.likedTracks.push(track.id)
-          this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
-        } else {
-          this.likedTracks = this.likedTracks.filter(id => id != track.id)
-          this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
-        }
-
-      } catch (err) {
-        console.error(err)
+    const trackId = track.id
+    const isDeezer = track.source === 'deezer'
+    
+    // Montar body conforme tipo
+    const body = {}
+    
+    if (isDeezer) {
+      body.source = 'deezer'
+      body.dadosMusica = {
+        titulo: track.title || 'Sem título',
+        artista: track.artist?.name || 'Artista Desconhecido',
+        capa: this.getBestImage(track) || '',
+        previewUrl: track.preview || '',
+        duration: track.duration || 30,
+        ano: track.ano || null,
+        album: track.album?.title || ''
       }
-    },
+    }
+    // Se for local, não precisa enviar source (ou envia 'local')
+
+    const res = await fetch(
+      `http://localhost:3002/curtidas/${trackId}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    )
+
+    const data = await res.json()
+
+    if (data.liked) {
+      // Adiciona ID se não existir
+      if (!this.likedTracks.includes(String(trackId))) {
+        this.likedTracks.push(String(trackId))
+      }
+      this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+    } else {
+      // Remove ID
+      this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
+      this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
+    }
+
+  } catch (err) {
+    console.error("Erro ao curtir música:", err)
+    this.showToast("Erro ao processar curtida", "error")
+  }
+},
     
     // Formatar duração
     formatDuration(seconds) {
