@@ -26,7 +26,14 @@ const createPlaylist = async (data, userId) => {
 
 const getPlaylists = async (userId) => {
   const playlists = await Playlist.find({ usuario: userId })
-    .populate('musicas', 'nome duracao foto link')
+.populate({
+  path: 'musicas',
+  select: 'nome duracao foto link cantores albuns',
+  populate: [
+    { path: 'cantores', select: 'nome' },
+    { path: 'albuns', select: 'nome' }
+  ]
+})
     .populate('musicasExternas')
     .sort({ createdAt: -1 })
 
@@ -36,10 +43,21 @@ const getPlaylists = async (userId) => {
     
     // Junta músicas locais e externas para o front
     const todasMusicas = [
-      ...(obj.musicas || []).map(m => ({
-        ...m,
-        source: 'local'
-      })),
+  ...(obj.musicas || []).map(m => ({
+  _id: m._id,
+  id: m._id,
+  nome: m.nome,
+  artista: Array.isArray(m.cantores) && m.cantores.length
+    ? m.cantores.map(c => c.nome).join(', ')
+    : 'Desconhecido',
+  foto: m.foto,
+  link: m.link,
+  duracao: m.duracao,
+  album: Array.isArray(m.albuns) && m.albuns.length
+    ? m.albuns[0].nome
+    : 'Sem álbum',
+  source: 'local'
+})),
       ...(obj.musicasExternas || []).map(m => ({
         _id: m._id,
         id: m.musicaId,
@@ -69,7 +87,14 @@ const getPlaylists = async (userId) => {
 // 🔥 BUSCAR POR ID
 const getPlaylistById = async (id) => {
   const playlist = await Playlist.findById(id)
-    .populate('musicas', 'nome duracao foto link')
+   .populate({
+  path: 'musicas',
+  select: 'nome duracao foto link cantores albuns',
+  populate: [
+    { path: 'cantores', select: 'nome' },
+    { path: 'albuns', select: 'nome' }
+  ]
+})
     .populate('musicasExternas')
 
   if (!playlist) return null
@@ -78,10 +103,21 @@ const getPlaylistById = async (id) => {
 
   // Junta músicas locais e externas
   const todasMusicas = [
-    ...(obj.musicas || []).map(m => ({
-      ...m,
-      source: 'local'
-    })),
+  ...(obj.musicas || []).map(m => ({
+  _id: m._id,
+  id: m._id,
+  nome: m.nome,
+  artista: Array.isArray(m.cantores) && m.cantores.length
+    ? m.cantores.map(c => c.nome).join(', ')
+    : 'Desconhecido',
+  foto: m.foto,
+  link: m.link,
+  duracao: m.duracao,
+  album: Array.isArray(m.albuns) && m.albuns.length
+    ? m.albuns[0].nome
+    : 'Sem álbum',
+  source: 'local'
+})),
     ...(obj.musicasExternas || []).map(m => ({
       _id: m._id,
       id: m.musicaId,

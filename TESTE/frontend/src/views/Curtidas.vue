@@ -33,21 +33,23 @@
         </button>
       </div>
 
-      <div 
-        v-for="(musica, index) in musicas" 
-        :key="`${musica.source}-${musica.id}`" 
-        class="music-card" 
+      <div
+        v-for="(musica, index) in musicas"
+        :key="`${musica.source}-${musica.id}`"
+        class="music-card"
         @dblclick="playMusic(index)"
       >
         <div class="music-number">{{ index + 1 }}</div>
-        
+
         <img :src="musica.cover || '/default-cover.png'" :alt="musica.title" />
-        
+
         <div class="music-info">
           <h3>{{ musica.title }}</h3>
+
           <span class="source-badge" :class="musica.source">
-  <i :class="getSourceIcon(musica.source)"></i>
-</span>
+            <i :class="getSourceIcon(musica.source)"></i>
+          </span>
+
           <p>
             {{ musica.artist }}
             <span v-if="musica.album"> • {{ musica.album }}</span>
@@ -55,32 +57,41 @@
         </div>
 
         <div class="music-actions">
-          <button 
-            class="btn-like active" 
+          <button
+            class="btn-like active"
             @click="removerCurtida(musica, index)"
             title="Remover dos curtidos"
           >
             <i class="fa fa-heart"></i>
           </button>
-          
-          <div class="dropdown-container" ref="dropdownContainers">
-            <button 
-              class="btn-more" 
+
+          <div class="dropdown-container">
+            <button
+              class="btn-more"
               @click="toggleMenu(index, $event)"
-              :class="{ 'active': activeMenuIndex === index }"
+              :class="{ active: activeMenuIndex === index }"
+              :ref="el => setDropdownTriggerRef(el, index)"
             >
               <i class="fa fa-ellipsis-v"></i>
             </button>
-            
-            <!-- Menu Dropdown Moderno -->
+          </div>
+
+          <!-- Teleport fica DENTRO do v-for -->
+          <Teleport to="body">
+            <div
+              v-if="activeMenuIndex === index"
+              class="dropdown-overlay"
+              @click="closeMenu"
+            ></div>
+
             <transition name="menu-pop">
-              <div 
-                v-if="activeMenuIndex === index" 
+              <div
+                v-if="activeMenuIndex === index"
                 class="modern-dropdown"
-                :style="getDropdownPosition(index)"
+                :style="dropdownPosition"
                 ref="dropdownMenus"
+                @click.stop
               >
-                <!-- Opções -->
                 <div class="dropdown-options">
                   <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
                     <div class="option-icon playlist-icon">
@@ -92,7 +103,7 @@
                     </div>
                     <i class="fa fa-chevron-right option-arrow"></i>
                   </button>
-                  
+
                   <button class="dropdown-option" @click="favoritarMusica(musica)">
                     <div class="option-icon favorite-icon">
                       <i class="fa fa-star-o"></i>
@@ -104,8 +115,7 @@
                     <i class="fa fa-chevron-right option-arrow"></i>
                   </button>
                 </div>
-                
-                <!-- Footer -->
+
                 <div class="dropdown-footer">
                   <button class="dropdown-close" @click="closeMenu">
                     <i class="fa fa-times"></i> Fechar
@@ -113,7 +123,7 @@
                 </div>
               </div>
             </transition>
-          </div>
+          </Teleport>
         </div>
       </div>
     </div>
@@ -130,9 +140,11 @@
             <span class="toast-message">{{ toast.message }}</span>
           </div>
         </div>
+
         <button v-if="toast.showUndo" class="toast-undo" @click="desfazerRemocao">
           <i class="fa fa-undo"></i> Desfazer
         </button>
+
         <button class="toast-close" @click="toast.show = false">
           <i class="fa fa-times"></i>
         </button>
@@ -142,38 +154,99 @@
     <!-- MODAL PLAYLIST -->
     <transition name="fade">
       <div v-if="showPlaylistModal" class="modal-overlay" @click.self="showPlaylistModal = false">
-        <div class="modal">
-          <div class="modal-header">
-            <h3>Adicionar à playlist</h3>
-            <button @click="showPlaylistModal = false">
+        <div class="modal modal-playlist">
+          <div class="modal-header-playlist">
+            <div class="modal-music-preview">
+              <img :src="musicaSelecionada?.cover || '/default-cover.png'" :alt="musicaSelecionada?.title" />
+              <div class="modal-music-info">
+                <span class="modal-music-label">Adicionar à playlist</span>
+                <h3 class="modal-music-title">{{ musicaSelecionada?.title }}</h3>
+                <p class="modal-music-artist">{{ musicaSelecionada?.artist }}</p>
+              </div>
+            </div>
+
+            <button class="modal-close-btn" @click="showPlaylistModal = false">
               <i class="fa fa-times"></i>
             </button>
           </div>
 
-          <div class="modal-body">
-            <div v-if="playlists.length === 0" class="empty-playlists">
-              <p>Você não tem playlists ainda</p>
+          <div class="modal-actions-bar">
+            <div class="search-playlist-box">
+              <i class="fa fa-search"></i>
+              <input
+                type="text"
+                v-model="playlistSearchQuery"
+                placeholder="Buscar playlist..."
+              />
+            </div>
+          </div>
+
+          <div class="modal-body-playlist">
+            <div v-if="isLoadingPlaylists" class="modal-loading">
+              <div class="spinner-small"></div>
+              <span>Carregando playlists...</span>
             </div>
 
-            <div v-else class="playlist-list">
-              <div 
-                v-for="playlist in playlists" 
+            <div v-else-if="filteredPlaylists.length === 0" class="empty-playlists-modern">
+              <div class="empty-playlist-icon">
+                <i class="fa fa-list-ul"></i>
+              </div>
+              <p v-if="playlistSearchQuery">Nenhuma playlist encontrada</p>
+              <p v-else>Você ainda não tem playlists</p>
+            </div>
+
+            <div v-else class="playlist-grid-modern">
+              <div
+                v-for="playlist in filteredPlaylists"
                 :key="playlist._id"
-                class="playlist-item"
+                class="playlist-card-modern"
+                :class="{ adding: playlistBeingAdded === playlist._id, added: playlistJustAdded === playlist._id }"
+                @click="adicionarNaPlaylist(playlist._id)"
               >
-                <div>
-                  <strong>{{ playlist.nome }}</strong>
-                  <p>{{ playlist.musicas?.length || 0 }} músicas</p>
+                <div class="playlist-card-cover">
+                  <img
+                    v-if="playlist.capa || playlist.musicas?.[0]?.cover"
+                    :src="playlist.capa || playlist.musicas[0].cover"
+                    :alt="playlist.nome"
+                  />
+
+                  <div v-else class="playlist-cover-placeholder">
+                    <i class="fa fa-music"></i>
+                  </div>
+
+                  <div v-if="playlistBeingAdded === playlist._id" class="playlist-overlay-loading">
+                    <div class="spinner-tiny"></div>
+                  </div>
+
+                  <div v-if="playlistJustAdded === playlist._id" class="playlist-overlay-success">
+                    <i class="fa fa-check"></i>
+                  </div>
                 </div>
 
-                <button 
-                  class="btn-add"
-                  @click="adicionarNaPlaylist(playlist._id)"
+                <div class="playlist-card-info">
+                  <strong class="playlist-card-name">{{ playlist.nome }}</strong>
+                  <span class="playlist-card-count">
+                    {{ playlist.musicas?.length || 0 }} músicas
+                    <span v-if="playlist.privada" class="playlist-private-badge">🔒</span>
+                  </span>
+                </div>
+
+                <button
+                  class="btn-add-modern"
+                  :class="{ added: playlistJustAdded === playlist._id }"
+                  :disabled="playlistBeingAdded === playlist._id"
                 >
-                  Adicionar
+                  <i v-if="playlistJustAdded === playlist._id" class="fa fa-check"></i>
+                  <i v-else class="fa fa-plus"></i>
                 </button>
               </div>
             </div>
+          </div>
+
+          <div class="modal-footer-playlist">
+            <button class="btn-cancel-modal" @click="showPlaylistModal = false">
+              Cancelar
+            </button>
           </div>
         </div>
       </div>
@@ -185,50 +258,72 @@
 export default {
   name: "Curtidas",
   
-  data() {
-    return {
-      musicas: [],
-      isLoading: false,
-      ultimaMusicaRemovida: null,
-      ultimoIndiceRemovido: null,
-      activeMenuIndex: null,
-      showPlaylistModal: false,
-      playlists: [],
-      musicaSelecionada: null,
-      usuarioId: null,
-      toast: {
-        show: false,
-        title: "",
-        message: "",
-        type: "success",
-        icon: "fa fa-check-circle",
-        showUndo: false
-      }
+ data() {
+  return {
+    musicas: [],
+    isLoading: false,
+    ultimaMusicaRemovida: null,
+    ultimoIndiceRemovido: null,
+    activeMenuIndex: null,
+    dropdownPosition: {
+      top: '0px',
+      left: '0px'
+    },
+    showPlaylistModal: false,
+    playlists: [],
+    playlistSearchQuery: '',
+    playlistBeingAdded: null,
+    playlistJustAdded: null,
+    isLoadingPlaylists: false,
+    musicaSelecionada: null,
+    dropdownTriggerRefs: [],
+    usuarioId: null,
+    toast: {
+      show: false,
+      title: "",
+      message: "",
+      type: "success",
+      icon: "fa fa-check-circle",
+      showUndo: false
     }
-  },
+  }
+},
+mounted() {
+  const user = JSON.parse(localStorage.getItem("usuario") || "{}")
+  this.usuarioId = user?._id || user?.id
 
-  mounted() {
-    const user = JSON.parse(localStorage.getItem("usuario") || "{}")
-    this.usuarioId = user?._id || user?.id
+  this.carregarCurtidas()
 
-    this.carregarCurtidas()
-    
-    // Atualiza quando voltar pra página
-    window.addEventListener('focus', this.carregarCurtidas)
-    document.addEventListener('click', this.handleClickOutside)
-    
-    // Escuta evento de curtidas atualizadas
-    window.addEventListener('curtidas-updated', this.carregarCurtidas)
-    window.addEventListener('likes-updated', this.carregarCurtidas)
-  },
+  window.addEventListener('focus', this.carregarCurtidas)
+  window.addEventListener('curtidas-updated', this.carregarCurtidas)
+  window.addEventListener('likes-updated', this.carregarCurtidas)
+  window.addEventListener('resize', this.closeMenu)
+  window.addEventListener('scroll', this.closeMenu, true)
+},
 
-  beforeUnmount() {
-    window.removeEventListener('focus', this.carregarCurtidas)
-    document.removeEventListener('click', this.handleClickOutside)
-    window.removeEventListener('curtidas-updated', this.carregarCurtidas)
-    window.removeEventListener('likes-updated', this.carregarCurtidas)
-  },
+beforeUnmount() {
+  window.removeEventListener('focus', this.carregarCurtidas)
+  window.removeEventListener('curtidas-updated', this.carregarCurtidas)
+  window.removeEventListener('likes-updated', this.carregarCurtidas)
+  window.removeEventListener('resize', this.closeMenu)
+  window.removeEventListener('scroll', this.closeMenu, true)
 
+  if (this.toastTimeout) {
+    clearTimeout(this.toastTimeout)
+  }
+
+  this.dropdownTriggerRefs = []
+},
+
+computed: {
+  filteredPlaylists() {
+    if (!this.playlistSearchQuery) return this.playlists
+    const query = this.playlistSearchQuery.toLowerCase()
+    return this.playlists.filter(p => 
+      p.nome?.toLowerCase().includes(query)
+    )
+  }
+},
   methods: {
     getSourceIcon(source) {
   const icons = {
@@ -300,64 +395,107 @@ parseDuration(durationStr) {
       }
     },
 
-    toggleMenu(index, event) {
-      event.stopPropagation()
-      if (this.activeMenuIndex === index) {
-        this.activeMenuIndex = null
-      } else {
-        this.activeMenuIndex = index
-      }
-    },
+toggleMenu(index, event) {
+  event.stopPropagation()
 
-    closeMenu() {
-      this.activeMenuIndex = null
-    },
+  if (this.activeMenuIndex === index) {
+    this.closeMenu()
+    return
+  }
 
-    handleClickOutside(event) {
-      const dropdowns = this.$refs.dropdownContainers
-      if (dropdowns) {
-        const containers = Array.isArray(dropdowns) ? dropdowns : [dropdowns]
-        const clickedInside = containers.some(container => 
-          container && container.contains(event.target)
-        )
-        if (!clickedInside) {
-          this.activeMenuIndex = null
-        }
-      }
-    },
+  const trigger = this.dropdownTriggerRefs[index]
+  if (!trigger) return
 
-    getDropdownPosition(index) {
-      return {}
-    },
+  const rect = trigger.getBoundingClientRect()
+  const menuWidth = 280
+  const menuHeight = 190
+  const spacing = 8
+  const margin = 12
 
-    async adicionarAPlaylist(musica) {
-      this.closeMenu()
-      this.musicaSelecionada = musica
-      this.showPlaylistModal = true
+  let left = rect.right - menuWidth
+  let top = rect.bottom + spacing
 
-      try {
-        const token = localStorage.getItem("token")
-        const res = await fetch(`http://localhost:3002/playlists`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const data = await res.json()
-        this.playlists = data
-      } catch (err) {
-        console.error(err)
-      }
-    },
+  if (left < margin) {
+    left = margin
+  }
+
+  if (left + menuWidth > window.innerWidth - margin) {
+    left = window.innerWidth - menuWidth - margin
+  }
+
+  if (top + menuHeight > window.innerHeight - margin) {
+    top = rect.top - menuHeight - spacing
+  }
+
+  if (top < margin) {
+    top = margin
+  }
+
+  this.dropdownPosition = {
+    position: 'fixed',
+    top: `${top}px`,
+    left: `${left}px`,
+    zIndex: 10001
+  }
+
+  this.activeMenuIndex = index
+},
+
+closeMenu() {
+  this.activeMenuIndex = null
+},
+
+
+setDropdownTriggerRef(el, index) {
+  if (el) {
+    this.dropdownTriggerRefs[index] = el
+  }
+},
+
+
+async adicionarAPlaylist(musica) {
+  this.closeMenu()
+  this.musicaSelecionada = musica
+  this.showPlaylistModal = true
+  this.playlistSearchQuery = ''
+  this.playlistBeingAdded = null
+  this.playlistJustAdded = null
+  this.isLoadingPlaylists = true
+
+  try {
+    const token = localStorage.getItem("token")
+    const res = await fetch(`http://localhost:3002/playlists`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    this.playlists = data
+  } catch (err) {
+    console.error(err)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível carregar playlists",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  } finally {
+    this.isLoadingPlaylists = false
+  }
+},
     
-   async adicionarNaPlaylist(playlistId) {
+async adicionarNaPlaylist(playlistId) {
+  // Evita clique duplo
+  if (this.playlistBeingAdded) return
+
+  this.playlistBeingAdded = playlistId
+
   try {
     const token = localStorage.getItem("token")
     const musica = this.musicaSelecionada
 
-    // ✅ MONTAR O BODY CORRETAMENTE
     const body = {
       source: musica.source || 'local'
     }
 
-    // Se for externa, envia dadosMusica completos
     if (musica.source && musica.source !== 'local') {
       body.dadosMusica = {
         titulo: musica.title || 'Sem título',
@@ -375,10 +513,10 @@ parseDuration(durationStr) {
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',  // ✅ ESSENCIAL
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(body)  // ✅ ENVIAR O BODY
+        body: JSON.stringify(body)
       }
     )
 
@@ -387,15 +525,25 @@ parseDuration(durationStr) {
       throw new Error(errData.error || `Erro ${res.status}`)
     }
 
+    // ✅ SUCESSO: mostra check por 1.5s depois fecha
+    this.playlistBeingAdded = null
+    this.playlistJustAdded = playlistId
+    
     this.showToast({
-      title: "Adicionado!",
+      title: "Adicionada!",
       message: `"${musica.title}" foi adicionada à playlist`,
       type: "success",
       icon: "fa fa-check"
     })
 
-    this.showPlaylistModal = false
+    // Fecha modal após delay
+    setTimeout(() => {
+      this.showPlaylistModal = false
+      this.playlistJustAdded = null
+    }, 1200)
+
   } catch (err) {
+    this.playlistBeingAdded = null
     console.error(err)
     this.showToast({
       title: "Erro",
@@ -983,22 +1131,18 @@ const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
 
 /* ===== MENU DROPDOWN MODERNO ===== */
 .modern-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 8px;
+  position: fixed;
   min-width: 280px;
-  background: rgba(30, 30, 46, 0.95);
-  backdrop-filter: blur(20px);
+  background: rgba(30, 30, 46, 0.98);
+  backdrop-filter: blur(24px);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  z-index: 1000;
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  z-index: 10001;
   overflow: hidden;
-  transform-origin: top right;
 }
 
 /* Animação do Menu */
@@ -1198,20 +1342,454 @@ const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
   color: #f8fafc;
 }
 
-/* ===== MODAL ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  z-index: 99999;  /* 🔥 MUITO ALTO - acima de absolutamente tudo */
+  animation: fadeIn 0.2s ease;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-playlist {
+  position: relative;  /* 🔥 ADICIONAR */
+  z-index: 99999;      /* 🔥 ADICIONAR */
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: hidden;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: slideUpModal 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideUpModal {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+/* Header com preview da música */
+.modal-header-playlist {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.15), rgba(124, 58, 237, 0.1));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-music-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-music-preview img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.modal-music-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modal-music-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #ec4899;
+  font-weight: 600;
+}
+
+.modal-music-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-music-artist {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  transform: rotate(90deg);
+}
+
+/* Barra de ações: busca + nova playlist */
+.modal-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.search-playlist-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: all 0.2s;
+}
+
+.search-playlist-box:focus-within {
+  border-color: rgba(236, 72, 153, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+.search-playlist-box i {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.search-playlist-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 14px;
+  width: 100%;
+}
+
+.search-playlist-box input::placeholder {
+  color: #64748b;
+}
+/* Body do modal */
+.modal-body-playlist {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 8px 16px;
+}
+
+.modal-body-playlist::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body-playlist::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body-playlist::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+/* Loading */
+.modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 12px;
+  color: #94a3b8;
+}
+
+.spinner-small {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(236, 72, 153, 0.2);
+  border-top-color: #ec4899;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Estado vazio moderno */
+.empty-playlists-modern {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 16px;
+}
+
+.empty-playlist-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(124, 58, 237, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+.empty-playlist-icon i {
+  font-size: 32px;
+  color: #ec4899;
+  opacity: 0.8;
+}
+
+.empty-playlists-modern p {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 0;
+}
+/* Grid de playlists moderno */
+.playlist-grid-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.playlist-card-modern {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.playlist-card-modern:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  transform: translateX(4px);
+}
+
+.playlist-card-modern.adding {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.playlist-card-modern.added {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.playlist-card-cover {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.playlist-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playlist-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(124, 58, 237, 0.2));
+}
+
+.playlist-cover-placeholder i {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Overlays de loading e sucesso */
+.playlist-overlay-loading,
+.playlist-overlay-success {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.playlist-overlay-loading {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.playlist-overlay-success {
+  background: rgba(16, 185, 129, 0.85);
+}
+
+.playlist-overlay-success i {
+  color: white;
+  font-size: 24px;
+  animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.spinner-tiny {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* Info da playlist */
+.playlist-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playlist-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-card-count {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playlist-private-badge {
+  font-size: 10px;
+}
+
+/* Botão de adicionar moderno */
+.btn-add-modern {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-add-modern:hover {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  transform: scale(1.1);
+}
+
+.btn-add-modern.added {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.btn-add-modern:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Footer */
+.modal-footer-playlist {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-cancel-modal {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-modal:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+}
+
+/* Animações de fade */
+.fade-enter-active {
+  animation: fadeIn 0.2s ease;
+}
+
+.fade-leave-active {
+  animation: fadeOut 0.2s ease forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 .modal {
   background: #121212;
   padding: 20px;
@@ -1329,7 +1907,14 @@ const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
   font-size: 20px;
   flex-shrink: 0;
 }
-
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
 .toast-notification.success .toast-icon {
   background: rgba(16, 185, 129, 0.15);
   color: #10b981;
@@ -1460,25 +2045,15 @@ const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
   }
 
   .modern-dropdown {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    margin: 0;
-    border-radius: 20px 20px 0 0;
-    max-height: 80vh;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%);
+    width: calc(100vw - 32px);
+    max-width: 360px;
+    max-height: 70vh;
     overflow-y: auto;
-    animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
+    border-radius: 20px;
   }
 
   .toast-notification {

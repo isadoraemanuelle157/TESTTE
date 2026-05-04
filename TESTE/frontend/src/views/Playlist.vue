@@ -120,9 +120,15 @@
         <h3><i class="fa fa-plus-circle"></i> Adicionar músicas</h3>
         <div class="search-box">
           <i class="fa fa-search"></i>
-          <input type="text" v-model="searchQuery" placeholder="Buscar músicas, artistas..." @input="debouncedSearch" />
+        <input 
+  type="text" 
+  v-model="searchQuery" 
+  placeholder="Buscar músicas, artistas..." 
+  @input="handleSearchInput" 
+/>
           <button v-if="searchQuery" class="clear-search" @click="clearSearch"><i class="fa fa-times"></i></button>
         </div>
+        
       </div>
 
       <!-- Resultados da Busca -->
@@ -132,7 +138,9 @@
           <div class="result-info">
             <span class="result-title">{{ song.title }}</span>
             <span class="result-artist">{{ song.artist }} • {{ song.album }}</span>
-            <span v-if="song.source !== 'local'" class="result-source" :class="song.source">{{ song.source }}</span>
+          <div class="result-source-icons">
+  <i :class="getSourceIcon(song.source)"></i>
+</div>
           </div>
           <button class="btn-add" @click="addSong(song)" :disabled="isSongAdded(song)">
             <i :class="isSongAdded(song) ? 'fa fa-check' : 'fa fa-plus'"></i>
@@ -156,7 +164,9 @@
             <div>
               <div :class="{ active: currentPlayingIndex === index }">{{ song.title }}</div>
               <small>{{ song.artist }}</small>
-              <span v-if="song.source && song.source !== 'local'" class="song-source-badge" :class="song.source">{{ song.source }}</span>
+           <span class="song-source-badge">
+  <i :class="getSourceIcon(song.source)"></i>
+</span>
             </div>
           </div>
           <span class="song-album">{{ song.album }}</span>
@@ -304,6 +314,31 @@ export default {
   },
 
   methods: {
+    handleSearchInput() {
+  // limpa timer anterior
+  clearTimeout(this.searchTimer)
+
+  // se apagou tudo → limpa resultados
+  if (!this.searchQuery || this.searchQuery.trim().length === 0) {
+    this.searchResults = []
+    return
+  }
+
+  // 🔥 dispara rápido (melhor UX)
+  this.searchTimer = setTimeout(() => {
+    this.searchMusicas()
+  }, 250) // mais rápido que 400ms
+},
+
+getSourceIcon(source) {
+  const icons = {
+    spotify: 'fa fa-spotify',
+   deezer: 'si si-deezer',
+    local: 'fa fa-database'
+  }
+  return icons[source] || 'fa fa-music'
+},
+
     // ===== PLAYER =====
     initAudioPlayer() {
       this.audioPlayer = new Audio()
@@ -353,19 +388,51 @@ export default {
       }
     },
     
-    normalizeSong(song) {
-      if (!song) return null
-      return {
-        id: String(song._id || song.id || song.musicaId),
-        title: song.title || song.nome || 'Sem título',
-        artist: song.artist || (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
-        album: song.album || song.albuns?.[0]?.nome || 'Sem álbum',
-        duration: song.duration || song.duracao || '0:00',
-        cover: song.cover || song.foto || '',
-        preview: song.preview || song.link || song.url || '',
-        source: song.source || 'local'
-      }
-    },
+normalizeSong(song) {
+  if (!song) return null
+
+  return {
+    id: String(song._id || song.id || song.musicaId),
+
+    title: song.title || song.nome || song.titulo || 'Sem título',
+
+    artist:
+      song.artist ||
+      song.artista ||
+      song?.dadosMusica?.artista ||
+      (song.cantores?.map(c => c.nome).join(', ')) ||
+      'Desconhecido',
+
+    album:
+      song.album ||
+      song.albuns?.[0]?.nome ||
+      song?.dadosMusica?.album ||
+      'Sem álbum',
+
+    duration: this.formatDuration(
+      this.parseDuration(
+        song.duration ||
+        song.duracao ||
+        song?.dadosMusica?.duration
+      )
+    ),
+
+    cover:
+      song.cover ||
+      song.foto ||
+      song?.dadosMusica?.capa ||
+      '',
+
+    preview:
+      song.preview ||
+      song.link ||
+      song.url ||
+      song?.dadosMusica?.previewUrl ||
+      '',
+
+    source: song.source || 'local'
+  }
+},
     
     playAll() {
       if (!this.currentPlaylist?.songs.length) {
@@ -545,7 +612,10 @@ export default {
     },
     
     async searchMusicas() {
-      if (this.searchQuery.length < 2) return
+  if (!this.searchQuery || this.searchQuery.trim().length < 1) {
+  this.searchResults = []
+  return
+}
       this.isSearching = true
       this.searchError = null
       this.searchResults = []
@@ -638,12 +708,16 @@ export default {
       this.searchError = null
     },
     
-    isSongAdded(song) {
-      if (!this.currentPlaylist) return false
-      return this.currentPlaylist.songs.some(s => 
-        String(s.id) === String(song.id) && (s.source || 'local') === (song.source || 'local')
-      )
-    },
+isSongAdded(song) {
+  if (!this.currentPlaylist) return false
+
+  return this.currentPlaylist.songs.some(s => {
+    return (
+      String(s.id) === String(song.id) &&
+      (s.source || 'local') === (song.source || 'local')
+    )
+  })
+},
     
     // ===== ADICIONAR MÚSICA =====
     async addSong(song) {
@@ -672,6 +746,18 @@ const body = {
         ano: song.ano || null,
         album: song.album || ''
       }
+ const newSong = {
+  id: song.id,
+  title: song.title,
+  artist: song.artist,
+  album: song.album,
+  duration: this.formatDuration(this.parseDuration(song.duration)),
+  cover: song.cover,
+  preview: song.preview,
+  source: song.source || 'local'
+}
+
+this.currentPlaylist.songs.push(newSong)     
       
       // ✅ DEBUG: Verifique no console se os dados estão corretos
       console.log('Enviando música externa:', {
@@ -706,10 +792,19 @@ const body = {
       throw new Error(errMessage)
     }
 
-    await this.loadPlaylists()
-    const updated = this.playlists.find(p => p.id === this.currentPlaylist.id)
-    if (updated) this.currentPlaylist = updated
-
+ // Atualiza só local (mantém o check)
+if (!this.isSongAdded(song)) {
+  this.currentPlaylist.songs.push({
+    id: song.id,
+    title: song.title,
+    artist: song.artist,
+    album: song.album,
+    duration: this.formatDuration(this.parseDuration(song.duration)),
+    cover: song.cover,
+    preview: song.preview,
+    source: song.source || 'local'
+  })
+}
     window.dispatchEvent(new Event('playlist-updated'))
     this.showToast({ message: `"${song.title}" adicionada!`, type: 'success' })
 
@@ -1346,7 +1441,29 @@ const idToRemove = song.externalId || song.id
 .delete-modal strong {
   color: #f8fafc;
 }
+.result-source-icons i {
+  margin-right: 6px;
+  font-size: 14px;
+}
 
+.song-source-badge i {
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+/* cores por plataforma */
+.fa-spotify {
+  color: #1db954;
+}
+
+.fa-database {
+  color: #3498db;
+}
+
+/* opcional deezer */
+.si-deezer {
+  color: #ff0000;
+}
 .modal-warning {
   display: block;
   margin-top: 8px;
