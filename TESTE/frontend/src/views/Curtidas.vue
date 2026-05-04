@@ -554,7 +554,7 @@ async adicionarNaPlaylist(playlistId) {
   }
 },
 
-    async favoritarMusica(musica) {
+ async favoritarMusica(musica) {
   this.closeMenu()
 
   try {
@@ -564,10 +564,10 @@ async adicionarNaPlaylist(playlistId) {
       tipo: "musica"
     }
 
-    // Se for externa, envia source e dadosMusica
     if (musica.source && musica.source !== 'local') {
       body.source = musica.source
-      body.dadosMusica = {
+      body.tipoItem = 'musica'        // ← envia tipoItem
+      body.dadosItem = {              // ← envia dadosItem (não dadosMusica)
         titulo: musica.title || 'Sem título',
         artista: musica.artist || 'Desconhecido',
         capa: musica.cover || '',
@@ -587,7 +587,11 @@ async adicionarNaPlaylist(playlistId) {
       body: JSON.stringify(body)
     })
 
-    if (!res.ok) throw new Error("Erro ao favoritar")
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      console.error('Erro do servidor ao favoritar:', errData)
+      throw new Error(errData.error || errData.message || `Erro ${res.status}`)
+    }
 
     const data = await res.json()
 
@@ -608,10 +612,10 @@ async adicionarNaPlaylist(playlistId) {
       })
     }
   } catch (err) {
-    console.error(err)
+    console.error('Erro completo ao favoritar:', err)
     this.showToast({
       title: "Erro",
-      message: "Não foi possível favoritar",
+      message: err.message || "Não foi possível favoritar",
       type: "error",
       icon: "fa fa-times"
     })

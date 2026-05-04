@@ -40,56 +40,96 @@ const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantor
 }
 
 // ========== FAVORITAS EXTERNAS ==========
-const toggleFavoritaExterna = async (usuarioId, itemId, source, tipoItem, dadosItem) => {
+const toggleFavoritaExterna = async (usuarioId, itemId, source, tipoItem, dadosItem, options = {}) => {
   try {
-    // Garante que usuarioId é ObjectId válido
-    const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId) 
-      ? new mongoose.Types.ObjectId(usuarioId) 
+    const acao = options.acao || 'toggle'
+
+    const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId)
+      ? new mongoose.Types.ObjectId(usuarioId)
       : (() => { throw new Error('usuarioId inválido: ' + usuarioId) })()
 
     const idExterno = String(itemId)
+    const sourceNormalizado = String(source).toLowerCase()
+    const tipoNormalizado = String(tipoItem).toLowerCase()
 
-    console.log('toggleFavoritaExterna:', { userObjectId, idExterno, source, tipoItem })
+    console.log('=== toggleFavoritaExterna ===')
+    console.log('userObjectId:', userObjectId)
+    console.log('idExterno:', idExterno)
+    console.log('source:', sourceNormalizado)
+    console.log('tipoItem:', tipoNormalizado)
+    console.log('acao:', acao)
 
-    const existing = await FavoritaExterna.findOne({
+    // busca exata
+    let existing = await FavoritaExterna.findOne({
       usuario: userObjectId,
       itemId: idExterno,
-      source: source,
-      tipoItem: tipoItem
+      source: sourceNormalizado,
+      tipoItem: tipoNormalizado
     })
+
+    // fallback para documentos legados sem tipoItem
+    if (!existing) {
+      existing = await FavoritaExterna.findOne({
+        usuario: userObjectId,
+        itemId: idExterno,
+        source: sourceNormalizado,
+        $or: [
+          { tipoItem: tipoNormalizado },
+          { tipoItem: { $exists: false } },
+          { tipoItem: null }
+        ]
+      })
+    }
 
     if (existing) {
       await existing.deleteOne()
-      return { favorited: false, source: source, tipoItem: tipoItem }
+      console.log('✅ FavoritaExterna REMOVIDA:', existing._id)
+      return { favorited: false, source: sourceNormalizado, tipoItem: tipoNormalizado }
+    }
+
+    // se a intenção era remover, nunca cria
+    if (acao === 'remover') {
+      console.log('⚠️ Item externo não encontrado para remover')
+      return {
+        favorited: false,
+        source: sourceNormalizado,
+        tipoItem: tipoNormalizado,
+        notFound: true
+      }
+    }
+
+    // criação só acontece se realmente for favoritar/toggle
+    if (!dadosItem || (!dadosItem.titulo && !dadosItem.nome)) {
+      throw new Error('Dados do item são obrigatórios para criar nova favorita externa')
     }
 
     const dadosPadrao = {
-      titulo: dadosItem?.titulo || dadosItem?.nome || 'Sem título',
-      artista: dadosItem?.artista || dadosItem?.artistaNome || 'Artista Desconhecido',
-      capa: dadosItem?.capa || dadosItem?.foto || dadosItem?.cover || '',
-      previewUrl: dadosItem?.previewUrl || dadosItem?.preview || '',
-      duration: dadosItem?.duration || 0,
-      ano: dadosItem?.ano || null,
-      album: dadosItem?.album || ''
+      titulo: dadosItem.titulo || dadosItem.nome || 'Sem título',
+      artista: dadosItem.artista || dadosItem.artistaNome || 'Artista Desconhecido',
+      capa: dadosItem.capa || dadosItem.foto || dadosItem.cover || '',
+      previewUrl: dadosItem.previewUrl || dadosItem.preview || '',
+      duration: dadosItem.duration || 0,
+      ano: dadosItem.ano || null,
+      album: dadosItem.album || ''
     }
 
     const novoDoc = await FavoritaExterna.create({
       usuario: userObjectId,
       itemId: idExterno,
-      source: source,
-      tipoItem: tipoItem,
+      source: sourceNormalizado,
+      tipoItem: tipoNormalizado,
       dadosItem: dadosPadrao
     })
 
-    console.log('FavoritaExterna criada:', novoDoc._id)
+    console.log('✅ FavoritaExterna criada:', novoDoc._id)
 
-    return { favorited: true, source: source, tipoItem: tipoItem }
-
+    return { favorited: true, source: sourceNormalizado, tipoItem: tipoNormalizado }
   } catch (err) {
     console.error('Erro em toggleFavoritaExterna:', err)
     throw err
   }
 }
+
 
 const getFavoritasByUser = async (usuarioId) => {
   const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId) 

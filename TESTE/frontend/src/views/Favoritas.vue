@@ -576,46 +576,57 @@ export default {
       }
     },
 
-    async remover(item) {
-      try {
-        const token = localStorage.getItem("token")
-        
-        const body = {
-          tipo: item.type
-        }
+async remover(item) {
+  try {
+    const token = localStorage.getItem("token")
 
-        // Se for item externo, envia source
-        if (item.isExternal && item.source) {
-          body.source = item.source
-        }
+    const body = {
+      tipo: item.type
+    }
 
-        console.log('Removendo favorita:', { id: item.id, body })
+    if (item.isExternal && item.source) {
+      body.source = String(item.source).toLowerCase()
+      body.tipoItem = String(item.type).toLowerCase()
+      body.acao = 'remover'
+    }
 
-        const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        })
-        
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}))
-          console.error('Erro do servidor:', errData)
-          throw new Error(errData.error || 'Erro ao remover')
-        }
-        
-        const data = await res.json()
-        
-        this.favoritas = this.favoritas.filter(f => f.id !== item.id)
-        this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
-      } catch (err) {
-        console.error(err)
-        this.showToast('Erro ao remover favorito', 'error')
-      }
-    },
+    console.log('=== REMOVER FAVORITA ===')
+    console.log('item.id:', item.id)
+    console.log('body:', body)
 
+    const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      console.error('Erro do servidor:', errData)
+      throw new Error(errData.error || 'Erro ao remover')
+    }
+
+    await res.json()
+
+    this.favoritas = this.favoritas.filter(f => {
+      return !(
+        f.id === item.id &&
+        f.type === item.type &&
+        (f.source || '') === (item.source || '')
+      )
+    })
+
+    window.dispatchEvent(new Event('favoritas-updated'))
+
+    this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
+  } catch (err) {
+    console.error(err)
+    this.showToast('Erro ao remover favorito', 'error')
+  }
+},
     play(item) {
       if (item.type !== "musica") return
       window.dispatchEvent(new CustomEvent("play-song", {

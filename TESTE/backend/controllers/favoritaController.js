@@ -5,14 +5,15 @@ const toggle = async (req, res) => {
   try {
     const usuarioId = req.user?.id || req.user?._id || req.user?.usuarioId
     const { id } = req.params
-    const { tipo, source, dadosItem } = req.body
+  const { tipo, source, dadosItem, dadosMusica, tipoItem, acao } = req.body
+
 
     console.log('=== TOGGLE FAVORITA ===')
     console.log('usuarioId:', usuarioId, '| tipo:', typeof usuarioId)
     console.log('id:', id, '| tipo:', typeof id)
     console.log('tipo:', tipo)
+    console.log('tipoItem:', tipoItem)
     console.log('source:', source)
-    console.log('dadosItem:', dadosItem)
 
     if (!usuarioId) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
@@ -25,29 +26,30 @@ const toggle = async (req, res) => {
     // ========== ITENS EXTERNOS (Spotify/Deezer) ==========
     if (source && source !== 'local') {
       const tiposSuportados = ['musica', 'album', 'cantor']
-      if (!tiposSuportados.includes(tipo)) {
+      const tipoEfetivo = tipoItem || tipo
+      
+      if (!tiposSuportados.includes(tipoEfetivo)) {
         return res.status(400).json({ 
           error: 'Tipo inválido para item externo',
+          tipoRecebido: tipoEfetivo,
           tiposSuportados 
         })
       }
 
-      // Validação mínima de dados
-      if (!dadosItem || !dadosItem.titulo) {
-        return res.status(400).json({ 
-          error: 'Dados do item são obrigatórios para favoritar itens externos',
-          recebido: { tipo, source, dadosItem }
-        })
-      }
-
+      const dadosEfetivos = dadosItem || dadosMusica
+      
+      // 🔥 CORREÇÃO: dadosItem só é obrigatório se for CRIAR (não existe ainda)
+      // Se não enviou dadosItem, o service vai tentar remover pelo itemId+source+tipoItem
       try {
-        const result = await favoritaService.toggleFavoritaExterna(
-          usuarioId,
-          String(id),
-          source,
-          tipo,
-          dadosItem
-        )
+    const result = await favoritaService.toggleFavoritaExterna(
+  usuarioId,
+  String(id),
+  String(source).toLowerCase(),
+  String(tipoEfetivo).toLowerCase(),
+  dadosEfetivos || null,
+  { acao }
+)
+
         return res.json(result)
       } catch (serviceErr) {
         console.error('Erro no service toggleFavoritaExterna:', serviceErr)
@@ -101,7 +103,6 @@ const toggle = async (req, res) => {
     })
   }
 }
-
 const getMinhasFavoritas = async (req, res) => {
   try {
     const usuarioId = req.user?.id || req.user?._id || req.user?.usuarioId
