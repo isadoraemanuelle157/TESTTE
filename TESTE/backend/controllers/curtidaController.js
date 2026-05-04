@@ -7,6 +7,7 @@ const mongoose = require('mongoose')
 const getMinhasCurtidas = async (req, res) => {
   try {
     const userId = req.user.id
+     const userObjectId = new mongoose.Types.ObjectId(userId)
 
     const { locais, externas } = await curtidaService.getTodasCurtidas(userId)
 
@@ -48,6 +49,7 @@ const getMinhasCurtidas = async (req, res) => {
 }
 
 // ========== TOGGLE CURTIDA (local ou externa) ==========
+// ========== TOGGLE CURTIDA (local ou externa) ==========
 const toggleCurtida = async (req, res) => {
   try {
     const userId = req.user.id
@@ -57,6 +59,14 @@ const toggleCurtida = async (req, res) => {
     // Validação básica
     if (!musicaId) {
       return res.status(400).json({ error: 'ID da música é obrigatório' })
+    }
+
+    // 🔥 CONVERTE userId PARA OBJECTID (garante consistência)
+    let userObjectId
+    try {
+      userObjectId = new mongoose.Types.ObjectId(userId)
+    } catch (e) {
+      return res.status(400).json({ error: 'ID de usuário inválido' })
     }
 
     // Se for música externa (deezer/spotify)
@@ -69,8 +79,8 @@ const toggleCurtida = async (req, res) => {
       }
 
       const result = await curtidaService.toggleCurtidaExterna(
-        userId, 
-        String(musicaId),  // Garante string
+        userObjectId,  // <-- MUDANÇA: passa ObjectId em vez de string
+        String(musicaId),
         source, 
         dadosMusica
       )
@@ -85,7 +95,10 @@ const toggleCurtida = async (req, res) => {
       })
     }
 
-    const result = await curtidaService.toggleCurtida(userId, musicaId)
+    // 🔥 CONVERTE musicaId PARA OBJECTID também
+    const musicaObjectId = new mongoose.Types.ObjectId(musicaId)
+
+    const result = await curtidaService.toggleCurtida(userObjectId, musicaObjectId)
     res.json(result)
 
   } catch (err) {

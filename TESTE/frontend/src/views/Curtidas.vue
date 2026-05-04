@@ -45,10 +45,12 @@
         
         <div class="music-info">
           <h3>{{ musica.title }}</h3>
+          <span class="source-badge" :class="musica.source">
+  <i :class="getSourceIcon(musica.source)"></i>
+</span>
           <p>
             {{ musica.artist }}
             <span v-if="musica.album"> • {{ musica.album }}</span>
-           
           </p>
         </div>
 
@@ -228,6 +230,15 @@ export default {
   },
 
   methods: {
+    getSourceIcon(source) {
+  const icons = {
+    spotify: 'fa fa-spotify',
+    deezer: 'si si-deezer',
+    local: 'fa fa-database'
+  }
+  return icons[source] || 'fa fa-music'
+},
+
 parseDuration(durationStr) {
   if (!durationStr) return 30
   if (typeof durationStr === 'number') {

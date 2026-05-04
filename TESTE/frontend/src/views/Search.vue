@@ -103,14 +103,19 @@
   class="group-item"
   @click="selectSuggestion(item.name, item)"
 >
-                  <img v-if="item.image" :src="item.image" class="item-thumb">
+                <img v-if="item.image" :src="item.image" class="item-thumb" @error="$event.target.style.display='none'">
                   <div v-else class="item-thumb-placeholder" :class="group.typeClass">
                     <i :class="getIconForType(group.type)"></i>
                   </div>
-                  <div class="item-details">
-                    <span class="item-name" v-html="highlightText(item.name)"></span>
-                    <span v-if="item.subtitle" class="item-sub">{{ item.subtitle }}</span>
-                  </div>
+           <div class="item-details">
+  <div class="item-name-row">
+    <span class="item-name" v-html="highlightText(item.name)"></span>
+    <span class="source-badge" :class="item.source" :title="'Fonte: ' + item.source">
+      <i :class="getSourceIcon(item.source)"></i>
+    </span>
+  </div>
+  <span v-if="item.subtitle" class="item-sub">{{ item.subtitle }}</span>
+</div>
                 </div>
               </div>
             </div>
@@ -314,7 +319,7 @@
                 @click="playTrack(track)"
               >
                 <span class="track-number">{{ index + 1 }}</span>
-                <img :src="track.album.cover_medium" :alt="track.title">
+<img :src="track.album.cover_medium" :alt="track.title" @error="$event.target.style.display='none'">
                 <div class="track-info">
                   <span class="track-name">{{ track.title }}</span>
                   <span class="track-artist">{{ track.artist.name }}</span>
@@ -350,7 +355,7 @@
                 class="artist-item"
                 @click="searchArtist(artist.name, artist.id)"
               >
-                <img :src="artist.picture_medium" :alt="artist.name">
+<img :src="artist.picture_medium" :alt="artist.name" @error="$event.target.style.display='none'">
                 <span class="artist-name">{{ artist.name }}</span>
                 <span class="artist-fans">{{ formatFans(artist.nb_fan) }}</span>
               </div>
@@ -387,21 +392,33 @@
               class="result-card"
                :class="{ 'has-decade': result.decada || result.ano }"
             >
-              <div class="result-image" @click="handleResultClick(result)">
-                <img :src="getBestImage(result)" :alt="getResultTitle(result)">
-                <div class="result-overlay">
-                  <i class="fa fa-play"></i>
-                </div>
-                <span class="result-type">{{ getResultType(result) }}</span>
+            <div class="result-image" @click="handleResultClick(result)">
+<img :src="getBestImage(result)" :alt="getResultTitle(result)" @error="$event.target.src='/default-cover.png'">
+  <div class="result-overlay">
+    <i class="fa fa-play"></i>
+  </div>
+  
+  <!-- Badge de tipo (Música/Artista/Álbum) -->
+  <span class="result-type">{{ getResultType(result) }}</span>
 
-                  <span
+  <!-- Badge de origem (Spotify/Deezer/Local) -->
+  <span 
+    class="source-badge-card" 
+    :class="result.source"
+    :title="'Fonte: ' + result.source"
+  >
+    <i :class="getSourceIcon(result.source)"></i>
+  </span>
+
+  <!-- Badge de década -->
+  <span
     v-if="result.decada || result.ano"
     class="decade-badge"
     :style="{ background: getDecadeColor(result.decada || result.ano) }"
   >
     {{ result.decada || getDecadeFromYear(result.ano) }}
   </span>
-              </div>
+</div>
               
             <!-- Música = coração -->
 <button 
@@ -465,7 +482,8 @@ export default {
 
   data() {
     return {
-      DEEZER_API: 'https://proxy.corsfix.com/?https://api.deezer.com',
+SPOTIFY_API: 'http://localhost:3002/spotify',
+DEEZER_API: 'https://api.deezer.com',
 
       // Search State
       searchQuery: '',
@@ -762,6 +780,14 @@ watch: {
 },
 
   methods: {
+getSourceIcon(source) {
+  const icons = {
+    spotify: 'fa fa-spotify',
+    deezer: 'si si-deezer',
+    local: 'fa fa-database'
+  }
+  return icons[source] || 'fa fa-music'
+},
     // ===== SISTEMA DE CURTIDAS =====
     
     // Carregar músicas curtidas do localStorage
@@ -1023,7 +1049,10 @@ async toggleFavoriteItem(item) {
     }
 
     // Montar body
-    const body = { tipo }
+   const body = {
+  tipo,
+  source: item.source || 'local'
+}
 
     if (isDeezer) {
       body.source = 'deezer'
@@ -1140,23 +1169,23 @@ handleResultClick(result) {
     }
 
     const trackId = track.id
-    const isDeezer = track.source === 'deezer'
     
     // Montar body conforme tipo
-    const body = {}
-    
-    if (isDeezer) {
-      body.source = 'deezer'
-      body.dadosMusica = {
-        titulo: track.title || 'Sem título',
-        artista: track.artist?.name || 'Artista Desconhecido',
-        capa: this.getBestImage(track) || '',
-        previewUrl: track.preview || '',
-        duration: track.duration || 30,
-        ano: track.ano || null,
-        album: track.album?.title || ''
-      }
-    }
+const body = {
+  source: track.source || 'local'
+}
+
+if (track.source === 'deezer' || track.source === 'spotify') {
+  body.dadosMusica = {
+    titulo: track.title || 'Sem título',
+    artista: track.artist?.name || 'Desconhecido',
+    capa: this.getBestImage(track) || '',
+    previewUrl: track.preview || '',
+    duration: track.duration || 30,
+    ano: track.ano || null,
+    album: track.album?.title || ''
+  }
+}
     // Se for local, não precisa enviar source (ou envia 'local')
 
     const res = await fetch(
@@ -1170,6 +1199,13 @@ handleResultClick(result) {
         body: JSON.stringify(body)
       }
     )
+        // 🔥 VERIFICA SE RESPOSTA ESTÁ OK ANTES DE FAZER JSON()
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      console.error('Erro da API:', errorData)
+      this.showToast(errorData.error || `Erro ${res.status}`, "error")
+      return
+    }
 
     const data = await res.json()
 
@@ -1211,16 +1247,21 @@ async loadTopTracksByCategory(category = 'Brasil') {
   try {
     this.currentTopCategory = category || 'Brasil'
 
-    let url = `${this.DEEZER_API}/chart/0/tracks?limit=10`
+   const res = await fetch(
+  `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10`
+).then(r => r.json())
 
-    if (category && category !== 'Brasil') {
-      url = `${this.DEEZER_API}/search/track?q=${encodeURIComponent(category)}&limit=10`
-    }
+this.chartTracks = res.tracks?.items.map(t => ({
+  id: t.id,
+  title: t.name,
+  artist: { name: t.artists.map(a => a.name).join(', ') },
+  album: {
+    cover_medium: t.album.images?.[0]?.url
+  },
+  preview: t.preview_url,
+  source: 'spotify'
+})) || []
 
-    const response = await fetch(url)
-    const data = await response.json()
-
-    this.chartTracks = Array.isArray(data.data) ? data.data : []
   } catch (error) {
     console.error('Erro ao carregar top da categoria:', error)
     this.chartTracks = []
@@ -1274,44 +1315,44 @@ async loadPopularArtists() {
         .catch(() => [])
     ])
 
-    const [tracks, artists, albums] = await Promise.all([
-      fetch(`${this.DEEZER_API}/search/track?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`${this.DEEZER_API}/search/album?q=${encodeURIComponent(query)}`).then(r => r.json())
-    ])
+const spotifyRes = await fetch(
+  `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album`
+).then(r => r.json())
 
+const deezerRes = await fetch(
+  `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
+).then(r => r.json())
     let results = []
 
-    // USUÁRIOS LOCAIS
-    if (Array.isArray(localUsuarios)) {
-  results.push(...localUsuarios.map(u => ({
-    id: u.id || u._id,
-    name: u.nome,
-    username: u.username,
-    picture: u.avatar,
-    bio: u.bio || '',
-    perfilPrivado: !!u.perfilPrivado,
-    mostrarAtividade: u.mostrarAtividade !== false,
-    localizacao: u.localizacao || '',
-    membroDesde: u.membroDesde || null,
-    type: 'user',
-    source: 'local'
-  })))
-}
+     // USUÁRIOS LOCAIS
+    if (Array.isArray(localUsuarios) && localUsuarios.length > 0) {
+      results.push(...localUsuarios.map(u => ({
+        id: u._id || u.id,
+        name: u.nome || u.name || u.username,
+        username: u.username || u.nome,
+        picture: u.foto || u.avatar || u.picture,
+        avatar: u.avatar || u.foto,
+        bio: u.bio,
+        perfilPrivado: u.perfilPrivado,
+        mostrarAtividade: u.mostrarAtividade,
+        type: 'user',
+        source: 'local'
+      })))
+    }
 
-    // MUSICAS LOCAIS
-    if (Array.isArray(localMusicas)) {
+    // MÚSICAS LOCAIS
+    if (Array.isArray(localMusicas) && localMusicas.length > 0) {
       results.push(...localMusicas.map(m => ({
         id: m._id,
         title: m.nome,
         artist: {
-          name: m.cantores?.map(c => c.nome).join(', ')
+          name: m.cantores?.map(c => c.nome).join(', ') || 'Artista desconhecido'
         },
         album: {
           title: m.albuns?.[0]?.nome || '',
           cover: m.albuns?.[0]?.foto || ''
         },
-        cover: m.foto,
+        cover: m.foto || m.albuns?.[0]?.foto || '',
         preview: m.link,
         ano: m.ano,
         decada: m.ano ? this.getDecadeFromYear(m.ano) : null,
@@ -1321,27 +1362,26 @@ async loadPopularArtists() {
     }
 
     // CANTORES LOCAIS
- // CANTORES LOCAIS
-if (Array.isArray(localCantores)) {
-  results.push(...localCantores.map(c => ({
-    id: c._id,
-    name: c.nome,
-    picture: c.foto,
-    nb_fan: c.totalSeguidores || 0,        // ← ADICIONADO
-    ano: c.ano,
-    decada: c.ano ? this.getDecadeFromYear(c.ano) : null,  // ← CORRIGIDO: c.ano
-    type: 'artist',
-    source: 'local'
-  })))
-}
+    if (Array.isArray(localCantores) && localCantores.length > 0) {
+      results.push(...localCantores.map(c => ({
+        id: c._id,
+        name: c.nome,
+        picture: c.foto,
+        nb_fan: c.totalSeguidores || 0,
+        ano: c.ano,
+        decada: c.ano ? this.getDecadeFromYear(c.ano) : null,
+        type: 'artist',
+        source: 'local'
+      })))
+    }
 
-// ÁLBUNS LOCAIS
-    if (Array.isArray(localAlbuns)) {
+    // ÁLBUNS LOCAIS
+    if (Array.isArray(localAlbuns) && localAlbuns.length > 0) {
       results.push(...localAlbuns.map(a => ({
         id: a._id,
         title: a.nome,
         artist: {
-          name: a.cantor?.nome || ''
+          name: a.cantor?.nome || 'Artista desconhecido'
         },
         cover: a.foto,
         ano: a.ano,
@@ -1350,82 +1390,87 @@ if (Array.isArray(localCantores)) {
         source: 'local'
       })))
     }
-
-    // GÊNEROS
-if (Array.isArray(localGeneros)) {
-
-  localGeneros.forEach(g=>{
-    // músicas do gênero
-    if(g.musicas?.length){
-      results.push(
-       ...g.musicas.map(m=>({
-          id:m._id,
-          title:m.nome,
-          artist:{
-             name:m.cantores?.map(c=>c.nome).join(', ')
-          },
-          album:{
-             title:m.albuns?.[0]?.nome || '',
-             cover:m.albuns?.[0]?.foto || ''
-          },
-          cover:m.foto,
-          preview:m.link,
-          ano:m.ano,
-          decada:m.ano
-            ? this.getDecadeFromYear(m.ano)
-            : null,
-          type:'track',
-          source:'local'
-       }))
-      )
-    }
-
-    // albuns do gênero
-    if(g.albuns?.length){
-      results.push(
-       ...g.albuns.map(a=>({
-         id:a._id,
-         title:a.nome,
-         artist:{
-            name:a.cantor?.nome || ''
-         },
-         cover:a.foto,
-         ano:a.ano,
-         decada:a.ano
-           ? this.getDecadeFromYear(a.ano)
-           : null,
-         type:'album',
-         source:'local'
-       }))
-      )
-    }
-
-    // cantores do gênero
-    if(g.cantores?.length){
-      results.push(
-       ...g.cantores.map(c=>({
-         id:c._id,
-         name:c.nome,
-         picture:c.foto,
-         nb_fan:c.totalSeguidores || 0,
-         ano:c.ano,
-         decada:c.ano
-           ? this.getDecadeFromYear(c.ano)
-           : null,
-         type:'artist',
-         source:'local'
-       }))
-      )
-    }
-
-  })
-
+// TRACKS
+if (spotifyRes.tracks?.items) {
+  results.push(...spotifyRes.tracks.items.map(t => ({
+    id: t.id,
+    title: t.name,
+    artist: { name: t.artists.map(a => a.name).join(', ') },
+    album: {
+      title: t.album.name,
+      cover: t.album.images?.[0]?.url
+    },
+    cover: t.album.images?.[0]?.url,
+    preview: t.preview_url,
+    duration: Math.floor(t.duration_ms / 1000),
+    type: 'track',
+    source: 'spotify'
+  })))
 }
 
-    // DEEZER
-    if (tracks.data) results.push(...tracks.data.map(t => ({ ...t, type: 'track', source: 'deezer' })))
-    if (artists.data) results.push(...artists.data.map(a => ({ ...a, type: 'artist', source: 'deezer' })))
-    if (albums.data) results.push(...albums.data.map(a => ({ ...a, type: 'album', source: 'deezer' })))
+// DEEZER - MÚSICAS
+if (deezerRes.data) {
+  results.push(...deezerRes.data.map(t => ({
+    id: t.id,
+    title: t.title,
+    artist: { name: t.artist?.name },
+    album: {
+      title: t.album?.title,
+      cover: t.album?.cover_medium
+    },
+    cover: t.album?.cover_medium,
+    preview: t.preview,
+    duration: t.duration,
+    type: 'track',
+    source: 'deezer'
+  })))
+}
+
+// DEEZER - ARTISTAS
+if (deezerRes.data) {
+  const deezerArtists = deezerRes.data
+    .map(t => t.artist)
+    .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+  
+  results.push(...deezerArtists.map(a => ({
+    id: a.id,
+    name: a.name,
+    picture: a.picture_medium,
+    picture_medium: a.picture_medium,
+    picture_big: a.picture_big,
+    nb_fan: a.nb_fan || 0,
+    type: 'artist',
+    source: 'deezer'
+  })))
+}
+
+// DEEZER - ÁLBUNS
+if (deezerRes.data) {
+  const deezerAlbums = deezerRes.data
+    .map(t => t.album)
+    .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+  
+  results.push(...deezerAlbums.map(a => ({
+    id: a.id,
+    title: a.title,
+    artist: { name: 'Artista' },
+    cover: a.cover_medium,
+    cover_medium: a.cover_medium,
+    cover_big: a.cover_big,
+    type: 'album',
+    source: 'deezer'
+  })))
+}   
+    // GÊNEROS (apenas o gênero em si, não seus itens - evita duplicação)
+    if (Array.isArray(localGeneros)) {
+      results.push(...localGeneros.map(g => ({
+        id: g._id,
+        name: g.nome,
+        description: g.descricao || 'Gênero musical',
+        type: 'genre',
+        source: 'local'
+      })))
+    }
 
     this.searchResults = results
   } catch (err) {
@@ -1749,39 +1794,35 @@ getResultSubtitle(item) {
     },
 
  getBestImage(item) {
-  if (item.source === 'local') {
-    if (item.type === 'track') {
-      return item.album?.cover || item.cover
+    // 🎵 DEEZER
+    if (item.source === 'deezer') {
+      if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
+      if (item.type === 'artist') return item.picture_medium || item.picture
+      if (item.type === 'album') return item.cover_medium || item.cover
+      return item.picture_medium || item.cover_medium || item.cover || ''
     }
-    if (item.type === 'artist') {
-      return item.picture
-    }
-    if (item.type === 'album') {
-      return item.cover
-    }
-    
-    // ✅ USUÁRIO: Priorizar avatar
-    if (item.type === 'user') {
-      return item.picture || item.avatar || '/default-avatar.png'
-    }
-    
-    if (item.type === 'genre') {
-      return '/default-genre.png'
-    }
-  }
-      // Deezer
-      if (item.type === 'track') {
-        return item.album?.cover_medium
-      }
-      if (item.type === 'artist') {
-        return item.picture_medium
-      }
-      if (item.type === 'album') {
-        return item.cover_medium
-      }
 
-      return ''
-    },
+    // 🎵 SPOTIFY
+    if (item.source === 'spotify') {
+      if (item.type === 'track') return item.album?.cover || item.cover
+      if (item.type === 'artist') return item.picture
+      if (item.type === 'album') return item.cover
+      return item.cover || item.picture || ''
+    }
+
+    // 🎵 LOCAL (banco de dados)
+    if (item.source === 'local') {
+      if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
+      if (item.type === 'artist') return item.picture || item.foto || ''
+      if (item.type === 'album') return item.cover || item.foto || ''
+      if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
+      if (item.type === 'genre') return item.foto || '/default-genre.png'
+      return item.foto || item.cover || item.picture || ''
+    }
+
+    // Fallback genérico
+    return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
+  },
 
     getIconForType(type) {
       const icons = {
@@ -2372,6 +2413,58 @@ html, body, #app {
     transform: translateX(0);
   }
 }
+/* ===== SOURCE BADGE NO DROPDOWN ===== */
+
+.item-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.item-name-row .item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-badge {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.2s;
+}
+
+.source-badge.spotify {
+  background: rgba(29, 185, 84, 0.15);
+  border-color: rgba(29, 185, 84, 0.4);
+  color: #1db954;
+}
+
+.source-badge.deezer {
+  background: rgba(255, 102, 0, 0.15);
+  border-color: rgba(255, 102, 0, 0.4);
+  color: #ff6600;
+}
+
+.source-badge.local {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #888;
+}
+
+.group-item:hover .source-badge {
+  transform: scale(1.1);
+}
 
 /* Mobile: sempre mostrar botão de excluir */
 @media (max-width: 768px) {
@@ -2573,7 +2666,64 @@ html, body, #app {
   gap: 10px;
   padding: 16px 20px;
 }
+.source-badge {
+  margin-left: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
 
+.source-badge.spotify {
+  color: #1db954;
+}
+
+.source-badge.deezer {
+  color: #ff6600;
+}
+
+.source-badge.local {
+  color: #888;
+}
+
+/* Card (canto da imagem) */
+.source-badge-card {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.7);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+  z-index: 3;
+  transition: all 0.2s;
+}
+
+.source-badge-card.spotify {
+  color: #1db954;
+  background: rgba(0,0,0,0.75);
+  border-color: rgba(29, 185, 84, 0.5);
+}
+
+.source-badge-card.deezer {
+  color: #ff6600;
+  background: rgba(0,0,0,0.75);
+  border-color: rgba(255, 102, 0, 0.5);
+}
+
+.source-badge-card.local {
+  color: #ccc;
+  background: rgba(0,0,0,0.75);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.result-card:hover .source-badge-card {
+  transform: scale(1.15);
+}
 .history-below-item {
   display: flex;
   align-items: center;
@@ -2686,12 +2836,22 @@ html, body, #app {
 .group-item:hover {
   background: rgba(255, 255, 255, 0.05);
 }
-
 .item-thumb {
   width: 40px;
   height: 40px;
   border-radius: 4px;
   object-fit: cover;
+  background: #282828;
+}
+
+.item-thumb[src=""],
+.item-thumb:not([src]) {
+  display: none;
+}
+
+.item-thumb[src=""] + .item-thumb-placeholder,
+.item-thumb:not([src]) + .item-thumb-placeholder {
+  display: flex;
 }
 
 .item-thumb-placeholder {
@@ -3663,7 +3823,7 @@ html, body, #app {
 .result-type {
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: 8px;  /* ← ajustar se quiser, ou deixar em 8px */
   padding: 4px 8px;
   background: rgba(0,0,0,0.7);
   border-radius: 4px;
@@ -3672,6 +3832,7 @@ html, body, #app {
   letter-spacing: 0.05em;
   color: #1db954;
   font-weight: 700;
+  z-index: 2;  /* ← ADICIONAR */
 }
 
 /* Botão de curtir no resultado da busca */

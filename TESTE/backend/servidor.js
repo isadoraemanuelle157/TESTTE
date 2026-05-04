@@ -22,6 +22,7 @@ const SPOTIFY_CLIENT_ID = 'cda0f08c0e8744a2a021aceea8d9e0df'
 const SPOTIFY_CLIENT_SECRET = 'cc19aea0c1b7441c802247a609ef00bb'
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token'
 const SPOTIFY_API_URL = 'https://api.spotify.com/v1'
+const DEEZER_API_URL = 'https://api.deezer.com'
 
 let spotifyToken = null
 let tokenExpiresAt = 0
@@ -82,13 +83,31 @@ const privacidadeAtividadeRoutes = safeRequire('./routes/privacidadeAtividadeRou
 // ============================================
 // MIDDLEWARES
 // ============================================
-app.use(cors())
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
 app.use(express.json({ limit: '20mb' }))
 app.use(express.urlencoded({ extended: true, limit: '20mb' }))
 
 // Middleware de log para debug
+// ============================================
+// MIDDLEWARE: Verifica se banco está conectado
+// ============================================
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`)
+  if (!dbConnected && req.path !== '/health') {
+    // Verifica se a rota precisa do banco
+    const dbRoutes = ['/usuarios', '/generos', '/musicas', '/albuns', '/cantores', 
+                     '/playlists', '/curtidas', '/favoritas', '/vibes', '/follows', 
+                     '/historico', '/notificacoes', '/privacidade']
+    if (dbRoutes.some(route => req.path.startsWith(route))) {
+      return res.status(503).json({ 
+        error: 'Banco de dados não conectado',
+        message: 'O servidor está rodando, mas o banco de dados não está acessível. Verifique a conexão.'
+      })
+    }
+  }
   next()
 })
 
@@ -138,6 +157,35 @@ app.get('/spotify/search', async (req, res) => {
     res.status(500).json({
       error: 'Erro ao buscar no Spotify',
       details: error.response?.data?.error?.message || error.message
+    })
+  }
+})
+
+// ============================================
+// 🎵 DEEZER SEARCH (PROXY)
+// ============================================
+app.get('/deezer/search', async (req, res) => {
+  try {
+    const { q } = req.query
+    const limit = parseInt(req.query.limit, 10) || 20
+
+    if (!q || q.trim().length === 0) {
+      return res.status(400).json({ error: 'Parâmetro "q" é obrigatório' })
+    }
+
+const response = await axios.get(`${DEEZER_API_URL}/search`, {
+  params: { q: q.trim(), limit },
+  timeout: 5000
+})
+
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('❌ Erro na busca Deezer:', error.response?.data || error.message)
+
+    res.status(500).json({
+      error: 'Erro ao buscar no Deezer',
+      details: error.response?.data || error.message
     })
   }
 })
@@ -277,42 +325,76 @@ app.get('/musicas/:id/audio', async (req, res) => {
       trackName = id  // Usa o ID como query de busca
     }
     
-    // 2. Tenta buscar no Spotify
-    console.log('🔍 Buscando no Spotify...')
-    try {
-      const token = await getSpotifyToken()
-      const query = artistName 
-        ? `track:"${trackName}" artist:"${artistName}"`
-        : trackName
-        
-      const spotifyResponse = await axios.get(`${SPOTIFY_API_URL}/search`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          q: query,
-          type: 'track',
-          limit: 5,
-          market: 'BR'
-        }
-      })
-      
-      const spotifyTrack = spotifyResponse.data?.tracks?.items?.find(t => t.preview_url) 
-                          || spotifyResponse.data?.tracks?.items?.[0]
-                          
-      if (spotifyTrack?.preview_url) {
-        console.log('✅ Preview encontrado no Spotify!')
-        return res.json({
-          source: 'spotify',
-          url: spotifyTrack.preview_url,
-          title: spotifyTrack.name,
-          artist: spotifyTrack.artists?.map(a => a.name).join(', '),
-          cover: spotifyTrack.album?.images?.[1]?.url,
-          duration: Math.floor(spotifyTrack.duration_ms / 1000),
-          isPreview: true
-        })
-      }
-    } catch (spotifyErr) {
-      console.log('⚠️ Spotify fallback falhou:', spotifyErr.message)
+// ============================================
+// 2. Tenta Spotify
+// ============================================
+try {
+  const token = await getSpotifyToken()
+
+  const query = artistName 
+    ? `track:"${trackName}" artist:"${artistName}"`
+    : trackName
+
+  const spotifyResponse = await axios.get(`${SPOTIFY_API_URL}/search`, {
+    headers: { Authorization: `Bearer ${token}` },
+    params: {
+      q: query,
+      type: 'track',
+      limit: 5,
+      market: 'BR'
     }
+  })
+
+  const spotifyTrack = spotifyResponse.data?.tracks?.items?.find(t => t.preview_url)
+
+  if (spotifyTrack?.preview_url) {
+    return res.json({
+      source: 'spotify',
+      url: spotifyTrack.preview_url,
+      title: spotifyTrack.name,
+      artist: spotifyTrack.artists?.map(a => a.name).join(', '),
+      cover: spotifyTrack.album?.images?.[1]?.url,
+      duration: Math.floor(spotifyTrack.duration_ms / 1000),
+      isPreview: true
+    })
+  }
+
+} catch (err) {
+  console.log('⚠️ Spotify falhou')
+}
+
+// ============================================
+// 3. Tenta Deezer (MELHOR fallback)
+// ============================================
+try {
+  const query = artistName 
+    ? `${artistName} ${trackName}`
+    : trackName
+
+  const deezerResponse = await axios.get(`${DEEZER_API_URL}/search`, {
+    params: {
+      q: query,
+      limit: 5
+    }
+  })
+
+  const deezerTrack = deezerResponse.data?.data?.find(t => t.preview)
+
+  if (deezerTrack?.preview) {
+    return res.json({
+      source: 'deezer',
+      url: deezerTrack.preview,
+      title: deezerTrack.title,
+      artist: deezerTrack.artist?.name,
+      cover: deezerTrack.album?.cover_medium,
+      duration: deezerTrack.duration,
+      isPreview: true
+    })
+  }
+
+} catch (err) {
+  console.log('⚠️ Deezer falhou')
+}
     
     // 3. Se tem música do banco com link direto MP3
     if (musica?.link && musica.link.includes('.mp3')) {
