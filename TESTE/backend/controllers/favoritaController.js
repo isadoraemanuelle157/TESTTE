@@ -26,7 +26,9 @@ const toggle = async (req, res) => {
     // ========== ITENS EXTERNOS (Spotify/Deezer) ==========
     if (source && source !== 'local') {
       const tiposSuportados = ['musica', 'album', 'cantor']
-      const tipoEfetivo = tipoItem || tipo
+      const tipoEfetivo = (tipoItem || tipo)?.toLowerCase()
+      const sourceNormalizado = String(source).toLowerCase()
+const tipoNormalizado = String(tipoItem).toLowerCase()
       
       if (!tiposSuportados.includes(tipoEfetivo)) {
         return res.status(400).json({ 

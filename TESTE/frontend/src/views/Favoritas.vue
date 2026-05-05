@@ -581,18 +581,15 @@ async remover(item) {
     const token = localStorage.getItem("token")
 
     const body = {
-      tipo: item.type
+      tipo: item.type,
+      acao: 'remover'
     }
 
+    // 🔥 EXTERNO
     if (item.isExternal && item.source) {
       body.source = String(item.source).toLowerCase()
       body.tipoItem = String(item.type).toLowerCase()
-      body.acao = 'remover'
     }
-
-    console.log('=== REMOVER FAVORITA ===')
-    console.log('item.id:', item.id)
-    console.log('body:', body)
 
     const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
       method: "POST",
@@ -603,30 +600,32 @@ async remover(item) {
       body: JSON.stringify(body)
     })
 
+    const data = await res.json()
+
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
-      console.error('Erro do servidor:', errData)
-      throw new Error(errData.error || 'Erro ao remover')
+      console.error('Erro backend:', data)
+      throw new Error(data.error || 'Erro ao remover')
     }
 
-    await res.json()
-
+    // 🔥 ATUALIZA LISTA (corrigido)
     this.favoritas = this.favoritas.filter(f => {
       return !(
-        f.id === item.id &&
-        f.type === item.type &&
-        (f.source || '') === (item.source || '')
+        String(f.id) === String(item.id) &&
+        String(f.type) === String(item.type) &&
+        String(f.source || '') === String(item.source || '')
       )
     })
 
     window.dispatchEvent(new Event('favoritas-updated'))
 
     this.showToast(`${item.title} removido dos favoritos`, 'info', 'Removido')
+
   } catch (err) {
     console.error(err)
     this.showToast('Erro ao remover favorito', 'error')
   }
 },
+
     play(item) {
       if (item.type !== "musica") return
       window.dispatchEvent(new CustomEvent("play-song", {
