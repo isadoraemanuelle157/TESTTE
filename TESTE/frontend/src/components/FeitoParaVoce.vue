@@ -6,69 +6,54 @@
         class="bg-layer"
         v-for="(layer, index) in 3"
         :key="index"
-        :class="{ active: headerStep === 1 }"
+        :class="{ active: headerStep === index + 1 }"
         :style="getBgStyle(index + 1)"
       ></div>
       <div class="noise-overlay"></div>
     </div>
 
     <!-- Header Global -->
-<header class="global-header onboarding-header">
-<div class="progress-steps">
+    <header class="global-header onboarding-header">
+      <div class="progress-steps">
 
-  <!-- STEP 1 -->
-  <div
-    class="step"
-    :class="{
-      completed: headerStep > 1,
-      active: headerStep === 1
-    }"
-  >
-    <div class="step-number">1</div>
-    <span class="step-label">Conta</span>
-  </div>
+        <!-- STEP 1 -->
+        <div
+          class="step"
+          :class="{ completed: headerStep > 1, active: headerStep === 1 }"
+        >
+          <div class="step-number">1</div>
+          <span class="step-label">Gêneros</span>
+        </div>
 
-  <div
-    class="step-line"
-    :class="{ completed: headerStep > 1 }"
-  >
-    <svg class="arrow-icon" viewBox="0 0 24 24">
-      <path d="M5 12h14M12 5l7 7-7 7"/>
-    </svg>
-  </div>
+        <div class="step-line" :class="{ completed: headerStep > 1 }">
+          <svg class="arrow-icon" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </div>
 
-  <!-- STEP 2 -->
-  <div
-    class="step"
-    :class="{
-      completed: headerStep > 2,
-      active: headerStep === 2
-    }"
-  >
-    <div class="step-number">2</div>
-    <span class="step-label">Perfil</span>
-  </div>
+        <!-- STEP 2 -->
+        <div
+          class="step"
+          :class="{ completed: headerStep > 2, active: headerStep === 2 }"
+        >
+          <div class="step-number">2</div>
+          <span class="step-label">Artistas</span>
+        </div>
 
-  <div
-    class="step-line"
-    :class="{ completed: headerStep > 2 }"
-  >
-    <svg class="arrow-icon" viewBox="0 0 24 24">
-      <path d="M5 12h14M12 5l7 7-7 7"/>
-    </svg>
-  </div>
+        <div class="step-line" :class="{ completed: headerStep > 2 }">
+          <svg class="arrow-icon" viewBox="0 0 24 24">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </div>
 
-  <!-- STEP 3 -->
-  <div
-    class="step"
-    :class="{ active: headerStep === 3 }"
-  >
-    <div class="step-number">3</div>
-    <span class="step-label">Preferências</span>
-  </div>
+        <!-- STEP 3 -->
+        <div class="step" :class="{ active: headerStep === 3 }">
+          <div class="step-number">3</div>
+          <span class="step-label">Vibes</span>
+        </div>
 
-</div>
-</header>
+      </div>
+    </header>
 
     <!-- Main Content Area - TELA TOTAL -->
     <main class="content-area">
@@ -78,19 +63,12 @@
           <span class="step-label">Etapa 1 de 3</span>
           <h1>Quais gêneros você curte? 🎸</h1>
           <p>Selecione pelo menos 3 para personalizar sua experiência</p>
-         
+
           <div class="selection-counter" :class="{ 'is-valid': selectedGenres.length >= 3 }">
             <div class="counter-ring">
               <svg viewBox="0 0 36 36">
-                <path
-                  class="ring-bg"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  class="ring-progress"
-                  :stroke-dasharray="genreProgress + ', 100'"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
+                <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path class="ring-progress" :stroke-dasharray="genreProgress + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
               </svg>
               <span class="counter-text">{{ selectedGenres.length }}</span>
             </div>
@@ -103,15 +81,8 @@
             v-for="(genre, index) in genres"
             :key="genre.id"
             class="genre-tile"
-            :class="{
-             active: selectedGenres.some(g=>g.id===genre.id),
-              'is-large': index % 7 === 0
-            }"
-            :style="{
-              '--genre-color': genre.color,
-              '--genre-gradient': genre.gradient,
-              animationDelay: index * 0.05 + 's'
-            }"
+            :class="{ active: selectedGenres.some(g => g.id === genre.id), 'is-large': index % 7 === 0 }"
+            :style="{ '--genre-color': genre.color, '--genre-gradient': genre.gradient, animationDelay: index * 0.04 + 's' }"
             @click="toggleGenre(genre)"
           >
             <div class="tile-bg" :style="{ background: genre.gradient }"></div>
@@ -129,55 +100,55 @@
         </div>
       </section>
 
-      <!-- ETAPA 2: ARTISTAS -->
-      <section v-show="currentStep === 2" class="step-section" key="step2">
-        <div class="step-header">
-          <span class="step-label">Etapa 2 de 3</span>
-          <h1>Seus artistas favoritos 🎤</h1>
-          <p>Escolha 2 ou mais artistas que você ama ouvir</p>
-         
-          <div class="selection-counter" :class="{ 'is-valid': selectedArtists.length >= 2 }">
-            <div class="counter-ring">
-              <svg viewBox="0 0 36 36">
-                <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                <path class="ring-progress" :stroke-dasharray="artistProgress + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-              </svg>
-              <span class="counter-text">{{ selectedArtists.length }}</span>
-            </div>
-            <span class="counter-label">{{ selectedArtists.length >= 2 ? 'Perfeito!' : 'Selecione 2+' }}</span>
-          </div>
-        </div>
+   <!-- ETAPA 2: ARTISTAS -->
+<section v-show="currentStep === 2" class="step-section" key="step2">
+  <div class="step-header">
+    <span class="step-label">Etapa 2 de 3</span>
+    <h1>Seus artistas favoritos 🎤</h1>
+    <p>Escolha 2 ou mais artistas que você ama ouvir</p>
 
-        <div class="artists-grid">
-          <div
-            v-for="(artist, index) in artists"
-            :key="artist.id"
-            class="artist-card-large"
-            :class="{ active: selectedArtists.some(a=>a.id===artist.id) }"
-            :style="{ animationDelay: index * 0.04 + 's' }"
-            @click="toggleArtist(artist)"
-          >
-            <div class="artist-image">
-              <img :src="artist.photo" :alt="artist.name">
-              <div class="artist-gradient"></div>
-             
-              <div class="selection-indicator">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-              </div>
-            </div>
-            <div class="artist-info">
-              <h3>{{ artist.name }}</h3>
-              <p>{{ artist.genre }}</p>
-              <div class="popularity-bar">
-                <div class="popularity-fill" :style="{ width: artist.popularity + '%' }"></div>
-              </div>
-              <span class="popularity-label">{{ artist.popularity }}% popular</span>
-            </div>
-          </div>
+    <div class="selection-counter" :class="{ 'is-valid': selectedArtists.length >= 2 }">
+      <div class="counter-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-progress" :stroke-dasharray="artistProgress + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+        <span class="counter-text">{{ selectedArtists.length }}</span>
+      </div>
+      <span class="counter-label">{{ selectedArtists.length >= 2 ? 'Perfeito!' : 'Selecione 2+' }}</span>
+    </div>
+  </div>
+
+  <div class="artists-grid artists-grid-flat">
+    <div
+      v-for="(artist, index) in displayedArtists"
+      :key="artist.id"
+      class="artist-card-large"
+      :class="{ active: selectedArtists.some(a => a.id === artist.id) }"
+      :style="{ animationDelay: index * 0.04 + 's' }"
+      @click="toggleArtist(artist)"
+    >
+      <div class="artist-image">
+        <img :src="artist.photo" :alt="artist.name" @error="$event.target.src = 'https://via.placeholder.com/400/333/fff?text=🎤'">
+        <div class="artist-gradient"></div>
+        <div class="selection-indicator">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+          </svg>
         </div>
-      </section>
+      </div>
+
+      <div class="artist-info">
+        <h3>{{ artist.name }}</h3>
+        <p>{{ artist.genre || 'Artista' }}</p>
+        <div class="popularity-bar">
+          <div class="popularity-fill" :style="{ width: artist.popularity + '%' }"></div>
+        </div>
+        <span class="popularity-label">{{ artist.popularity }}% popular</span>
+      </div>
+    </div>
+  </div>
+</section>
 
       <!-- ETAPA 3: VIBES -->
       <section v-show="currentStep === 3" class="step-section" key="step3">
@@ -185,7 +156,7 @@
           <span class="step-label">Etapa 3 de 3</span>
           <h1>Qual é a sua vibe? ✨</h1>
           <p>Selecione os momentos em que você mais ouve música</p>
-         
+
           <div class="selection-counter optional">
             <div class="counter-ring">
               <svg viewBox="0 0 36 36">
@@ -203,11 +174,8 @@
             v-for="(vibe, index) in vibes"
             :key="vibe.id"
             class="vibe-showcase-card"
-            :class="{ active: selectedVibes.some(v=>v.id===vibe.id) }"
-            :style="{
-              '--vibe-gradient': vibe.gradient,
-              animationDelay: index * 0.08 + 's'
-            }"
+            :class="{ active: selectedVibes.some(v => v.id === vibe.id) }"
+            :style="{ '--vibe-gradient': vibe.gradient, animationDelay: index * 0.06 + 's' }"
             @click="toggleVibe(vibe)"
           >
             <div class="vibe-bg" :style="{ background: vibe.gradient }"></div>
@@ -241,7 +209,7 @@
           <transition-group name="chip">
             <div
               v-for="item in selectedItems.slice(0, 5)"
-              :key="item.name"
+              :key="item.id || item.name"
               class="preview-chip"
               :style="{ background: item.color || item.gradient }"
             >
@@ -263,11 +231,7 @@
 
     <!-- Footer Navigation -->
     <footer class="step-footer">
-      <button
-        class="btn-nav btn-prev"
-        :disabled="currentStep === 1"
-        @click="prevStep"
-      >
+      <button class="btn-nav btn-prev" :disabled="currentStep === 1" @click="prevStep">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
         </svg>
@@ -276,10 +240,7 @@
 
       <button
         class="btn-nav btn-next"
-        :class="{
-          'btn-primary': canProceed,
-          'btn-disabled': !canProceed
-        }"
+        :class="{ 'btn-primary': canProceed, 'btn-disabled': !canProceed }"
         :disabled="!canProceed"
         @click="nextStep"
       >
@@ -296,14 +257,13 @@
     <!-- Success Modal com botão de voltar -->
     <transition name="modal">
       <div v-if="showSuccess" class="success-modal">
-        <!-- Botão Voltar no canto esquerdo -->
         <button class="btn-back-modal" @click="goBackFromSuccess">
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
           Voltar
         </button>
-       
+
         <div class="success-content">
           <div class="success-icon">
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -349,61 +309,136 @@ export default {
   },
 
   computed: {
-    headerStep() {
-      return this.currentStep
-    },
+  headerStep() {
+    return this.currentStep
+  },
 
-    genreProgress() {
-      return Math.min((this.selectedGenres.length / 3) * 100, 100)
-    },
+  genreProgress() {
+    return Math.min((this.selectedGenres.length / 3) * 100, 100)
+  },
 
-    artistProgress() {
-      return Math.min((this.selectedArtists.length / 2) * 100, 100)
-    },
+  artistProgress() {
+    return Math.min((this.selectedArtists.length / 2) * 100, 100)
+  },
 
-    vibeProgress() {
-      return Math.min((this.selectedVibes.length / 2) * 100, 100)
-    },
+  vibeProgress() {
+    return Math.min((this.selectedVibes.length / 2) * 100, 100)
+  },
 
-    canProceed() {
-      if (this.currentStep === 1) return this.selectedGenres.length >= 3
-      if (this.currentStep === 2) return this.selectedArtists.length >= 2
-      return true
-    },
+  canProceed() {
+    if (this.currentStep === 1) return this.selectedGenres.length >= 3
+    if (this.currentStep === 2) return this.selectedArtists.length >= 2
+    return true
+  },
 
-    selectedItems() {
-      return [
-        ...this.selectedGenres,
-        ...this.selectedArtists,
-        ...this.selectedVibes
-      ]
-    },
+  selectedItems() {
+    return [
+      ...this.selectedGenres,
+      ...this.selectedArtists,
+      ...this.selectedVibes
+    ]
+  },
 
-    summaryTags() {
-      return [
-        ...this.selectedGenres.slice(0, 3).map(g => g.name),
-        ...this.selectedArtists.slice(0, 2).map(a => a.name),
-        ...this.selectedVibes.slice(0, 2).map(v => v.name)
-      ]
-    }
+  summaryTags() {
+    return [
+      ...this.selectedGenres.slice(0, 3).map(g => g.name),
+      ...this.selectedArtists.slice(0, 2).map(a => a.name),
+      ...this.selectedVibes.slice(0, 2).map(v => v.name)
+    ]
+  },
+
+  displayedArtists() {
+    return this.artists.slice(0, 45)
+  }
   },
 
   methods: {
-    async loadInitialData() {
-      // primeiro banco
-      await Promise.all([
-        this.loadGeneros(),
-        this.loadCantores(),
-        this.loadVibes()
-      ])
+    limitGenres(list) {
+  return this.mergeUniqueByName([], list).slice(0, 15)
+},
 
-      // depois APIs
-      await Promise.all([
-        this.loadSpotifyArtists(),
-        this.loadSpotifyGeneros(),
-        this.loadSpotifyVibes()
-      ])
+limitVibes(list) {
+  return this.mergeUniqueByName([], list).slice(0, 18)
+},
+
+limitArtistsByGenre(list) {
+  const groups = new Map()
+
+  list.forEach(artist => {
+    const genreKey =
+      artist.genreGroup ||
+      artist.genre?.split(',')[0]?.trim() ||
+      'Outros'
+
+    if (!groups.has(genreKey)) {
+      groups.set(genreKey, [])
+    }
+
+    const group = groups.get(genreKey)
+    const alreadyExists = group.some(
+      a => this.normalizeText(a.name) === this.normalizeText(artist.name)
+    )
+
+    if (!alreadyExists && group.length < 3) {
+      group.push({
+        ...artist,
+        genre: genreKey,
+        genreGroup: genreKey
+      })
+    }
+  })
+
+  return Array.from(groups.entries())
+    .slice(0, 15)
+    .flatMap(([genre, artists]) =>
+      artists.map(artist => ({
+        ...artist,
+        genre,
+        genreGroup: genre
+      }))
+    )
+},
+
+    async fetchJson(url, label = "requisicao") {
+      const res = await fetch(url)
+      const text = await res.text()
+
+      let data = null
+      try {
+        data = text ? JSON.parse(text) : null
+      } catch (e) {
+        throw new Error(`${label}: resposta invalida -> ${text}`)
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          `${label} falhou (${res.status}): ${data?.error || data?.message || text}`
+        )
+      }
+
+      console.log(`✅ ${label}`, data)
+      return data
     },
+
+async loadInitialData() {
+  const results = await Promise.allSettled([
+    this.loadSpotifyGeneros(),
+    this.loadSpotifyArtists(),
+    this.loadSpotifyVibes(),
+    this.loadGeneros(),
+    this.loadCantores(),
+    this.loadVibes()
+  ])
+
+  this.genres = this.limitGenres(this.genres)
+  this.artists = this.limitArtistsByGenre(this.artists)
+  this.vibes = this.limitVibes(this.vibes)
+
+  console.log("📦 loadInitialData finalizado", results)
+  console.log("genres:", this.genres.length)
+  console.log("artists:", this.artists.length)
+  console.log("vibes:", this.vibes.length)
+},
 
     normalizeText(value) {
       return (value || "")
@@ -423,17 +458,14 @@ export default {
         if (!map.has(key)) {
           map.set(key, item)
         } else {
-          map.set(key, {
-            ...map.get(key),
-            ...item
-          })
+          map.set(key, { ...map.get(key), ...item })
         }
       })
 
       return Array.from(map.values())
     },
 
-    // ==================== GÊNEROS ====================
+    // ==================== GENEROS ====================
     async loadGeneros() {
       try {
         const res = await fetch("http://localhost:3002/generos")
@@ -452,7 +484,7 @@ export default {
 
         this.genres = this.mergeUniqueByName(this.genres, mapped)
       } catch (e) {
-        console.error("Erro gêneros:", e)
+        console.error("Erro generos:", e)
       }
     },
 
@@ -468,7 +500,7 @@ export default {
           photo: c.foto || `https://i.pravatar.cc/400?img=${index + 10}`,
           genre: c.generos?.length
             ? c.generos.map(g => g.nome).join(", ")
-            : "Sem gênero",
+            : "Sem genero",
           popularity: Math.floor(Math.random() * 20) + 80,
           source: "local"
         }))
@@ -501,131 +533,124 @@ export default {
       }
     },
 
-    // ==================== ARTISTAS SPOTIFY ====================
-    async loadSpotifyArtists() {
-      try {
-        const res = await fetch("http://localhost:3002/spotify/artists/popular?limit=15")
-        const data = await res.json()
+    // ==================== ARTISTAS SPOTIFY (45 artistas = 15 generos x 3) ====================
+   async loadSpotifyArtists() {
+  try {
+    const data = await this.fetchJson(
+      "http://localhost:3002/spotify/artists/popular",
+      "Spotify artistas"
+    )
 
-        const spotifyArtists = (data.artists?.items || []).map((artist, index) => ({
-          id: artist.id,
-          name: artist.name,
-          photo: artist.images?.[0]?.url || `https://i.pravatar.cc/400?img=${index + 50}`,
-          genre: artist.genres?.length
-            ? artist.genres.slice(0, 3).join(", ")
-            : "Sem gênero",
-          genresArray: artist.genres || [],
-          popularity: artist.popularity || Math.floor(Math.random() * 20) + 70,
-          followers: artist.followers?.total || 0,
-          source: "spotify"
-        }))
+    const spotifyArtists = (data.groups || []).flatMap((group, groupIndex) =>
+      (group.artists || []).slice(0, 3).map((artist, index) => ({
+        id: artist.id,
+        name: artist.name,
+        photo: artist.images?.[0]?.url || `https://i.pravatar.cc/400?img=${groupIndex * 3 + index + 50}`,
+        genre: group.genre,
+        genreGroup: group.genre,
+        genresArray: artist.genres || [group.genre],
+        popularity: artist.popularity || Math.floor(Math.random() * 20) + 70,
+        followers: artist.followers?.total || 0,
+        source: "spotify"
+      }))
+    )
 
-        const enrichedArtists = await Promise.all(
-          spotifyArtists.map(async (artist) => {
-            try {
-              const deezerRes = await fetch(`http://localhost:3002/deezer/search?q=${encodeURIComponent(artist.name)}&limit=1`)
-              const deezerData = await deezerRes.json()
-              const d = deezerData.data?.[0]
+    this.artists = this.limitArtistsByGenre(
+      this.mergeUniqueByName(this.artists, spotifyArtists)
+    )
 
-              if (d) {
-                return {
-                  ...artist,
-                  photo: artist.photo || d.artist?.picture_medium,
-                  followers: artist.followers || d.artist?.nb_fan || 0,
-                  source: "spotify"
-                }
-              }
+    console.log("🎤 artistas carregados:", this.artists.length)
+  } catch (e) {
+    console.error("Erro Spotify artistas:", e)
+  }
+},
 
-              return artist
-            } catch {
-              return artist
-            }
-          })
-        )
+    // ==================== GENEROS SPOTIFY ====================
+ async loadSpotifyGeneros() {
+  try {
+    const data = await this.fetchJson(
+      "http://localhost:3002/spotify/artists/popular",
+      "Spotify generos"
+    )
 
-        this.artists = this.mergeUniqueByName(this.artists, enrichedArtists)
-      } catch (e) {
-        console.error("Erro Spotify artistas:", e)
-      }
-    },
+    const generosSpotify = (data.groups || []).slice(0, 15).map((group, i) => ({
+      id: "spotify_" + this.normalizeText(group.genre),
+      name: group.genre,
+      emoji: this.getEmoji(group.genre),
+      color: this.getColor(i),
+      gradient: this.getGradient(i),
+      source: "spotify"
+    }))
 
-    // ==================== GÊNEROS SPOTIFY ====================
-    async loadSpotifyGeneros() {
-      try {
-        const res = await fetch("http://localhost:3002/spotify/artists/popular?limit=20")
-        const data = await res.json()
+    this.genres = this.limitGenres(
+      this.mergeUniqueByName(this.genres, generosSpotify)
+    )
 
-        const generosSet = new Set()
+    console.log("🎸 generos carregados:", this.genres.length)
+  } catch (e) {
+    console.error("Erro generos Spotify:", e)
+  }
+},
 
-        data.artists?.items?.forEach(a => {
-          a.genres?.forEach(g => generosSet.add(g))
-        })
+    // ==================== VIBES API (12 vibes) ====================
+ async loadSpotifyVibes() {
+  try {
+    const data = await this.fetchJson(
+      "http://localhost:3002/spotify/vibes",
+      "Spotify vibes"
+    )
 
-        const generosSpotify = Array.from(generosSet).map((g, i) => ({
-          id: "spotify_" + this.normalizeText(g),
-          name: g,
-          emoji: this.getEmoji(g),
-          color: this.getColor(i),
-          gradient: this.getGradient(i),
-          source: "spotify"
-        }))
+    const apiVibes = (Array.isArray(data) ? data : []).slice(0, 18).map((v, index) => ({
+      id: v.id || `api_vibe_${index}`,
+      name: v.name,
+      emoji: v.emoji || "✨",
+      gradient: v.gradient || this.getGradient(index),
+      description: v.description || "Vibe vinda da API",
+      tags: v.tags || [],
+      source: v.source || "spotify"
+    }))
 
-        this.genres = this.mergeUniqueByName(this.genres, generosSpotify)
-      } catch (e) {
-        console.error("Erro gêneros Spotify:", e)
-      }
-    },
+    this.vibes = this.limitVibes(
+      this.mergeUniqueByName(this.vibes, apiVibes)
+    )
+console.log("📡 Chamando /spotify/vibes...")
+console.log("🎧 vibes API:", data)
+    console.log("🎧 vibes carregadas:", this.vibes.length)
+  } catch (e) {
+    console.error("Erro vibes API:", e)
+  }
+},
 
-    // ==================== VIBES API ====================
-    async loadSpotifyVibes() {
-      try {
-        const res = await fetch("http://localhost:3002/spotify/vibes")
-        const data = await res.json()
+   generateVibesFromGenres() {
+  const map = {
+    funk: { name: "Festa", emoji: "🎉", tags: ["danca", "noite"] },
+    rock: { name: "Energia", emoji: "⚡", tags: ["treino", "acao"] },
+    pop: { name: "Chill", emoji: "🌈", tags: ["leve", "happy"] },
+    gospel: { name: "Relax", emoji: "🙏", tags: ["paz", "fe"] },
+    eletronica: { name: "Night", emoji: "🌙", tags: ["balada"] }
+  }
 
-        const apiVibes = (data || []).map((v, index) => ({
-          id: v.id || `api_vibe_${index}`,
-          name: v.name,
-          emoji: v.emoji || "✨",
-          gradient: v.gradient || this.getGradient(index),
-          description: v.description || "Vibe vinda da API",
-          tags: v.tags || [],
-          source: v.source || "spotify"
-        }))
+  const novas = []
 
-        this.vibes = this.mergeUniqueByName(this.vibes, apiVibes)
-      } catch (e) {
-        console.error("Erro vibes API:", e)
-      }
-    },
-
-    generateVibesFromGenres() {
-      const map = {
-        funk: { name: "Festa", emoji: "🎉", tags: ["dança", "noite"] },
-        rock: { name: "Energia", emoji: "⚡", tags: ["treino", "ação"] },
-        pop: { name: "Chill", emoji: "🌈", tags: ["leve", "happy"] },
-        gospel: { name: "Relax", emoji: "🙏", tags: ["paz", "fé"] },
-        eletronica: { name: "Night", emoji: "🌙", tags: ["balada"] }
-      }
-
-      const novas = []
-
-      this.selectedGenres.forEach(g => {
-        const key = this.normalizeText(g.name)
-        if (map[key]) {
-          novas.push({
-            id: "auto_" + key,
-            name: map[key].name,
-            emoji: map[key].emoji,
-            description: "Gerado automaticamente",
-            gradient: this.getGradient(Math.floor(Math.random() * 10)),
-            tags: map[key].tags,
-            source: "auto"
-          })
-        }
+  this.selectedGenres.forEach(g => {
+    const key = this.normalizeText(g.name)
+    if (map[key]) {
+      novas.push({
+        id: "auto_" + key,
+        name: map[key].name,
+        emoji: map[key].emoji,
+        description: "Gerado automaticamente",
+        gradient: this.getGradient(Math.floor(Math.random() * 10)),
+        tags: map[key].tags,
+        source: "auto"
       })
+    }
+  })
 
-      this.vibes = this.mergeUniqueByName(this.vibes, novas)
-    },
+  this.vibes = this.limitVibes(
+    this.mergeUniqueByName(this.vibes, novas)
+  )
+},
 
     getEmoji(nome) {
       const map = {
@@ -640,7 +665,11 @@ export default {
         samba: "🥁",
         sertanejo: "🌾",
         mpb: "🇧🇷",
-        pagode: "🪘"
+        pagode: "🪘",
+        reggae: "🌿",
+        indie: "🎧",
+        metal: "🤘",
+        jazz: "🎷"
       }
 
       const key = this.normalizeText(nome).replace(/\s/g, "")
@@ -649,12 +678,9 @@ export default {
 
     getColor(index) {
       const colors = [
-        "#E91E63",
-        "#F44336",
-        "#FF9800",
-        "#00BCD4",
-        "#9C27B0",
-        "#4CAF50"
+        "#E91E63", "#F44336", "#FF9800", "#00BCD4", "#9C27B0",
+        "#4CAF50", "#3F51B5", "#FF5722", "#009688", "#795548",
+        "#607D8B", "#E91E63", "#8BC34A", "#CDDC39", "#FFEB3B"
       ]
       return colors[index % colors.length]
     },
@@ -666,7 +692,16 @@ export default {
         "linear-gradient(135deg,#FF9800,#FFB74D)",
         "linear-gradient(135deg,#00BCD4,#4DD0E1)",
         "linear-gradient(135deg,#9C27B0,#CE93D8)",
-        "linear-gradient(135deg,#4CAF50,#81C784)"
+        "linear-gradient(135deg,#4CAF50,#81C784)",
+        "linear-gradient(135deg,#3F51B5,#7986CB)",
+        "linear-gradient(135deg,#FF5722,#FF8A65)",
+        "linear-gradient(135deg,#009688,#80CBC4)",
+        "linear-gradient(135deg,#795548,#BCAAA4)",
+        "linear-gradient(135deg,#607D8B,#B0BEC5)",
+        "linear-gradient(135deg,#8BC34A,#C5E1A5)",
+        "linear-gradient(135deg,#CDDC39,#E6EE9C)",
+        "linear-gradient(135deg,#FFEB3B,#FFF59D)",
+        "linear-gradient(135deg,#00ACC1,#80DEEA)"
       ]
       return gradients[index % gradients.length]
     },
@@ -682,7 +717,6 @@ export default {
 
     toggleGenre(genre) {
       const existe = this.selectedGenres.find(g => g.id === genre.id)
-
       if (existe) {
         this.selectedGenres = this.selectedGenres.filter(g => g.id !== genre.id)
       } else {
@@ -692,7 +726,6 @@ export default {
 
     toggleArtist(artist) {
       const existe = this.selectedArtists.find(a => a.id === artist.id)
-
       if (existe) {
         this.selectedArtists = this.selectedArtists.filter(a => a.id !== artist.id)
       } else {
@@ -702,7 +735,6 @@ export default {
 
     toggleVibe(vibe) {
       const existe = this.selectedVibes.find(v => v.id === vibe.id)
-
       if (existe) {
         this.selectedVibes = this.selectedVibes.filter(v => v.id !== vibe.id)
       } else {
@@ -720,7 +752,6 @@ export default {
       if (this.currentStep === 1) {
         this.generateVibesFromGenres()
       }
-
       if (this.currentStep === 3) {
         this.showSuccess = true
       } else {
@@ -753,7 +784,7 @@ export default {
         const token = localStorage.getItem("token")
 
         if (!userId) {
-          throw new Error("Usuário não encontrado")
+          throw new Error("Usuario nao encontrado")
         }
 
         const generosPayload = this.selectedGenres.map(g => ({
@@ -821,7 +852,7 @@ export default {
 
         await Swal.fire({
           title: "Conta criada com sucesso! 🎉",
-          text: "Seu perfil está pronto. Bora ouvir música!",
+          text: "Seu perfil esta pronto. Bora ouvir musica!",
           icon: "success",
           background: "#121212",
           color: "#fff",
@@ -842,7 +873,7 @@ export default {
         console.error(err)
         Swal.fire({
           title: "Erro 😢",
-          text: "Não foi possível finalizar o cadastro",
+          text: "Nao foi possivel finalizar o cadastro",
           icon: "error"
         })
       }
@@ -872,13 +903,14 @@ export default {
   overflow: hidden;
 }
 
-/* Background Dinâmico */
+/* Background Dinamico */
 .dynamic-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
 }
+
 .progress-steps {
   display: flex;
   align-items: center;
@@ -897,7 +929,6 @@ export default {
   display: none;
 }
 
-/* Quando completa */
 .step-line.completed {
   background: #1DB954;
 }
@@ -917,6 +948,7 @@ export default {
   color: #1DB954;
   transform: scale(1.1);
 }
+
 .bg-layer {
   position: absolute;
   inset: 0;
@@ -938,14 +970,13 @@ export default {
 /* Header Global */
 .global-header {
   position: fixed;
-  top: 70px;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
- justify-content: center; /* 👈 CENTRALIZA */
-
+  justify-content: center;
   padding: 16px 32px;
   background: rgba(10, 10, 10, 0.8);
   backdrop-filter: blur(20px);
@@ -967,101 +998,12 @@ export default {
   color: #1DB954;
 }
 
-/* Steps Navigation */
-.steps-nav {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 50px;
-}
-
-.step-dot {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  z-index: 2;
-  transition: all 0.3s;
-}
-
-.step-dot.active {
-  background: #1DB954;
-  border-color: #1DB954;
-  transform: scale(1.1);
-  box-shadow: 0 0 20px rgba(29, 185, 84, 0.5);
-}
-
-.step-dot.completed {
-  background: #1DB954;
-  border-color: #1DB954;
-  cursor: pointer;
-}
-
-.step-dot.completed:hover {
-  transform: scale(1.15);
-}
-
-.step-number {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.step-dot.completed .step-number {
-  display: none;
-}
-
-.check-icon {
-  width: 18px;
-  height: 18px;
-  display: none;
-}
-
-.step-dot.completed .check-icon {
-  display: block;
-}
-
-.connector-line {
-  position: absolute;
-  left: 36px;
-  top: 50%;
-  height: 2px;
-  background: #1DB954;
-  transform: translateY(-50%);
-  transition: width 0.5s ease;
-  z-index: 1;
-}
-
-.btn-skip-header {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: rgba(255, 255, 255, 0.7);
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.3s;
-}
-
-.btn-skip-header:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: white;
-}
-
 /* Content Area - TELA TOTAL */
 .content-area {
   flex: 1;
   position: relative;
   z-index: 1;
-  margin-top: 110px;
+  margin-top: 80px;
   margin-bottom: 140px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1197,7 +1139,7 @@ export default {
   color: #1ed760;
 }
 
-/* Genres Masonry - CORREÇÃO: Tiles grandes reduzidos */
+/* Genres Masonry */
 .genres-masonry {
   flex: 1;
   display: grid;
@@ -1225,7 +1167,6 @@ export default {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* CORREÇÃO: Tile grande agora ocupa apenas 1 coluna e 1 linha (tamanho normal) */
 .genre-tile.is-large {
   grid-column: span 1;
   grid-row: span 1;
@@ -1386,35 +1327,6 @@ export default {
   position: absolute;
   inset: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 50%);
-}
-
-.play-button {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  width: 44px;
-  height: 44px;
-  background: #1DB954;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.3s;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
-
-.artist-card-large:hover .play-button {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-
-.play-button svg {
-  width: 20px;
-  height: 20px;
-  color: white;
-  margin-left: 2px;
 }
 
 .selection-indicator {
@@ -1589,6 +1501,7 @@ export default {
   margin-bottom: 10px;
   line-height: 1.4;
 }
+
 .step {
   display: flex;
   flex-direction: column;
@@ -1625,6 +1538,7 @@ export default {
 .step.completed .step-number {
   background: #1DB954;
 }
+
 .vibe-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1847,7 +1761,6 @@ export default {
   animation: fadeIn 0.3s ease;
 }
 
-/* Botão Voltar no modal */
 .btn-back-modal {
   position: absolute;
   top: 24px;
@@ -1965,38 +1878,34 @@ export default {
   .global-header {
     padding: 14px 20px;
   }
- 
-  .steps-nav {
-    gap: 40px;
-  }
- 
+
   .content-area {
     padding: 20px;
     margin-top: 65px;
   }
- 
+
   .step-header h1 {
     font-size: 28px;
   }
- 
+
   .genres-masonry {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 10px;
   }
- 
+
   .artists-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 14px;
   }
- 
+
   .vibes-showcase {
     grid-template-columns: 1fr;
   }
- 
+
   .step-footer {
     padding: 16px 20px;
   }
- 
+
   .btn-nav {
     padding: 10px 18px;
     font-size: 14px;
@@ -2007,29 +1916,29 @@ export default {
   .step-header h1 {
     font-size: 24px;
   }
- 
+
   .genre-tile.is-large {
     grid-column: span 1;
     grid-row: span 1;
   }
- 
+
   .preview-bar {
     bottom: 80px;
     padding: 10px 14px;
   }
- 
+
   .preview-chip {
     padding: 5px 10px;
     font-size: 11px;
   }
- 
+
   .btn-back-modal {
     top: 16px;
     left: 16px;
     padding: 10px 16px;
     font-size: 13px;
   }
- 
+
   .btn-back-modal svg {
     width: 18px;
     height: 18px;

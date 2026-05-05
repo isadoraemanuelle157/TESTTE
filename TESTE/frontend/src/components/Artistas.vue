@@ -13,14 +13,8 @@
       </button>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="loading-state">
-      <div class="spinner"></div>
-      <span>Carregando artistas...</span>
-    </div>
-
     <!-- Error State -->
-    <div v-else-if="error" class="error-state">
+<div v-if="error" class="error-state">
       <p>{{ error }}</p>
       <button @click="loadArtists" class="retry-btn">Tentar novamente</button>
     </div>
@@ -40,7 +34,7 @@
       </div>
     </Transition>
 
-    <div v-if="!isLoading && !error" class="carousel-container">
+   <div v-if="artists.length && !error" class="carousel-container">
       <button
         v-if="showLeft"
         class="nav-btn prev"
@@ -178,7 +172,7 @@ export default {
       showLeft: false,
       showRight: true,
       showAllModal: false,
-      isLoading: true,
+      isLoading: false,
       error: null,
       subtitle: 'Os maiores nomes da música global',
       toast: {
@@ -196,10 +190,16 @@ export default {
   },
 
 async mounted() {
+const cached = localStorage.getItem('artists_cache')
+
+  if (cached) {
+    this.artists = JSON.parse(cached)
+  }
+
   await this.loadFollowedArtists()
-  await this.loadArtists()
+  this.loadArtists() // não precisa await
+
   window.addEventListener('resize', this.checkArrows)
-  window.dispatchEvent(new Event('artists-updated'))
 },
 
   beforeUnmount() {
@@ -211,7 +211,7 @@ async mounted() {
 
   methods: {
     abrirPaginaCantor(id) {
-  this.$router.push({ name: 'CantorDetalhe', params: { id } })
+  this.$router.push({ name: 'DetalheCantor', params: { id } })
 },
     // ============ API DEEZER ============
 async loadCantoresFromDB() {
@@ -281,55 +281,118 @@ async getFollowersCount(artist) {
   }
 },
   async loadArtists() {
-  this.isLoading = true;
-  this.error = null;
+  this.error = null
 
   try {
-    // 🔥 1. Deezer
-    const deezerResponse = await fetch(`${this.CORS_PROXY}${this.DEEZER_API}/chart/0/artists?limit=10`);
-    const deezerData = await deezerResponse.json();
+    // =========================
+    // 🔥 DEEZER
+    // =========================
+    const deezerResponse = await fetch(
+      `${this.CORS_PROXY}${this.DEEZER_API}/chart/0/artists?limit=10`
+    )
+    const deezerData = await deezerResponse.json()
 
     let deezerArtists = []
+
     if (deezerData.data) {
-      deezerArtists = deezerData.data.map(a => ({
-        id: a.id,
-        name: a.name,
-        picture: a.picture_medium,
-        picture_medium: a.picture_medium,
-        picture_big: a.picture_big,
-        nb_fan: a.nb_fan,
-        source: 'deezer'
-      }))
+      // 🔥 busca detalhes reais (IMPORTANTE)
+      const detailed = await Promise.all(
+        deezerData.data.map(async (a) => {
+          try {
+            const res = await fetch(
+              `${this.CORS_PROXY}${this.DEEZER_API}/artist/${a.id}`
+            )
+            const details = await res.json()
+
+            return {
+              id: a.id,
+              name: a.name,
+              picture: details.picture_medium,
+              picture_medium: details.picture_medium,
+              picture_big: details.picture_big,
+              nb_fan: details.nb_fan || 0, // ✅ REAL
+              source: 'deezer'
+            }
+          } catch {
+            return {
+              id: a.id,
+              name: a.name,
+              picture: a.picture_medium,
+              picture_medium: a.picture_medium,
+              picture_big: a.picture_big,
+              nb_fan: a.nb_fan || 0,
+              source: 'deezer'
+            }
+          }
+        })
+      )
+
+      deezerArtists = detailed
     }
 
-    // 🔥 2. Spotify (AGORA USANDO SEU BACKEND)
-    const spotifyResponse = await fetch('http://localhost:3002/spotify/artists/popular?limit=10')
+    // =========================
+    // 🔥 SPOTIFY (DETALHE REAL)
+    // =========================
+    const spotifyResponse = await fetch(
+      'http://localhost:3002/spotify/artists/popular?limit=10'
+    )
     const spotifyData = await spotifyResponse.json()
 
     let spotifyArtists = []
+
     if (spotifyData.artists?.items) {
-      spotifyArtists = spotifyData.artists.items.map(a => ({
-        id: a.id,
-        name: a.name,
-picture: a.images?.[2]?.url || a.images?.[1]?.url || a.images?.[0]?.url,        // menor (64x64)
-picture_medium: a.images?.[1]?.url || a.images?.[0]?.url,                          // média (300x300)
-picture_big: a.images?.[0]?.url || a.images?.[1]?.url, 
-        nb_fan: a.followers?.total || 0,
-        source: 'spotify'
-      }))
+      const detailedSpotify = await Promise.all(
+        spotifyData.artists.items.map(async (a) => {
+          try {
+            const res = await fetch(
+              `http://localhost:3002/spotify/artist/${a.id}`
+            )
+            const details = await res.json()
+
+            return {
+              id: a.id,
+              name: a.name,
+              picture: details.images?.[2]?.url || details.images?.[0]?.url,
+              picture_medium: details.images?.[1]?.url || details.images?.[0]?.url,
+              picture_big: details.images?.[0]?.url,
+              nb_fan: details.followers?.total || 0, // ✅ REAL
+              source: 'spotify'
+            }
+          } catch {
+            return {
+              id: a.id,
+              name: a.name,
+              picture: a.images?.[2]?.url || a.images?.[0]?.url,
+              picture_medium: a.images?.[1]?.url || a.images?.[0]?.url,
+              picture_big: a.images?.[0]?.url,
+              nb_fan: a.followers?.total || 0,
+              source: 'spotify'
+            }
+          }
+        })
+      )
+
+      spotifyArtists = detailedSpotify
     }
 
-    // 🔥 3. Banco
+    // =========================
+    // 🔥 BANCO
+    // =========================
     const dbArtists = await this.loadCantoresFromDB()
 
-    // 🔥 4. JUNTAR TUDO
-    this.artists = [
-      ...dbArtists,
-      ...deezerArtists,
-      ...spotifyArtists
-    ]
+    // =========================
+    // 🔥 JUNÇÃO + REMOVER DUPLICADOS
+    // =========================
+    const all = [...dbArtists, ...deezerArtists, ...spotifyArtists]
 
-    this.subtitle = `Artistas do sistema + Deezer + Spotify`
+    const seen = new Set()
+    this.artists = all.filter(a => {
+      const key = a.name?.toLowerCase().trim()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    localStorage.setItem('artists_cache', JSON.stringify(this.artists))
 
     this.$nextTick(() => this.checkArrows())
 
@@ -581,7 +644,7 @@ async loadFollowedArtists() {
     
 goToArtist(artist) {
   this.$router.push({
-    name: 'CantorDetalhe',
+    name: 'DetalheCantor',
     params: { id: artist.id },
     query: { source: artist.source }
   })

@@ -528,50 +528,91 @@ export default {
 
   methods: {
     // ========== CARREGAMENTO DE DADOS ==========
-    async carregarDetalhes() {
-      try {
-        this.loading = true
-        const token = localStorage.getItem('token')
-        const artistId = this.$route?.params?.id || this.id
+ async carregarDetalhes() {
+  try {
+    this.loading = true
 
-        if (!artistId) {
-          throw new Error('ID do artista não fornecido')
-        }
+    const artistId = this.$route?.params?.id
+    const source = this.$route?.query?.source || 'db'
 
-        // Carrega dados do artista e shows em paralelo
-        const [cantorRes, showsRes] = await Promise.allSettled([
-          fetch(`${API_BASE_URL}/cantores/${artistId}`),
-          fetch(`${API_BASE_URL}/cantores/${artistId}/shows`).catch(() => ({ ok: false }))
-        ])
+    if (!artistId) throw new Error('ID não encontrado')
 
-        if (cantorRes.status === 'fulfilled' && cantorRes.value.ok) {
-          this.cantor = await cantorRes.value.json()
-        } else {
-          throw new Error('Artista não encontrado')
-        }
+    // =========================
+    // 🔥 ARTISTA DO BANCO
+    // =========================
+    if (source === 'db') {
+      const res = await fetch(`${API_BASE_URL}/cantores/${artistId}`)
 
-        if (showsRes.status === 'fulfilled' && showsRes.value.ok) {
-          this.shows = await showsRes.value.json()
-        } else {
-          this.shows = []
-        }
+      if (!res.ok) throw new Error('Artista não encontrado')
 
-        // Verifica se o usuário logado segue o artista
-        if (token && this.cantor) {
-          await this.verificarSeguindo(token, artistId)
-        }
+      this.cantor = await res.json()
 
-        // Carrega likes do localStorage
-        this.carregarLikes()
+      const showsRes = await fetch(`${API_BASE_URL}/cantores/${artistId}/shows`)
+      this.shows = showsRes.ok ? await showsRes.json() : []
 
-      } catch (error) {
-        console.error('Erro ao carregar detalhes:', error)
-        this.cantor = null
-        this.mostrarToast(error.message || 'Erro ao carregar artista', 'error')
-      } finally {
-        this.loading = false
+      return
+    }
+
+    // =========================
+    // 🔥 DEEZER
+    // =========================
+    if (source === 'deezer') {
+      const res = await fetch(
+        `https://corsproxy.io/?https://api.deezer.com/artist/${artistId}`
+      )
+
+      const data = await res.json()
+
+      this.cantor = {
+        _id: data.id,
+        nome: data.name,
+        foto: data.picture_big,
+        banner: data.picture_xl,
+        totalSeguidores: data.nb_fan,
+        bio: `Artista popular do Deezer`,
+        generos: [{ nome: 'Música' }],
+        musicas: [],
+        albuns: []
       }
-    },
+
+      this.shows = []
+      return
+    }
+
+    // =========================
+    // 🔥 SPOTIFY
+    // =========================
+    if (source === 'spotify') {
+      const res = await fetch(
+        `http://localhost:3002/spotify/artist/${artistId}`
+      )
+
+      const data = await res.json()
+
+      this.cantor = {
+        _id: data.id,
+        nome: data.name,
+        foto: data.images?.[0]?.url,
+        banner: data.images?.[0]?.url,
+        totalSeguidores: data.followers?.total,
+        bio: `Artista do Spotify`,
+        generos: data.genres?.map(g => ({ nome: g })) || [],
+        musicas: [],
+        albuns: []
+      }
+
+      this.shows = []
+      return
+    }
+
+  } catch (error) {
+    console.error(error)
+    this.cantor = null
+    this.mostrarToast('Erro ao carregar artista', 'error')
+  } finally {
+    this.loading = false
+  }
+},
 
     async verificarSeguindo(token, artistId) {
       try {

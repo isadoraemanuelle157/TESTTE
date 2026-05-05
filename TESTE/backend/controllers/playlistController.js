@@ -122,11 +122,14 @@ const removeMusica = async (req, res) => {
 const toggleFavorita = async (req, res) => {
   try {
     const userId = req.user.id
-    const playlist = await playlistService.toggleFavorita(
-      req.params.id,
-      userId
-    )
-    res.json(playlist)
+    const playlist = await playlistService.toggleFavorita(req.params.id, userId)
+
+    const favorited = playlist.favoritas.some(id => String(id) === String(userId))
+
+    res.json({
+      favorited,
+      playlistId: playlist._id
+    })
   } catch (err) {
     res.status(400).json({ error: err.message })
   }
