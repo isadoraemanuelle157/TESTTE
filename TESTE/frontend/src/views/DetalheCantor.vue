@@ -30,11 +30,11 @@
         <div class="hero-particles" v-if="!isMobile">
           <div v-for="n in 20" :key="n" class="particle" :style="getParticleStyle(n)"></div>
         </div>
-        
+       
         <div class="hero-content">
           <div class="artist-visual">
             <div class="artist-photo-wrapper">
-              <img :src="cantor.foto" :alt="cantor.nome" class="foto-artista" />
+              <img :src="cantor.foto || '/default-artist.png'" :alt="cantor.nome" class="foto-artista" @error="handleImageError" />
               <div class="photo-ring"></div>
               <div class="photo-glow"></div>
               <div v-if="cantor.verificado" class="verified-badge" title="Artista Verificado">
@@ -47,13 +47,13 @@
 
           <div class="hero-info">
             <div class="info-header">
-              <span class="tag">
+              <span v-if="cantor.verificado" class="tag">
                 <span class="tag-pulse"></span>
                 Artista Verificado
               </span>
               <div class="stats-row">
                 <div class="stat-item">
-                  <span class="stat-value">{{ formatarSeguidores(cantor.totalSeguidores) }}</span>
+                  <span class="stat-value">{{ formatarSeguidores(cantor.totalSeguidores || 0) }}</span>
                   <span class="stat-label">seguidores</span>
                 </div>
                 <div class="stat-divider"></div>
@@ -70,11 +70,11 @@
             </div>
 
             <h1 class="artist-name">{{ cantor.nome }}</h1>
-            
+           
             <p class="genres">
-              <span v-for="(genero, idx) in cantor.generos" :key="genero._id || idx" class="genre-tag">
+              <span v-for="(genero, idx) in (cantor.generos || [])" :key="genero._id || idx" class="genre-tag">
                 {{ genero.nome }}
-                <span v-if="idx < cantor.generos.length - 1" class="genre-separator">•</span>
+                <span v-if="idx < (cantor.generos || []).length - 1" class="genre-separator">•</span>
               </span>
             </p>
 
@@ -94,7 +94,7 @@
                 <div class="btn-ripple" v-if="isPlaying"></div>
               </button>
 
-              <button @click="toggleFollow" class="btn-follow" :class="{ 'following': isFollowing }">
+              <button @click="toggleFollow" class="btn-follow" :class="{ 'following': isFollowing }" :disabled="followLoading">
                 <span class="follow-icon">
                   <svg v-if="!isFollowing" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M12 5v14M5 12h14"/>
@@ -103,16 +103,22 @@
                     <path d="M20 6L9 17l-5-5"/>
                   </svg>
                 </span>
-                <span class="follow-text">{{ isFollowing ? 'Seguindo' : 'Seguir' }}</span>
+                <span class="follow-text">{{ followLoading ? '...' : (isFollowing ? 'Seguindo' : 'Seguir') }}</span>
               </button>
 
-              <button class="btn-more" @click="showMoreOptions = !showMoreOptions">
+              <button class="btn-more" @click.stop="toggleMoreOptions">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                 </svg>
                 <div v-if="showMoreOptions" class="dropdown-menu">
-                  <button @click="compartilhar">Compartilhar</button>
-                  <button @click="reportar">Reportar</button>
+                  <button @click="compartilhar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                    Compartilhar
+                  </button>
+                  <button @click="reportar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Reportar
+                  </button>
                 </div>
               </button>
             </div>
@@ -130,8 +136,8 @@
       <!-- Navegação por Tabs -->
       <nav class="tabs-nav" :class="{ 'sticky': isTabsSticky }">
         <div class="tabs-container">
-          <button 
-            v-for="tab in tabs" 
+          <button
+            v-for="tab in tabs"
             :key="tab.id"
             @click="activeTab = tab.id"
             class="tab-btn"
@@ -139,7 +145,7 @@
           >
             <span class="tab-icon">{{ tab.icon }}</span>
             {{ tab.label }}
-            <span v-if="tab.count" class="tab-count">{{ tab.count }}</span>
+            <span v-if="tab.count !== undefined && tab.count !== null" class="tab-count">{{ tab.count }}</span>
           </button>
           <div class="tab-indicator" :style="indicatorStyle"></div>
         </div>
@@ -149,13 +155,20 @@
       <section v-show="activeTab === 'musicas'" class="section musicas-section">
         <div class="section-header">
           <h2>Populares</h2>
-          <button class="btn-ver-todos">Ver todos</button>
+          <button class="btn-ver-todos" @click="verTodasMusicas">Ver todos</button>
         </div>
-        
-        <div class="musicas-list">
-          <div 
-            v-for="(musica, index) in cantor.musicas" 
-            :key="musica._id" 
+       
+        <div v-if="!cantor.musicas || cantor.musicas.length === 0" class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+          <p>Nenhuma música disponível</p>
+        </div>
+       
+        <div v-else class="musicas-list">
+          <div
+            v-for="(musica, index) in cantor.musicas"
+            :key="musica._id || index"
             class="musica-row"
             :class="{ 'playing': currentTrack === musica._id }"
             @mouseenter="hoveredTrack = musica._id"
@@ -166,8 +179,8 @@
               <span v-if="hoveredTrack !== musica._id && currentTrack !== musica._id" class="number">
                 {{ String(index + 1).padStart(2, '0') }}
               </span>
-              <button v-else class="track-play-btn">
-                <svg v-if="currentTrack !== musica._id" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <button v-else class="track-play-btn" @click.stop="playTrack(musica)">
+                <svg v-if="currentTrack !== musica._id || !isPlaying" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
                 <div v-else class="equalizer">
@@ -177,7 +190,7 @@
             </div>
 
             <div class="track-image" v-if="musica.foto">
-              <img :src="musica.foto" :alt="musica.nome" />
+              <img :src="musica.foto" :alt="musica.nome" @error="handleTrackImageError" />
               <div class="track-image-overlay"></div>
             </div>
             <div v-else class="track-image-placeholder">
@@ -195,7 +208,7 @@
               <span class="track-plays">{{ formatarSeguidores(musica.plays || Math.floor(Math.random() * 5000000)) }} reproduções</span>
             </div>
 
-            <div class="track-duration">{{ musica.duracao || '3:45' }}</div>
+            <div class="track-duration">{{ formatarDuracao(musica.duracao) }}</div>
 
             <button class="track-like" @click.stop="toggleLike(musica._id)">
               <svg :class="{ 'liked': likedTracks.includes(musica._id) }" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -203,7 +216,7 @@
               </svg>
             </button>
 
-            <button class="track-more" @click.stop>
+            <button class="track-more" @click.stop="showTrackMenu(musica)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
               </svg>
@@ -217,36 +230,48 @@
         <div class="section-header">
           <h2>Discografia</h2>
           <div class="album-filters">
-            <button class="filter-btn active">Todos</button>
-            <button class="filter-btn">Álbuns</button>
-            <button class="filter-btn">Singles</button>
-            <button class="filter-btn">EPs</button>
+            <button
+              v-for="filter in albumFilters"
+              :key="filter.value"
+              class="filter-btn"
+              :class="{ 'active': activeAlbumFilter === filter.value }"
+              @click="activeAlbumFilter = filter.value"
+            >
+              {{ filter.label }}
+            </button>
           </div>
         </div>
 
-        <div class="albuns-grid">
-          <div 
-            v-for="(album, index) in cantor.albuns" 
-            :key="album._id" 
+        <div v-if="!filteredAlbuns || filteredAlbuns.length === 0" class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <p>Nenhum álbum disponível</p>
+        </div>
+
+        <div v-else class="albuns-grid">
+          <div
+            v-for="(album, index) in filteredAlbuns"
+            :key="album._id || index"
             class="album-card"
             :style="{ animationDelay: `${index * 0.1}s` }"
           >
             <div class="album-cover-wrapper">
-              <img v-if="album.foto" :src="album.foto" :alt="album.nome" class="album-cover" />
+              <img v-if="album.foto" :src="album.foto" :alt="album.nome" class="album-cover" @error="handleAlbumImageError" />
               <div v-else class="album-cover-placeholder">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 </svg>
               </div>
-              
+             
               <div class="album-overlay">
-                <button class="album-play-btn" @click="playAlbum(album)">
+                <button class="album-play-btn" @click.stop="playAlbum(album)">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
                 </button>
-                <button class="album-like-btn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <button class="album-like-btn" @click.stop="toggleAlbumLike(album._id)">
+                  <svg :class="{ 'liked': likedAlbums.includes(album._id) }" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                   </svg>
                 </button>
@@ -259,7 +284,7 @@
               <h3 class="album-name">{{ album.nome }}</h3>
               <p class="album-meta">
                 <span class="album-type">{{ album.tipo || 'Álbum' }}</span>
-                <span class="album-tracks">{{ album.musicas?.length || 12 }} músicas</span>
+                <span class="album-tracks">{{ (album.musicas || []).length }} músicas</span>
               </p>
             </div>
           </div>
@@ -272,7 +297,7 @@
           <div class="sobre-main">
             <h2>Sobre o Artista</h2>
             <p class="sobre-texto">{{ cantor.sobre || cantor.bio || 'Biografia não disponível.' }}</p>
-            
+           
             <div class="sobre-stats">
               <div class="sobre-stat">
                 <span class="sobre-stat-value">{{ cantor.cidade || 'São Paulo, BR' }}</span>
@@ -290,7 +315,7 @@
           </div>
 
           <div class="sobre-image" v-if="cantor.fotoSecundaria">
-            <img :src="cantor.fotoSecundaria" :alt="cantor.nome" />
+            <img :src="cantor.fotoSecundaria" :alt="cantor.nome" @error="handleImageError" />
           </div>
         </div>
       </section>
@@ -299,24 +324,31 @@
       <section v-show="activeTab === 'shows'" class="section shows-section">
         <div class="section-header">
           <h2>Próximos Shows</h2>
-          <span class="section-subtitle">{{ shows.length }} datas confirmadas</span>
+          <span class="section-subtitle">{{ shows.length }} data{{ shows.length !== 1 ? 's' : '' }} confirmada{{ shows.length !== 1 ? 's' : '' }}</span>
         </div>
 
-        <div class="shows-timeline">
-          <div v-for="(show, index) in shows" :key="show._id" class="show-item" :style="{ animationDelay: `${index * 0.1}s` }">
+        <div v-if="shows.length === 0" class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>
+          </svg>
+          <p>Nenhum show agendado</p>
+        </div>
+
+        <div v-else class="shows-timeline">
+          <div v-for="(show, index) in shows" :key="show._id || index" class="show-item" :style="{ animationDelay: `${index * 0.1}s` }">
             <div class="show-timeline-line"></div>
             <div class="show-timeline-dot"></div>
-            
+           
             <div class="show-card-premium">
               <div class="show-date-premium">
-                <span class="show-day">{{ new Date(show.data).getDate() }}</span>
-                <span class="show-month">{{ new Date(show.data).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase() }}</span>
-                <span class="show-year">{{ new Date(show.data).getFullYear() }}</span>
+                <span class="show-day">{{ formatarDia(show.data) }}</span>
+                <span class="show-month">{{ formatarMes(show.data) }}</span>
+                <span class="show-year">{{ formatarAno(show.data) }}</span>
               </div>
 
               <div class="show-content">
                 <div class="show-image" v-if="show.foto">
-                  <img :src="show.foto" :alt="show.titulo" />
+                  <img :src="show.foto" :alt="show.titulo" @error="handleImageError" />
                 </div>
                 <div class="show-details">
                   <h3>{{ show.titulo }}</h3>
@@ -337,7 +369,7 @@
                 </div>
               </div>
 
-              <a v-if="show.linkIngressos" :href="show.linkIngressos" target="_blank" class="btn-ingressos">
+              <a v-if="show.linkIngressos" :href="show.linkIngressos" target="_blank" rel="noopener noreferrer" class="btn-ingressos">
                 <span>Ingressos</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <path d="M7 17L17 7M17 7H7M17 7v10"/>
@@ -352,22 +384,22 @@
       </section>
 
       <!-- Artistas Relacionados -->
-      <section v-if="cantor.relacionados?.length" class="section relacionados-section">
+      <section v-if="cantor.relacionados && cantor.relacionados.length > 0" class="section relacionados-section">
         <div class="section-header">
           <h2>Fãs também curtem</h2>
         </div>
         <div class="relacionados-grid">
-          <div v-for="artista in cantor.relacionados" :key="artista._id" class="relacionado-card">
+          <div v-for="artista in cantor.relacionados" :key="artista._id" class="relacionado-card" @click="irParaArtista(artista._id)">
             <div class="relacionado-image">
-              <img :src="artista.foto" :alt="artista.nome" />
-              <button class="relacionado-play">
+              <img :src="artista.foto || '/default-artist.png'" :alt="artista.nome" @error="handleImageError" />
+              <button class="relacionado-play" @click.stop="playArtista(artista)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               </button>
             </div>
             <h4>{{ artista.nome }}</h4>
-            <p>{{ artista.genero }}</p>
+            <p>{{ artista.genero || 'Artista' }}</p>
           </div>
         </div>
       </section>
@@ -386,13 +418,26 @@
       <p>Não conseguimos encontrar esse artista no momento. Verifique o nome ou tente novamente mais tarde.</p>
       <button @click="$router.push('/')" class="btn-voltar">Voltar para o início</button>
     </div>
+
+    <!-- Toast Notification -->
+    <transition name="toast">
+      <div v-if="toast.show" class="toast-notification" :class="toast.type">
+        <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+        <svg v-else-if="toast.type === 'error'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        <span>{{ toast.message }}</span>
+      </div>
+    </transition>
   </div>
 </template>
-
 <script>
+const API_BASE_URL = 'http://localhost:3002'
+
 export default {
   name: 'CantorDetalhe',
-  props: ['id'],
 
   data() {
     return {
@@ -400,14 +445,22 @@ export default {
       cantor: null,
       shows: [],
       isFollowing: false,
+      followLoading: false,
       isPlaying: false,
       currentTrack: null,
       hoveredTrack: null,
       likedTracks: [],
+      likedAlbums: [],
       activeTab: 'musicas',
+      activeAlbumFilter: 'todos',
       showMoreOptions: false,
       isTabsSticky: false,
-      isMobile: window.innerWidth < 768
+      isMobile: false,
+      toast: {
+        show: false,
+        message: '',
+        type: 'success'
+      }
     }
   },
 
@@ -427,8 +480,8 @@ export default {
 
     tabs() {
       return [
-        { id: 'musicas', label: 'Músicas', icon: '🎵', count: this.cantor?.musicas?.length },
-        { id: 'albuns', label: 'Discografia', icon: '💿', count: this.cantor?.albuns?.length },
+        { id: 'musicas', label: 'Músicas', icon: '🎵', count: (this.cantor?.musicas || []).length },
+        { id: 'albuns', label: 'Discografia', icon: '💿', count: (this.cantor?.albuns || []).length },
         { id: 'sobre', label: 'Sobre', icon: '👤' },
         { id: 'shows', label: 'Shows', icon: '🎤', count: this.shows?.length }
       ]
@@ -439,91 +492,163 @@ export default {
       return {
         transform: `translateX(${index * 100}%)`
       }
+    },
+
+    albumFilters() {
+      return [
+        { label: 'Todos', value: 'todos' },
+        { label: 'Álbuns', value: 'album' },
+        { label: 'Singles', value: 'single' },
+        { label: 'EPs', value: 'ep' }
+      ]
+    },
+
+    filteredAlbuns() {
+      if (!this.cantor?.albuns) return []
+      if (this.activeAlbumFilter === 'todos') return this.cantor.albuns
+      return this.cantor.albuns.filter(album =>
+        (album.tipo || 'album').toLowerCase() === this.activeAlbumFilter
+      )
     }
   },
 
   async mounted() {
+    this.isMobile = window.innerWidth < 768
     await this.carregarDetalhes()
     window.addEventListener('scroll', this.handleScroll)
     window.addEventListener('resize', this.handleResize)
+    document.addEventListener('click', this.handleDocumentClick)
   },
 
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll)
     window.removeEventListener('resize', this.handleResize)
+    document.removeEventListener('click', this.handleDocumentClick)
   },
 
   methods: {
+    // ========== CARREGAMENTO DE DADOS ==========
     async carregarDetalhes() {
       try {
         this.loading = true
         const token = localStorage.getItem('token')
+        const artistId = this.$route?.params?.id || this.id
 
-        const [cantorRes, showsRes] = await Promise.all([
-          fetch(`http://localhost:3002/cantores/${this.id}`),
-          fetch(`http://localhost:3002/cantores/${this.id}/shows`)
+        if (!artistId) {
+          throw new Error('ID do artista não fornecido')
+        }
+
+        // Carrega dados do artista e shows em paralelo
+        const [cantorRes, showsRes] = await Promise.allSettled([
+          fetch(`${API_BASE_URL}/cantores/${artistId}`),
+          fetch(`${API_BASE_URL}/cantores/${artistId}/shows`).catch(() => ({ ok: false }))
         ])
 
-        if (!cantorRes.ok) throw new Error('Cantor não encontrado')
-
-        this.cantor = await cantorRes.json()
-
-        if (showsRes.ok) {
-          this.shows = await showsRes.json()
+        if (cantorRes.status === 'fulfilled' && cantorRes.value.ok) {
+          this.cantor = await cantorRes.value.json()
+        } else {
+          throw new Error('Artista não encontrado')
         }
 
-        if (token) {
-          const seguindoRes = await fetch(
-            'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
-
-          if (seguindoRes.ok) {
-            const seguindo = await seguindoRes.json()
-            this.isFollowing = seguindo.some(
-              f => String(f.seguindo_id?._id || f.seguindo_id) === String(this.id)
-            )
-          }
+        if (showsRes.status === 'fulfilled' && showsRes.value.ok) {
+          this.shows = await showsRes.value.json()
+        } else {
+          this.shows = []
         }
+
+        // Verifica se o usuário logado segue o artista
+        if (token && this.cantor) {
+          await this.verificarSeguindo(token, artistId)
+        }
+
+        // Carrega likes do localStorage
+        this.carregarLikes()
+
       } catch (error) {
-        console.error(error)
+        console.error('Erro ao carregar detalhes:', error)
         this.cantor = null
+        this.mostrarToast(error.message || 'Erro ao carregar artista', 'error')
       } finally {
         this.loading = false
       }
     },
 
-    async toggleFollow() {
+    async verificarSeguindo(token, artistId) {
       try {
-        const token = localStorage.getItem('token')
-        if (!token) {
-          this.$router.push('/login')
-          return
+        const res = await fetch(`${API_BASE_URL}/follows/verificar?seguindo_id=${artistId}&tipo=cantor`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          this.isFollowing = data.seguindo || false
         }
+      } catch (err) {
+        console.warn('Erro ao verificar follow:', err)
+      }
+    },
 
+    // ========== FOLLOW / SEGUIR ==========
+    async toggleFollow() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        this.mostrarToast('Faça login para seguir artistas', 'error')
+        this.$router.push('/login')
+        return
+      }
+
+      if (this.followLoading) return
+      this.followLoading = true
+
+      try {
+        const artistId = this.cantor._id || this.id
         const url = this.isFollowing
-          ? 'http://localhost:3002/follows/desseguir'
-          : 'http://localhost:3002/follows/seguir'
+          ? `${API_BASE_URL}/follows/desseguir`
+          : `${API_BASE_URL}/follows/seguir`
+       
+        const method = this.isFollowing ? 'DELETE' : 'POST'
 
         const res = await fetch(url, {
-          method: this.isFollowing ? 'DELETE' : 'POST',
+          method,
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-          body: JSON.stringify({ seguindo_id: this.id, tipo: 'cantor' })
+          body: JSON.stringify({
+            seguindo_id: artistId,
+            tipo: 'cantor'
+          })
         })
 
-        if (!res.ok) throw new Error('Erro ao seguir artista')
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.error || errorData.message || `Erro ${res.status}`)
+        }
 
+        const data = await res.json().catch(() => ({}))
+       
+        // Atualiza estado
         this.isFollowing = !this.isFollowing
+       
+        // Atualiza contador local
         const atual = Number(this.cantor.totalSeguidores || 0)
-        this.cantor.totalSeguidores = this.isFollowing ? atual + 1 : Math.max(0, atual - 1)
+        this.cantor.totalSeguidores = this.isFollowing
+          ? atual + 1
+          : Math.max(0, atual - 1)
+
+        this.mostrarToast(
+          this.isFollowing ? 'Você seguiu este artista!' : 'Você deixou de seguir este artista',
+          'success'
+        )
+
       } catch (error) {
-        console.error(error)
+        console.error('Erro ao seguir/desseguir:', error)
+        this.mostrarToast(error.message || 'Erro ao processar ação', 'error')
+      } finally {
+        this.followLoading = false
       }
     },
 
+    // ========== PLAYER ==========
     togglePlay() {
       this.isPlaying = !this.isPlaying
       if (this.isPlaying && this.cantor?.musicas?.length) {
@@ -534,6 +659,8 @@ export default {
     },
 
     playTrack(musica) {
+      if (!musica || !musica._id) return
+     
       if (this.currentTrack === musica._id) {
         this.isPlaying = !this.isPlaying
         if (!this.isPlaying) this.currentTrack = null
@@ -544,36 +671,105 @@ export default {
     },
 
     playAlbum(album) {
+      if (!album) return
       console.log('Tocar álbum:', album.nome)
+      this.mostrarToast(`Reproduzindo álbum: ${album.nome}`, 'success')
     },
 
+    playArtista(artista) {
+      if (!artista) return
+      this.$router.push(`/artista/${artista._id}`)
+    },
+
+    // ========== LIKES ==========
     toggleLike(trackId) {
+      if (!trackId) return
       const index = this.likedTracks.indexOf(trackId)
       if (index > -1) {
         this.likedTracks.splice(index, 1)
       } else {
         this.likedTracks.push(trackId)
       }
+      this.salvarLikes()
     },
 
+    toggleAlbumLike(albumId) {
+      if (!albumId) return
+      const index = this.likedAlbums.indexOf(albumId)
+      if (index > -1) {
+        this.likedAlbums.splice(index, 1)
+      } else {
+        this.likedAlbums.push(albumId)
+      }
+      this.salvarLikes()
+    },
+
+    carregarLikes() {
+      try {
+        const likes = JSON.parse(localStorage.getItem('likedTracks') || '[]')
+        const albumLikes = JSON.parse(localStorage.getItem('likedAlbums') || '[]')
+        this.likedTracks = likes
+        this.likedAlbums = albumLikes
+      } catch (e) {
+        this.likedTracks = []
+        this.likedAlbums = []
+      }
+    },
+
+    salvarLikes() {
+      localStorage.setItem('likedTracks', JSON.stringify(this.likedTracks))
+      localStorage.setItem('likedAlbums', JSON.stringify(this.likedAlbums))
+    },
+
+    // ========== COMPARTILHAR / REPORTAR ==========
     compartilhar() {
+      this.showMoreOptions = false
       if (navigator.share) {
         navigator.share({
-          title: this.cantor.nome,
-          text: `Confira ${this.cantor.nome} na nossa plataforma!`,
+          title: this.cantor?.nome || 'Artista',
+          text: `Confira ${this.cantor?.nome} na SoundUp!`,
           url: window.location.href
-        })
+        }).catch(() => {})
       } else {
         navigator.clipboard.writeText(window.location.href)
+        this.mostrarToast('Link copiado para a área de transferência!', 'success')
       }
     },
 
     reportar() {
-      console.log('Reportar artista')
+      this.showMoreOptions = false
+      this.mostrarToast('Obrigado pelo feedback. Analisaremos sua denúncia.', 'success')
     },
 
+    toggleMoreOptions() {
+      this.showMoreOptions = !this.showMoreOptions
+    },
+
+    handleDocumentClick(e) {
+      const moreBtn = this.$el.querySelector('.btn-more')
+      if (moreBtn && !moreBtn.contains(e.target)) {
+        this.showMoreOptions = false
+      }
+    },
+
+    // ========== NAVEGAÇÃO ==========
+    irParaArtista(id) {
+      if (id) {
+        this.$router.push(`/artista/${id}`)
+      }
+    },
+
+    verTodasMusicas() {
+      this.mostrarToast('Todas as músicas serão exibidas em breve', 'success')
+    },
+
+    showTrackMenu(musica) {
+      console.log('Menu da música:', musica?.nome)
+    },
+
+    // ========== UI HELPERS ==========
     handleScroll() {
-      const tabsNav = document.querySelector('.tabs-nav')
+      const tabsNav = this.$el?.querySelector('.tabs-nav')
       if (tabsNav) {
         this.isTabsSticky = tabsNav.getBoundingClientRect().top <= 0
       }
@@ -585,23 +781,80 @@ export default {
 
     getParticleStyle(n) {
       return {
-        left: `${Math.random() * 100}%`,
-        animationDelay: `${Math.random() * 5}s`,
-        animationDuration: `${5 + Math.random() * 10}s`,
-        opacity: Math.random() * 0.5
+        left: `${(n * 5.3) % 100}%`,
+        animationDelay: `${(n * 0.3) % 5}s`,
+        animationDuration: `${5 + (n % 10)}s`,
+        opacity: 0.2 + (n % 3) * 0.15
       }
     },
 
+    // ========== FORMATADORES ==========
     formatarSeguidores(total) {
-      if (!total) return '0'
+      if (!total || total === 0) return '0'
       if (total >= 1000000) return (total / 1000000).toFixed(1).replace('.0', '') + 'M'
       if (total >= 1000) return (total / 1000).toFixed(1).replace('.0', '') + 'K'
       return String(total)
+    },
+
+    formatarDuracao(duracao) {
+      if (!duracao) return '3:45'
+      if (typeof duracao === 'number') {
+        const min = Math.floor(duracao / 60)
+        const sec = duracao % 60
+        return `${min}:${String(sec).padStart(2, '0')}`
+      }
+      return duracao
+    },
+
+    formatarDia(dataStr) {
+      try {
+        return new Date(dataStr).getDate()
+      } catch {
+        return '--'
+      }
+    },
+
+    formatarMes(dataStr) {
+      try {
+        return new Date(dataStr).toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()
+      } catch {
+        return '---'
+      }
+    },
+
+    formatarAno(dataStr) {
+      try {
+        return new Date(dataStr).getFullYear()
+      } catch {
+        return '----'
+      }
+    },
+
+    // ========== TOAST ==========
+    mostrarToast(message, type = 'success') {
+      this.toast = { show: true, message, type }
+      setTimeout(() => {
+        this.toast.show = false
+      }, 3000)
+    },
+
+    // ========== IMAGE HANDLERS ==========
+    handleImageError(e) {
+      e.target.src = '/default-artist.png'
+    },
+
+    handleTrackImageError(e) {
+      e.target.style.display = 'none'
+      e.target.parentElement.classList.add('track-image-placeholder')
+    },
+
+    handleAlbumImageError(e) {
+      e.target.style.display = 'none'
+      e.target.parentElement.querySelector('.album-cover-placeholder').style.display = 'flex'
     }
   }
 }
 </script>
-
 <style scoped>
 /* ===== DESIGN SYSTEM ===== */
 .cantor-detalhe {
@@ -624,7 +877,7 @@ export default {
   --shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.2);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
+ 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-dark);
   min-height: 100vh;
@@ -1048,7 +1301,7 @@ export default {
   transition: var(--transition);
 }
 
-.btn-follow:hover {
+.btn-follow:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
   transform: translateY(-2px);
@@ -1060,10 +1313,15 @@ export default {
   color: var(--primary);
 }
 
-.btn-follow.following:hover {
+.btn-follow.following:hover:not(:disabled) {
   background: rgba(239, 68, 68, 0.1);
   border-color: #ef4444;
   color: #ef4444;
+}
+
+.btn-follow:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-more {
@@ -1095,7 +1353,7 @@ export default {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 8px;
-  min-width: 160px;
+  min-width: 180px;
   box-shadow: var(--shadow-lg);
   z-index: 100;
 }
@@ -1111,11 +1369,18 @@ export default {
   cursor: pointer;
   font-size: 14px;
   transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .dropdown-menu button:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
+}
+
+.dropdown-menu button svg {
+  flex-shrink: 0;
 }
 
 /* Audio Visualizer */
@@ -1272,6 +1537,26 @@ export default {
   color: var(--text-muted);
   font-size: 14px;
   font-weight: 500;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  color: var(--text-muted);
+  gap: 16px;
+}
+
+.empty-state svg {
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin: 0;
 }
 
 /* ===== MUSICAS LIST ===== */
@@ -1470,9 +1755,7 @@ export default {
 
 .track-more:hover {
   color: var(--text-primary);
-}
-
-/* ===== ALBUNS GRID ===== */
+}/* ===== ALBUNS GRID ===== */
 .albuns-section .section-header {
   flex-wrap: wrap;
   gap: 16px;
@@ -1609,6 +1892,11 @@ export default {
 .album-like-btn:hover {
   background: rgba(239, 68, 68, 0.8);
   transform: scale(1.1);
+}
+
+.album-like-btn svg.liked {
+  color: #ef4444;
+  fill: #ef4444;
 }
 
 .album-year-badge {
@@ -2041,12 +2329,53 @@ export default {
   box-shadow: var(--shadow-glow);
 }
 
+/* ===== TOAST NOTIFICATION ===== */
+.toast-notification {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+}
+
+.toast-notification.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.toast-notification.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 968px) {
   .sobre-grid {
     grid-template-columns: 1fr;
   }
-  
+ 
   .sobre-image {
     order: -1;
     max-height: 300px;
@@ -2058,7 +2387,7 @@ export default {
     min-height: auto;
     padding: 40px 0 60px;
   }
-  
+ 
   .hero-content {
     flex-direction: column;
     align-items: center;
@@ -2066,84 +2395,91 @@ export default {
     padding: 0 20px;
     gap: 32px;
   }
-  
+ 
   .artist-photo-wrapper {
     width: 180px;
     height: 180px;
   }
-  
+ 
   .artist-name {
     font-size: 40px;
   }
-  
+ 
   .info-header {
     justify-content: center;
   }
-  
+ 
   .stats-row {
     justify-content: center;
   }
-  
+ 
   .hero-actions {
     justify-content: center;
     flex-wrap: wrap;
   }
-  
+ 
   .audio-visualizer {
     justify-content: center;
   }
-  
+ 
   .tabs-container {
     padding: 0 16px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
-  
+ 
   .tabs-container::-webkit-scrollbar {
     display: none;
   }
-  
+ 
   .tab-btn {
     padding: 16px 16px;
     font-size: 14px;
   }
-  
+ 
   .section {
     padding: 32px 20px;
   }
-  
+ 
   .musica-row {
     padding: 10px 12px;
   }
-  
+ 
   .track-stats,
   .track-duration {
     display: none;
   }
-  
+ 
   .albuns-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
-  
+ 
   .show-card-premium {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
-  
+ 
   .btn-ingressos {
     width: 100%;
     justify-content: center;
   }
-  
+ 
   .sobre-stats {
     grid-template-columns: 1fr;
   }
-  
+ 
   .relacionados-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+ 
+  .toast-notification {
+    left: 20px;
+    right: 20px;
+    transform: none;
+    border-radius: var(--radius-sm);
   }
 }
 
@@ -2151,19 +2487,19 @@ export default {
   .artist-name {
     font-size: 32px;
   }
-  
+ 
   .albuns-grid {
     grid-template-columns: 1fr;
   }
-  
+ 
   .relacionados-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .hero-actions {
     gap: 12px;
   }
-  
+ 
   .btn-play,
   .btn-follow {
     padding: 12px 24px;

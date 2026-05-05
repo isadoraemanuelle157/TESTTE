@@ -3,13 +3,10 @@ const Follow = require('../models/Follow')
 const PrivacidadeAtividade = require('../models/PrivacidadeAtividade')
 const bcrypt = require('bcrypt')
 
-// Helper para formatar usuário
 const formatUser = (user) => {
   if (!user) return null
-
   const userObj = user.toObject ? user.toObject() : user
   const { _id, senha, ...rest } = userObj
-
   return {
     id: _id.toString(),
     ...rest,
@@ -19,10 +16,100 @@ const formatUser = (user) => {
 
 const sameId = (a, b) => String(a || '') === String(b || '')
 
+// ===== NORMALIZAÇÃO =====
+const normalizarGeneros = (generosInput = []) => {
+  const locais = []
+  const externos = []
+
+  generosInput.forEach(g => {
+    if (!g) return
+    if (typeof g === 'string') {
+      locais.push(g)
+      return
+    }
+    if (g.source && g.source !== 'local') {
+      externos.push({
+        source: g.source,
+        externalId: g.externalId || g.id,
+        nome: g.nome || g.name || 'Desconhecido',
+        icon: g.icon || g.emoji || '🎵',
+        color: g.color || '#1DB954'
+      })
+    } else if (g.id && !g.source) {
+      locais.push(g.id)
+    } else if (g._id) {
+      locais.push(g._id)
+    }
+  })
+
+  return { locais, externos }
+}
+
+const normalizarArtistas = (artistasInput = []) => {
+  const locais = []
+  const externos = []
+
+  artistasInput.forEach(a => {
+    if (!a) return
+    if (typeof a === 'string') {
+      locais.push(a)
+      return
+    }
+    if (a.source && a.source !== 'local') {
+      externos.push({
+        source: a.source,
+        externalId: a.externalId || a.id,
+        nome: a.nome || a.name || 'Desconhecido',
+        imagem: a.imagem || a.photo || a.images?.[0]?.url || null,
+        extra: {
+          genero: a.genero || a.genre || '',
+          popularidade: a.popularidade || a.popularity || 0
+        }
+      })
+    } else if (a.id && !a.source) {
+      locais.push(a.id)
+    } else if (a._id) {
+      locais.push(a._id)
+    }
+  })
+
+  return { locais, externos }
+}
+
+const normalizarVibes = (vibesInput = []) => {
+  const locais = []
+  const externas = []
+
+  vibesInput.forEach(v => {
+    if (!v) return
+    if (typeof v === 'string') {
+      locais.push(v)
+      return
+    }
+    if (v.source && v.source !== 'local') {
+      externas.push({
+        source: v.source,
+        externalId: v.externalId || v.id || null,
+        nome: v.nome || v.name || 'Desconhecido',
+        emoji: v.emoji || v.icon || '✨',
+        descricao: v.descricao || v.description || '',
+        gradient: v.gradient || 'linear-gradient(135deg,#667eea,#764ba2)',
+        tags: v.tags || []
+      })
+    } else if (v.id && !v.source) {
+      locais.push(v.id)
+    } else if (v._id) {
+      locais.push(v._id)
+    }
+  })
+
+  return { locais, externas }
+}
+
+// ===== PERMISSÕES =====
 const canAccessProfile = async (targetUserId, viewerId) => {
   const user = await Usuario.findById(targetUserId, 'perfilPrivado')
   if (!user) return false
-
   if (!user.perfilPrivado) return true
   if (!viewerId) return false
   if (sameId(targetUserId, viewerId)) return true
@@ -38,10 +125,8 @@ const canAccessProfile = async (targetUserId, viewerId) => {
 
 const hasPendingFollowRequest = async (targetUserId, viewerId) => {
   if (!viewerId) return false
-
   const user = await Usuario.findById(targetUserId, 'solicitacoesSeguir')
   if (!user) return false
-
   return user.solicitacoesSeguir?.some(
     s => sameId(s.usuario, viewerId) && s.status === 'pendente'
   )
@@ -57,11 +142,10 @@ const isResourceBlocked = async (targetUserId, viewerId, recurso) => {
   }).lean()
 
   if (!regra) return false
-
   return regra.recursos.includes('tudo') || regra.recursos.includes(recurso)
 }
 
-// restante igual...
+// ===== AVATAR =====
 const generateDefaultAvatar = (nome, id) => {
   const initials = nome
     .split(' ')
@@ -107,33 +191,27 @@ const generateDefaultAvatar = (nome, id) => {
   return 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64')
 }
 
+// ===== CRUD =====
 const createUser = async (data) => {
   const { nome, email, senha } = data
-
   const jaExiste = await Usuario.findOne({ email })
-  if (jaExiste) {
-    throw new Error('E-mail já cadastrado')
-  }
+  if (jaExiste) throw new Error('E-mail já cadastrado')
 
   const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
   const senhaHash = await bcrypt.hash(senha, 10)
   const defaultAvatar = generateDefaultAvatar(nome, null)
 
   const user = new Usuario({
-    nome,
-    username,
-    email,
+    nome, username, email,
     senha: senhaHash,
-    bio: '',
-    avatar: defaultAvatar,
-    cover: null,
-    localizacao: '',
-    perfilPrivado: false,
-    mostrarAtividade: true
+    bio: '', avatar: defaultAvatar, cover: null, localizacao: '',
+    perfilPrivado: false, mostrarAtividade: true,
+    generos: { locais: [], externos: [] },
+    artistasFavoritos: { locais: [], externos: [] },
+    vibesFavoritas: { locais: [], externas: [] }
   })
 
   const savedUser = await user.save()
-
   if (savedUser._id) {
     savedUser.avatar = generateDefaultAvatar(nome, savedUser._id.toString())
     await savedUser.save()
@@ -144,50 +222,70 @@ const createUser = async (data) => {
 
 const loginUser = async (email, senha) => {
   const user = await Usuario.findOne({ email })
-
   if (!user) throw new Error('Usuário não encontrado')
-
   const senhaValida = await bcrypt.compare(senha, user.senha)
   if (!senhaValida) throw new Error('Senha inválida')
-
   return formatUser(user)
 }
 
 const getUsers = async () => {
   const users = await Usuario.find({}, '-senha')
-  return users.map(formatUser)
+  return users.map(u => formatUser(u))
 }
 
 const getUserById = async (id, currentUserId) => {
   const user = await Usuario.findById(id, '-senha')
-    .populate('generos', 'nome icon color popularidade')
+    .populate('generos.locais', 'nome icon color popularidade')
+    .populate('artistasFavoritos.locais', 'nome foto generos')
+    .populate('vibesFavoritas.locais', 'nome emoji descricao gradient tags')
 
   if (!user) return null
 
   const formatted = formatUser(user)
   const isOwner = sameId(formatted.id, currentUserId)
 
-  const basePublic = {
-    id: formatted.id,
-    nome: formatted.nome,
-    username: formatted.username,
-    avatar: formatted.avatar,
-    cover: formatted.cover || null,
-    bio: formatted.bio || '',
-    membroDesde: formatted.membroDesde || null,
-    perfilPrivado: formatted.perfilPrivado,
-    onboardingCompleto: formatted.onboardingCompleto || false,
-    generos: formatted.generos || []
-  }
+  const montarResposta = async (completo = false) => {
+    if (!completo) {
+      return {
+        id: formatted.id,
+        nome: formatted.nome,
+        username: formatted.username,
+        avatar: formatted.avatar,
+        cover: formatted.cover || null,
+        bio: formatted.bio || '',
+        membroDesde: formatted.membroDesde || null,
+        perfilPrivado: formatted.perfilPrivado,
+        onboardingCompleto: formatted.onboardingCompleto || false,
+        generos: { todos: [], locais: [], externos: [] },
+        artistasFavoritos: { todos: [], locais: [], externos: [] },
+        vibesFavoritas: { todos: [], locais: [], externas: [] },
+        acessoLiberado: false,
+        solicitacaoPendente: false
+      }
+    }
 
-  if (!formatted.perfilPrivado || isOwner) {
+    const [generos, artistas, vibes] = await Promise.all([
+      user.getGenerosCompletos(),
+      user.getArtistasCompletos(),
+      user.getVibesCompletas()
+    ])
+
     return {
       ...formatted,
+      generos: { todos: generos, locais: formatted.generos?.locais, externos: formatted.generos?.externos },
+      artistasFavoritos: { todos: artistas, locais: formatted.artistasFavoritos?.locais, externos: formatted.artistasFavoritos?.externos },
+      vibesFavoritas: { todos: vibes, locais: formatted.vibesFavoritas?.locais, externas: formatted.vibesFavoritas?.externas },
       acessoLiberado: true,
       solicitacaoPendente: false
     }
   }
 
+  // Público ou dono
+  if (!formatted.perfilPrivado || isOwner) {
+    return await montarResposta(true)
+  }
+
+  // Verifica se segue
   const follow = await Follow.findOne({
     seguidor_id: currentUserId,
     seguindo_id: id,
@@ -195,66 +293,66 @@ const getUserById = async (id, currentUserId) => {
   }).lean()
 
   if (follow) {
-    return {
-      ...formatted,
-      acessoLiberado: true,
-      solicitacaoPendente: false
-    }
+    return await montarResposta(true)
   }
 
+  // Perfil privado e não segue
   const solicitacaoPendente = user.solicitacoesSeguir?.some(
     s => sameId(s.usuario, currentUserId) && s.status === 'pendente'
   )
 
-  return {
-    ...basePublic,
-    acessoLiberado: false,
-    solicitacaoPendente: !!solicitacaoPendente
-  }
+  const base = await montarResposta(false)
+  base.solicitacaoPendente = !!solicitacaoPendente
+  return base
 }
 
 const updateUser = async (id, data) => {
   const {
-    nome,
-    username,
-    idade,
-    bio,
-    avatar,
-    cover,
-    localizacao,
-    email,
-    website,
-    perfilPrivado,
-    mostrarAtividade,
-    generos,
-    artistasFavoritos,
-    vibesFavoritas,
-    onboardingCompleto
+    nome, username, idade, bio, avatar, cover, localizacao,
+    email, website, perfilPrivado, mostrarAtividade,
+    generos, artistasFavoritos, vibesFavoritas, onboardingCompleto
   } = data
 
-  const updateData = {}
+  // Busca usuário atual para fazer merge nos arrays híbridos
+  const usuarioAtual = await Usuario.findById(id)
+  if (!usuarioAtual) return null
 
-  if (nome !== undefined) updateData.nome = nome
-  if (username !== undefined) updateData.username = username
-  if (idade !== undefined) updateData.idade = idade
-  if (bio !== undefined) updateData.bio = bio
-  if (avatar !== undefined) updateData.avatar = avatar
-  if (cover !== undefined) updateData.cover = cover
-  if (localizacao !== undefined) updateData.localizacao = localizacao
-  if (email !== undefined) updateData.email = email
-  if (website !== undefined) updateData.website = website
-  if (perfilPrivado !== undefined) updateData.perfilPrivado = perfilPrivado
-  if (mostrarAtividade !== undefined) updateData.mostrarAtividade = mostrarAtividade
-  if (generos !== undefined) updateData.generos = generos
-  if (artistasFavoritos !== undefined) updateData.artistasFavoritos = artistasFavoritos
-  if (vibesFavoritas !== undefined) updateData.vibesFavoritas = vibesFavoritas
-  if (onboardingCompleto !== undefined) updateData.onboardingCompleto = onboardingCompleto
+  // Campos simples
+  if (nome !== undefined) usuarioAtual.nome = nome
+  if (username !== undefined) usuarioAtual.username = username
+  if (idade !== undefined) usuarioAtual.idade = idade
+  if (bio !== undefined) usuarioAtual.bio = bio
+  if (avatar !== undefined) usuarioAtual.avatar = avatar
+  if (cover !== undefined) usuarioAtual.cover = cover
+  if (localizacao !== undefined) usuarioAtual.localizacao = localizacao
+  if (email !== undefined) usuarioAtual.email = email
+  if (website !== undefined) usuarioAtual.website = website
+  if (perfilPrivado !== undefined) usuarioAtual.perfilPrivado = perfilPrivado
+  if (mostrarAtividade !== undefined) usuarioAtual.mostrarAtividade = mostrarAtividade
+  if (onboardingCompleto !== undefined) usuarioAtual.onboardingCompleto = onboardingCompleto
 
-  const user = await Usuario.findByIdAndUpdate(
-    id,
-    updateData,
-    { new: true, select: '-senha' }
-  ).populate('generos', 'nome icon color popularidade')
+  // Campos híbridos — substituição completa (não append)
+  if (generos !== undefined) {
+    const norm = normalizarGeneros(generos)
+    usuarioAtual.generos = { locais: norm.locais, externos: norm.externos }
+  }
+
+  if (artistasFavoritos !== undefined) {
+    const norm = normalizarArtistas(artistasFavoritos)
+    usuarioAtual.artistasFavoritos = { locais: norm.locais, externos: norm.externos }
+  }
+
+  if (vibesFavoritas !== undefined) {
+    const norm = normalizarVibes(vibesFavoritas)
+    usuarioAtual.vibesFavoritas = { locais: norm.locais, externas: norm.externas }
+  }
+
+  const saved = await usuarioAtual.save()
+
+  const user = await Usuario.findById(saved._id, '-senha')
+    .populate('generos.locais', 'nome icon color popularidade')
+    .populate('artistasFavoritos.locais', 'nome foto generos')
+    .populate('vibesFavoritas.locais', 'nome emoji descricao gradient tags')
 
   return formatUser(user)
 }
@@ -266,9 +364,7 @@ const deleteUser = async (id) => {
 
 const searchUsers = async (query) => {
   if (!query || query.trim() === '') return []
-
   const regex = new RegExp(query, 'i')
-
   const users = await Usuario.find({
     $or: [
       { nome: { $regex: regex } },
@@ -297,23 +393,12 @@ const getUserStats = async (userId) => {
     Playlist.countDocuments({ usuario: userId, privacidade: 'Pública' })
   ])
 
-  return {
-    musicasCurtidas,
-    playlists
-  }
+  return { musicasCurtidas, playlists }
 }
 
 module.exports = {
-  createUser,
-  loginUser,
-  getUsers,
-  getUserById,
-  updateUser,
-  deleteUser,
-  searchUsers,
-  generateDefaultAvatar,
-  getUserStats,
-  canAccessProfile,
-  hasPendingFollowRequest,
-  isResourceBlocked
+  createUser, loginUser, getUsers, getUserById,
+  updateUser, deleteUser, searchUsers,
+  generateDefaultAvatar, getUserStats,
+  canAccessProfile, hasPendingFollowRequest, isResourceBlocked
 }

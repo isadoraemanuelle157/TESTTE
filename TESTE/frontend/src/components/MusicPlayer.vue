@@ -186,7 +186,15 @@ export default {
       
       // Controle
       hasTrack: false,
-      playPromise: null
+      playPromise: null,
+      
+      // ═══════════════════════════════════════════════════════
+      // NOVO: Controle de histórico
+      // ═══════════════════════════════════════════════════════
+      _trackStartTime: null,      // Quando a música começou a tocar
+      _totalListenedTime: 0,      // Tempo total ouvido (acumulado)
+      _lastSyncTime: 0,           // Último sync enviado
+      _syncInterval: null         // Referência do intervalo
     }
   },
 
@@ -222,15 +230,95 @@ export default {
     // Eventos globais
     window.addEventListener('play-song', this.handlePlaySong)
     window.addEventListener('playlist-playback-started', this.handlePlaylistPlayback)
+    
+    // Comandos do Dashboard
+    window.addEventListener('player-toggle-play', this.handleTogglePlayCommand)
+    window.addEventListener('player-next-track', this.handleNextCommand)
+    
+    // Iniciar sincronização contínua com o Dashboard
+    this.startSyncInterval()
   },
 
   beforeDestroy() {
     window.removeEventListener('play-song', this.handlePlaySong)
     window.removeEventListener('playlist-playback-started', this.handlePlaylistPlayback)
+    window.removeEventListener('player-toggle-play', this.handleTogglePlayCommand)
+    window.removeEventListener('player-next-track', this.handleNextCommand)
+    
+    this.stopSyncInterval()
   },
 
   methods: {
-    // 🎵 HANDLERS DE EVENTOS GLOBAIS
+    // ═══════════════════════════════════════════════════════
+    // SINCRONIZAÇÃO COM DASHBOARD (NOVO)
+    // ═══════════════════════════════════════════════════════
+
+    startSyncInterval() {
+      // Envia estado a cada 300ms para o Dashboard
+      this._syncInterval = setInterval(() => {
+        this.syncStateToDashboard()
+      }, 300)
+    },
+
+    stopSyncInterval() {
+      if (this._syncInterval) {
+        clearInterval(this._syncInterval)
+        this._syncInterval = null
+      }
+    },
+
+    syncStateToDashboard() {
+      if (!this.currentTrack) return
+      
+      const audio = this.$refs.audioPlayer
+      if (!audio) return
+      
+      // Evita enviar se nada mudou significativamente
+      const now = Date.now()
+      if (now - this._lastSyncTime < 250) return
+      
+      const progress = this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0
+      
+      window.dispatchEvent(new CustomEvent('player-state-changed', {
+        detail: {
+          track: {
+            id: this.currentTrack.id,
+            title: this.currentTrack.title,
+            artist: this.currentTrack.artist,
+            cover: this.currentTrack.cover,
+            url: this.currentTrack.url,
+            duration: this.currentTrack.duration
+          },
+          isPlaying: this.isPlaying,
+          currentTime: this.currentTime,
+          duration: this.duration,
+          progress: progress,
+          context: this.currentTrack.source || 'unknown',
+          timestamp: now
+        }
+      }))
+      
+      this._lastSyncTime = now
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // COMANDOS DO DASHBOARD
+    // ═══════════════════════════════════════════════════════
+
+    handleTogglePlayCommand() {
+      console.log('🎮 Comando toggle-play recebido do Dashboard')
+      this.togglePlay()
+    },
+
+    handleNextCommand() {
+      console.log('⏭️ Comando next recebido do Dashboard')
+      this.nextTrack()
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // HANDLERS DE EVENTOS GLOBAIS
+    // ═══════════════════════════════════════════════════════
+
     handlePlaySong(e) {
       console.log('📥 Evento play-song recebido:', e.detail)
       this.loadSongFromEvent(e.detail)
@@ -241,8 +329,16 @@ export default {
       this.loadSongFromEvent(e.detail)
     },
 
-    // 🎵 CARREGAR MÚSICA DO EVENTO
-    loadSongFromEvent({ song, playlist, index }) {
+    // ═══════════════════════════════════════════════════════
+    // CARREGAR MÚSICA DO EVENTO
+    // ═══════════════════════════════════════════════════════
+
+    loadSongFromEvent({ song, playlist, index, context }) {
+      // Se já tinha uma música tocando, registra ela no histórico ANTES de trocar
+      if (this.currentTrack && this._trackStartTime) {
+        this.notifyTrackEnded(false) // false = não terminou naturalmente, mas trocou
+      }
+
       // Atualizar playlist
       if (playlist && Array.isArray(playlist) && playlist.length > 0) {
         this.queue = [...playlist]
@@ -255,6 +351,10 @@ export default {
       
       // Marcar que tem música
       this.hasTrack = true
+      
+      // Resetar contadores de histórico
+      this._trackStartTime = Date.now()
+      this._totalListenedTime = 0
       
       console.log('🎵 Carregando música:', this.queue[this.currentIndex]?.title)
       
@@ -270,7 +370,10 @@ export default {
       })
     },
 
-    // 🎵 CARREGAR E TOCAR (CORRIGIDO)
+    // ═══════════════════════════════════════════════════════
+    // CARREGAR E TOCAR
+    // ═══════════════════════════════════════════════════════
+
     async loadAndPlay() {
       const audio = this.$refs.audioPlayer
       if (!audio) {
@@ -302,7 +405,10 @@ export default {
       }, 100)
     },
 
-    // 🎵 TENTAR TOCAR COM TRATAMENTO ROBUSTO
+    // ═══════════════════════════════════════════════════════
+    // TENTAR TOCAR COM TRATAMENTO ROBUSTO
+    // ═══════════════════════════════════════════════════════
+
     async attemptPlay() {
       const audio = this.$refs.audioPlayer
       if (!audio) return
@@ -328,8 +434,10 @@ export default {
         this.isPlaying = true
         this.isLoading = false
         
-        // Notificar
-        this.notifyPlayerUpdate()
+        // Resetar contador quando começa a tocar de verdade
+        if (!this._trackStartTime) {
+          this._trackStartTime = Date.now()
+        }
         
       } catch (err) {
         console.error('❌ Erro ao tocar:', err.name, err.message)
@@ -338,17 +446,18 @@ export default {
         
         if (err.name === 'NotAllowedError') {
           console.log('⚠️ Autoplay bloqueado - interação do usuário necessária')
-          alert('Clique no botão play para iniciar a música (autoplay bloqueado pelo navegador)')
         } else if (err.name === 'NotSupportedError') {
           console.error('❌ Formato de áudio não suportado')
-          alert('Formato de áudio não suportado')
         }
       } finally {
         this.playPromise = null
       }
     },
 
-    // 🎵 TOGGLE PLAY/PAUSE (CORRIGIDO)
+    // ═══════════════════════════════════════════════════════
+    // TOGGLE PLAY/PAUSE
+    // ═══════════════════════════════════════════════════════
+
     async togglePlay() {
       const audio = this.$refs.audioPlayer
       if (!audio || !this.currentTrack) return
@@ -371,6 +480,13 @@ export default {
         audio.pause()
         this.isPlaying = false
         
+        // Acumular tempo ouvido
+        if (this._trackStartTime) {
+          const sessionTime = Date.now() - this._trackStartTime
+          this._totalListenedTime += sessionTime
+          this._trackStartTime = null // Pausa o contador
+        }
+        
       } else {
         // TOCAR
         console.log('▶️ Iniciando reprodução...')
@@ -383,6 +499,12 @@ export default {
           this.playPromise = audio.play()
           await this.playPromise
           this.isPlaying = true
+          
+          // Retomar contador
+          if (!this._trackStartTime) {
+            this._trackStartTime = Date.now()
+          }
+          
           console.log('✅ Reprodução iniciada!')
         } catch (err) {
           console.error('❌ Erro ao tocar:', err)
@@ -391,14 +513,14 @@ export default {
           this.playPromise = null
         }
       }
-      
-      this.notifyPlayerUpdate()
     },
 
-    // 🎵 EVENTOS DO ÁUDIO (SINCRONIZAÇÃO DE ESTADO)
+    // ═══════════════════════════════════════════════════════
+    // EVENTOS DO ÁUDIO (SINCRONIZAÇÃO DE ESTADO)
+    // ═══════════════════════════════════════════════════════
+
     onAudioPlay() {
       console.log('🔊 Evento: play disparado')
-      // Só atualizar se não estivermos no meio de uma operação
       if (!this.playPromise) {
         this.isPlaying = true
       }
@@ -415,7 +537,6 @@ export default {
       console.log('✅ Evento: canplay - áudio pronto')
       this.canPlay = true
       
-      // Se deveria estar tocando mas não está, tentar tocar
       const audio = this.$refs.audioPlayer
       if (audio && audio.paused && this.hasTrack) {
         console.log('🔄 Auto-play após canplay')
@@ -423,17 +544,69 @@ export default {
       }
     },
 
+    // ═══════════════════════════════════════════════════════
+    // EVENTO CRÍTICO: MÚSICA TERMINOU
+    // ═══════════════════════════════════════════════════════
+
     onAudioEnded() {
-      console.log('⏹️ Evento: ended')
+      console.log('⏹️ Evento: ended - Música terminou!')
       this.isPlaying = false
+      
+      // Notificar Dashboard que a música terminou naturalmente
+      this.notifyTrackEnded(true) // true = terminou naturalmente
       
       if (this.repeatMode) {
         const audio = this.$refs.audioPlayer
         audio.currentTime = 0
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
         this.attemptPlay()
       } else {
         this.nextTrack()
       }
+    },
+
+    /**
+     * Notifica o Dashboard que uma música acabou de ser ouvida
+     * @param {boolean} naturallyEnded - true se terminou sozinha, false se foi trocada
+     */
+    notifyTrackEnded(naturallyEnded = true) {
+      if (!this.currentTrack) return
+      
+      // Calcular tempo total ouvido
+      let listenedDuration = this._totalListenedTime
+      
+      // Se ainda estava tocando quando terminou, adiciona o tempo da sessão atual
+      if (this._trackStartTime) {
+        listenedDuration += (Date.now() - this._trackStartTime)
+      }
+      
+      console.log(`📊 Música finalizada. Tempo ouvido: ${Math.round(listenedDuration/1000)}s (naturallyEnded: ${naturallyEnded})`)
+      
+      // SEMPRE notificar, independente do tempo ouvido
+      // O Dashboard decide se adiciona ou não ao histórico
+      window.dispatchEvent(new CustomEvent('player-track-ended', {
+        detail: {
+          track: {
+            id: this.currentTrack.id,
+            title: this.currentTrack.title,
+            artist: this.currentTrack.artist,
+            cover: this.currentTrack.cover,
+            url: this.currentTrack.url,
+            duration: this.currentTrack.duration,
+            source: this.currentTrack.source || 'unknown'
+          },
+          listenedDuration: listenedDuration,
+          totalDuration: this.duration * 1000, // duração total em ms
+          context: this.currentTrack.source || 'unknown',
+          naturallyEnded: naturallyEnded,
+          timestamp: Date.now()
+        }
+      }))
+      
+      // Resetar contadores
+      this._trackStartTime = null
+      this._totalListenedTime = 0
     },
 
     onAudioError(e) {
@@ -457,7 +630,10 @@ export default {
       }
     },
 
-    // 🎵 NAVEGAÇÃO
+    // ═══════════════════════════════════════════════════════
+    // NAVEGAÇÃO (MODIFICADA PARA REGISTRAR HISTÓRICO)
+    // ═══════════════════════════════════════════════════════
+
     prevTrack() {
       const audio = this.$refs.audioPlayer
       
@@ -467,23 +643,42 @@ export default {
         return
       }
       
+      // Registrar música atual antes de trocar
+      if (this.currentTrack) {
+        this.notifyTrackEnded(false)
+      }
+      
       if (this.currentIndex > 0) {
         this.currentIndex--
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
         this.loadAndPlay()
       }
     },
 
     nextTrack() {
+      // Registrar música atual antes de trocar
+      if (this.currentTrack) {
+        this.notifyTrackEnded(false)
+      }
+      
       if (this.currentIndex < this.queue.length - 1) {
         this.currentIndex++
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
         this.loadAndPlay()
       } else if (this.repeatMode) {
         this.currentIndex = 0
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
         this.loadAndPlay()
       }
     },
 
-    // 🎵 CONTROLES
+    // ═══════════════════════════════════════════════════════
+    // CONTROLES
+    // ═══════════════════════════════════════════════════════
+
     toggleLike() {
       this.isLiked = !this.isLiked
     },
@@ -507,7 +702,10 @@ export default {
       }
     },
 
-    // 🎵 SEEK
+    // ═══════════════════════════════════════════════════════
+    // SEEK
+    // ═══════════════════════════════════════════════════════
+
     onSeekInput(e) {
       this.isDragging = true
       this.currentTime = parseFloat(e.target.value)
@@ -535,7 +733,10 @@ export default {
       }
     },
 
-    // 🎵 VOLUME
+    // ═══════════════════════════════════════════════════════
+    // VOLUME
+    // ═══════════════════════════════════════════════════════
+
     onVolumeInput(e) {
       const vol = parseFloat(e.target.value)
       this.volume = vol
@@ -561,7 +762,10 @@ export default {
       }
     },
 
-    // 🎵 UTILIDADES
+    // ═══════════════════════════════════════════════════════
+    // UTILIDADES
+    // ═══════════════════════════════════════════════════════
+
     formatTime(seconds) {
       if (!seconds || isNaN(seconds)) return "0:00"
       const m = Math.floor(seconds / 60)
@@ -573,13 +777,12 @@ export default {
       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMTgxODE4Ii8+PHRleHQgeD0iMzAiIHk9IjM1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4='
     },
 
-    notifyPlayerUpdate() {
-      window.dispatchEvent(new CustomEvent('player-update', {
-        detail: { isPlaying: this.isPlaying }
-      }))
-    },
-
     stop() {
+      // Registrar no histórico antes de parar
+      if (this.currentTrack) {
+        this.notifyTrackEnded(false)
+      }
+      
       const audio = this.$refs.audioPlayer
       if (audio) {
         audio.pause()
@@ -589,6 +792,8 @@ export default {
       this.hasTrack = false
       this.queue = []
       this.currentIndex = 0
+      this._trackStartTime = null
+      this._totalListenedTime = 0
     }
   }
 }

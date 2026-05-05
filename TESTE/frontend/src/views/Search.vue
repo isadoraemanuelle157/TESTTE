@@ -1,18 +1,16 @@
 <template>
   <div class="search-page">
     <div class="search-container">
-      
+     
       <!-- Header com Logo -->
       <header class="search-header">
         <div class="header-brand">
           <i class="fa fa-music brand-icon"></i>
           <span class="brand-text">SoundUp</span>
         </div>
-        
-        <!-- Botão de Histórico removido do header -->
       </header>
 
-  <!-- Barra de Busca Principal -->
+      <!-- Barra de Busca Principal -->
       <div class="search-main">
         <div class="search-box" :class="{ focused: isFocused }">
           <i class="fa fa-search search-icon"></i>
@@ -33,7 +31,7 @@
 
         <!-- Sugestões / Histórico Dropdown -->
         <div v-if="showSuggestions" class="suggestions-box">
-          
+         
           <!-- HISTÓRICO: quando input vazio e tem histórico -->
           <div v-if="searchQuery.length === 0 && searchHistory.length > 0" class="history-section">
             <div class="history-header-row">
@@ -55,8 +53,8 @@
                   <i class="fa fa-search history-icon"></i>
                   <span class="history-text">{{ item }}</span>
                 </div>
-                <button 
-                  class="history-delete-btn" 
+                <button
+                  class="history-delete-btn"
                   @click.stop="removeHistoryItem(item)"
                   title="Remover do histórico"
                 >
@@ -97,25 +95,25 @@
             >
               <div class="group-label">{{ group.type }}</div>
               <div class="group-items">
-               <div
-  v-for="(item, idx) in group.items"
-  :key="idx"
-  class="group-item"
-  @click="selectSuggestion(item.name, item)"
->
-                <img v-if="item.image" :src="item.image" class="item-thumb" @error="$event.target.style.display='none'">
+                <div
+                  v-for="(item, idx) in group.items"
+                  :key="idx"
+                  class="group-item"
+                  @click="selectSuggestion(item.name, item)"
+                >
+                  <img v-if="item.image" :src="item.image" class="item-thumb" @error="$event.target.style.display='none'">
                   <div v-else class="item-thumb-placeholder" :class="group.typeClass">
                     <i :class="getIconForType(group.type)"></i>
                   </div>
-           <div class="item-details">
-  <div class="item-name-row">
-    <span class="item-name" v-html="highlightText(item.name)"></span>
-    <span class="source-badge" :class="item.source" :title="'Fonte: ' + item.source">
-      <i :class="getSourceIcon(item.source)"></i>
-    </span>
-  </div>
-  <span v-if="item.subtitle" class="item-sub">{{ item.subtitle }}</span>
-</div>
+                  <div class="item-details">
+                    <div class="item-name-row">
+                      <span class="item-name" v-html="highlightText(item.name)"></span>
+                      <span class="source-badge" :class="item.source" :title="'Fonte: ' + item.source">
+                        <i :class="getSourceIcon(item.source)"></i>
+                      </span>
+                    </div>
+                    <span v-if="item.subtitle" class="item-sub">{{ item.subtitle }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -123,10 +121,9 @@
         </div>
       </div>
 
-      <!-- Resto do template permanece igual... -->
       <!-- Conteúdo Principal -->
       <main class="search-content">
-        
+       
         <!-- Loading -->
         <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
@@ -135,15 +132,15 @@
 
         <!-- Estado Inicial - Descoberta -->
         <div v-if="!hasSearched && !isLoading" class="discover-section">
-          
+         
           <!-- Categorias Rápidas com Botão Detalhado -->
           <div class="quick-tags">
             <div class="tags-header">
               <h3 class="section-label">Explorar</h3>
-              
+             
               <!-- Botão Categorias Detalhadas -->
               <div class="categories-dropdown-wrapper" ref="categoriesContainer">
-                <button 
+                <button
                   class="categories-btn"
                   @click="showCategoriesDropdown = !showCategoriesDropdown"
                   :class="{ active: showCategoriesDropdown }"
@@ -152,7 +149,7 @@
                   <span>Categorias</span>
                   <i class="fa fa-chevron-down" :class="{ rotate: showCategoriesDropdown }"></i>
                 </button>
-                
+               
                 <!-- Dropdown de Categorias Detalhadas -->
                 <transition name="dropdown">
                   <div v-if="showCategoriesDropdown" class="categories-dropdown">
@@ -163,10 +160,10 @@
                         <i class="fa fa-times"></i>
                       </button>
                     </div>
-                    
+                   
                     <div class="categories-tabs">
-                      <button 
-                        v-for="tab in categoryTabs" 
+                      <button
+                        v-for="tab in categoryTabs"
                         :key="tab.id"
                         :class="{ active: activeCategoryTab === tab.id }"
                         @click="activeCategoryTab = tab.id"
@@ -175,117 +172,114 @@
                         {{ tab.name }}
                       </button>
                     </div>
-                    
+                   
                     <div class="categories-content">
                       <!-- Tab: Gêneros -->
                       <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
-                   <div class="category-section">
-  <h4>Populares</h4>
-  <div v-if="generosPorCategoria.popular.length === 0" class="empty-category">
-    <span class="empty-text">Nenhum gênero popular cadastrado</span>
-  </div>
-  <div class="category-tags detailed">
-    <button
-      v-for="genre in generosPorCategoria.popular"
-      :key="genre._id"
-      class="tag-btn detailed"
-      @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-    >
-      <i class="fa fa-music"></i>
-      <span>{{ genre.nome }}</span>
-      <small>
-        🎵 {{ genre.musicas?.length || 0 }} • 
-        💿 {{ genre.albuns?.length || 0 }} • 
-        🎤 {{ genre.cantores?.length || 0 }}
-      </small>
-    </button>
-  </div>
-</div>
+                        <div class="category-section">
+                          <h4>Populares</h4>
+                          <div v-if="generosPorCategoria.popular.length === 0" class="empty-category">
+                            <span class="empty-text">Nenhum gênero popular cadastrado</span>
+                          </div>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in generosPorCategoria.popular"
+                              :key="genre._id"
+                              class="tag-btn detailed"
+                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+                            >
+                              <i class="fa fa-music"></i>
+                              <span>{{ genre.nome }}</span>
+                              <small>
+                                🎵 {{ genre.musicas?.length || 0 }} •
+                                💿 {{ genre.albuns?.length || 0 }} •
+                                🎤 {{ genre.cantores?.length || 0 }}
+                              </small>
+                            </button>
+                          </div>
+                        </div>
 
-                        
-                      <div class="category-section">
-  <h4>Estilos Regionais</h4>
-  <div class="category-tags detailed">
-    <button
-      v-for="genre in generosPorCategoria.regional"
-      :key="genre._id"
-      class="tag-btn detailed"
-      @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-    >
-      <i class="fa fa-map"></i>
-      <span>{{ genre.nome }}</span>
-    </button>
-  </div>
-</div>
+                        <div class="category-section">
+                          <h4>Estilos Regionais</h4>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in generosPorCategoria.regional"
+                              :key="genre._id"
+                              class="tag-btn detailed"
+                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+                            >
+                              <i class="fa fa-map"></i>
+                              <span>{{ genre.nome }}</span>
+                            </button>
+                          </div>
+                        </div>
                        
-      <div class="category-section">
-  <h4>Eletrônica & Dance</h4>
-  <div class="category-tags detailed">
-    <button
-      v-for="genre in generosPorCategoria.electronic"
-      :key="genre._id"
-      class="tag-btn detailed"
-      @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-    >
-      <i class="fa fa-headphones"></i>
-      <span>{{ genre.nome }}</span>
-    </button>
-  </div>
-</div>
-
-              </div>
-                      
+                        <div class="category-section">
+                          <h4>Eletrônica & Dance</h4>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in generosPorCategoria.electronic"
+                              :key="genre._id"
+                              class="tag-btn detailed"
+                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+                            >
+                              <i class="fa fa-headphones"></i>
+                              <span>{{ genre.nome }}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                     
                       <!-- Tab: Moods -->
-                     <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
-  <div class="mood-grid detailed">
-    <div
-      v-for="vibe in vibes"
-      :key="vibe._id"
-      class="mood-card-detailed"
-      :style="{ background: vibe.gradient }"
-      @click="searchVibe(vibe)"
-    >
-      <span style="font-size: 24px">{{ vibe.emoji }}</span>
-      <div class="mood-info">
-        <span class="mood-name">{{ vibe.nome }}</span>
-        <span class="mood-desc">{{ vibe.descricao }}</span>
-      </div>
-    </div>
-  </div>
-</div>
+                      <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
+                        <div class="mood-grid detailed">
+                          <div
+                            v-for="vibe in vibes"
+                            :key="vibe._id"
+                            class="mood-card-detailed"
+                            :style="{ background: vibe.gradient }"
+                            @click="searchVibe(vibe)"
+                          >
+                            <span style="font-size: 24px">{{ vibe.emoji }}</span>
+                            <div class="mood-info">
+                              <span class="mood-name">{{ vibe.nome }}</span>
+                              <span class="mood-desc">{{ vibe.descricao }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                                  
                       <!-- Tab: Décadas -->
-<div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
-  <div class="decade-timeline">
-    <div
-      v-for="decade in detailedCategories.decades"
-      :key="decade.name"
-      class="decade-item"
-      @click="searchByDecade(decade.name); showCategoriesDropdown = false"
-    >
-     <div
-  class="decade-bar"
-  :style="{ width: decade.popularity + '%', background: getDecadeColor(decade.name) }"
-></div>
-      <div class="decade-info">
-       <span
-  class="decade-name"
-  :style="{ color: getDecadeColor(decade.name) }"
->
-  {{ decade.name }}
-</span>
-
-        <span class="decade-desc">{{ decade.description }}</span>
-      </div>
-    </div>
-  </div>
-</div>
+                      <div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
+                        <div class="decade-timeline">
+                          <div
+                            v-for="decade in detailedCategories.decades"
+                            :key="decade.name"
+                            class="decade-item"
+                            @click="searchByDecade(decade.name); showCategoriesDropdown = false"
+                          >
+                            <div
+                              class="decade-bar"
+                              :style="{ width: decade.popularity + '%', background: getDecadeColor(decade.name) }"
+                            ></div>
+                            <div class="decade-info">
+                              <span
+                                class="decade-name"
+                                :style="{ color: getDecadeColor(decade.name) }"
+                              >
+                                {{ decade.name }}
+                              </span>
+                              <span class="decade-desc">{{ decade.description }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </transition>
               </div>
             </div>
-            
+           
             <div class="tags-row">
               <button
                 v-for="cat in quickCategories"
@@ -298,19 +292,14 @@
             </div>
           </div>
 
-          <!-- Grid de Descoberta -->
-          <div class="discovery-grid">
-            
-          </div>
-
-          <!-- Top Músicas -->
+          <!-- Top Músicas - Layout em Linha tipo Spotify -->
           <div class="top-section" v-if="chartTracks.length > 0">
             <div class="top-header">
-  <h3>{{ topSectionTitle }}</h3>
-  <button @click="searchAndGo(currentTopCategory)" class="view-all">
-    Ver todas
-  </button>
-</div>
+              <h3>{{ topSectionTitle }}</h3>
+              <button @click="searchAndGo(currentTopCategory)" class="view-all">
+                Ver todas
+              </button>
+            </div>
             <div class="top-tracks">
               <div
                 v-for="(track, index) in chartTracks.slice(0, 5)"
@@ -319,14 +308,14 @@
                 @click="playTrack(track)"
               >
                 <span class="track-number">{{ index + 1 }}</span>
-<img :src="track.album.cover_medium" :alt="track.title" @error="$event.target.style.display='none'">
+                <img :src="track.album.cover_medium" :alt="track.title" @error="$event.target.style.display='none'">
                 <div class="track-info">
                   <span class="track-name">{{ track.title }}</span>
                   <span class="track-artist">{{ track.artist.name }}</span>
                 </div>
-                
+               
                 <!-- Botão de curtir no Top Músicas -->
-                <button 
+                <button
                   class="btn-like-track"
                   @click.stop="toggleLikeTrack(track)"
                   :class="{ liked: isTrackLiked(track.id) }"
@@ -334,7 +323,7 @@
                 >
                   <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
                 </button>
-                
+               
                 <button class="track-play">
                   <i class="fa fa-play"></i>
                 </button>
@@ -342,7 +331,7 @@
             </div>
           </div>
 
-          <!-- Artistas Populares -->
+          <!-- Artistas Populares - Grid de Cards -->
           <div class="top-section" v-if="popularArtistsReal.length > 0">
             <div class="top-header">
               <h3>Artistas Populares</h3>
@@ -355,7 +344,7 @@
                 class="artist-item"
                 @click="searchArtist(artist.name, artist.id)"
               >
-<img :src="artist.picture_medium" :alt="artist.name" @error="$event.target.style.display='none'">
+                <img :src="artist.picture_medium" :alt="artist.name" @error="$event.target.style.display='none'">
                 <span class="artist-name">{{ artist.name }}</span>
                 <span class="artist-fans">{{ formatFans(artist.nb_fan) }}</span>
               </div>
@@ -364,7 +353,7 @@
 
         </div>
 
-        <!-- Resultados da Busca -->
+        <!-- Resultados da Busca - Layout Spotify Style -->
         <div v-else-if="hasSearched && !isLoading" class="search-results">
           <div class="results-header">
             <h2>Resultados para "{{ lastSearch }}"</h2>
@@ -385,80 +374,148 @@
             <p>Nenhum resultado encontrado</p>
           </div>
 
-          <div v-else class="results-grid">
-            <div
-              v-for="(result, index) in filteredResults"
-              :key="result.id || index"
-              class="result-card"
-               :class="{ 'has-decade': result.decada || result.ano }"
-            >
-            <div class="result-image" @click="handleResultClick(result)">
-<img :src="getBestImage(result)" :alt="getResultTitle(result)" @error="$event.target.src='/default-cover.png'">
-  <div class="result-overlay">
-    <i class="fa fa-play"></i>
-  </div>
-  
-  <!-- Badge de tipo (Música/Artista/Álbum) -->
-  <span class="result-type">{{ getResultType(result) }}</span>
-
-  <!-- Badge de origem (Spotify/Deezer/Local) -->
-  <span 
-    class="source-badge-card" 
-    :class="result.source"
-    :title="'Fonte: ' + result.source"
-  >
-    <i :class="getSourceIcon(result.source)"></i>
-  </span>
-
-  <!-- Badge de década -->
-  <span
-    v-if="result.decada || result.ano"
-    class="decade-badge"
-    :style="{ background: getDecadeColor(result.decada || result.ano) }"
-  >
-    {{ result.decada || getDecadeFromYear(result.ano) }}
-  </span>
-</div>
-              
-            <!-- Música = coração -->
-<button 
-  v-if="result.type === 'track'"
-  class="btn-like-result"
-  @click.stop="toggleLikeTrack(result)"
-  :class="{ liked: isTrackLiked(result.id) }"
-  :title="isTrackLiked(result.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
->
-  <i :class="isTrackLiked(result.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-</button>
-
-<!-- Álbum = estrela (LOCAL E DEEZER) -->
-<button 
-  v-else-if="result.type === 'album'"
-  class="btn-like-result btn-star"
-  @click.stop="toggleFavoriteItem(result)"
-  :class="{ liked: isAlbumFavorited(result.id) }"
-  :title="isAlbumFavorited(result.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
->
-  <i :class="isAlbumFavorited(result.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
-</button>
-
-<!-- Artista = estrela (LOCAL E DEEZER) -->
-<button 
-  v-else-if="result.type === 'artist'"
-  class="btn-like-result btn-star"
-  @click.stop="toggleFavoriteItem(result)"
-  :class="{ liked: isArtistFavorited(result.id) }"
-  :title="isArtistFavorited(result.id) ? 'Remover dos favoritos' : 'Adicionar aos favoritos'"
->
-  <i :class="isArtistFavorited(result.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
-</button>
-              
-              <div class="result-info" @click="handleResultClick(result)">
-                <h4>{{ getResultTitle(result) }}</h4>
-                <p>{{ getResultSubtitle(result) }}</p>
+          <!-- MÚSICAS - Layout em lista tipo Spotify -->
+          <div v-if="getFilteredByType('track').length > 0" class="results-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Músicas</h3>
+            </div>
+            <div class="tracks-list">
+              <div
+                v-for="(track, index) in getFilteredByType('track')"
+                :key="track.id"
+                class="track-list-item"
+                @click="playTrack(track)"
+              >
+                <span class="track-list-number">{{ index + 1 }}</span>
+                <div class="track-list-thumb">
+                  <img :src="getBestImage(track)" :alt="getResultTitle(track)" @error="$event.target.style.display='none'">
+                  <div class="track-list-play-overlay">
+                    <i class="fa fa-play"></i>
+                  </div>
+                </div>
+                <div class="track-list-info">
+                  <span class="track-list-name">{{ getResultTitle(track) }}</span>
+                  <span class="track-list-artist">{{ getResultSubtitle(track) }}</span>
+                </div>
+                <div class="track-list-source">
+                  <span class="source-badge" :class="track.source">
+                    <i :class="getSourceIcon(track.source)"></i>
+                  </span>
+                </div>
+                <button
+                  class="btn-like-list"
+                  @click.stop="toggleLikeTrack(track)"
+                  :class="{ liked: isTrackLiked(track.id) }"
+                >
+                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                </button>
+                <span v-if="track.duration" class="track-list-duration">{{ formatDuration(track.duration) }}</span>
               </div>
             </div>
           </div>
+
+          <!-- ARTISTAS - Grid de Cards Circulares -->
+          <div v-if="getFilteredByType('artist').length > 0" class="results-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Artistas</h3>
+            </div>
+            <div class="artists-grid">
+              <div
+                v-for="artist in getFilteredByType('artist')"
+                :key="artist.id"
+                class="artist-card"
+                @click="handleResultClick(artist)"
+              >
+                <div class="artist-card-img">
+                  <img :src="getBestImage(artist)" :alt="getResultTitle(artist)" @error="$event.target.src='/default-avatar.png'">
+                </div>
+                <span class="artist-card-name">{{ getResultTitle(artist) }}</span>
+                <span class="artist-card-type">Artista</span>
+                <button
+                  class="btn-like-artist"
+                  @click.stop="toggleFavoriteItem(artist)"
+                  :class="{ liked: isArtistFavorited(artist.id) }"
+                >
+                  <i :class="isArtistFavorited(artist.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ÁLBUNS - Grid de Cards Quadrados -->
+          <div v-if="getFilteredByType('album').length > 0" class="results-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Álbuns</h3>
+            </div>
+            <div class="albums-grid">
+              <div
+                v-for="album in getFilteredByType('album')"
+                :key="album.id"
+                class="album-card"
+                @click="handleResultClick(album)"
+              >
+                <div class="album-card-img">
+                  <img :src="getBestImage(album)" :alt="getResultTitle(album)" @error="$event.target.src='/default-cover.png'">
+                  <div class="album-card-overlay">
+                    <i class="fa fa-play"></i>
+                  </div>
+                  <span class="source-badge-card" :class="album.source">
+                    <i :class="getSourceIcon(album.source)"></i>
+                  </span>
+                </div>
+                <span class="album-card-name">{{ getResultTitle(album) }}</span>
+                <span class="album-card-artist">{{ getResultSubtitle(album) }}</span>
+                <button
+                  class="btn-like-album"
+                  @click.stop="toggleFavoriteItem(album)"
+                  :class="{ liked: isAlbumFavorited(album.id) }"
+                >
+                  <i :class="isAlbumFavorited(album.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- USUÁRIOS - Grid de Cards -->
+          <div v-if="getFilteredByType('user').length > 0" class="results-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Usuários</h3>
+            </div>
+            <div class="users-grid">
+              <div
+                v-for="user in getFilteredByType('user')"
+                :key="user.id"
+                class="user-card"
+                @click="goToUserProfile(user)"
+              >
+                <div class="user-card-img">
+                  <img :src="user.picture || user.avatar || '/default-avatar.png'" :alt="user.name">
+                </div>
+                <span class="user-card-name">{{ user.name || user.username }}</span>
+                <span class="user-card-type">Perfil</span>
+                <span v-if="user.perfilPrivado" class="user-privacy">🔒 Privado</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- GÊNEROS - Grid de Pills -->
+          <div v-if="getFilteredByType('genre').length > 0" class="results-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Gêneros</h3>
+            </div>
+            <div class="genres-grid">
+              <div
+                v-for="genre in getFilteredByType('genre')"
+                :key="genre.id"
+                class="genre-card"
+                @click="searchAndGo(genre.name)"
+              >
+                <span class="genre-card-name">{{ genre.name }}</span>
+                <span class="genre-card-desc">{{ genre.description || 'Gênero musical' }}</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </main>
@@ -475,15 +532,14 @@
 
   </div>
 </template>
-
 <script>
 export default {
   name: 'Search',
 
   data() {
     return {
-SPOTIFY_API: 'http://localhost:3002/spotify',
-DEEZER_API: 'https://api.deezer.com',
+      SPOTIFY_API: 'http://localhost:3002/spotify',
+      DEEZER_API: 'https://api.deezer.com',
 
       // Search State
       searchQuery: '',
@@ -497,7 +553,7 @@ DEEZER_API: 'https://api.deezer.com',
       isLoading: false,
       activeCategoryTab: 'genres',
 
-        currentTopCategory: 'Brasil',
+      currentTopCategory: 'Brasil',
 
       // importante
       searchTimeout: null,
@@ -522,69 +578,69 @@ DEEZER_API: 'https://api.deezer.com',
         { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' }
       ],
       decadeColors: {
-  '2020s': '#1db954',
-  '2010s': '#00c2ff',
-  '2000s': '#7c4dff',
-  '90s': '#ff2d95',
-  '80s': '#ff6b00',
-  '70s': '#f4c542',
-  '60s': '#8bc34a',
-  '50s': '#a1887f',
-  '40s': '#78909c',
-  '30s': '#b0bec5',
-  '20s': '#d4af37'
-},
+        '2020s': '#1db954',
+        '2010s': '#00c2ff',
+        '2000s': '#7c4dff',
+        '90s': '#ff2d95',
+        '80s': '#ff6b00',
+        '70s': '#f4c542',
+        '60s': '#8bc34a',
+        '50s': '#a1887f',
+        '40s': '#78909c',
+        '30s': '#b0bec5',
+        '20s': '#d4af37'
+      },
 
-     detailedCategories: {
-  genres: {
-    popular: [
-      { name: 'Pop', icon: 'fa fa-star', color: '#E91E63', count: '2.4M' },
-      { name: 'Rock', icon: 'fa fa-bolt', color: '#F44336', count: '1.8M' },
-      { name: 'Hip Hop', icon: 'fa fa-microphone', color: '#FF9800', count: '3.2M' },
-      { name: 'Eletrônica', icon: 'fa fa-headphones', color: '#00BCD4', count: '2.1M' },
-      { name: 'R&B', icon: 'fa fa-heart', color: '#9C27B0', count: '890K' },
-      { name: 'Indie', icon: 'fa fa-tree', color: '#4CAF50', count: '1.2M' }
-    ],
-    regional: [
-      { name: 'Sertanejo', icon: 'fa fa-guitar', color: '#8D6E63' },
-      { name: 'Funk', icon: 'fa fa-fire', color: '#FF5722' },
-      { name: 'MPB', icon: 'fa fa-music', color: '#9C27B0' },
-      { name: 'Gospel', icon: 'fa fa-book', color: '#1976D2' },
-      { name: 'Forró', icon: 'fa fa-accordion', color: '#795548' },
-      { name: 'Pagode', icon: 'fa fa-users', color: '#FF9800' },
-      { name: 'Samba', icon: 'fa fa-drum', color: '#F44336' },
-      { name: 'Bossa Nova', icon: 'fa fa-coffee', color: '#4CAF50' }
-    ],
-    electronic: [
-      { name: 'House', icon: 'fa fa-home', color: '#00BCD4' },
-      { name: 'Techno', icon: 'fa fa-cog', color: '#3F51B5' },
-      { name: 'Trance', icon: 'fa fa-moon-o', color: '#9C27B0' },
-      { name: 'Dubstep', icon: 'fa fa-bomb', color: '#FF5722' },
-      { name: 'Drum & Bass', icon: 'fa fa-tachometer', color: '#E91E63' },
-      { name: 'Ambient', icon: 'fa fa-cloud', color: '#607D8B' }
-    ]
-  },
+      detailedCategories: {
+        genres: {
+          popular: [
+            { name: 'Pop', icon: 'fa fa-star', color: '#E91E63', count: '2.4M' },
+            { name: 'Rock', icon: 'fa fa-bolt', color: '#F44336', count: '1.8M' },
+            { name: 'Hip Hop', icon: 'fa fa-microphone', color: '#FF9800', count: '3.2M' },
+            { name: 'Eletrônica', icon: 'fa fa-headphones', color: '#00BCD4', count: '2.1M' },
+            { name: 'R&B', icon: 'fa fa-heart', color: '#9C27B0', count: '890K' },
+            { name: 'Indie', icon: 'fa fa-tree', color: '#4CAF50', count: '1.2M' }
+          ],
+          regional: [
+            { name: 'Sertanejo', icon: 'fa fa-guitar', color: '#8D6E63' },
+            { name: 'Funk', icon: 'fa fa-fire', color: '#FF5722' },
+            { name: 'MPB', icon: 'fa fa-music', color: '#9C27B0' },
+            { name: 'Gospel', icon: 'fa fa-book', color: '#1976D2' },
+            { name: 'Forró', icon: 'fa fa-accordion', color: '#795548' },
+            { name: 'Pagode', icon: 'fa fa-users', color: '#FF9800' },
+            { name: 'Samba', icon: 'fa fa-drum', color: '#F44336' },
+            { name: 'Bossa Nova', icon: 'fa fa-coffee', color: '#4CAF50' }
+          ],
+          electronic: [
+            { name: 'House', icon: 'fa fa-home', color: '#00BCD4' },
+            { name: 'Techno', icon: 'fa fa-cog', color: '#3F51B5' },
+            { name: 'Trance', icon: 'fa fa-moon-o', color: '#9C27B0' },
+            { name: 'Dubstep', icon: 'fa fa-bomb', color: '#FF5722' },
+            { name: 'Drum & Bass', icon: 'fa fa-tachometer', color: '#E91E63' },
+            { name: 'Ambient', icon: 'fa fa-cloud', color: '#607D8B' }
+          ]
+        },
 
-  moods: [
-    { name: 'Treino', icon: 'fa fa-heartbeat', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)', description: 'Energia máxima para se exercitar' },
-    { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' }
-  ],
+        moods: [
+          { name: 'Treino', icon: 'fa fa-heartbeat', gradient: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)', description: 'Energia máxima para se exercitar' },
+          { name: 'Foco', icon: 'fa fa-brain', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', description: 'Concentração e produtividade' }
+        ],
 
-  activities: [],
+        activities: [],
 
-  decades: [
-    { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
-    { name: '2010s', description: 'Streaming e pop global', color: '#00c2ff', popularity: 88 },
-    { name: '2000s', description: 'Anos 2000', color: '#7c4dff', popularity: 82 },
-    { name: '90s', description: 'Clássicos dos 90', color: '#ff2d95', popularity: 78 },
-    { name: '80s', description: 'Ouro dos 80', color: '#ff6b00', popularity: 75 },
-    { name: '70s', description: 'Disco e rock', color: '#f4c542', popularity: 70 },
-    { name: '60s', description: 'Era clássica', color: '#8bc34a', popularity: 65 },
-    { name: '50s', description: 'Nascimento do rock e jazz moderno', color: '#a1887f', popularity: 60 },
-    { name: '40s', description: 'Swing, jazz e clássicos antigos', color: '#78909c', popularity: 55 },
-    { name: '30s', description: 'Era do rádio e big bands', color: '#b0bec5', popularity: 50 },
-    { name: '20s', description: 'Jazz raiz e música vintage', color: '#d4af37', popularity: 45 }
-  ]
+        decades: [
+          { name: '2020s', description: 'Os hits atuais', color: '#1db954', popularity: 95 },
+          { name: '2010s', description: 'Streaming e pop global', color: '#00c2ff', popularity: 88 },
+          { name: '2000s', description: 'Anos 2000', color: '#7c4dff', popularity: 82 },
+          { name: '90s', description: 'Clássicos dos 90', color: '#ff2d95', popularity: 78 },
+          { name: '80s', description: 'Ouro dos 80', color: '#ff6b00', popularity: 75 },
+          { name: '70s', description: 'Disco e rock', color: '#f4c542', popularity: 70 },
+          { name: '60s', description: 'Era clássica', color: '#8bc34a', popularity: 65 },
+          { name: '50s', description: 'Nascimento do rock e jazz moderno', color: '#a1887f', popularity: 60 },
+          { name: '40s', description: 'Swing, jazz e clássicos antigos', color: '#78909c', popularity: 55 },
+          { name: '30s', description: 'Era do rádio e big bands', color: '#b0bec5', popularity: 50 },
+          { name: '20s', description: 'Jazz raiz e música vintage', color: '#d4af37', popularity: 45 }
+        ]
       },
 
       searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Décadas'],
@@ -634,38 +690,38 @@ DEEZER_API: 'https://api.deezer.com',
   },
 
   computed: {
-  topSectionTitle() {
-  return this.currentTopCategory && this.currentTopCategory !== 'Brasil'
-    ? `Top músicas de ${this.currentTopCategory}`
-    : 'Top Músicas Brasil'
-},
+    topSectionTitle() {
+      return this.currentTopCategory && this.currentTopCategory !== 'Brasil'
+        ? `Top músicas de ${this.currentTopCategory}`
+        : 'Top Músicas Brasil'
+    },
 
-filteredResults() {
-  if (this.activeFilter === 'Décadas') {
-    const range = this.getDecadeRange(this.lastSearch)
-    if (!range) return []
+    filteredResults() {
+      if (this.activeFilter === 'Décadas') {
+        const range = this.getDecadeRange(this.lastSearch)
+        if (!range) return []
 
-    return this.searchResults.filter(r => {
-      if (!['track', 'album', 'artist'].includes(r.type)) return false
-      if (!r.ano) return false
+        return this.searchResults.filter(r => {
+          if (!['track', 'album', 'artist'].includes(r.type)) return false
+          if (!r.ano) return false
 
-      const itemYear = parseInt(r.ano)
-      return itemYear >= range.start && itemYear <= range.end
-    })
-  }
+          const itemYear = parseInt(r.ano)
+          return itemYear >= range.start && itemYear <= range.end
+        })
+      }
 
-  if (this.activeFilter === 'Todos') return this.searchResults
+      if (this.activeFilter === 'Todos') return this.searchResults
 
-  const typeMap = {
-    'Músicas': 'track',
-    'Artistas': 'artist',
-    'Álbuns': 'album',
-    'Usuários': 'user'
-  }
+      const typeMap = {
+        'Músicas': 'track',
+        'Artistas': 'artist',
+        'Álbuns': 'album',
+        'Usuários': 'user'
+      }
 
-  const filterType = typeMap[this.activeFilter]
-  return this.searchResults.filter(r => r.type === filterType)
-},
+      const filterType = typeMap[this.activeFilter]
+      return this.searchResults.filter(r => r.type === filterType)
+    },
 
     generosPorCategoria() {
       const grupos = {
@@ -714,8 +770,8 @@ filteredResults() {
             typeClass: type
               .toLowerCase()
               .normalize('NFD')
-              .replace(/[\u0300-\u036f]/g, '')
-              .replace(/\s+/g, '-'),
+              .replace(/[\\u0300-\\u036f]/g, '')
+              .replace(/\\s+/g, '-'),
             items: []
           }
         }
@@ -749,485 +805,465 @@ filteredResults() {
     }
   },
 
-mounted() {
-  document.addEventListener('click', this.handleClickOutside)
+  mounted() {
+    document.addEventListener('click', this.handleClickOutside)
 
-  const initialCategory = this.$route?.query?.q || 'Brasil'
-  this.currentTopCategory = initialCategory
-  this.searchQuery = this.$route?.query?.q || ''
+    const initialCategory = this.$route?.query?.q || 'Brasil'
+    this.currentTopCategory = initialCategory
+    this.searchQuery = this.$route?.query?.q || ''
 
-  this.loadInitialData(initialCategory)
-  this.loadLikedTracks()
-  this.loadFavoritas()
-  this.loadVibes()
-  this.loadGeneros()
-  this.loadHistory()
-},
+    this.loadInitialData(initialCategory)
+    this.loadLikedTracks()
+    this.loadFavoritas()
+    this.loadVibes()
+    this.loadGeneros()
+    this.loadHistory()
+  },
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
     if (this.searchTimeout) clearTimeout(this.searchTimeout)
   },
-watch: {
-  '$route.query.q': {
-    immediate: false,
-    handler(newValue) {
-      const category = newValue || 'Brasil'
-      this.currentTopCategory = category
-      this.loadTopTracksByCategory(category)
+
+  watch: {
+    '$route.query.q': {
+      immediate: false,
+      handler(newValue) {
+        const category = newValue || 'Brasil'
+        this.currentTopCategory = category
+        this.loadTopTracksByCategory(category)
+      }
     }
-  }
-},
+  },
 
   methods: {
-getSourceIcon(source) {
-  const icons = {
-    spotify: 'fa fa-spotify',
-    deezer: 'si si-deezer',
-    local: 'fa fa-database'
-  }
-  return icons[source] || 'fa fa-music'
-},
-    // ===== SISTEMA DE CURTIDAS =====
-    
-    // Carregar músicas curtidas do localStorage
-  async loadLikedTracks() {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) {
-      this.likedTracks = []
-      return
-    }
-
-    const res = await fetch(`http://localhost:3002/curtidas`, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    // ===== NOVO: Filtrar por tipo para seções separadas =====
+    getFilteredByType(type) {
+      if (this.activeFilter === 'Todos') {
+        return this.filteredResults.filter(r => r.type === type)
       }
-    })
+      return this.filteredResults.filter(r => r.type === type)
+    },
 
-    const data = await res.json()
+    getSourceIcon(source) {
+      const icons = {
+        spotify: 'fa fa-spotify',
+        deezer: 'si si-deezer',
+        local: 'fa fa-database'
+      }
+      return icons[source] || 'fa fa-music'
+    },
 
-    // Guardar TODOS os IDs (locais e externos) como string para comparação
-    this.likedTracks = data.map(c => String(c.id)).filter(Boolean)
+    // ===== SISTEMA DE CURTIDAS =====
+   
+    async loadLikedTracks() {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.likedTracks = []
+          return
+        }
 
-  } catch (err) {
-    console.error("Erro ao carregar curtidas:", err)
-    this.likedTracks = []
-  }
-},
+        const res = await fetch(`http://localhost:3002/curtidas`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const data = await res.json()
+        this.likedTracks = data.map(c => String(c.id)).filter(Boolean)
+
+      } catch (err) {
+        console.error("Erro ao carregar curtidas:", err)
+        this.likedTracks = []
+      }
+    },
 
     async loadVibes() {
-  try {
-    const res = await fetch("http://localhost:3002/vibes")
-    const data = await res.json()
-
-    this.vibes = data
-  } catch (err) {
-    console.error("Erro ao carregar vibes:", err)
-  }
-},
-async loadHistory() {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    const res = await fetch("http://localhost:3002/historico", {
-      headers: {
-        Authorization: `Bearer ${token}`
+      try {
+        const res = await fetch("http://localhost:3002/vibes")
+        const data = await res.json()
+        this.vibes = data
+      } catch (err) {
+        console.error("Erro ao carregar vibes:", err)
       }
-    })
+    },
 
-    const data = await res.json()
-    console.log("HISTORICO:", data)
+    async loadHistory() {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) return
 
-    // 🔥 GARANTE QUE É ARRAY
-    if (Array.isArray(data)) {
-      this.searchHistory = data.map(h => h.termo)
-    } else {
-      this.searchHistory = []
-      console.error("Resposta inesperada:", data)
-    }
+        const res = await fetch("http://localhost:3002/historico", {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
 
-  } catch (err) {
-    console.error("Erro ao carregar histórico:", err)
-  }
-},
-// Adicione este método no objeto methods:
-async removeHistoryItem(item) {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) return
-
-    await fetch(`http://localhost:3002/historico/item`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ termo: item })
-    })
-
-    // Remove do array local
-    this.searchHistory = this.searchHistory.filter(h => h !== item)
-    
-  } catch (err) {
-    console.error("Erro ao remover item do histórico:", err)
-    // Fallback: remove localmente mesmo se API falhar
-    this.searchHistory = this.searchHistory.filter(h => h !== item)
-  }
-},
-
-searchVibe(vibe) {
-  const query = Array.isArray(vibe.tags) && vibe.tags.length
-    ? vibe.tags.join(' ')
-    : vibe.nome
-
-  this.searchQuery = query
-  this.performSearch()
-},
-
-  async loadFavoritas() {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) {
-      this.favoriteAlbums = []
-      this.favoriteArtists = []
-      return
-    }
-
-    const res = await fetch(`http://localhost:3002/favoritas`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-
-    const data = await res.json()
-
-    // Extrair IDs de álbuns favoritados (locais e externos)
-    this.favoriteAlbums = data
-      .filter(f => {
-        // Local: f.album existe e tem _id
-        if (f.album && f.album._id) return true
-        // Externo: f.albumExterno existe
-        if (f.albumExterno) return true
-        return false
-      })
-      .map(f => {
-        if (f.album && f.album._id) return String(f.album._id)
-        if (f.albumExterno) return String(f.albumExterno.id)
-        return null
-      })
-      .filter(Boolean)
-
-    // Extrair IDs de artistas favoritados (locais e externos)
-    this.favoriteArtists = data
-      .filter(f => {
-        // Local: f.cantor existe e tem _id
-        if (f.cantor && f.cantor._id) return true
-        // Externo: f.cantorExterno existe
-        if (f.cantorExterno) return true
-        return false
-      })
-      .map(f => {
-        if (f.cantor && f.cantor._id) return String(f.cantor._id)
-        if (f.cantorExterno) return String(f.cantorExterno.id)
-        return null
-      })
-      .filter(Boolean)
-
-  } catch (err) {
-    console.error("Erro ao carregar favoritas:", err)
-    this.favoriteAlbums = []
-    this.favoriteArtists = []
-  }
-},
-
-async loadGeneros() {
-  try {
-    const res = await fetch("http://localhost:3002/generos")
-    const data = await res.json()
-
-    console.log('Gêneros carregados:', data) // debug
-
-    // Garantir que é um array
-    let generosArray = data
-    if (!Array.isArray(data)) {
-      // Se vier como objeto agrupado, achatar
-      generosArray = Object.values(data).flat()
-    }
-
-    this.generosDB = generosArray
-    
-    // Atualizar quickCategories automaticamente
-    if (this.generosDB.length > 0) {
-      this.quickCategories = this.generosDB.map(g => g.nome)
-    }
-
-  } catch (err) {
-    console.error("Erro ao carregar gêneros:", err)
-    this.generosDB = []
-  }
-},
-
-getDecadeFromYear(year) {
-  const y = parseInt(year)
-  if (isNaN(y)) return null
-
-  if (y >= 2020 && y <= 2029) return '2020s'
-  if (y >= 2010 && y <= 2019) return '2010s'
-  if (y >= 2000 && y <= 2009) return '2000s'
-  if (y >= 1990 && y <= 1999) return '90s'
-  if (y >= 1980 && y <= 1989) return '80s'
-  if (y >= 1970 && y <= 1979) return '70s'
-  if (y >= 1960 && y <= 1969) return '60s'
-  if (y >= 1950 && y <= 1959) return '50s'
-  if (y >= 1940 && y <= 1949) return '40s'
-  if (y >= 1930 && y <= 1939) return '30s'
-  if (y >= 1920 && y <= 1929) return '20s'
-
-  return null
-},
-
-getDecadeColor(decadeOrYear) {
-  if (!decadeOrYear) return '#1db954'
-
-  if (/^\d{4}$/.test(String(decadeOrYear))) {
-    const decade = this.getDecadeFromYear(decadeOrYear)
-    return this.decadeColors[decade] || '#1db954'
-  }
-
-  return this.decadeColors[decadeOrYear] || '#1db954'
-},
-
-getDecadeRange(decadeName) {
-  const ranges = {
-    '2020s': { start: 2020, end: 2029 },
-    '2010s': { start: 2010, end: 2019 },
-    '2000s': { start: 2000, end: 2009 },
-    '90s': { start: 1990, end: 1999 },
-    '80s': { start: 1980, end: 1989 },
-    '70s': { start: 1970, end: 1979 },
-    '60s': { start: 1960, end: 1969 },
-    '50s': { start: 1950, end: 1959 },
-    '40s': { start: 1940, end: 1949 },
-    '30s': { start: 1930, end: 1939 },
-    '20s': { start: 1920, end: 1929 }
-  }
-
-  return ranges[decadeName] || null
-},
-
-  isAlbumFavorited(albumId) {
-  if (!albumId) return false
-  return this.favoriteAlbums.some(id => String(id) === String(albumId))
-},
-
-isArtistFavorited(artistId) {
-  if (!artistId) return false
-  return this.favoriteArtists.some(id => String(id) === String(artistId))
-},
-
-async toggleFavoriteItem(item) {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) {
-      this.showToast("Faça login para favoritar", "info")
-      return
-    }
-
-    const itemId = item.id
-    const isDeezer = item.source === 'deezer'
-    const isLocal = item.source === 'local'
-
-    // Determinar tipo do item
-    let tipo = ''
-    if (item.type === 'album') tipo = 'album'
-    else if (item.type === 'artist') tipo = 'cantor'
-    else {
-      this.showToast("Tipo de item não suportado", "error")
-      return
-    }
-
-    // Montar body
-   const body = {
-  tipo,
-  source: item.source || 'local'
-}
-
-    if (isDeezer) {
-      body.source = 'deezer'
-      body.dadosItem = {
-        titulo: item.title || item.name || 'Sem título',
-        artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
-        capa: this.getBestImage(item) || '',
-        previewUrl: item.preview || '',
-        duration: item.duration || 0,
-        ano: item.ano || null,
-        album: item.album?.title || ''
-      }
-    } else if (isLocal) {
-      body.source = 'local'
-    }
-
-    const res = await fetch(`http://localhost:3002/favoritas/${String(itemId)}/favoritar`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    })
-
-    const data = await res.json()
-
-    if (item.type === 'album') {
-      if (data.favorited) {
-        if (!this.favoriteAlbums.includes(String(itemId))) {
-          this.favoriteAlbums.push(String(itemId))
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          this.searchHistory = data.map(h => h.termo)
+        } else {
+          this.searchHistory = []
         }
-        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-      } else {
-        this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
-        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
-      }
-    }
 
-    if (item.type === 'artist') {
-      if (data.favorited) {
-        if (!this.favoriteArtists.includes(String(itemId))) {
-          this.favoriteArtists.push(String(itemId))
+      } catch (err) {
+        console.error("Erro ao carregar histórico:", err)
+      }
+    },
+
+    async removeHistoryItem(item) {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) return
+
+        await fetch(`http://localhost:3002/historico/item`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ termo: item })
+        })
+
+        this.searchHistory = this.searchHistory.filter(h => h !== item)
+       
+      } catch (err) {
+        console.error("Erro ao remover item do histórico:", err)
+        this.searchHistory = this.searchHistory.filter(h => h !== item)
+      }
+    },
+
+    searchVibe(vibe) {
+      const query = Array.isArray(vibe.tags) && vibe.tags.length
+        ? vibe.tags.join(' ')
+        : vibe.nome
+
+      this.searchQuery = query
+      this.performSearch()
+    },
+
+    async loadFavoritas() {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.favoriteAlbums = []
+          this.favoriteArtists = []
+          return
         }
-        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-      } else {
-        this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
-        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+
+        const res = await fetch(`http://localhost:3002/favoritas`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        const data = await res.json()
+
+        this.favoriteAlbums = data
+          .filter(f => {
+            if (f.album && f.album._id) return true
+            if (f.albumExterno) return true
+            return false
+          })
+          .map(f => {
+            if (f.album && f.album._id) return String(f.album._id)
+            if (f.albumExterno) return String(f.albumExterno.id)
+            return null
+          })
+          .filter(Boolean)
+
+        this.favoriteArtists = data
+          .filter(f => {
+            if (f.cantor && f.cantor._id) return true
+            if (f.cantorExterno) return true
+            return false
+          })
+          .map(f => {
+            if (f.cantor && f.cantor._id) return String(f.cantor._id)
+            if (f.cantorExterno) return String(f.cantorExterno.id)
+            return null
+          })
+          .filter(Boolean)
+
+      } catch (err) {
+        console.error("Erro ao carregar favoritas:", err)
+        this.favoriteAlbums = []
+        this.favoriteArtists = []
       }
-    }
+    },
 
-    window.dispatchEvent(new Event('favoritas-updated'))
+    async loadGeneros() {
+      try {
+        const res = await fetch("http://localhost:3002/generos")
+        const data = await res.json()
 
-  } catch (err) {
-    console.error("Erro ao favoritar item:", err)
-    this.showToast("Erro ao favoritar item", "error")
-  }
-},
+        let generosArray = data
+        if (!Array.isArray(data)) {
+          generosArray = Object.values(data).flat()
+        }
 
-handleResultClick(result) {
-  if (result.type === 'track') {
-    return this.playTrack(result)
-  }
+        this.generosDB = generosArray
+       
+        if (this.generosDB.length > 0) {
+          this.quickCategories = this.generosDB.map(g => g.nome)
+        }
 
-  if (result.type === 'album' && result.source === 'local') {
-    return this.$router.push(`/album/${result.id}`)
-  }
-
-  if (result.type === 'artist' && result.source === 'local') {
-    return this.$router.push(`/cantor/${result.id}`)
-  }
-
-  if (result.type === 'user') {
-    return this.goToUserProfile(result)
-  }
-},
-
-   goToUserProfile(user) {
-  if (!user) return
-
-  const usuarioLogado = JSON.parse(localStorage.getItem('usuario') || '{}')
-  const loggedId = String(usuarioLogado.id || usuarioLogado._id || '')
-  const targetId = String(user.id || user._id || '')
-
-  if (!targetId) return
-
-  this.showSuggestions = false
-  this.showHistory = false
-
-  // Se clicou no próprio usuário
-  if (loggedId && loggedId === targetId) {
-    return this.$router.push('/perfil')
-  }
-
-  // Outro usuário → página pública/externa estilo Instagram
-  return this.$router.push({
-    name: 'PerfilUsuario',
-    params: { id: targetId }
-  })
-}, 
-    // Verificar se uma música está curtida
-   isTrackLiked(trackId) {
-  if (!trackId) return false
-  return this.likedTracks.some(id => String(id) === String(trackId))
-},
-    
-    // Curtir/descurtir uma música
-   async toggleLikeTrack(track) {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) {
-      this.showToast("Faça login para curtir músicas", "info")
-      return
-    }
-
-    const trackId = track.id
-    
-    // Montar body conforme tipo
-const body = {
-  source: track.source || 'local'
-}
-
-if (track.source === 'deezer' || track.source === 'spotify') {
-  body.dadosMusica = {
-    titulo: track.title || 'Sem título',
-    artista: track.artist?.name || 'Desconhecido',
-    capa: this.getBestImage(track) || '',
-    previewUrl: track.preview || '',
-    duration: track.duration || 30,
-    ano: track.ano || null,
-    album: track.album?.title || ''
-  }
-}
-    // Se for local, não precisa enviar source (ou envia 'local')
-
-    const res = await fetch(
-      `http://localhost:3002/curtidas/${trackId}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
+      } catch (err) {
+        console.error("Erro ao carregar gêneros:", err)
+        this.generosDB = []
       }
-    )
-        // 🔥 VERIFICA SE RESPOSTA ESTÁ OK ANTES DE FAZER JSON()
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      console.error('Erro da API:', errorData)
-      this.showToast(errorData.error || `Erro ${res.status}`, "error")
-      return
-    }
+    },
 
-    const data = await res.json()
+    getDecadeFromYear(year) {
+      const y = parseInt(year)
+      if (isNaN(y)) return null
 
-    if (data.liked) {
-      // Adiciona ID se não existir
-      if (!this.likedTracks.includes(String(trackId))) {
-        this.likedTracks.push(String(trackId))
+      if (y >= 2020 && y <= 2029) return '2020s'
+      if (y >= 2010 && y <= 2019) return '2010s'
+      if (y >= 2000 && y <= 2009) return '2000s'
+      if (y >= 1990 && y <= 1999) return '90s'
+      if (y >= 1980 && y <= 1989) return '80s'
+      if (y >= 1970 && y <= 1979) return '70s'
+      if (y >= 1960 && y <= 1969) return '60s'
+      if (y >= 1950 && y <= 1959) return '50s'
+      if (y >= 1940 && y <= 1949) return '40s'
+      if (y >= 1930 && y <= 1939) return '30s'
+      if (y >= 1920 && y <= 1929) return '20s'
+
+      return null
+    },
+
+    getDecadeColor(decadeOrYear) {
+      if (!decadeOrYear) return '#1db954'
+
+      if (/^\\d{4}$/.test(String(decadeOrYear))) {
+        const decade = this.getDecadeFromYear(decadeOrYear)
+        return this.decadeColors[decade] || '#1db954'
       }
-      this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
-    } else {
-      // Remove ID
-      this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
-      this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
-    }
 
-  } catch (err) {
-    console.error("Erro ao curtir música:", err)
-    this.showToast("Erro ao processar curtida", "error")
-  }
-},
-    
-    // Formatar duração
+      return this.decadeColors[decadeOrYear] || '#1db954'
+    },
+
+    getDecadeRange(decadeName) {
+      const ranges = {
+        '2020s': { start: 2020, end: 2029 },
+        '2010s': { start: 2010, end: 2019 },
+        '2000s': { start: 2000, end: 2009 },
+        '90s': { start: 1990, end: 1999 },
+        '80s': { start: 1980, end: 1989 },
+        '70s': { start: 1970, end: 1979 },
+        '60s': { start: 1960, end: 1969 },
+        '50s': { start: 1950, end: 1959 },
+        '40s': { start: 1940, end: 1949 },
+        '30s': { start: 1930, end: 1939 },
+        '20s': { start: 1920, end: 1929 }
+      }
+
+      return ranges[decadeName] || null
+    },
+
+    isAlbumFavorited(albumId) {
+      if (!albumId) return false
+      return this.favoriteAlbums.some(id => String(id) === String(albumId))
+    },
+
+    isArtistFavorited(artistId) {
+      if (!artistId) return false
+      return this.favoriteArtists.some(id => String(id) === String(artistId))
+    },
+
+    async toggleFavoriteItem(item) {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.showToast("Faça login para favoritar", "info")
+          return
+        }
+
+        const itemId = item.id
+        const isDeezer = item.source === 'deezer'
+        const isLocal = item.source === 'local'
+
+        let tipo = ''
+        if (item.type === 'album') tipo = 'album'
+        else if (item.type === 'artist') tipo = 'cantor'
+        else {
+          this.showToast("Tipo de item não suportado", "error")
+          return
+        }
+
+        const body = {
+          tipo,
+          source: item.source || 'local'
+        }
+
+        if (isDeezer) {
+          body.source = 'deezer'
+          body.dadosItem = {
+            titulo: item.title || item.name || 'Sem título',
+            artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
+            capa: this.getBestImage(item) || '',
+            previewUrl: item.preview || '',
+            duration: item.duration || 0,
+            ano: item.ano || null,
+            album: item.album?.title || ''
+          }
+        } else if (isLocal) {
+          body.source = 'local'
+        }
+
+        const res = await fetch(`http://localhost:3002/favoritas/${String(itemId)}/favoritar`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        const data = await res.json()
+
+        if (item.type === 'album') {
+          if (data.favorited) {
+            if (!this.favoriteAlbums.includes(String(itemId))) {
+              this.favoriteAlbums.push(String(itemId))
+            }
+            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+          } else {
+            this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
+            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+          }
+        }
+
+        if (item.type === 'artist') {
+          if (data.favorited) {
+            if (!this.favoriteArtists.includes(String(itemId))) {
+              this.favoriteArtists.push(String(itemId))
+            }
+            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+          } else {
+            this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
+            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+          }
+        }
+
+        window.dispatchEvent(new Event('favoritas-updated'))
+
+      } catch (err) {
+        console.error("Erro ao favoritar item:", err)
+        this.showToast("Erro ao favoritar item", "error")
+      }
+    },
+
+    handleResultClick(result) {
+      if (result.type === 'track') {
+        return this.playTrack(result)
+      }
+
+      if (result.type === 'album' && result.source === 'local') {
+        return this.$router.push(`/album/${result.id}`)
+      }
+
+      if (result.type === 'artist' && result.source === 'local') {
+        return this.$router.push(`/cantor/${result.id}`)
+      }
+
+      if (result.type === 'user') {
+        return this.goToUserProfile(result)
+      }
+    },
+
+    goToUserProfile(user) {
+      if (!user) return
+
+      const usuarioLogado = JSON.parse(localStorage.getItem('usuario') || '{}')
+      const loggedId = String(usuarioLogado.id || usuarioLogado._id || '')
+      const targetId = String(user.id || user._id || '')
+
+      if (!targetId) return
+
+      this.showSuggestions = false
+      this.showHistory = false
+
+      if (loggedId && loggedId === targetId) {
+        return this.$router.push('/perfil')
+      }
+
+      return this.$router.push({
+        name: 'PerfilUsuario',
+        params: { id: targetId }
+      })
+    },
+
+    isTrackLiked(trackId) {
+      if (!trackId) return false
+      return this.likedTracks.some(id => String(id) === String(trackId))
+    },
+   
+    async toggleLikeTrack(track) {
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) {
+          this.showToast("Faça login para curtir músicas", "info")
+          return
+        }
+
+        const trackId = track.id
+       
+        const body = {
+          source: track.source || 'local'
+        }
+
+        if (track.source === 'deezer' || track.source === 'spotify') {
+          body.dadosMusica = {
+            titulo: track.title || 'Sem título',
+            artista: track.artist?.name || 'Desconhecido',
+            capa: this.getBestImage(track) || '',
+            previewUrl: track.preview || '',
+            duration: track.duration || 30,
+            ano: track.ano || null,
+            album: track.album?.title || ''
+          }
+        }
+
+        const res = await fetch(
+          `http://localhost:3002/curtidas/${trackId}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          }
+        )
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          console.error('Erro da API:', errorData)
+          this.showToast(errorData.error || `Erro ${res.status}`, "error")
+          return
+        }
+
+        const data = await res.json()
+
+        if (data.liked) {
+          if (!this.likedTracks.includes(String(trackId))) {
+            this.likedTracks.push(String(trackId))
+          }
+          this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+        } else {
+          this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
+          this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
+        }
+
+      } catch (err) {
+        console.error("Erro ao curtir música:", err)
+        this.showToast("Erro ao processar curtida", "error")
+      }
+    },
+   
     formatDuration(seconds) {
       if (!seconds) return "3:00"
       const mins = Math.floor(seconds / 60)
@@ -1236,355 +1272,356 @@ if (track.source === 'deezer' || track.source === 'spotify') {
     },
 
     // API Methods
-async loadInitialData(category = 'Brasil') {
-  await Promise.all([
-    this.loadTopTracksByCategory(category),
-    this.loadPopularArtists()
-  ])
-},
-
-async loadTopTracksByCategory(category = 'Brasil') {
-  try {
-    this.currentTopCategory = category || 'Brasil'
-
-   const res = await fetch(
-  `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10`
-).then(r => r.json())
-
-this.chartTracks = res.tracks?.items.map(t => ({
-  id: t.id,
-  title: t.name,
-  artist: { name: t.artists.map(a => a.name).join(', ') },
-  album: {
-    cover_medium: t.album.images?.[0]?.url
-  },
-  preview: t.preview_url,
-  source: 'spotify'
-})) || []
-
-  } catch (error) {
-    console.error('Erro ao carregar top da categoria:', error)
-    this.chartTracks = []
-  }
-},
-
-async loadPopularArtists() {
-  try {
-    const response = await fetch('http://localhost:3002/cantores')
-    const data = await response.json()
-
-    // 🔥 adaptar para o formato que o front espera
-    this.popularArtistsReal = data.map(cantor => ({
-      id: cantor._id,
-      name: cantor.nome,
-      picture_medium: cantor.foto,
-      nb_fan: cantor.totalSeguidores || 0,
-      source: 'local'
-    }))
-
-  } catch (error) {
-    console.error('Erro ao carregar artistas do banco:', error)
-  }
-},
-    
-  async searchAll(query) {
-  this.isLoading = true
-
-  try {
-    const token = localStorage.getItem("token")
-    const authHeaders = token
-      ? { Authorization: `Bearer ${token}` }
-      : {}
-
-    const [
-      localMusicas,
-      localCantores,
-      localAlbuns,
-      localGeneros,
-      localUsuarios
-    ] = await Promise.all([
-      fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`)
-.then(r=>r.json()),
-      fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
-        headers: authHeaders
-      })
-        .then(async r => r.ok ? r.json() : [])
-        .catch(() => [])
-    ])
-
-const spotifyRes = await fetch(
-  `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album`
-).then(r => r.json())
-
-const deezerRes = await fetch(
-  `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
-).then(r => r.json())
-    let results = []
-
-     // USUÁRIOS LOCAIS
-    if (Array.isArray(localUsuarios) && localUsuarios.length > 0) {
-      results.push(...localUsuarios.map(u => ({
-        id: u._id || u.id,
-        name: u.nome || u.name || u.username,
-        username: u.username || u.nome,
-        picture: u.foto || u.avatar || u.picture,
-        avatar: u.avatar || u.foto,
-        bio: u.bio,
-        perfilPrivado: u.perfilPrivado,
-        mostrarAtividade: u.mostrarAtividade,
-        type: 'user',
-        source: 'local'
-      })))
-    }
-
-    // MÚSICAS LOCAIS
-    if (Array.isArray(localMusicas) && localMusicas.length > 0) {
-      results.push(...localMusicas.map(m => ({
-        id: m._id,
-        title: m.nome,
-        artist: {
-          name: m.cantores?.map(c => c.nome).join(', ') || 'Artista desconhecido'
-        },
-        album: {
-          title: m.albuns?.[0]?.nome || '',
-          cover: m.albuns?.[0]?.foto || ''
-        },
-        cover: m.foto || m.albuns?.[0]?.foto || '',
-        preview: m.link,
-        ano: m.ano,
-        decada: m.ano ? this.getDecadeFromYear(m.ano) : null,
-        type: 'track',
-        source: 'local'
-      })))
-    }
-
-    // CANTORES LOCAIS
-    if (Array.isArray(localCantores) && localCantores.length > 0) {
-      results.push(...localCantores.map(c => ({
-        id: c._id,
-        name: c.nome,
-        picture: c.foto,
-        nb_fan: c.totalSeguidores || 0,
-        ano: c.ano,
-        decada: c.ano ? this.getDecadeFromYear(c.ano) : null,
-        type: 'artist',
-        source: 'local'
-      })))
-    }
-
-    // ÁLBUNS LOCAIS
-    if (Array.isArray(localAlbuns) && localAlbuns.length > 0) {
-      results.push(...localAlbuns.map(a => ({
-        id: a._id,
-        title: a.nome,
-        artist: {
-          name: a.cantor?.nome || 'Artista desconhecido'
-        },
-        cover: a.foto,
-        ano: a.ano,
-        decada: a.ano ? this.getDecadeFromYear(a.ano) : null,
-        type: 'album',
-        source: 'local'
-      })))
-    }
-// TRACKS
-if (spotifyRes.tracks?.items) {
-  results.push(...spotifyRes.tracks.items.map(t => ({
-    id: t.id,
-    title: t.name,
-    artist: { name: t.artists.map(a => a.name).join(', ') },
-    album: {
-      title: t.album.name,
-      cover: t.album.images?.[0]?.url
+    async loadInitialData(category = 'Brasil') {
+      await Promise.all([
+        this.loadTopTracksByCategory(category),
+        this.loadPopularArtists()
+      ])
     },
-    cover: t.album.images?.[0]?.url,
-    preview: t.preview_url,
-    duration: Math.floor(t.duration_ms / 1000),
-    type: 'track',
-    source: 'spotify'
-  })))
-}
 
-// DEEZER - MÚSICAS
-if (deezerRes.data) {
-  results.push(...deezerRes.data.map(t => ({
-    id: t.id,
-    title: t.title,
-    artist: { name: t.artist?.name },
-    album: {
-      title: t.album?.title,
-      cover: t.album?.cover_medium
-    },
-    cover: t.album?.cover_medium,
-    preview: t.preview,
-    duration: t.duration,
-    type: 'track',
-    source: 'deezer'
-  })))
-}
+    async loadTopTracksByCategory(category = 'Brasil') {
+      try {
+        this.currentTopCategory = category || 'Brasil'
 
-// DEEZER - ARTISTAS
-if (deezerRes.data) {
-  const deezerArtists = deezerRes.data
-    .map(t => t.artist)
-    .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
-  
-  results.push(...deezerArtists.map(a => ({
-    id: a.id,
-    name: a.name,
-    picture: a.picture_medium,
-    picture_medium: a.picture_medium,
-    picture_big: a.picture_big,
-    nb_fan: a.nb_fan || 0,
-    type: 'artist',
-    source: 'deezer'
-  })))
-}
+        const res = await fetch(
+          `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10`
+        ).then(r => r.json())
 
-// DEEZER - ÁLBUNS
-if (deezerRes.data) {
-  const deezerAlbums = deezerRes.data
-    .map(t => t.album)
-    .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
-  
-  results.push(...deezerAlbums.map(a => ({
-    id: a.id,
-    title: a.title,
-    artist: { name: 'Artista' },
-    cover: a.cover_medium,
-    cover_medium: a.cover_medium,
-    cover_big: a.cover_big,
-    type: 'album',
-    source: 'deezer'
-  })))
-}   
-    // GÊNEROS (apenas o gênero em si, não seus itens - evita duplicação)
-    if (Array.isArray(localGeneros)) {
-      results.push(...localGeneros.map(g => ({
-        id: g._id,
-        name: g.nome,
-        description: g.descricao || 'Gênero musical',
-        type: 'genre',
-        source: 'local'
-      })))
-    }
-
-    this.searchResults = results
-  } catch (err) {
-    console.error(err)
-    this.searchResults = []
-  } finally {
-    this.isLoading = false
-  }
-},
-
-searchByDecade(decadeName) {
-  const range = this.getDecadeRange(decadeName)
-  if (!range) return
-
-  this.searchQuery = decadeName
-  this.lastSearch = decadeName
-  this.hasSearched = true
-  this.showSuggestions = false
-  this.showHistory = false
-  this.showCategoriesDropdown = false
-  this.activeFilter = 'Décadas'
-  this.isLoading = true
-
-  Promise.all([
-    fetch(`http://localhost:3002/musicas`).then(r => r.json()),
-    fetch(`http://localhost:3002/albuns`).then(r => r.json()),
-    fetch(`http://localhost:3002/cantores`).then(r => r.json())
-  ])
-    .then(([musicasData, albunsData, cantoresData]) => {
-      let results = []
-
-      if (Array.isArray(musicasData)) {
-        const musicasDaDecada = musicasData.filter(m => {
-          if (!m.ano) return false
-          const year = parseInt(m.ano)
-          return year >= range.start && year <= range.end
-        })
-
-        results.push(...musicasDaDecada.map(m => ({
-          id: m._id,
-          title: m.nome,
-          artist: {
-            name: m.cantores?.map(c => c.nome).join(', ')
-          },
+        this.chartTracks = res.tracks?.items.map(t => ({
+          id: t.id,
+          title: t.name,
+          artist: { name: t.artists.map(a => a.name).join(', ') },
           album: {
-            title: m.albuns?.[0]?.nome || '',
-            cover: m.albuns?.[0]?.foto || ''
+            cover_medium: t.album.images?.[0]?.url
           },
-          cover: m.foto,
-          preview: m.link,
-          ano: m.ano,
-          decada: this.getDecadeFromYear(m.ano),
-          type: 'track',
-          source: 'local'
-        })))
-      }
+          preview: t.preview_url,
+          source: 'spotify'
+        })) || []
 
-      if (Array.isArray(albunsData)) {
-        const albunsDaDecada = albunsData.filter(a => {
-          if (!a.ano) return false
-          const year = parseInt(a.ano)
-          return year >= range.start && year <= range.end
+      } catch (error) {
+        console.error('Erro ao carregar top da categoria:', error)
+        this.chartTracks = []
+      }
+    },
+
+    async loadPopularArtists() {
+      try {
+        const response = await fetch('http://localhost:3002/cantores')
+        const data = await response.json()
+
+        this.popularArtistsReal = data.map(cantor => ({
+          id: cantor._id,
+          name: cantor.nome,
+          picture_medium: cantor.foto,
+          nb_fan: cantor.totalSeguidores || 0,
+          source: 'local'
+        }))
+
+      } catch (error) {
+        console.error('Erro ao carregar artistas do banco:', error)
+      }
+    },
+   
+    async searchAll(query) {
+      this.isLoading = true
+
+      try {
+        const token = localStorage.getItem("token")
+        const authHeaders = token
+          ? { Authorization: `Bearer ${token}` }
+          : {}
+
+        const [
+          localMusicas,
+          localCantores,
+          localAlbuns,
+          localGeneros,
+          localUsuarios
+        ] = await Promise.all([
+          fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
+            headers: authHeaders
+          })
+            .then(async r => r.ok ? r.json() : [])
+            .catch(() => [])
+        ])
+
+        const spotifyRes = await fetch(
+          `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album`
+        ).then(r => r.json())
+
+        const deezerRes = await fetch(
+          `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
+        ).then(r => r.json())
+
+        let results = []
+
+        // USUÁRIOS LOCAIS
+        if (Array.isArray(localUsuarios) && localUsuarios.length > 0) {
+          results.push(...localUsuarios.map(u => ({
+            id: u._id || u.id,
+            name: u.nome || u.name || u.username,
+            username: u.username || u.nome,
+            picture: u.foto || u.avatar || u.picture,
+            avatar: u.avatar || u.foto,
+            bio: u.bio,
+            perfilPrivado: u.perfilPrivado,
+            mostrarAtividade: u.mostrarAtividade,
+            type: 'user',
+            source: 'local'
+          })))
+        }
+
+        // MÚSICAS LOCAIS
+        if (Array.isArray(localMusicas) && localMusicas.length > 0) {
+          results.push(...localMusicas.map(m => ({
+            id: m._id,
+            title: m.nome,
+            artist: {
+              name: m.cantores?.map(c => c.nome).join(', ') || 'Artista desconhecido'
+            },
+            album: {
+              title: m.albuns?.[0]?.nome || '',
+              cover: m.albuns?.[0]?.foto || ''
+            },
+            cover: m.foto || m.albuns?.[0]?.foto || '',
+            preview: m.link,
+            ano: m.ano,
+            decada: m.ano ? this.getDecadeFromYear(m.ano) : null,
+            type: 'track',
+            source: 'local'
+          })))
+        }
+
+        // CANTORES LOCAIS
+        if (Array.isArray(localCantores) && localCantores.length > 0) {
+          results.push(...localCantores.map(c => ({
+            id: c._id,
+            name: c.nome,
+            picture: c.foto,
+            nb_fan: c.totalSeguidores || 0,
+            ano: c.ano,
+            decada: c.ano ? this.getDecadeFromYear(c.ano) : null,
+            type: 'artist',
+            source: 'local'
+          })))
+        }
+
+        // ÁLBUNS LOCAIS
+        if (Array.isArray(localAlbuns) && localAlbuns.length > 0) {
+          results.push(...localAlbuns.map(a => ({
+            id: a._id,
+            title: a.nome,
+            artist: {
+              name: a.cantor?.nome || 'Artista desconhecido'
+            },
+            cover: a.foto,
+            ano: a.ano,
+            decada: a.ano ? this.getDecadeFromYear(a.ano) : null,
+            type: 'album',
+            source: 'local'
+          })))
+        }
+
+        // SPOTIFY TRACKS
+        if (spotifyRes.tracks?.items) {
+          results.push(...spotifyRes.tracks.items.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: { name: t.artists.map(a => a.name).join(', ') },
+            album: {
+              title: t.album.name,
+              cover: t.album.images?.[0]?.url
+            },
+            cover: t.album.images?.[0]?.url,
+            preview: t.preview_url,
+            duration: Math.floor(t.duration_ms / 1000),
+            type: 'track',
+            source: 'spotify'
+          })))
+        }
+
+        // DEEZER - MÚSICAS
+        if (deezerRes.data) {
+          results.push(...deezerRes.data.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: { name: t.artist?.name },
+            album: {
+              title: t.album?.title,
+              cover: t.album?.cover_medium
+            },
+            cover: t.album?.cover_medium,
+            preview: t.preview,
+            duration: t.duration,
+            type: 'track',
+            source: 'deezer'
+          })))
+        }
+
+        // DEEZER - ARTISTAS
+        if (deezerRes.data) {
+          const deezerArtists = deezerRes.data
+            .map(t => t.artist)
+            .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+         
+          results.push(...deezerArtists.map(a => ({
+            id: a.id,
+            name: a.name,
+            picture: a.picture_medium,
+            picture_medium: a.picture_medium,
+            picture_big: a.picture_big,
+            nb_fan: a.nb_fan || 0,
+            type: 'artist',
+            source: 'deezer'
+          })))
+        }
+
+        // DEEZER - ÁLBUNS
+        if (deezerRes.data) {
+          const deezerAlbums = deezerRes.data
+            .map(t => t.album)
+            .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+         
+          results.push(...deezerAlbums.map(a => ({
+            id: a.id,
+            title: a.title,
+            artist: { name: 'Artista' },
+            cover: a.cover_medium,
+            cover_medium: a.cover_medium,
+            cover_big: a.cover_big,
+            type: 'album',
+            source: 'deezer'
+          })))
+        }  
+
+        // GÊNEROS
+        if (Array.isArray(localGeneros)) {
+          results.push(...localGeneros.map(g => ({
+            id: g._id,
+            name: g.nome,
+            description: g.descricao || 'Gênero musical',
+            type: 'genre',
+            source: 'local'
+          })))
+        }
+
+        this.searchResults = results
+      } catch (err) {
+        console.error(err)
+        this.searchResults = []
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    searchByDecade(decadeName) {
+      const range = this.getDecadeRange(decadeName)
+      if (!range) return
+
+      this.searchQuery = decadeName
+      this.lastSearch = decadeName
+      this.hasSearched = true
+      this.showSuggestions = false
+      this.showHistory = false
+      this.showCategoriesDropdown = false
+      this.activeFilter = 'Décadas'
+      this.isLoading = true
+
+      Promise.all([
+        fetch(`http://localhost:3002/musicas`).then(r => r.json()),
+        fetch(`http://localhost:3002/albuns`).then(r => r.json()),
+        fetch(`http://localhost:3002/cantores`).then(r => r.json())
+      ])
+        .then(([musicasData, albunsData, cantoresData]) => {
+          let results = []
+
+          if (Array.isArray(musicasData)) {
+            const musicasDaDecada = musicasData.filter(m => {
+              if (!m.ano) return false
+              const year = parseInt(m.ano)
+              return year >= range.start && year <= range.end
+            })
+
+            results.push(...musicasDaDecada.map(m => ({
+              id: m._id,
+              title: m.nome,
+              artist: {
+                name: m.cantores?.map(c => c.nome).join(', ')
+              },
+              album: {
+                title: m.albuns?.[0]?.nome || '',
+                cover: m.albuns?.[0]?.foto || ''
+              },
+              cover: m.foto,
+              preview: m.link,
+              ano: m.ano,
+              decada: this.getDecadeFromYear(m.ano),
+              type: 'track',
+              source: 'local'
+            })))
+          }
+
+          if (Array.isArray(albunsData)) {
+            const albunsDaDecada = albunsData.filter(a => {
+              if (!a.ano) return false
+              const year = parseInt(a.ano)
+              return year >= range.start && year <= range.end
+            })
+
+            results.push(...albunsDaDecada.map(a => ({
+              id: a._id,
+              title: a.nome,
+              artist: {
+                name: a.cantor?.nome || ''
+              },
+              cover: a.foto,
+              ano: a.ano,
+              decada: this.getDecadeFromYear(a.ano),
+              type: 'album',
+              source: 'local'
+            })))
+          }
+
+          if (Array.isArray(cantoresData)) {
+            const cantoresDaDecada = cantoresData.filter(c => {
+              if (!c.ano) return false
+              const year = parseInt(c.ano)
+              return year >= range.start && year <= range.end
+            })
+
+            results.push(...cantoresDaDecada.map(c => ({
+              id: c._id,
+              name: c.nome,
+              picture: c.foto,
+              nb_fan: c.totalSeguidores || 0,  
+              ano: c.ano,
+              decada: this.getDecadeFromYear(c.ano),
+              type: 'artist',
+              source: 'local'
+            })))
+          }
+
+          this.searchResults = results
+
+          if (results.length === 0) {
+            this.showToast(`Nenhum resultado encontrado para ${decadeName}`, 'info')
+          }
         })
-
-        results.push(...albunsDaDecada.map(a => ({
-          id: a._id,
-          title: a.nome,
-          artist: {
-            name: a.cantor?.nome || ''
-          },
-          cover: a.foto,
-          ano: a.ano,
-          decada: this.getDecadeFromYear(a.ano),
-          type: 'album',
-          source: 'local'
-        })))
-      }
-
-      if (Array.isArray(cantoresData)) {
-        const cantoresDaDecada = cantoresData.filter(c => {
-          if (!c.ano) return false
-          const year = parseInt(c.ano)
-          return year >= range.start && year <= range.end
+        .catch(err => {
+          console.error('Erro ao buscar por década:', err)
+          this.searchResults = []
+          this.showToast('Erro ao buscar resultados da década', 'error')
         })
+        .finally(() => {
+          this.isLoading = false
+        })
+    },
 
-        results.push(...cantoresDaDecada.map(c => ({
-          id: c._id,
-          name: c.nome,
-          picture: c.foto,
-            nb_fan: c.totalSeguidores || 0,  
-          ano: c.ano,
-          decada: this.getDecadeFromYear(c.ano),
-          type: 'artist',
-          source: 'local'
-        })))
-      }
-
-      this.searchResults = results
-
-      if (results.length === 0) {
-        this.showToast(`Nenhum resultado encontrado para ${decadeName}`, 'info')
-      }
-    })
-    .catch(err => {
-      console.error('Erro ao buscar por década:', err)
-      this.searchResults = []
-      this.showToast('Erro ao buscar resultados da década', 'error')
-    })
-    .finally(() => {
-      this.isLoading = false
-    })
-},
-
-searchByYear(year) {
+    searchByYear(year) {
       const targetYear = parseInt(year)
       if (isNaN(targetYear)) return
 
@@ -1603,15 +1640,14 @@ searchByYear(year) {
         fetch(`http://localhost:3002/cantores`).then(r => r.json())
       ])
         .then(([musicasData, albunsData, cantoresData]) => {
-  let results = []
-          
-          // Filtrar músicas do ano
+          let results = []
+         
           if (Array.isArray(musicasData)) {
             const musicasDoAno = musicasData.filter(m => {
               if (!m.ano) return false
               return parseInt(m.ano) === targetYear
             })
-            
+           
             results.push(...musicasDoAno.map(m => ({
               id: m._id,
               title: m.nome,
@@ -1629,14 +1665,13 @@ searchByYear(year) {
               source: 'local'
             })))
           }
-          
-          // Filtrar álbuns do ano
+         
           if (Array.isArray(albunsData)) {
             const albunsDoAno = albunsData.filter(a => {
               if (!a.ano) return false
               return parseInt(a.ano) === targetYear
             })
-            
+           
             results.push(...albunsDoAno.map(a => ({
               id: a._id,
               title: a.nome,
@@ -1649,27 +1684,26 @@ searchByYear(year) {
               source: 'local'
             })))
           }
-          
-            // 🎤 ARTISTAS DO ANO
-  if (Array.isArray(cantoresData)) {
-    const cantoresDoAno = cantoresData.filter(c => {
-      if (!c.ano) return false
-      return parseInt(c.ano) === targetYear
-    })
+         
+          if (Array.isArray(cantoresData)) {
+            const cantoresDoAno = cantoresData.filter(c => {
+              if (!c.ano) return false
+              return parseInt(c.ano) === targetYear
+            })
 
-    results.push(...cantoresDoAno.map(c => ({
-      id: c._id,
-      name: c.nome,
-      picture: c.foto,
-       nb_fan: c.totalSeguidores || 0,
-      ano: c.ano,
-      type: 'artist',
-      source: 'local'
-    })))
-  }
+            results.push(...cantoresDoAno.map(c => ({
+              id: c._id,
+              name: c.nome,
+              picture: c.foto,
+              nb_fan: c.totalSeguidores || 0,
+              ano: c.ano,
+              type: 'artist',
+              source: 'local'
+            })))
+          }
 
           this.searchResults = results
-          
+         
           if (results.length === 0) {
             this.showToast(`Nenhum resultado encontrado para ${targetYear}`, 'info')
           }
@@ -1716,113 +1750,94 @@ searchByYear(year) {
       return item.name || item.title || 'Desconhecido'
     },
 
-getResultSubtitle(item) {
-  // 🎵 TRACK
-  if (item.type === 'track') {
-    let subtitle = item.artist?.name || 'Artista desconhecido'
+    getResultSubtitle(item) {
+      if (item.type === 'track') {
+        let subtitle = item.artist?.name || 'Artista desconhecido'
+        if (item.ano) {
+          const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
+          subtitle += ` • ${item.ano} (${decada})`
+        }
+        return subtitle
+      }
 
-    if (item.ano) {
-      const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
-      subtitle += ` • ${item.ano} (${decada})`
-    }
+      if (item.type === 'artist') {
+        let subtitle = `${this.formatFans(item.nb_fan)} fãs`
+        if (item.ano) {
+          const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
+          subtitle += ` • ${item.ano} (${decada})`
+        }
+        return subtitle
+      }
 
-    return subtitle
-  }
+      if (item.type === 'album') {
+        let subtitle = item.artist?.name || 'Artista desconhecido'
+        if (item.ano) {
+          const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
+          subtitle += ` • ${item.ano} (${decada})`
+        }
+        return subtitle
+      }
 
-  // 🎤 ARTISTA
-  if (item.type === 'artist') {
-    let subtitle = `${this.formatFans(item.nb_fan)} fãs`
+      if (item.type === 'user') {
+        let subtitle = item.username ? `@${item.username}` : 'Usuário'
+        if (item.bio) {
+          subtitle += ` • ${item.bio.substring(0, 40)}${item.bio.length > 40 ? '...' : ''}`
+        }
+        if (item.perfilPrivado) {
+          subtitle += ' • 🔒 Privado'
+        } else {
+          subtitle += ' • 🌍 Público'
+        }
+        if (item.mostrarAtividade === false) {
+          subtitle += ' • atividade oculta'
+        }
+        return subtitle
+      }
 
-    if (item.ano) {
-      const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
-      subtitle += ` • ${item.ano} (${decada})`
-    }
+      if (item.type === 'genre') {
+        return item.description || 'Gênero musical'
+      }
 
-    return subtitle
-  }
-
-  // 💿 ÁLBUM
-  if (item.type === 'album') {
-    let subtitle = item.artist?.name || 'Artista desconhecido'
-
-    if (item.ano) {
-      const decada = item.decada || (Math.floor(item.ano / 10) * 10 + 's')
-      subtitle += ` • ${item.ano} (${decada})`
-    }
-
-    return subtitle
-  }
-
-  // 👤 USUÁRIO
-  if (item.type === 'user') {
-    let subtitle = item.username ? `@${item.username}` : 'Usuário'
-
-    if (item.bio) {
-      subtitle += ` • ${item.bio.substring(0, 40)}${item.bio.length > 40 ? '...' : ''}`
-    }
-
-    if (item.perfilPrivado) {
-      subtitle += ' • 🔒 Privado'
-    } else {
-      subtitle += ' • 🌍 Público'
-    }
-
-    if (item.mostrarAtividade === false) {
-      subtitle += ' • atividade oculta'
-    }
-
-    return subtitle
-  }
-
-  // 🎼 GÊNERO
-  if (item.type === 'genre') {
-    return item.description || 'Gênero musical'
-  }
-
-  return ''
-},
+      return ''
+    },
 
     getResultType(item) {
       const typeMap = {
         'track': 'Música',
         'artist': 'Artista',
         'album': 'Álbum',
-         'user': 'Usuário',
-          'genre': 'Gênero'
+        'user': 'Usuário',
+        'genre': 'Gênero'
       }
       return typeMap[item.type] || item.type
     },
 
- getBestImage(item) {
-    // 🎵 DEEZER
-    if (item.source === 'deezer') {
-      if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
-      if (item.type === 'artist') return item.picture_medium || item.picture
-      if (item.type === 'album') return item.cover_medium || item.cover
-      return item.picture_medium || item.cover_medium || item.cover || ''
-    }
+    getBestImage(item) {
+      if (item.source === 'deezer') {
+        if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
+        if (item.type === 'artist') return item.picture_medium || item.picture
+        if (item.type === 'album') return item.cover_medium || item.cover
+        return item.picture_medium || item.cover_medium || item.cover || ''
+      }
 
-    // 🎵 SPOTIFY
-    if (item.source === 'spotify') {
-      if (item.type === 'track') return item.album?.cover || item.cover
-      if (item.type === 'artist') return item.picture
-      if (item.type === 'album') return item.cover
-      return item.cover || item.picture || ''
-    }
+      if (item.source === 'spotify') {
+        if (item.type === 'track') return item.album?.cover || item.cover
+        if (item.type === 'artist') return item.picture
+        if (item.type === 'album') return item.cover
+        return item.cover || item.picture || ''
+      }
 
-    // 🎵 LOCAL (banco de dados)
-    if (item.source === 'local') {
-      if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
-      if (item.type === 'artist') return item.picture || item.foto || ''
-      if (item.type === 'album') return item.cover || item.foto || ''
-      if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
-      if (item.type === 'genre') return item.foto || '/default-genre.png'
-      return item.foto || item.cover || item.picture || ''
-    }
+      if (item.source === 'local') {
+        if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
+        if (item.type === 'artist') return item.picture || item.foto || ''
+        if (item.type === 'album') return item.cover || item.foto || ''
+        if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
+        if (item.type === 'genre') return item.foto || '/default-genre.png'
+        return item.foto || item.cover || item.picture || ''
+      }
 
-    // Fallback genérico
-    return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
-  },
+      return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
+    },
 
     getIconForType(type) {
       const icons = {
@@ -1847,40 +1862,38 @@ getResultSubtitle(item) {
     },
 
     // Interaction Methods
-   handleClickOutside(event) {
-  const categoriesEl = this.$refs.categoriesContainer
-
-  if (categoriesEl && !categoriesEl.contains(event.target)) {
-    this.showCategoriesDropdown = false
-  }
-},
-
-handleInput() {
-  this.showSuggestions = true
-
-  if (this.searchTimeout) {
-    clearTimeout(this.searchTimeout)
-  }
-
-  this.searchTimeout = setTimeout(() => {
-    const query = this.searchQuery.trim()
-    
-    // Se for um ano (4 dígitos entre 1900-2100), buscar por ano
-    if (/^\d{4}$/.test(query)) {
-      const year = parseInt(query)
-      if (year >= 1900 && year <= 2100) {
-        this.searchByYear(query)
-        return
+    handleClickOutside(event) {
+      const categoriesEl = this.$refs.categoriesContainer
+      if (categoriesEl && !categoriesEl.contains(event.target)) {
+        this.showCategoriesDropdown = false
       }
-    }
-    
-    if (query.length > 2) {
-      this.searchAll(query)
-    } else {
-      this.searchResults = []
-    }
-  }, 300)
-},
+    },
+
+    handleInput() {
+      this.showSuggestions = true
+
+      if (this.searchTimeout) {
+        clearTimeout(this.searchTimeout)
+      }
+
+      this.searchTimeout = setTimeout(() => {
+        const query = this.searchQuery.trim()
+       
+        if (/^\\d{4}$/.test(query)) {
+          const year = parseInt(query)
+          if (year >= 1900 && year <= 2100) {
+            this.searchByYear(query)
+            return
+          }
+        }
+       
+        if (query.length > 2) {
+          this.searchAll(query)
+        } else {
+          this.searchResults = []
+        }
+      }, 300)
+    },
 
     highlightText(text) {
       const query = this.searchQuery
@@ -1898,14 +1911,14 @@ handleInput() {
       }, 200)
     },
 
-  selectSuggestion(sugg, item = null) {
-  if (item && item.type === 'user') {
-    return this.goToUserProfile(item)
-  }
+    selectSuggestion(sugg, item = null) {
+      if (item && item.type === 'user') {
+        return this.goToUserProfile(item)
+      }
 
-  this.searchQuery = sugg
-  this.performSearch()
-},
+      this.searchQuery = sugg
+      this.performSearch()
+    },
 
     selectFromHistory(item) {
       this.searchQuery = item
@@ -1913,12 +1926,11 @@ handleInput() {
       this.showHistory = false
     },
 
- async performSearch() {
+    async performSearch() {
       const query = this.searchQuery.trim()
       if (!query) return
-      
-      // Se for um ano (4 dígitos entre 1900-2100), buscar por ano
-      if (/^\d{4}$/.test(query)) {
+     
+      if (/^\\d{4}$/.test(query)) {
         const year = parseInt(query)
         if (year >= 1900 && year <= 2100) {
           this.searchByYear(query)
@@ -1927,53 +1939,52 @@ handleInput() {
           return
         }
       }
-      
+     
       this.lastSearch = query
       this.hasSearched = true
       this.showSuggestions = false
       this.showHistory = false
       this.showCategoriesDropdown = false
-      
-      // Save to history
+     
       await this.saveHistory(query)
       await this.loadHistory()
-      
+     
       await this.searchAll(query)
     },
-    
+   
     async saveHistory(termo) {
-  try {
-    const token = localStorage.getItem("token")
-    if (!token) return
+      try {
+        const token = localStorage.getItem("token")
+        if (!token) return
 
-    await fetch("http://localhost:3002/historico", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ termo })
-    })
-  } catch (err) {
-    console.error("Erro ao salvar histórico:", err)
-  }
-},
+        await fetch("http://localhost:3002/historico", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ termo })
+        })
+      } catch (err) {
+        console.error("Erro ao salvar histórico:", err)
+      }
+    },
 
-searchAndGo(term) {
-  this.currentTopCategory = term || 'Brasil'
-  this.searchQuery = term
-  this.loadTopTracksByCategory(this.currentTopCategory)
-  this.performSearch()
-},
+    searchAndGo(term) {
+      this.currentTopCategory = term || 'Brasil'
+      this.searchQuery = term
+      this.loadTopTracksByCategory(this.currentTopCategory)
+      this.performSearch()
+    },
 
-  searchArtist(artistName, artistId) {
-  if (artistId) {
-    this.$router.push(`/cantor/${artistId}`)
-  } else {
-    this.searchQuery = artistName
-    this.performSearch()
-  }
-},
+    searchArtist(artistName, artistId) {
+      if (artistId) {
+        this.$router.push(`/cantor/${artistId}`)
+      } else {
+        this.searchQuery = artistName
+        this.performSearch()
+      }
+    },
 
     clearSearch() {
       this.searchQuery = ''
@@ -1982,29 +1993,27 @@ searchAndGo(term) {
       this.$refs.searchInput.focus()
     },
 
-   async clearHistory() {
-  try {
-    const token = localStorage.getItem("token")
+    async clearHistory() {
+      try {
+        const token = localStorage.getItem("token")
 
-    await fetch("http://localhost:3002/historico", {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`
+        await fetch("http://localhost:3002/historico", {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        this.searchHistory = []
+        this.showHistory = false
+      } catch (err) {
+        console.error("Erro ao limpar histórico:", err)
       }
-    })
-
-    this.searchHistory = []
-    this.showHistory = false
-  } catch (err) {
-    console.error("Erro ao limpar histórico:", err)
-  }
-},
+    },
 
     playTrack(track) {
-      // Converter para formato do player
       const playerSong = this.convertToPlayerFormat(track)
-      
-      // Disparar evento global
+     
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
@@ -2026,7 +2035,7 @@ searchAndGo(term) {
         type: track.type || 'search'
       }
     },
-    
+   
     // ===== TOAST =====
     showToast(message, type = "success") {
       const icons = {
@@ -2034,14 +2043,14 @@ searchAndGo(term) {
         error: "fa fa-exclamation-circle",
         info: "fa fa-info-circle"
       }
-      
+     
       this.toast = {
         show: true,
         message,
         type,
         icon: icons[type]
       }
-      
+     
       setTimeout(() => {
         this.toast.show = false
       }, 3000)
@@ -2049,23 +2058,22 @@ searchAndGo(term) {
   }
 }
 </script>
-
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+
 html, body, #app {
   height: 100%;
   margin: 0;
 }
 
 .search-page {
-   min-height: 100vh;
+  min-height: 100vh;
   width: 100%;
   margin: 0;
   color: #fff;
   font-family: 'Circular', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: linear-gradient(180deg, #050508 0%, #0a0a1a 30%, #0a1a3f 100%);
   padding: 24px 0 120px 0;
-
   display: flex;
   justify-content: center;
 }
@@ -2076,7 +2084,7 @@ html, body, #app {
   padding: 0 32px;
 }
 
-/* Header */
+/* ===== HEADER ===== */
 .search-header {
   display: flex;
   align-items: center;
@@ -2101,125 +2109,7 @@ html, body, #app {
   color: #fff;
 }
 
-/* History */
-.history-wrapper {
-  position: relative;
-}
-
-.history-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  color: #b3b3b3;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.history-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border-color: #1db954;
-}
-
-.history-badge {
-  width: 20px;
-  height: 20px;
-  background: #1db954;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: #000;
-  font-weight: 700;
-}
-
-.history-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 300px;
-  background: #181818;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  overflow: hidden;
-  z-index: 100;
-}
-
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.history-header span {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-}
-
-.clear-btn {
-  font-size: 12px;
-  color: #1db954;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.history-list {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
-  background: none;
-  border: none;
-  color: #b3b3b3;
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.empty-category {
-  padding: 20px;
-  text-align: center;
-  color: #666;
-  font-size: 13px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-  margin: 8px 0;
-}
-
-.empty-text {
-  font-style: italic;
-}
-.history-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-}
-
-.history-icon {
-  color: #1db954;
-  font-size: 12px;
-}
-
-/* Search Box */
+/* ===== SEARCH BOX ===== */
 .search-main {
   position: relative;
   margin-bottom: 40px;
@@ -2265,8 +2155,42 @@ html, body, #app {
 .search-box input::placeholder {
   color: #666;
 }
-/* ===== HISTÓRICO NO DROPDOWN DO INPUT ===== */
 
+.clear-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.clear-btn-icon:hover {
+  background: rgba(255, 68, 68, 0.8);
+}
+
+/* ===== SUGGESTIONS DROPDOWN ===== */
+.suggestions-box {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #181818;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  overflow: hidden;
+  z-index: 90;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ===== HISTÓRICO NO DROPDOWN ===== */
 .history-section {
   padding: 12px 0;
 }
@@ -2390,155 +2314,9 @@ html, body, #app {
   transform: scale(1.1);
 }
 
-/* Animação suave */
-.history-list-item {
-  animation: fadeInLeft 0.2s ease forwards;
-  animation-delay: calc(var(--i, 0) * 0.03s);
-  opacity: 0;
-}
-
-.history-list-item:nth-child(1) { --i: 1; }
-.history-list-item:nth-child(2) { --i: 2; }
-.history-list-item:nth-child(3) { --i: 3; }
-.history-list-item:nth-child(4) { --i: 4; }
-.history-list-item:nth-child(5) { --i: 5; }
-
-@keyframes fadeInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-/* ===== SOURCE BADGE NO DROPDOWN ===== */
-
-.item-name-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.item-name-row .item-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.source-badge {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.1);
-  transition: all 0.2s;
-}
-
-.source-badge.spotify {
-  background: rgba(29, 185, 84, 0.15);
-  border-color: rgba(29, 185, 84, 0.4);
-  color: #1db954;
-}
-
-.source-badge.deezer {
-  background: rgba(255, 102, 0, 0.15);
-  border-color: rgba(255, 102, 0, 0.4);
-  color: #ff6600;
-}
-
-.source-badge.local {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #888;
-}
-
-.group-item:hover .source-badge {
-  transform: scale(1.1);
-}
-
-/* Mobile: sempre mostrar botão de excluir */
-@media (max-width: 768px) {
-  .history-delete-btn {
-    opacity: 1;
-    color: #888;
-  }
-  
-  .history-list-item {
-    padding: 14px 16px;
-  }
-  
-  .history-header-row {
-    padding: 8px 16px 12px;
-  }
-}
-.clear-btn-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.clear-btn-icon:hover {
-  background: rgba(255, 68, 68, 0.8);
-}
-
-/* Suggestions */
-.suggestions-box {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  background: #181818;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  overflow: hidden;
-  z-index: 90;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-/* Suggested Section */
+/* ===== SUGGESTED SECTION ===== */
 .suggested-section {
   padding: 20px;
-}
-
-.result-card.has-decade .result-type {
-  background: linear-gradient(135deg, #1db954, #1ed760);
-  color: #000;
-  font-weight: 700;
-}
-
-.decade-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.04em;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255,255,255,0.15);
-  z-index: 2;
 }
 
 .suggested-header {
@@ -2599,209 +2377,11 @@ html, body, #app {
   letter-spacing: 0.05em;
 }
 
-/* Grouped Results */
+/* ===== GROUPED RESULTS ===== */
 .grouped-results {
   padding: 16px 0;
 }
-/* ===== HISTÓRICO ABAIXO DO INPUT ===== */
-.history-below-input {
-  margin-top: 16px;
-  background: rgba(24, 24, 24, 0.8);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  animation: slideDown 0.3s ease;
-}
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.history-below-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(29, 185, 84, 0.05);
-}
-
-.history-below-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #1db954;
-}
-
-.history-below-title i {
-  font-size: 16px;
-}
-
-.clear-all-btn {
-  font-size: 12px;
-  color: #888;
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.2s;
-  font-weight: 600;
-}
-
-.clear-all-btn:hover {
-  color: #ff4444;
-}
-
-.history-below-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 16px 20px;
-}
-.source-badge {
-  margin-left: 8px;
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.source-badge.spotify {
-  color: #1db954;
-}
-
-.source-badge.deezer {
-  color: #ff6600;
-}
-
-.source-badge.local {
-  color: #888;
-}
-
-/* Card (canto da imagem) */
-.source-badge-card {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(0,0,0,0.7);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  border: 1px solid rgba(255,255,255,0.15);
-  backdrop-filter: blur(4px);
-  z-index: 3;
-  transition: all 0.2s;
-}
-
-.source-badge-card.spotify {
-  color: #1db954;
-  background: rgba(0,0,0,0.75);
-  border-color: rgba(29, 185, 84, 0.5);
-}
-
-.source-badge-card.deezer {
-  color: #ff6600;
-  background: rgba(0,0,0,0.75);
-  border-color: rgba(255, 102, 0, 0.5);
-}
-
-.source-badge-card.local {
-  color: #ccc;
-  background: rgba(0,0,0,0.75);
-  border-color: rgba(255,255,255,0.2);
-}
-
-.result-card:hover .source-badge-card {
-  transform: scale(1.15);
-}
-.history-below-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  transition: all 0.2s;
-  max-width: 100%;
-}
-
-.history-below-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(29, 185, 84, 0.5);
-}
-
-.history-text {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #fff;
-  cursor: pointer;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-text:hover {
-  color: #1db954;
-}
-
-.history-icon {
-  color: #888;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-.delete-history-item {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #888;
-  font-size: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.delete-history-item:hover {
-  background: rgba(255, 68, 68, 0.8);
-  color: #fff;
-  transform: scale(1.1);
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-  .history-below-list {
-    padding: 12px 16px;
-  }
-  
-  .history-below-item {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  
-  .history-below-header {
-    padding: 12px 16px;
-  }
-}
 .result-group {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -2836,22 +2416,13 @@ html, body, #app {
 .group-item:hover {
   background: rgba(255, 255, 255, 0.05);
 }
+
 .item-thumb {
   width: 40px;
   height: 40px;
   border-radius: 4px;
   object-fit: cover;
   background: #282828;
-}
-
-.item-thumb[src=""],
-.item-thumb:not([src]) {
-  display: none;
-}
-
-.item-thumb[src=""] + .item-thumb-placeholder,
-.item-thumb:not([src]) + .item-thumb-placeholder {
-  display: flex;
 }
 
 .item-thumb-placeholder {
@@ -2864,34 +2435,23 @@ html, body, #app {
   background: #282828;
 }
 
-.item-thumb-placeholder.artista {
-  background: rgba(29, 185, 84, 0.1);
-  color: #1db954;
-}
+.item-thumb-placeholder.artista { background: rgba(29, 185, 84, 0.1); color: #1db954; }
+.item-thumb-placeholder.musica { background: rgba(33, 150, 243, 0.1); color: #2196F3; }
+.item-thumb-placeholder.album { background: rgba(156, 39, 176, 0.1); color: #9C27B0; }
+.item-thumb-placeholder.usuario { background: rgba(29, 185, 84, 0.1); color: #1db954; }
+.item-thumb-placeholder.genero { background: rgba(255, 152, 0, 0.1); color: #FF9800; }
 
-.item-thumb-placeholder.musica {
-  background: rgba(33, 150, 243, 0.1);
-  color: #2196F3;
-}
-
-.item-thumb-placeholder.album {
-  background: rgba(156, 39, 176, 0.1);
-  color: #9C27B0;
-}
-/* ✅ ADICIONAR AQUI: */
-.item-thumb-placeholder.usuario {
-  background: rgba(29, 185, 84, 0.1);
-  color: #1db954;
-}
-
-.item-thumb-placeholder.genero {
-  background: rgba(255, 152, 0, 0.1);
-  color: #FF9800;
-}
 .item-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.item-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .item-name {
@@ -2910,12 +2470,43 @@ html, body, #app {
   color: #888;
 }
 
-/* Content */
-.search-content {
-  padding-bottom: 40px;
+.source-badge {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.2s;
 }
 
-/* Loading */
+.source-badge.spotify {
+  background: rgba(29, 185, 84, 0.15);
+  border-color: rgba(29, 185, 84, 0.4);
+  color: #1db954;
+}
+
+.source-badge.deezer {
+  background: rgba(255, 102, 0, 0.15);
+  border-color: rgba(255, 102, 0, 0.4);
+  color: #ff6600;
+}
+
+.source-badge.local {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #888;
+}
+
+.group-item:hover .source-badge {
+  transform: scale(1.1);
+}
+
+/* ===== LOADING ===== */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -2939,7 +2530,7 @@ html, body, #app {
   to { transform: rotate(360deg); }
 }
 
-/* Discover Section */
+/* ===== DISCOVER SECTION ===== */
 .discover-section {
   animation: fadeIn 0.3s ease;
 }
@@ -2949,7 +2540,7 @@ html, body, #app {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Quick Tags com Categorias Detalhadas */
+/* ===== QUICK TAGS ===== */
 .quick-tags {
   margin-bottom: 32px;
 }
@@ -2970,7 +2561,7 @@ html, body, #app {
   margin: 0;
 }
 
-/* Botão Categorias */
+/* ===== CATEGORIES DROPDOWN ===== */
 .categories-dropdown-wrapper {
   position: relative;
 }
@@ -3010,7 +2601,6 @@ html, body, #app {
   transform: rotate(180deg);
 }
 
-/* Dropdown de Categorias */
 .categories-dropdown {
   position: absolute;
   top: calc(100% + 12px);
@@ -3065,7 +2655,6 @@ html, body, #app {
   color: #fff;
 }
 
-/* Tabs de Categorias */
 .categories-tabs {
   display: flex;
   gap: 0;
@@ -3103,7 +2692,6 @@ html, body, #app {
   background: rgba(29,185,84,0.05);
 }
 
-/* Conteúdo das Categorias */
 .categories-content {
   max-height: 400px;
   overflow-y: auto;
@@ -3131,7 +2719,6 @@ html, body, #app {
   margin-bottom: 12px;
 }
 
-/* Tags Detalhadas */
 .category-tags.detailed {
   display: flex;
   flex-wrap: wrap;
@@ -3171,7 +2758,21 @@ html, body, #app {
   margin-left: 4px;
 }
 
-/* Mood Grid Detalhado */
+.empty-category {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.empty-text {
+  font-style: italic;
+}
+
+/* ===== MOOD GRID ===== */
 .mood-grid.detailed {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -3195,18 +2796,6 @@ html, body, #app {
   filter: brightness(1.1);
 }
 
-.mood-card-detailed i {
-  font-size: 24px;
-  color: #fff;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.2);
-  border-radius: 10px;
-}
-
 .mood-info {
   display: flex;
   flex-direction: column;
@@ -3224,86 +2813,7 @@ html, body, #app {
   color: rgba(255,255,255,0.7);
 }
 
-/* Activity List */
-.activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-}
-
-.activity-item:hover {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.1);
-  transform: translateX(4px);
-}
-
-.activity-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 18px;
-}
-
-.activity-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.activity-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.btn-star {
-  color: #fbbf24 !important;
-}
-
-.btn-star:hover {
-  background: rgba(251, 191, 36, 0.9) !important;
-  color: #0a0a0f !important;
-}
-
-.btn-star.liked {
-  background: rgba(251, 191, 36, 0.9) !important;
-  color: #0a0a0f !important;
-}
-
-.activity-desc {
-  font-size: 12px;
-  color: #888;
-}
-
-.activity-arrow {
-  color: #888;
-  font-size: 12px;
-  transition: all 0.2s;
-}
-
-.activity-item:hover .activity-arrow {
-  color: #1db954;
-  transform: translateX(4px);
-}
-
-/* Decade Timeline */
+/* ===== DECADE TIMELINE ===== */
 .decade-timeline {
   display: flex;
   flex-direction: column;
@@ -3359,7 +2869,7 @@ html, body, #app {
   color: #888;
 }
 
-/* Tags Row (Explorar rápido) */
+/* ===== TAGS ROW ===== */
 .tags-row {
   display: flex;
   flex-wrap: wrap;
@@ -3385,7 +2895,7 @@ html, body, #app {
   transform: translateY(-2px);
 }
 
-/* Transitions */
+/* ===== TRANSITIONS ===== */
 .dropdown-enter-active {
   animation: dropdownIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -3395,121 +2905,16 @@ html, body, #app {
 }
 
 @keyframes dropdownIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes dropdownOut {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-  }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.95); }
 }
 
-/* Discovery Grid */
-.discovery-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 40px;
-}
-
-.discovery-card {
-  background: #181818;
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.card-label {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  margin-bottom: 16px;
-}
-
-/* Trend List */
-.trend-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.trend-item {
-  padding: 12px 16px;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.trend-item:hover {
-  transform: translateX(4px);
-  filter: brightness(1.1);
-}
-
-/* Genre Cloud */
-.genre-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.genre-pill {
-  padding: 8px 14px;
-  border-radius: 16px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.genre-pill:hover {
-  transform: scale(1.05);
-  filter: brightness(1.2);
-}
-
-/* Mood Grid */
-.mood-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.mood-item {
-  aspect-ratio: 16/9;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.mood-item:hover {
-  transform: scale(1.02);
-}
-
-/* Top Section */
+/* ===== TOP SECTION ===== */
 .top-section {
   background: #181818;
   border-radius: 8px;
@@ -3547,19 +2952,19 @@ html, body, #app {
   color: #1db954;
 }
 
-/* Top Tracks */
+/* ===== TOP TRACKS - LISTA TIPO SPOTIFY ===== */
 .top-tracks {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
 }
 
 .track-card {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -3577,8 +2982,8 @@ html, body, #app {
 }
 
 .track-card img {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 4px;
   object-fit: cover;
 }
@@ -3587,7 +2992,7 @@ html, body, #app {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .track-name {
@@ -3603,13 +3008,13 @@ html, body, #app {
 
 /* Botão de curtir no Top Músicas */
 .btn-like-track {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: transparent;
   border: none;
   color: #888;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -3640,8 +3045,8 @@ html, body, #app {
 }
 
 .track-play {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: #1db954;
   border: none;
@@ -3662,7 +3067,7 @@ html, body, #app {
   transform: scale(1.1);
 }
 
-/* Artists Row */
+/* ===== ARTISTS ROW ===== */
 .artists-row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -3709,7 +3114,11 @@ html, body, #app {
   color: #888;
 }
 
-/* Search Results */
+/* ===== SEARCH RESULTS ===== */
+.search-results {
+  animation: fadeIn 0.3s ease;
+}
+
 .results-header {
   margin-bottom: 24px;
 }
@@ -3724,6 +3133,7 @@ html, body, #app {
 .filter-tabs {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .filter-tabs button {
@@ -3748,7 +3158,7 @@ html, body, #app {
   color: #000;
 }
 
-/* No Results */
+/* ===== NO RESULTS ===== */
 .no-results {
   display: flex;
   flex-direction: column;
@@ -3764,43 +3174,284 @@ html, body, #app {
   opacity: 0.5;
 }
 
-/* Results Grid */
-.results-grid {
+/* ===== RESULTS SECTION ===== */
+.results-section {
+  margin-bottom: 40px;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+/* ===== TRACKS LIST - LAYOUT SPOTIFY STYLE ===== */
+.tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.track-list-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.track-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.track-list-number {
+  width: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
+.track-list-thumb {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.track-list-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.track-list-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.track-list-play-overlay i {
+  font-size: 14px;
+  color: #fff;
+}
+
+.track-list-item:hover .track-list-play-overlay {
+  opacity: 1;
+}
+
+.track-list-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.track-list-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-list-artist {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-list-source {
+  flex-shrink: 0;
+}
+
+.track-list-duration {
+  font-size: 12px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  width: 40px;
+  text-align: right;
+}
+
+.btn-like-list {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
+}
+
+.track-list-item:hover .btn-like-list {
+  opacity: 1;
+}
+
+.btn-like-list:hover {
+  color: #ec4899;
+  transform: scale(1.2);
+}
+
+.btn-like-list.liked {
+  opacity: 1;
+  color: #ec4899;
+}
+
+/* ===== ARTISTS GRID ===== */
+.artists-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 24px;
 }
 
-.result-card {
-  position: relative;
+.artist-card {
+  text-align: center;
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
+  padding: 16px;
+  border-radius: 8px;
+  background: #181818;
 }
 
-.result-card:hover {
+.artist-card:hover {
+  background: #282828;
   transform: translateY(-4px);
 }
 
-.result-image {
-  position: relative;
+.artist-card-img {
+  width: 100%;
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 50%;
   overflow: hidden;
   margin-bottom: 12px;
 }
 
-.result-image img {
+.artist-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.artist-card-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artist-card-type {
+  font-size: 12px;
+  color: #888;
+}
+
+.btn-like-artist {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
+}
+
+.artist-card:hover .btn-like-artist {
+  opacity: 1;
+}
+
+.btn-like-artist:hover {
+  background: rgba(251, 191, 36, 0.9);
+  color: #0a0a0f;
+}
+
+.btn-like-artist.liked {
+  opacity: 1;
+  background: rgba(251, 191, 36, 0.9);
+  color: #0a0a0f;
+}
+
+/* ===== ALBUMS GRID ===== */
+.albums-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.album-card {
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  padding: 16px;
+  border-radius: 8px;
+  background: #181818;
+}
+
+.album-card:hover {
+  background: #282828;
+  transform: translateY(-4px);
+}
+
+.album-card-img {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.album-card-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s;
 }
 
-.result-card:hover .result-image img {
+.album-card:hover .album-card-img img {
   transform: scale(1.05);
 }
 
-.result-overlay {
+.album-card-overlay {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0.6);
@@ -3811,69 +3462,57 @@ html, body, #app {
   transition: opacity 0.2s;
 }
 
-.result-card:hover .result-overlay {
+.album-card:hover .album-card-overlay {
   opacity: 1;
 }
 
-.result-overlay i {
+.album-card-overlay i {
   font-size: 32px;
   color: #1db954;
 }
 
-.result-type {
+.source-badge-card {
   position: absolute;
-  top: 8px;
-  right: 8px;  /* ← ajustar se quiser, ou deixar em 8px */
-  padding: 4px 8px;
+  top: 6px;
+  right: 6px;
   background: rgba(0,0,0,0.7);
-  border-radius: 4px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #1db954;
-  font-weight: 700;
-  z-index: 2;  /* ← ADICIONAR */
-}
-
-/* Botão de curtir no resultado da busca */
-.btn-like-result {
-  position: absolute;
-  bottom: 50px;
-  right: 8px;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.7);
-  border: none;
-  color: #fff;
-  font-size: 16px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
-  opacity: 0;
-  z-index: 10;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.15);
+  backdrop-filter: blur(4px);
+  z-index: 3;
+  transition: all 0.2s;
 }
 
-.result-card:hover .btn-like-result {
-  opacity: 1;
+.source-badge-card.spotify {
+  color: #1db954;
+  background: rgba(0,0,0,0.75);
+  border-color: rgba(29, 185, 84, 0.5);
 }
 
-.btn-like-result:hover {
-  background: rgba(236, 72, 153, 0.9);
-  color: #fff;
-  transform: scale(1.1);
+.source-badge-card.deezer {
+  color: #ff6600;
+  background: rgba(0,0,0,0.75);
+  border-color: rgba(255, 102, 0, 0.5);
 }
 
-.btn-like-result.liked {
-  opacity: 1;
-  background: rgba(236, 72, 153, 0.9);
-  color: #fff;
-  animation: heartBeat 0.3s ease;
+.source-badge-card.local {
+  color: #ccc;
+  background: rgba(0,0,0,0.75);
+  border-color: rgba(255,255,255,0.2);
 }
 
-.result-info h4 {
+.album-card:hover .source-badge-card {
+  transform: scale(1.15);
+}
+
+.album-card-name {
+  display: block;
   font-size: 14px;
   font-weight: 600;
   color: #fff;
@@ -3883,12 +3522,136 @@ html, body, #app {
   text-overflow: ellipsis;
 }
 
-.result-info p {
+.album-card-artist {
   font-size: 12px;
   color: #888;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.btn-like-album {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
+}
+
+.album-card:hover .btn-like-album {
+  opacity: 1;
+}
+
+.btn-like-album:hover {
+  background: rgba(251, 191, 36, 0.9);
+  color: #0a0a0f;
+}
+
+.btn-like-album.liked {
+  opacity: 1;
+  background: rgba(251, 191, 36, 0.9);
+  color: #0a0a0f;
+}
+
+/* ===== USERS GRID ===== */
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.user-card {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 16px;
+  border-radius: 8px;
+  background: #181818;
+}
+
+.user-card:hover {
+  background: #282828;
+  transform: translateY(-4px);
+}
+
+.user-card-img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.user-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-card-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-card-type {
+  font-size: 12px;
+  color: #888;
+}
+
+.user-privacy {
+  font-size: 11px;
+  color: #fbbf24;
+}
+
+/* ===== GENRES GRID ===== */
+.genres-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.genre-card {
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 160px;
+}
+
+.genre-card:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.1);
+}
+
+.genre-card-name {
+  display: block;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.genre-card-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
 }
 
 /* ===== TOAST ===== */
@@ -3910,14 +3673,8 @@ html, body, #app {
 }
 
 @keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .toast.success {
@@ -3939,7 +3696,6 @@ html, body, #app {
   font-size: 20px;
 }
 
-/* Animações de transição Vue */
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.3s ease;
@@ -3951,20 +3707,22 @@ html, body, #app {
   transform: translateX(-50%) translateY(20px);
 }
 
-/* Responsive */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
-  .results-grid {
+  .artists-grid,
+  .albums-grid,
+  .users-grid {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+ 
   .suggested-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .artists-row {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+ 
   .categories-dropdown {
     width: 500px;
   }
@@ -3975,20 +3733,18 @@ html, body, #app {
     margin-left: 200px;
     width: calc(100% - 200px);
   }
-  
-  .discovery-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .results-grid {
+ 
+  .artists-grid,
+  .albums-grid,
+  .users-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+ 
   .categories-dropdown {
     width: 450px;
     right: -100px;
   }
-  
+ 
   .mood-grid.detailed {
     grid-template-columns: 1fr;
   }
@@ -3999,34 +3755,36 @@ html, body, #app {
     margin-left: 0;
     width: 100%;
   }
-  
+ 
   .search-container {
     padding: 0 16px;
   }
-  
+ 
   .search-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  
-  .results-grid {
+ 
+  .artists-grid,
+  .albums-grid,
+  .users-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
-  
+ 
   .artists-row {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+ 
   .suggested-grid {
     grid-template-columns: 1fr;
   }
-  
+ 
   .filter-tabs {
     flex-wrap: wrap;
   }
-  
+ 
   .categories-dropdown {
     position: fixed;
     top: 50%;
@@ -4036,20 +3794,25 @@ html, body, #app {
     width: 90vw;
     max-height: 80vh;
   }
-  
+ 
   .categories-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-  
+ 
   .categories-tabs button {
     flex-shrink: 0;
   }
-  
-  /* Mostrar botão de curtir em mobile */
+ 
   .btn-like-track,
-  .btn-like-result {
+  .btn-like-list,
+  .btn-like-artist,
+  .btn-like-album {
     opacity: 1;
+  }
+ 
+  .track-list-item {
+    padding: 8px 12px;
   }
 }
 
@@ -4057,37 +3820,43 @@ html, body, #app {
   .search-box {
     padding: 12px 16px;
   }
-  
+ 
   .search-box input {
     font-size: 16px;
   }
-  
-  .results-grid {
+ 
+  .artists-grid,
+  .albums-grid,
+  .users-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
-  .result-info h4 {
-    font-size: 12px;
-  }
-  
+ 
   .artists-row {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .tags-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-  
+ 
   .category-tags.detailed {
     gap: 8px;
   }
-  
+ 
   .tag-btn.detailed {
     padding: 8px 12px;
     font-size: 12px;
+  }
+ 
+  .track-list-number {
+    display: none;
+  }
+ 
+  .track-list-duration {
+    display: none;
   }
 }
 </style>

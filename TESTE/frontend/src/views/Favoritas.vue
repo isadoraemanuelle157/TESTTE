@@ -24,7 +24,7 @@
           </div>
           <div class="header-text">
             <h1>Minhas Favoritas</h1>
-            <p class="header-subtitle">Suas músicas, álbuns e artistas preferidos em um só lugar</p>
+            <p class="header-subtitle">Suas músicas, playlists, álbuns e artistas preferidos em um só lugar</p>
           </div>
         </div>
         <div class="header-actions">
@@ -33,12 +33,6 @@
               <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
             </svg>
             <span>Exportar</span>
-          </button>
-          <button class="btn-header primary" @click="tocarTudo">
-            <svg viewBox="0 0 24 24" fill="currentColor" class="btn-icon">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-            <span>Tocar Tudo</span>
           </button>
         </div>
       </div>
@@ -653,20 +647,162 @@ async remover(item) {
     abrirCantor(item) {
       this.$router.push(`/cantor/${item.id}`)
     },
-    tocarTudo() {
-      const musicas = this.favoritas.filter(f => f.type === 'musica')
-      if (musicas.length === 0) {
-        this.showToast('Nenhuma música para tocar', 'info')
-        return
-      }
-      this.showToast(`Tocando ${musicas.length} músicas`, 'success', 'Playlist iniciada')
-    },
-    exportarFavoritas() {
-      this.showToast('Lista exportada com sucesso!', 'success')
-    },
-    mostrarOpcoes(item) {
-      console.log('Opções para:', item)
+
+async exportarFavoritas() {
+  if (this.favoritas.length === 0) {
+    this.showToast('Nada para exportar', 'info')
+    return
+  }
+
+  try {
+    const { jsPDF } = await import("jspdf")
+
+    const doc = new jsPDF()
+
+    // ===============================
+    // 🎨 CAPA
+    // ===============================
+    doc.setFillColor(15, 15, 25)
+    doc.rect(0, 0, 210, 297, 'F')
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(28)
+    doc.setTextColor(255, 255, 255)
+    doc.text("MINHAS FAVORITAS", 105, 100, { align: "center" })
+
+    doc.setFontSize(14)
+    doc.setTextColor(180, 180, 200)
+    doc.text("Relatório personalizado", 105, 115, { align: "center" })
+
+    doc.setFontSize(10)
+    doc.text(
+      `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      105,
+      130,
+      { align: "center" }
+    )
+
+    doc.addPage()
+
+    // ===============================
+    // 📊 CONTADORES
+    // ===============================
+    const musicas = this.favoritas.filter(f => f.type === 'musica').length
+    const playlists = this.favoritas.filter(f => f.type === 'playlist').length
+    const albuns = this.favoritas.filter(f => f.type === 'album').length
+    const artistas = this.favoritas.filter(f => f.type === 'cantor').length
+
+    let y = 20
+
+    doc.setFontSize(18)
+    doc.setTextColor(40, 40, 40)
+    doc.text("Resumo Geral", 14, y)
+
+    y += 10
+
+    doc.setFontSize(12)
+
+    const addCard = (label, value, color) => {
+      doc.setFillColor(...color)
+      doc.roundedRect(14, y, 80, 15, 3, 3, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.text(`${label}: ${value}`, 18, y + 10)
+
+      y += 20
     }
+
+    addCard("Músicas", musicas, [99, 102, 241])
+    addCard("Playlists", playlists, [236, 72, 153])
+    addCard("Álbuns", albuns, [245, 158, 11])
+    addCard("Artistas", artistas, [139, 92, 246])
+
+    y += 10
+
+    // ===============================
+    // 🎵 LISTAS
+    // ===============================
+    const grupos = {
+      musica: { nome: "Músicas", cor: [99, 102, 241] },
+      playlist: { nome: "Playlists", cor: [236, 72, 153] },
+      album: { nome: "Álbuns", cor: [245, 158, 11] },
+      cantor: { nome: "Artistas", cor: [139, 92, 246] }
+    }
+
+    for (const tipo in grupos) {
+      const itens = this.favoritas.filter(f => f.type === tipo)
+      if (itens.length === 0) continue
+
+      if (y > 260) {
+        doc.addPage()
+        y = 20
+      }
+
+      // Título da seção
+      doc.setFillColor(...grupos[tipo].cor)
+      doc.rect(14, y, 180, 8, 'F')
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(13)
+      doc.text(grupos[tipo].nome, 16, y + 6)
+
+      y += 12
+
+      doc.setTextColor(40, 40, 40)
+      doc.setFontSize(11)
+
+      itens.forEach(item => {
+        if (y > 280) {
+          doc.addPage()
+          y = 20
+        }
+
+        const linha = `• ${item.title} - ${item.subtitle || ''}`
+        doc.text(linha, 16, y)
+
+        y += 6
+      })
+
+      y += 8
+    }
+
+    // ===============================
+    // 🧾 RODAPÉ
+    // ===============================
+    const pageCount = doc.getNumberOfPages()
+
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+
+      doc.setFontSize(9)
+      doc.setTextColor(150)
+
+      doc.text(
+        `Página ${i} de ${pageCount}`,
+        105,
+        290,
+        { align: "center" }
+      )
+
+      doc.text(
+        "Gerado por SoundUp",
+        14,
+        290
+      )
+    }
+
+    // ===============================
+    // 💾 SALVAR
+    // ===============================
+    doc.save("favoritas-profissional.pdf")
+
+    this.showToast('PDF profissional exportado!', 'success')
+
+  } catch (err) {
+    console.error(err)
+    this.showToast('Erro ao exportar PDF', 'error')
+  }
+}
   }
 }
 </script>

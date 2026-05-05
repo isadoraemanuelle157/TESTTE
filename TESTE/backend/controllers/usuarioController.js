@@ -137,7 +137,6 @@ const getPublicCurtidas = async (req, res) => {
       return res.status(403).json({ message: "Curtidas ocultas para você" })
     }
 
-    // Busca curtidas locais e externas
     const Curtida = require('../models/Curtida')
     const CurtidaExterna = require('../models/CurtidaExterna')
 

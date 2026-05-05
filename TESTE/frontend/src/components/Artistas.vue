@@ -68,6 +68,11 @@
                 @error="handleImageError"
               />
             </div>
+            <div class="source-badge" :class="artist.source">
+  <span v-if="artist.source === 'db'">DB</span>
+  <span v-else-if="artist.source === 'deezer'">DZ</span>
+  <span v-else-if="artist.source === 'spotify'">SP</span>
+</div>
             <button 
               class="follow-btn-float"
               :class="{ 'following': isFollowing(artist.id) }"
@@ -86,7 +91,7 @@
             <h3 class="artist-name">{{ artist.name }}</h3>
             <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
           <div class="monthly-listeners">
-  <span class="listeners-count">{{ formatListeners(artist.nb_fan || artist.fans) }}</span>
+ <span class="listeners-count">{{ formatListeners(artist.nb_fan || artist.followers?.total || artist.fans || 0) }}</span>
   <span class="listeners-label">fãs</span>
 </div>
             <button 
@@ -135,11 +140,11 @@
           
           <div class="modal-body">
             <div class="artists-list">
-           <div 
-  v-for="cantor in cantores" 
-  :key="cantor._id" 
+<div 
+  v-for="artist in artists" 
+  :key="artist.id" 
   class="artist-card"
-  @click="abrirPaginaCantor(cantor._id)"
+  @click="goToArtist(artist)"
 >
                 <div class="list-image">
                   <img :src="artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError">
@@ -275,7 +280,7 @@ async getFollowersCount(artist) {
     console.error(error)
   }
 },
-   async loadArtists() {
+  async loadArtists() {
   this.isLoading = true;
   this.error = null;
 
@@ -286,28 +291,56 @@ async getFollowersCount(artist) {
 
     let deezerArtists = []
     if (deezerData.data) {
-      deezerArtists = await this.enrichArtistsData(deezerData.data)
+      deezerArtists = deezerData.data.map(a => ({
+        id: a.id,
+        name: a.name,
+        picture: a.picture_medium,
+        picture_medium: a.picture_medium,
+        picture_big: a.picture_big,
+        nb_fan: a.nb_fan,
+        source: 'deezer'
+      }))
     }
 
-    // 🔥 2. Banco
+    // 🔥 2. Spotify (AGORA USANDO SEU BACKEND)
+    const spotifyResponse = await fetch('http://localhost:3002/spotify/artists/popular?limit=10')
+    const spotifyData = await spotifyResponse.json()
+
+    let spotifyArtists = []
+    if (spotifyData.artists?.items) {
+      spotifyArtists = spotifyData.artists.items.map(a => ({
+        id: a.id,
+        name: a.name,
+picture: a.images?.[2]?.url || a.images?.[1]?.url || a.images?.[0]?.url,        // menor (64x64)
+picture_medium: a.images?.[1]?.url || a.images?.[0]?.url,                          // média (300x300)
+picture_big: a.images?.[0]?.url || a.images?.[1]?.url, 
+        nb_fan: a.followers?.total || 0,
+        source: 'spotify'
+      }))
+    }
+
+    // 🔥 3. Banco
     const dbArtists = await this.loadCantoresFromDB()
 
-    // 🔥 3. JUNTAR OS DOIS
-    this.artists = [...dbArtists, ...deezerArtists]
+    // 🔥 4. JUNTAR TUDO
+    this.artists = [
+      ...dbArtists,
+      ...deezerArtists,
+      ...spotifyArtists
+    ]
 
-    this.subtitle = `Artistas do sistema + Top globais`
+    this.subtitle = `Artistas do sistema + Deezer + Spotify`
 
-    this.$nextTick(() => {
-      this.checkArrows()
-    })
+    this.$nextTick(() => this.checkArrows())
 
   } catch (error) {
-    console.error('Erro geral:', error)
+    console.error(error)
     this.error = 'Erro ao carregar artistas'
   } finally {
     this.isLoading = false
   }
 },
+
 normalizeMongoId(value) {
   if (!value) return null
 
@@ -546,14 +579,12 @@ async loadFollowedArtists() {
 },
     // ============ NAVIGATION ============
     
-    goToArtist(artist) {
-  if (artist.source === 'db') {
-    // 👉 rota interna
-    this.$router?.push(`/cantor/${artist.id}`)
-  } else {
-    // 👉 Deezer
-    window.open(`https://www.deezer.com/artist/${artist.id}`, '_blank')
-  }
+goToArtist(artist) {
+  this.$router.push({
+    name: 'CantorDetalhe',
+    params: { id: artist.id },
+    query: { source: artist.source }
+  })
 },
 
     goToArtistFromModal(artist) {
@@ -1232,7 +1263,28 @@ async loadFollowedArtists() {
   border-color: #fff;
   background: rgba(255,255,255,0.1);
 }
+.source-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+}
 
+.source-badge.db {
+  background: #6366f1;
+}
+
+.source-badge.deezer {
+  background: #ff6600;
+}
+
+.source-badge.spotify {
+  background: #1db954;
+}
 .list-follow-btn.following {
   background: #1db954;
   border-color: #1db954;

@@ -1105,7 +1105,161 @@ const idToRemove = song.externalId || song.id
   display: flex;
   gap: 12px;
 }
+/* ========== PRIVACY OPTIONS - BOTÕES PÚBLICO/PRIVADO ========== */
+.privacy-options {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
 
+.privacy-options button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: #94a3b8;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.privacy-options button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.03) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.privacy-options button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.privacy-options button:hover::before {
+  opacity: 1;
+}
+
+/* Botão PÚBLICO ativo */
+.privacy-options button.active:first-child,
+.privacy-options button.active:nth-child(1) {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border-color: #10b981;
+  color: #34d399;
+  box-shadow: 
+    0 0 0 1px rgba(16, 185, 129, 0.3),
+    0 4px 20px rgba(16, 185, 129, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.privacy-options button.active:first-child:hover,
+.privacy-options button.active:nth-child(1):hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 0 1px rgba(16, 185, 129, 0.4),
+    0 8px 30px rgba(16, 185, 129, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
+}
+
+/* Botão PRIVADO ativo */
+.privacy-options button.active:last-child,
+.privacy-options button.active:nth-child(2) {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+  border-color: #ef4444;
+  color: #f87171;
+  box-shadow: 
+    0 0 0 1px rgba(239, 68, 68, 0.3),
+    0 4px 20px rgba(239, 68, 68, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.privacy-options button.active:last-child:hover,
+.privacy-options button.active:nth-child(2):hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 0 1px rgba(239, 68, 68, 0.4),
+    0 8px 30px rgba(239, 68, 68, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
+}
+
+/* Ícones dos botões */
+.privacy-options button i {
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.privacy-options button:hover i {
+  transform: scale(1.15);
+}
+
+.privacy-options button.active i {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Animação de pulso sutil no ativo */
+.privacy-options button.active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: privacy-pulse 2s ease-in-out infinite;
+}
+
+.privacy-options button.active:first-child::after,
+.privacy-options button.active:nth-child(1)::after {
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.privacy-options button.active:last-child::after,
+.privacy-options button.active:nth-child(2)::after {
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+}
+
+@keyframes privacy-pulse {
+  0%, 100% { 
+    opacity: 0.6; 
+    transform: translate(-50%, -50%) scale(1); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: translate(-50%, -50%) scale(1.3); 
+  }
+}
+
+/* Indicador de status (bolinha) */
+.privacy-options button .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.privacy-options button.active .status-dot {
+  opacity: 1;
+}
 .edit-privacy-options button {
   display: flex;
   align-items: center;
@@ -1991,10 +2145,6 @@ const idToRemove = song.externalId || song.id
 }
 
 /* Opções de Privacidade */
-.privacy-options {
-  display: flex;
-  gap: 12px;
-}
 
 .privacy-btn {
   flex: 1;

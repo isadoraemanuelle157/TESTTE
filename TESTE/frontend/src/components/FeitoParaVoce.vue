@@ -326,193 +326,350 @@
 
 <script>
 import Swal from "sweetalert2"
+
 export default {
   name: "Onboarding",
+
   data() {
     return {
       currentStep: 1,
+      selectedGenres: [],
+      selectedArtists: [],
+      selectedVibes: [],
+      showSuccess: false,
 
-   selectedGenres:[],
-   selectedArtists:[],
-   selectedVibes:[],
-   showSuccess:false,
-
-   genres:[],
-   artists:[],
-   vibes:[]
+      genres: [],
+      artists: [],
+      vibes: []
     }
-},
- 
-async mounted(){
- await Promise.all([
-   this.loadGeneros(),
-   this.loadCantores(),
-   this.loadVibes()
- ])
-},
+  },
+
+  async mounted() {
+    await this.loadInitialData()
+  },
 
   computed: {
     headerStep() {
-  return 3
-},
+      return this.currentStep
+    },
+
     genreProgress() {
       return Math.min((this.selectedGenres.length / 3) * 100, 100)
     },
+
     artistProgress() {
       return Math.min((this.selectedArtists.length / 2) * 100, 100)
     },
+
     vibeProgress() {
       return Math.min((this.selectedVibes.length / 2) * 100, 100)
     },
+
     canProceed() {
       if (this.currentStep === 1) return this.selectedGenres.length >= 3
       if (this.currentStep === 2) return this.selectedArtists.length >= 2
       return true
     },
-selectedItems(){
- return [
-   ...this.selectedGenres,
-   ...this.selectedArtists,
-   ...this.selectedVibes
- ]
-},
 
-   summaryTags(){
- return [
-  ...this.selectedGenres.slice(0,3).map(g=>g.name),
-  ...this.selectedArtists.slice(0,2).map(a=>a.name),
-  ...this.selectedVibes.slice(0,2).map(v=>v.name)
- ]
-}
+    selectedItems() {
+      return [
+        ...this.selectedGenres,
+        ...this.selectedArtists,
+        ...this.selectedVibes
+      ]
+    },
+
+    summaryTags() {
+      return [
+        ...this.selectedGenres.slice(0, 3).map(g => g.name),
+        ...this.selectedArtists.slice(0, 2).map(a => a.name),
+        ...this.selectedVibes.slice(0, 2).map(v => v.name)
+      ]
+    }
   },
 
   methods: {
-async loadGeneros(){
- try{
-   const res = await fetch("http://localhost:3002/generos")
-   const data = await res.json()
+    async loadInitialData() {
+      // primeiro banco
+      await Promise.all([
+        this.loadGeneros(),
+        this.loadCantores(),
+        this.loadVibes()
+      ])
 
-   // backend retorna objeto agrupado
-   const generosArray = Object.values(data).flat()
+      // depois APIs
+      await Promise.all([
+        this.loadSpotifyArtists(),
+        this.loadSpotifyGeneros(),
+        this.loadSpotifyVibes()
+      ])
+    },
 
-   this.genres = generosArray.map((g,index)=>({
-      id:g._id,
-      name:g.nome,
-      emoji:g.icon || this.getEmoji(g.nome),
-      color:g.color || this.getColor(index),
-      gradient:this.getGradient(index)
-   }))
+    normalizeText(value) {
+      return (value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+    },
 
- }catch(e){
-   console.error("Erro gêneros:",e)
- }
-},
+    mergeUniqueByName(currentList, newList) {
+      const map = new Map()
 
-// ==================== ARTISTAS ====================
-async loadCantores(){
- try{
+      ;[...currentList, ...newList].forEach(item => {
+        const key = this.normalizeText(item.name)
+        if (!key) return
 
-  const res = await fetch("http://localhost:3002/cantores")
-  const data = await res.json()
+        if (!map.has(key)) {
+          map.set(key, item)
+        } else {
+          map.set(key, {
+            ...map.get(key),
+            ...item
+          })
+        }
+      })
 
-  this.artists = data.map((c,index)=>({
-      id:c._id,
-      name:c.nome,
+      return Array.from(map.values())
+    },
 
-      photo:
-        c.foto ||
-        `https://i.pravatar.cc/400?img=${index+10}`,
+    // ==================== GÊNEROS ====================
+    async loadGeneros() {
+      try {
+        const res = await fetch("http://localhost:3002/generos")
+        const data = await res.json()
 
-      genre:
-       c.generos?.length
-        ? c.generos.map(g=>g.nome).join(", ")
-        : "Sem gênero",
+        const generosArray = Object.values(data).flat()
 
-      popularity:
-         Math.floor(Math.random()*20)+80
-  }))
+        const mapped = generosArray.map((g, index) => ({
+          id: g._id,
+          name: g.nome,
+          emoji: g.icon || this.getEmoji(g.nome),
+          color: g.color || this.getColor(index),
+          gradient: g.gradient || this.getGradient(index),
+          source: "local"
+        }))
 
- }catch(e){
-   console.error("Erro cantores:",e)
- }
+        this.genres = this.mergeUniqueByName(this.genres, mapped)
+      } catch (e) {
+        console.error("Erro gêneros:", e)
+      }
+    },
 
-},
+    // ==================== ARTISTAS ====================
+    async loadCantores() {
+      try {
+        const res = await fetch("http://localhost:3002/cantores")
+        const data = await res.json()
 
-// ==================== VIBES ====================
-async loadVibes(){
+        const mapped = data.map((c, index) => ({
+          id: c._id,
+          name: c.nome,
+          photo: c.foto || `https://i.pravatar.cc/400?img=${index + 10}`,
+          genre: c.generos?.length
+            ? c.generos.map(g => g.nome).join(", ")
+            : "Sem gênero",
+          popularity: Math.floor(Math.random() * 20) + 80,
+          source: "local"
+        }))
 
- try{
-   const res = await fetch("http://localhost:3002/vibes")
-   const data = await res.json()
+        this.artists = this.mergeUniqueByName(this.artists, mapped)
+      } catch (e) {
+        console.error("Erro cantores:", e)
+      }
+    },
 
-   this.vibes = data.map(v=>({
+    // ==================== VIBES BANCO ====================
+    async loadVibes() {
+      try {
+        const res = await fetch("http://localhost:3002/vibes")
+        const data = await res.json()
 
-      id:v._id,
-      name:v.nome,
-      emoji:v.emoji || "🎵",
+        const mapped = data.map((v, index) => ({
+          id: v._id,
+          name: v.nome,
+          emoji: v.emoji || "🎵",
+          gradient: v.gradient || this.getGradient(index),
+          description: v.descricao || "Vibe musical",
+          tags: v.tags || [],
+          source: "local"
+        }))
 
-      gradient:
-        v.gradient ||
-       "linear-gradient(135deg,#667eea,#764ba2)",
+        this.vibes = this.mergeUniqueByName(this.vibes, mapped)
+      } catch (e) {
+        console.error("Erro vibes:", e)
+      }
+    },
 
-      description:v.descricao,
+    // ==================== ARTISTAS SPOTIFY ====================
+    async loadSpotifyArtists() {
+      try {
+        const res = await fetch("http://localhost:3002/spotify/artists/popular?limit=15")
+        const data = await res.json()
 
-      tags:v.tags || []
+        const spotifyArtists = (data.artists?.items || []).map((artist, index) => ({
+          id: artist.id,
+          name: artist.name,
+          photo: artist.images?.[0]?.url || `https://i.pravatar.cc/400?img=${index + 50}`,
+          genre: artist.genres?.length
+            ? artist.genres.slice(0, 3).join(", ")
+            : "Sem gênero",
+          genresArray: artist.genres || [],
+          popularity: artist.popularity || Math.floor(Math.random() * 20) + 70,
+          followers: artist.followers?.total || 0,
+          source: "spotify"
+        }))
 
-   }))
+        const enrichedArtists = await Promise.all(
+          spotifyArtists.map(async (artist) => {
+            try {
+              const deezerRes = await fetch(`http://localhost:3002/deezer/search?q=${encodeURIComponent(artist.name)}&limit=1`)
+              const deezerData = await deezerRes.json()
+              const d = deezerData.data?.[0]
 
- }catch(e){
-   console.error("Erro vibes:",e)
- }
+              if (d) {
+                return {
+                  ...artist,
+                  photo: artist.photo || d.artist?.picture_medium,
+                  followers: artist.followers || d.artist?.nb_fan || 0,
+                  source: "spotify"
+                }
+              }
 
-},
+              return artist
+            } catch {
+              return artist
+            }
+          })
+        )
 
-  getEmoji(nome){
- const map={
-   pop:"🎵",
-   rock:"🎸",
-   funk:"🔥",
-   hiphop:"🎤",
-   eletronica:"🎹",
-   gospel:"🙏",
-   samba:"🥁",
-   sertanejo:"🌾",
-   mpb:"🇧🇷"
- }
+        this.artists = this.mergeUniqueByName(this.artists, enrichedArtists)
+      } catch (e) {
+        console.error("Erro Spotify artistas:", e)
+      }
+    },
 
- const key=nome
-  ?.toLowerCase()
-  .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g,"")
-  .replace(/\s/g,"")
+    // ==================== GÊNEROS SPOTIFY ====================
+    async loadSpotifyGeneros() {
+      try {
+        const res = await fetch("http://localhost:3002/spotify/artists/popular?limit=20")
+        const data = await res.json()
 
- return map[key] || "🎶"
-},
+        const generosSet = new Set()
 
-getColor(index){
-const colors=[
-"#E91E63",
-"#F44336",
-"#FF9800",
-"#00BCD4",
-"#9C27B0",
-"#4CAF50"
-]
-return colors[index%colors.length]
-},
+        data.artists?.items?.forEach(a => {
+          a.genres?.forEach(g => generosSet.add(g))
+        })
 
-getGradient(index){
-const gradients=[
-"linear-gradient(135deg,#E91E63,#F48FB1)",
-"linear-gradient(135deg,#F44336,#EF5350)",
-"linear-gradient(135deg,#FF9800,#FFB74D)",
-"linear-gradient(135deg,#00BCD4,#4DD0E1)",
-"linear-gradient(135deg,#9C27B0,#CE93D8)",
-"linear-gradient(135deg,#4CAF50,#81C784)"
-]
+        const generosSpotify = Array.from(generosSet).map((g, i) => ({
+          id: "spotify_" + this.normalizeText(g),
+          name: g,
+          emoji: this.getEmoji(g),
+          color: this.getColor(i),
+          gradient: this.getGradient(i),
+          source: "spotify"
+        }))
 
-return gradients[index%gradients.length]
-},
+        this.genres = this.mergeUniqueByName(this.genres, generosSpotify)
+      } catch (e) {
+        console.error("Erro gêneros Spotify:", e)
+      }
+    },
+
+    // ==================== VIBES API ====================
+    async loadSpotifyVibes() {
+      try {
+        const res = await fetch("http://localhost:3002/spotify/vibes")
+        const data = await res.json()
+
+        const apiVibes = (data || []).map((v, index) => ({
+          id: v.id || `api_vibe_${index}`,
+          name: v.name,
+          emoji: v.emoji || "✨",
+          gradient: v.gradient || this.getGradient(index),
+          description: v.description || "Vibe vinda da API",
+          tags: v.tags || [],
+          source: v.source || "spotify"
+        }))
+
+        this.vibes = this.mergeUniqueByName(this.vibes, apiVibes)
+      } catch (e) {
+        console.error("Erro vibes API:", e)
+      }
+    },
+
+    generateVibesFromGenres() {
+      const map = {
+        funk: { name: "Festa", emoji: "🎉", tags: ["dança", "noite"] },
+        rock: { name: "Energia", emoji: "⚡", tags: ["treino", "ação"] },
+        pop: { name: "Chill", emoji: "🌈", tags: ["leve", "happy"] },
+        gospel: { name: "Relax", emoji: "🙏", tags: ["paz", "fé"] },
+        eletronica: { name: "Night", emoji: "🌙", tags: ["balada"] }
+      }
+
+      const novas = []
+
+      this.selectedGenres.forEach(g => {
+        const key = this.normalizeText(g.name)
+        if (map[key]) {
+          novas.push({
+            id: "auto_" + key,
+            name: map[key].name,
+            emoji: map[key].emoji,
+            description: "Gerado automaticamente",
+            gradient: this.getGradient(Math.floor(Math.random() * 10)),
+            tags: map[key].tags,
+            source: "auto"
+          })
+        }
+      })
+
+      this.vibes = this.mergeUniqueByName(this.vibes, novas)
+    },
+
+    getEmoji(nome) {
+      const map = {
+        pop: "🎵",
+        rock: "🎸",
+        funk: "🔥",
+        hiphop: "🎤",
+        trap: "🎤",
+        rap: "🎤",
+        eletronica: "🎹",
+        gospel: "🙏",
+        samba: "🥁",
+        sertanejo: "🌾",
+        mpb: "🇧🇷",
+        pagode: "🪘"
+      }
+
+      const key = this.normalizeText(nome).replace(/\s/g, "")
+      return map[key] || "🎶"
+    },
+
+    getColor(index) {
+      const colors = [
+        "#E91E63",
+        "#F44336",
+        "#FF9800",
+        "#00BCD4",
+        "#9C27B0",
+        "#4CAF50"
+      ]
+      return colors[index % colors.length]
+    },
+
+    getGradient(index) {
+      const gradients = [
+        "linear-gradient(135deg,#E91E63,#F48FB1)",
+        "linear-gradient(135deg,#F44336,#EF5350)",
+        "linear-gradient(135deg,#FF9800,#FFB74D)",
+        "linear-gradient(135deg,#00BCD4,#4DD0E1)",
+        "linear-gradient(135deg,#9C27B0,#CE93D8)",
+        "linear-gradient(135deg,#4CAF50,#81C784)"
+      ]
+      return gradients[index % gradients.length]
+    },
 
     getBgStyle(step) {
       const gradients = {
@@ -523,71 +680,47 @@ return gradients[index%gradients.length]
       return { background: gradients[step] }
     },
 
-toggleGenre(genre){
- const existe=this.selectedGenres.find(
-   g=>g.id===genre.id
- )
+    toggleGenre(genre) {
+      const existe = this.selectedGenres.find(g => g.id === genre.id)
 
- if(existe){
-   this.selectedGenres=
-    this.selectedGenres.filter(
-      g=>g.id!==genre.id
-    )
- }else{
-   this.selectedGenres.push(genre)
- }
-},
+      if (existe) {
+        this.selectedGenres = this.selectedGenres.filter(g => g.id !== genre.id)
+      } else {
+        this.selectedGenres.push(genre)
+      }
+    },
 
-toggleArtist(artist){
- const existe=this.selectedArtists.find(
-   a=>a.id===artist.id
- )
+    toggleArtist(artist) {
+      const existe = this.selectedArtists.find(a => a.id === artist.id)
 
- if(existe){
-  this.selectedArtists=
-   this.selectedArtists.filter(
-    a=>a.id!==artist.id
-   )
- }else{
-   this.selectedArtists.push(artist)
- }
-},
+      if (existe) {
+        this.selectedArtists = this.selectedArtists.filter(a => a.id !== artist.id)
+      } else {
+        this.selectedArtists.push(artist)
+      }
+    },
 
-toggleVibe(vibe){
- const existe=this.selectedVibes.find(
-   v=>v.id===vibe.id
- )
+    toggleVibe(vibe) {
+      const existe = this.selectedVibes.find(v => v.id === vibe.id)
 
- if(existe){
-   this.selectedVibes=
-    this.selectedVibes.filter(
-      v=>v.id!==vibe.id
-    )
- }else{
-   this.selectedVibes.push(vibe)
- }
-},
+      if (existe) {
+        this.selectedVibes = this.selectedVibes.filter(v => v.id !== vibe.id)
+      } else {
+        this.selectedVibes.push(vibe)
+      }
+    },
 
-   removeItem(item){
-
-this.selectedGenres=
- this.selectedGenres.filter(
-   g=>g.id!==item.id
- )
-
-this.selectedArtists=
- this.selectedArtists.filter(
-   a=>a.id!==item.id
- )
-
-this.selectedVibes=
- this.selectedVibes.filter(
-   v=>v.id!==item.id
- )
-
-},
+    removeItem(item) {
+      this.selectedGenres = this.selectedGenres.filter(g => g.id !== item.id)
+      this.selectedArtists = this.selectedArtists.filter(a => a.id !== item.id)
+      this.selectedVibes = this.selectedVibes.filter(v => v.id !== item.id)
+    },
 
     nextStep() {
+      if (this.currentStep === 1) {
+        this.generateVibesFromGenres()
+      }
+
       if (this.currentStep === 3) {
         this.showSuccess = true
       } else {
@@ -613,84 +746,107 @@ this.selectedVibes=
       }
     },
 
-async finishOnboarding(){
- try{
+    async finishOnboarding() {
+      try {
+        const usuario = JSON.parse(localStorage.getItem("usuario"))
+        const userId = usuario?._id || usuario?.id
+        const token = localStorage.getItem("token")
 
-  const usuario = JSON.parse(localStorage.getItem("usuario"))
-  const userId = usuario?._id || usuario?.id
-  const token = localStorage.getItem("token")
+        if (!userId) {
+          throw new Error("Usuário não encontrado")
+        }
 
-  if(!userId){
-    throw new Error("Usuário não encontrado")
-  }
+        const generosPayload = this.selectedGenres.map(g => ({
+          id: g.id,
+          source: g.source || 'local',
+          nome: g.name,
+          icon: g.emoji || '🎵',
+          color: g.color
+        }))
 
-  // salvar preferências
-  await fetch(`http://localhost:3002/usuarios/${userId}`, {
-    method:"PUT",
-    headers:{
-      "Content-Type":"application/json",
-      Authorization:`Bearer ${token}`
-    },
-    body: JSON.stringify({
-      generos: this.selectedGenres.map(g=>g.id),
-      artistasFavoritos: this.selectedArtists.map(a=>a.id),
-      vibesFavoritas: this.selectedVibes.map(v=>v.id),
-      onboardingCompleto:true
-    })
-  })
+        const artistasPayload = this.selectedArtists.map(a => ({
+          id: a.id,
+          source: a.source || 'local',
+          nome: a.name,
+          imagem: a.photo,
+          extra: {
+            genero: a.genre,
+            popularidade: a.popularity
+          }
+        }))
 
-  // favoritos
-  await Promise.all(
-    this.selectedArtists.map(artist =>
-      fetch(`http://localhost:3002/favoritas/${artist.id}/favoritar`, {
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          Authorization:`Bearer ${token}`
-        },
-        body: JSON.stringify({ tipo:"cantor" })
-      })
-    )
-  )
+        const vibesPayload = this.selectedVibes.map(v => ({
+          id: v.id,
+          source: v.source || 'local',
+          nome: v.name,
+          emoji: v.emoji,
+          descricao: v.description,
+          gradient: v.gradient,
+          tags: v.tags
+        }))
 
-  // salvar local
-  localStorage.setItem(
-    "artistasFavoritos",
-    JSON.stringify(this.selectedArtists.map(a=>a.id))
-  )
+        await fetch(`http://localhost:3002/usuarios/${userId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            generos: generosPayload,
+            artistasFavoritos: artistasPayload,
+            vibesFavoritas: vibesPayload,
+            onboardingCompleto: true
+          })
+        })
 
-  // 🔥 ALERTA TOP
-  await Swal.fire({
-    title: "Conta criada com sucesso! 🎉",
-    text: "Seu perfil está pronto. Bora ouvir música!",
-    icon: "success",
-    background: "#121212",
-    color: "#fff",
-    confirmButtonText: "Ir para o Dashboard 🚀",
-    confirmButtonColor: "#1DB954",
-    timer: 2500,
-    timerProgressBar: true,
-    showClass: {
-      popup: "animate__animated animate__zoomIn"
-    },
-    hideClass: {
-      popup: "animate__animated animate__fadeOut"
+        const artistasLocais = this.selectedArtists.filter(a => !a.source || a.source === 'local')
+
+        await Promise.all(
+          artistasLocais.map(artist =>
+            fetch(`http://localhost:3002/favoritas/${artist.id}/favoritar`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({ tipo: "cantor" })
+            })
+          )
+        )
+
+        localStorage.setItem(
+          "artistasFavoritos",
+          JSON.stringify(this.selectedArtists.map(a => a.id))
+        )
+
+        await Swal.fire({
+          title: "Conta criada com sucesso! 🎉",
+          text: "Seu perfil está pronto. Bora ouvir música!",
+          icon: "success",
+          background: "#121212",
+          color: "#fff",
+          confirmButtonText: "Ir para o Dashboard 🚀",
+          confirmButtonColor: "#1DB954",
+          timer: 2500,
+          timerProgressBar: true,
+          showClass: {
+            popup: "animate__animated animate__zoomIn"
+          },
+          hideClass: {
+            popup: "animate__animated animate__fadeOut"
+          }
+        })
+
+        this.$router.push('/dashboard')
+      } catch (err) {
+        console.error(err)
+        Swal.fire({
+          title: "Erro 😢",
+          text: "Não foi possível finalizar o cadastro",
+          icon: "error"
+        })
+      }
     }
-  })
-
-  // 👉 depois do alert, redireciona
-  this.$router.push('/dashboard')
-
- }catch(err){
-   console.error(err)
-
-   Swal.fire({
-     title: "Erro 😢",
-     text: "Não foi possível finalizar o cadastro",
-     icon: "error"
-   })
- }
-}
   }
 }
 </script>

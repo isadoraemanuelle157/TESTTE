@@ -54,42 +54,57 @@
         </div>
       </section>
 
-      <!-- HERO: CONTINUE LISTENING -->
+      <!-- HERO: CONTINUE LISTENING (SINCRONIZADO COM PLAYER) -->
       <div v-if="continueListening.length > 0" class="hero-banner continue-listening" :style="heroGradient">
         <div class="hero-ambient"></div>
         <div class="hero-content">
           <div class="hero-badge">
-            <i class="fa fa-play-circle"></i> Continue Ouvindo
+            <i class="fa fa-play-circle"></i>
+            {{ isPlaying ? 'Tocando Agora' : 'Continue Ouvindo' }}
             <span class="badge-live" v-if="isPlaying">
-              <span class="live-dot"></span> Tocando Agora
+              <span class="live-dot"></span> LIVE
             </span>
           </div>
+         
+          <!-- Título dinâmico: mostra currentTrack do player se existir -->
           <h1 class="hero-title">{{ currentTrack?.title || continueListening[0].title }}</h1>
           <p class="hero-artist">{{ currentTrack?.artist || continueListening[0].artist }}</p>
-          <p class="hero-description">
+         
+          <p class="hero-description" v-if="!isPlaying && continueListening[0].progress < 95">
             De onde você parou
-            <span class="highlight">{{ Math.round(continueListening[0].progress) }}% completo</span>
+            <span class="highlight">{{ Math.round(continueListening[0].progress || 0) }}% completo</span>
+          </p>
+          <p class="hero-description" v-else-if="isPlaying">
+            <span class="highlight">▶ Reproduzindo agora</span>
           </p>
 
+          <!-- Progress Bar sincronizada com o player -->
           <div class="hero-progress" v-if="continueListening[0]">
             <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: (continueListening[0].progress || 0) + '%' }"></div>
+              <div
+                class="progress-fill"
+                :style="{ width: (isPlaying ? progressPercent : (continueListening[0].progress || 0)) + '%' }"
+              ></div>
             </div>
             <div class="progress-time">
-              <span>{{ formatTime(continueListening[0].currentTime) }}</span>
-              <span>{{ formatTime(continueListening[0].duration) }}</span>
+              <span>{{ formatTime(isPlaying ? currentTime : continueListening[0].currentTime) }}</span>
+              <span>{{ formatTime(isPlaying ? duration : continueListening[0].duration) }}</span>
             </div>
           </div>
 
           <div class="hero-actions">
             <button class="btn-primary btn-glow" @click="playContinueListening(0)">
-              <i class="fa" :class="isPlaying && isCurrentTrack(continueListening[0]) ? 'fa-pause' : 'fa-play'"></i>
-              {{ isPlaying && isCurrentTrack(continueListening[0]) ? 'Pausar' : 'Continuar' }}
+              <i class="fa" :class="isPlaying ? 'fa-pause' : 'fa-play'"></i>
+              {{ isPlaying ? 'Pausar' : (continueListening[0].progress > 0 ? 'Continuar' : 'Tocar') }}
             </button>
             <button class="btn-secondary" @click="playNextInQueue">
               <i class="fa fa-step-forward"></i> Próxima
             </button>
-            <button class="btn-secondary btn-icon" @click="toggleLike" :class="{ 'active': isLiked }">
+            <button
+              class="btn-secondary btn-icon"
+              @click="toggleLike"
+              :class="{ 'active': isLiked }"
+            >
               <i class="fa" :class="isLiked ? 'fa-heart' : 'fa-heart-o'"></i>
             </button>
           </div>
@@ -101,8 +116,8 @@
               <div class="vinyl-grooves"></div>
               <div class="vinyl-label">
                 <img
-                  v-if="continueListening[0]?.cover"
-                  :src="continueListening[0].cover"
+                  v-if="(currentTrack?.cover || continueListening[0]?.cover)"
+                  :src="currentTrack?.cover || continueListening[0].cover"
                   @error="handleImageError"
                   alt="Album Cover"
                 />
@@ -185,6 +200,9 @@
               </button>
 
               <div class="dropdown-container" ref="dropdownContainers">
+                <button class="btn-more" @click.stop="toggleMenu(index, $event)" :class="{ active: activeMenuIndex === index }">
+                  <i class="fa fa-ellipsis-v"></i>
+                </button>
 
                 <transition name="menu-pop">
                   <div
@@ -278,7 +296,7 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Tocadas Recentemente -->
+      <!-- SEÇÃO: Tocadas Recentemente (SINCRONIZADO COM PLAYER) -->
       <section class="section" v-if="recentlyPlayed.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
@@ -296,7 +314,7 @@
         <div class="cards-row" :class="{ 'expanded': showAllRecentTracks }">
           <div
             v-for="(track, index) in recentlyPlayed.slice(0, showAllRecentTracks ? 12 : 6)"
-            :key="'recent-'+track.id"
+            :key="'recent-'+track.id+'-'+track.playedAt"
             class="music-card"
             @click="playTrack(track, 'recent', index)"
             :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
@@ -309,7 +327,10 @@
               <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
                 <span v-for="n in 4" :key="n"></span>
               </div>
-              <div class="time-badge">{{ formatTimeAgo(track.playedAt) }}</div>
+              <!-- Mostra "Agora" se for a atual, senão mostra tempo relativo -->
+              <div class="time-badge" :class="{ 'now-playing': isCurrentTrack(track) && isPlaying }">
+                {{ isCurrentTrack(track) && isPlaying ? '▶ AGORA' : formatTimeAgo(track.playedAt) }}
+              </div>
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ track.title }}</h3>
@@ -609,18 +630,6 @@
         </div>
       </section>
 
-      <!-- PLAYER EMBEDDED -->
-      <div class="embedded-player" v-if="currentTrack">
-        <audio
-          ref="audioPlayer"
-          :src="currentTrack.preview"
-          @timeupdate="updateProgress"
-          @ended="onTrackEnded"
-          @loadedmetadata="onLoadedMetadata"
-          autoplay
-        ></audio>
-      </div>
-
       <!-- LOADING STATE -->
       <div v-if="!chartTracks.length" class="skeleton"></div>
 
@@ -717,10 +726,18 @@ export default {
       greeting: "Bom dia",
       welcomeMessage: "Pronto para descobrir novas músicas hoje?",
 
-      // Player State
+      // ═══════════════════════════════════════════════════════
+      // PLAYER SYNC STATE (NOVO - Sincronizado com MusicPlayer)
+      // ═══════════════════════════════════════════════════════
       isPlaying: false,
       isLiked: false,
-      currentTrack: null,
+      currentTrack: null,        // Track atual do player (sincronizado)
+      currentTime: 0,          // Tempo atual do player
+      duration: 0,             // Duração total do player
+      progressPercent: 0,      // Porcentagem de progresso do player
+      playerContext: null,       // Contexto da música (recent, chart, curtidas, etc)
+
+      // Legacy Player State (mantido para compatibilidade)
       currentPlaylist: null,
       currentAlbum: null,
       currentArtist: null,
@@ -731,11 +748,6 @@ export default {
       showAllPersonalContent: false,
       showAllCurtidas: false,
 
-      // Audio Progress
-      currentTime: 0,
-      duration: 30,
-      progressPercent: 0,
-
       // API Data
       chartTracks: [],
       popularArtists: [],
@@ -744,10 +756,10 @@ export default {
       recommendedTracks: [],
       followedArtists: [],
 
-      // Personalized Data
-      continueListening: [],
+      // Personalized Data (SINCRONIZADAS COM PLAYER)
+      continueListening: [],   // [0] = música atual do player com progresso real
       madeForYou: [],
-      recentlyPlayed: [],
+      recentlyPlayed: [],      // Histórico real de músicas escutadas
 
       // Playlists reais do usuário
       userPlaylists: [],
@@ -788,7 +800,11 @@ export default {
         "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
         "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
         "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)"
-      ]
+      ],
+
+      // Controle de histórico
+      _lastAddedToRecent: null,  // Evita duplicatas rápidas
+      _minListenTime: 10000      // Mínimo 10s para contar como "ouvida"
     }
   },
 
@@ -798,12 +814,28 @@ export default {
     this.loadUserFromStorage()
     this.updateGreeting()
 
-    window.addEventListener('player-update', this.handlePlayerUpdate)
+    // ═══════════════════════════════════════════════════════
+    // EVENTOS DO PLAYER (NOVO)
+    // ═══════════════════════════════════════════════════════
+    window.addEventListener('player-state-changed', this.handlePlayerStateChange)
+    window.addEventListener('player-track-ended', this.handlePlayerTrackEnded)
+    window.addEventListener('play-song', this.handlePlaySongFromDashboard)
+
+    // Eventos legados
     window.addEventListener('artists-updated', this.loadFollowedArtists)
     window.addEventListener('playlist-updated', this.loadUserPlaylists)
     window.addEventListener('curtidas-updated', this.carregarCurtidas)
     window.addEventListener('likes-updated', this.carregarCurtidas)
     document.addEventListener('click', this.handleClickOutside)
+
+     // DEBUG: Verificar se eventos estão chegando
+  window.addEventListener('player-track-ended', (e) => {
+    console.log('🔍 DEBUG Dashboard recebeu player-track-ended:', e.detail)
+  })
+ 
+  window.addEventListener('player-state-changed', (e) => {
+    console.log('🔍 DEBUG Dashboard recebeu player-state-changed:', e.detail?.track?.title, 'isPlaying:', e.detail?.isPlaying)
+  })
 
     setInterval(this.updateGreeting, 60000)
 
@@ -814,15 +846,16 @@ export default {
   },
 
   beforeDestroy() {
-    window.removeEventListener('player-update', this.handlePlayerUpdate)
+    // Remover eventos do player
+    window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
+    window.removeEventListener('player-track-ended', this.handlePlayerTrackEnded)
+    window.removeEventListener('play-song', this.handlePlaySongFromDashboard)
+
     window.removeEventListener('playlist-updated', this.loadUserPlaylists)
     window.removeEventListener('curtidas-updated', this.carregarCurtidas)
     window.removeEventListener('likes-updated', this.carregarCurtidas)
     document.removeEventListener('click', this.handleClickOutside)
 
-    if (this.$refs.audioPlayer) {
-      this.$refs.audioPlayer.pause()
-    }
     if (this.toast.timer) {
       clearInterval(this.toast.timer)
     }
@@ -832,7 +865,233 @@ export default {
   },
 
   methods: {
-    // ===== CURTIDAS METHODS (do Curtidas.vue) =====
+    // ═══════════════════════════════════════════════════════
+    // PLAYER SYNC METHODS (NOVO)
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * Recebe atualizações de estado do MusicPlayer em tempo real
+     * Atualiza: continueListening[0], isPlaying, currentTrack, progresso
+     */
+    handlePlayerStateChange(e) {
+      const { track, isPlaying, currentTime, duration, progress, context, timestamp } = e.detail || {}
+
+      if (!track) return
+
+      // Atualizar estado de reprodução
+      this.isPlaying = isPlaying
+      this.currentTrack = track
+      this.currentTime = currentTime || 0
+      this.duration = duration || track.duration || 0
+      this.progressPercent = progress || 0
+      this.playerContext = context
+
+      // Atualizar "Continue Ouvindo" com a música atual em tempo real
+      this.updateContinueListening(track, {
+        progress: progress || 0,
+        currentTime: currentTime || 0,
+        duration: duration || track.duration || 0,
+        isPlaying: isPlaying,
+        timestamp: timestamp || Date.now()
+      })
+
+      // Se começou a tocar agora, adicionar ao início do histórico
+      if (isPlaying && this._lastAddedToRecent !== track.id) {
+        this._lastAddedToRecent = track.id
+      }
+    },
+
+        /**
+     * Quando uma música termina ou é trocada, adiciona ao "Tocadas Recentemente"
+     */
+    handlePlayerTrackEnded(e) {
+      const { track, listenedDuration, totalDuration, context, naturallyEnded, timestamp } = e.detail || {}
+
+      if (!track) {
+        console.log('⚠️ player-track-ended recebido sem track')
+        return
+      }
+
+      console.log(`📥 player-track-ended: "${track.title}" - ouvida ${Math.round((listenedDuration || 0)/1000)}s (naturallyEnded: ${naturallyEnded})`)
+
+      // Calcular porcentagem ouvida
+      const listenedPercent = totalDuration > 0
+        ? ((listenedDuration || 0) / totalDuration) * 100
+        : 0
+
+      // Critérios para adicionar ao histórico:
+      // 1. Terminou naturalmente (chegou ao fim) -> SEMPRE adiciona
+      // 2. Ouveu mais de 30% da música -> Adiciona
+      // 3. Ouveu mais de 10 segundos -> Adiciona
+      const shouldAdd = naturallyEnded ||
+                        listenedPercent > 30 ||
+                        (listenedDuration || 0) > 10000
+
+      if (!shouldAdd) {
+        console.log(`⏭️ "${track.title}" ignorada (ouvida apenas ${Math.round(listenedPercent)}% / ${Math.round((listenedDuration||0)/1000)}s)`)
+        return
+      }
+
+      // Adicionar ao início do "Tocadas Recentemente"
+      this.addToRecentlyPlayed(track, context)
+
+      // Resetar flag
+      this._lastAddedToRecent = null
+    },
+
+    /**
+     * Adiciona uma música ao "Tocadas Recentemente"
+     */
+    addToRecentlyPlayed(track, context) {
+      // Normalizar dados do track
+      const normalizedTrack = {
+        id: track.id,
+        title: track.title || 'Sem título',
+        artist: track.artist || 'Artista desconhecido',
+        cover: track.cover || track.album?.cover_medium || '',
+        url: track.url || track.preview,
+        duration: track.duration || 0,
+        source: track.source || context || 'unknown',
+        playedAt: Date.now()
+      }
+
+      console.log('➕ Adicionando ao histórico:', normalizedTrack.title)
+
+      // Remover se já existe (para mover para o topo)
+      const existingIndex = this.recentlyPlayed.findIndex(t => t.id === normalizedTrack.id)
+      if (existingIndex >= 0) {
+        this.recentlyPlayed.splice(existingIndex, 1)
+      }
+
+      // Adicionar no início
+      this.recentlyPlayed.unshift(normalizedTrack)
+
+      // Manter máximo de 20 itens
+      if (this.recentlyPlayed.length > 20) {
+        this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
+      }
+
+      // Persistir no localStorage
+      this.saveRecentlyPlayed()
+
+      // Mostrar toast de confirmação (opcional)
+      // this.showToast('Adicionada ao histórico', `"${normalizedTrack.title}"`, 'success', 'fa fa-history')
+
+      console.log('📋 Histórico atualizado. Total:', this.recentlyPlayed.length)
+    },
+   
+    /**
+     * Atualiza o "Continue Ouvindo" com dados em tempo real do player
+     */
+    updateContinueListening(track, data) {
+      const existingIndex = this.continueListening.findIndex(t => t.id === track.id)
+
+      const trackData = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        cover: track.cover,
+        preview: track.url || track.preview,
+        progress: data.progress || 0,
+        currentTime: data.currentTime || 0,
+        duration: data.duration || track.duration || 0,
+        isPlaying: data.isPlaying,
+        lastPlayed: data.timestamp || Date.now()
+      }
+
+      if (existingIndex >= 0) {
+        // Atualizar existente
+        this.$set(this.continueListening, existingIndex, trackData)
+      } else {
+        // Adicionar no início
+        this.continueListening.unshift(trackData)
+        // Manter apenas 5 itens
+        if (this.continueListening.length > 5) {
+          this.continueListening = this.continueListening.slice(0, 5)
+        }
+      }
+    },
+
+    /**
+     * Adiciona uma música ao "Tocadas Recentemente"
+     * Evita duplicatas consecutivas e mantém ordem cronológica
+     */
+    addToRecentlyPlayed(track, context) {
+      // Normalizar dados do track
+      const normalizedTrack = {
+        id: track.id,
+        title: track.title || 'Sem título',
+        artist: track.artist || 'Artista desconhecido',
+        cover: track.cover || track.album?.cover_medium || '',
+        url: track.url || track.preview,
+        duration: track.duration || 0,
+        source: track.source || context || 'unknown',
+        playedAt: Date.now()
+      }
+
+      // Remover se já existe (para mover para o topo)
+      const existingIndex = this.recentlyPlayed.findIndex(t => t.id === normalizedTrack.id)
+      if (existingIndex >= 0) {
+        this.recentlyPlayed.splice(existingIndex, 1)
+      }
+
+      // Adicionar no início
+      this.recentlyPlayed.unshift(normalizedTrack)
+
+      // Manter máximo de 20 itens
+      if (this.recentlyPlayed.length > 20) {
+        this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
+      }
+
+      // Persistir no localStorage para manter entre sessões
+      this.saveRecentlyPlayed()
+
+      console.log('📋 Adicionada ao histórico:', normalizedTrack.title)
+    },
+
+    /**
+     * Persiste o histórico no localStorage
+     */
+    saveRecentlyPlayed() {
+      try {
+        localStorage.setItem('dashboard_recently_played', JSON.stringify(this.recentlyPlayed))
+      } catch (e) {
+        console.error('Erro ao salvar histórico:', e)
+      }
+    },
+
+    /**
+     * Carrega o histórico do localStorage
+     */
+    loadRecentlyPlayed() {
+      try {
+        const stored = localStorage.getItem('dashboard_recently_played')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          // Filtrar apenas itens dos últimos 7 dias
+          const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
+          this.recentlyPlayed = parsed.filter(t => t.playedAt > sevenDaysAgo)
+        }
+      } catch (e) {
+        console.error('Erro ao carregar histórico:', e)
+      }
+    },
+
+    /**
+     * Handler para quando o Dashboard dispara play-song (clique do usuário)
+     * Notifica o MusicPlayer para tocar
+     */
+    handlePlaySongFromDashboard(e) {
+      const { song, playlist, index, context } = e.detail || {}
+
+      // O MusicPlayer vai receber este evento e disparar player-state-changed de volta
+      // Não precisamos fazer nada aqui, apenas log
+      console.log('🎵 Dashboard solicitou reprodução:', song?.title, 'context:', context)
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // CURTIDAS METHODS (do Curtidas.vue)
+    // ═══════════════════════════════════════════════════════
 
     getSourceIcon(source) {
       const icons = {
@@ -1147,6 +1406,7 @@ export default {
         type: 'liked'
       }
 
+      // Disparar evento para o MusicPlayer
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
@@ -1164,9 +1424,6 @@ export default {
           context: 'curtidas'
         }
       }))
-
-      this.currentTrack = playerSong
-      this.isPlaying = true
     },
 
     playAllCurtidas() {
@@ -1179,7 +1436,9 @@ export default {
       this.$router?.push('/curtidas')
     },
 
-    // ===== PLAYLISTS METHODS =====
+    // ═══════════════════════════════════════════════════════
+    // PLAYLISTS METHODS
+    // ═══════════════════════════════════════════════════════
 
     async loadUserPlaylists() {
       this.loadingPlaylists = true
@@ -1227,7 +1486,9 @@ export default {
         || this.showToast('Criar Playlist', 'Redirecionando para criar playlist...', 'info', 'fa fa-plus')
     },
 
-    // ===== AUTH & USER =====
+    // ═══════════════════════════════════════════════════════
+    // AUTH & USER
+    // ═══════════════════════════════════════════════════════
 
     checkAuth() {
       const isLoggedIn = localStorage.getItem('isLoggedIn')
@@ -1279,7 +1540,9 @@ export default {
       this.$router?.push('/artistas') || this.showToast('Artistas', 'Ver todos os artistas...', 'info')
     },
 
-    // ===== DATA LOADING =====
+    // ═══════════════════════════════════════════════════════
+    // DATA LOADING
+    // ═══════════════════════════════════════════════════════
 
     async loadAllData() {
       this.loading = true
@@ -1290,6 +1553,7 @@ export default {
         this.loadGenres()
         this.loadMockUserData()
         this.loadFollowedArtists()
+        this.loadRecentlyPlayed() // Carregar histórico persistido
       } catch (error) {
         console.error(error)
       } finally {
@@ -1371,34 +1635,13 @@ export default {
     },
 
     loadMockUserData() {
-      this.continueListening = [
-        {
-          id: 101,
-          title: "Leão",
-          artist: "Marília Mendonça",
-          cover: "https://e-cdns-images.dzcdn.net/images/cover/1a2b3c/250x250-000000-80-0-0.jpg",
-          progress: 65,
-          currentTime: 142,
-          duration: 218,
-          preview: "https://cdns-preview-1.dzcdn.net/stream/c-1a2b3c"
-        }
-      ]
-
+      // Dados mockados para "Feito para Você" (mantidos como recomendações estáticas)
       this.madeForYou = [
         { id: 1, title: "Mix Diário 1", description: "Marília Mendonça, Maiara & Maraisa...", tracks: 50, cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
         { id: 2, title: "Mix Diário 2", description: "Henrique & Juliano, Jorge & Mateus...", tracks: 45, cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
         { id: 3, title: "Descobertas", description: "Novas músicas para você", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
         { id: 4, title: "On Repeat", description: "Músicas que você ama", tracks: 100, cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" },
         { id: 5, title: "Radar", description: "Atualizado toda sexta", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" }
-      ]
-
-      this.recentlyPlayed = [
-        { id: 201, title: "Infiel", artist: "Marília Mendonça", cover: "https://e-cdns-images.dzcdn.net/images/cover/201/250x250.jpg", playedAt: Date.now() - 3600000 },
-        { id: 202, title: "Ciumeira", artist: "Marília Mendonça", cover: "https://e-cdns-images.dzcdn.net/images/cover/202/250x250.jpg", playedAt: Date.now() - 7200000 },
-        { id: 203, title: "Supera", artist: "Marília Mendonça", cover: "https://e-cdns-images.dzcdn.net/images/cover/203/250x250.jpg", playedAt: Date.now() - 10800000 },
-        { id: 204, title: "Bem Pior Que Eu", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/204/250x250.jpg", playedAt: Date.now() - 14400000 },
-        { id: 205, title: "Medo Bobo", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/205/250x250.jpg", playedAt: Date.now() - 18000000 },
-        { id: 206, title: "10%", artist: "Maiara & Maraisa", cover: "https://e-cdns-images.dzcdn.net/images/cover/206/250x250.jpg", playedAt: Date.now() - 21600000 }
       ]
     },
 
@@ -1411,15 +1654,47 @@ export default {
       }
     },
 
-    // ===== PLAYBACK METHODS =====
+    // ═══════════════════════════════════════════════════════
+    // PLAYBACK METHODS (Atualizados para sincronização)
+    // ═══════════════════════════════════════════════════════
 
     playContinueListening(index) {
       const track = this.continueListening[index]
+      if (!track) return
+
+      // Se for a música atual e estiver tocando, pausar via evento
       if (this.isCurrentTrack(track) && this.isPlaying) {
-        this.pauseTrack()
-      } else {
-        this.playTrack(track, 'continue', index)
+        // Disparar evento de pausa para o MusicPlayer
+        window.dispatchEvent(new CustomEvent('player-toggle-play'))
+        return
       }
+
+      // Converter para formato do player e disparar evento
+      const playerSong = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        cover: track.cover,
+        url: track.preview,
+        duration: track.duration || 30,
+        source: 'continue'
+      }
+
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: this.continueListening.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: t.artist,
+            cover: t.cover,
+            url: t.preview,
+            duration: t.duration || 30
+          })),
+          index: index,
+          context: 'continue'
+        }
+      }))
     },
 
     playMix(mix) {
@@ -1438,35 +1713,47 @@ export default {
     },
 
     async playTrack(track, context, index) {
+      // Se for a mesma track e estiver tocando, pausar
       if (this.isCurrentTrack(track) && this.isPlaying) {
-        this.pauseTrack()
+        window.dispatchEvent(new CustomEvent('player-toggle-play'))
         return
       }
 
-      this.currentTrack = track
+      // Normalizar track para o formato do player
+      const playerSong = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist?.name || track.artist,
+        cover: track.album?.cover_medium || track.cover,
+        url: track.preview || track.url,
+        duration: track.duration || 30,
+        source: context
+      }
+
+      // Determinar playlist baseada no contexto
+      let playlist = []
+      switch(context) {
+        case 'chart':
+          playlist = this.chartTracks
+          break
+        case 'recommended':
+          playlist = this.recommendedTracks
+          break
+        case 'recent':
+          playlist = this.recentlyPlayed
+          break
+        default:
+          playlist = [playerSong]
+      }
 
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
-          song: track,
-          playlist: this.recentlyPlayed,
+          song: playerSong,
+          playlist: playlist,
           index: index,
           context: context
         }
       }))
-
-      this.$nextTick(() => {
-        const audio = this.$refs.audioPlayer
-        if (audio) {
-          audio.src = track.preview
-          audio.play().then(() => {
-            this.isPlaying = true
-            this.showToast('Tocando Agora', track.title, 'success', 'fa fa-play-circle')
-          }).catch(err => {
-            console.error('Erro ao tocar:', err)
-            this.showToast('Erro', 'Não foi possível tocar a música', 'error', 'fa fa-exclamation-circle')
-          })
-        }
-      })
     },
 
     async playArtistTopTrack(artist) {
@@ -1476,7 +1763,33 @@ export default {
         const data = await response.json()
         if (data.data?.length > 0) {
           this.currentArtist = artist
-          this.playTrack(data.data[0], 'artist', 0)
+         
+          // Disparar evento para o player
+          const playerSong = {
+            id: data.data[0].id,
+            title: data.data[0].title,
+            artist: data.data[0].artist?.name,
+            cover: data.data[0].album?.cover_medium,
+            url: data.data[0].preview,
+            duration: data.data[0].duration || 30,
+            source: 'artist'
+          }
+
+          window.dispatchEvent(new CustomEvent('play-song', {
+            detail: {
+              song: playerSong,
+              playlist: data.data.map(t => ({
+                id: t.id,
+                title: t.title,
+                artist: t.artist?.name,
+                cover: t.album?.cover_medium,
+                url: t.preview,
+                duration: t.duration || 30
+              })),
+              index: 0,
+              context: 'artist'
+            }
+          }))
         }
       } catch (error) {
         this.showToast('Erro', 'Falha ao carregar artista', 'error', 'fa fa-exclamation-circle')
@@ -1492,7 +1805,32 @@ export default {
         const data = await response.json()
         if (data.data?.length > 0) {
           this.currentAlbum = album
-          this.playTrack(data.data[0], 'album', 0)
+         
+          const playerSong = {
+            id: data.data[0].id,
+            title: data.data[0].title,
+            artist: album.artist?.name,
+            cover: album.cover_medium,
+            url: data.data[0].preview,
+            duration: data.data[0].duration || 30,
+            source: 'album'
+          }
+
+          window.dispatchEvent(new CustomEvent('play-song', {
+            detail: {
+              song: playerSong,
+              playlist: data.data.map(t => ({
+                id: t.id,
+                title: t.title,
+                artist: album.artist?.name,
+                cover: album.cover_medium,
+                url: t.preview,
+                duration: t.duration || 30
+              })),
+              index: 0,
+              context: 'album'
+            }
+          }))
         }
       } catch (error) {
         this.showToast('Erro', 'Falha ao carregar álbum', 'error', 'fa fa-exclamation-circle')
@@ -1502,40 +1840,14 @@ export default {
     },
 
     playNextInQueue() {
+      // Disparar evento para o MusicPlayer avançar
+      window.dispatchEvent(new CustomEvent('player-next-track'))
       this.showToast('Fila', 'Reproduzindo próxima música', 'info', 'fa fa-step-forward')
     },
 
-    pauseTrack() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.pause()
-        this.isPlaying = false
-      }
-    },
-
-    updateProgress() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        this.currentTime = audio.currentTime
-        this.duration = audio.duration || 30
-        this.progressPercent = (this.currentTime / this.duration) * 100
-      }
-    },
-
-    onLoadedMetadata() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        this.duration = audio.duration || 30
-      }
-    },
-
-    onTrackEnded() {
-      this.isPlaying = false
-      this.progressPercent = 0
-      this.currentTime = 0
-    },
-
-    // ===== NAVIGATION =====
+    // ═══════════════════════════════════════════════════════
+    // NAVIGATION
+    // ═══════════════════════════════════════════════════════
 
     navigateToGenre(genre) {
       this.$router?.push({ path: '/genre', query: { id: genre.id } })
@@ -1567,7 +1879,9 @@ export default {
       this.showToast('Carregando', 'Buscando mais lançamentos...', 'info', 'fa fa-spinner fa-spin')
     },
 
-    // ===== UTILITIES =====
+    // ═══════════════════════════════════════════════════════
+    // UTILITIES
+    // ═══════════════════════════════════════════════════════
 
     isCurrentTrack(track) {
       if (!this.currentTrack || !track) return false
@@ -1588,10 +1902,6 @@ export default {
       return false
     },
 
-    handlePlayerUpdate(e) {
-      this.isPlaying = e.detail?.isPlaying || false
-    },
-
     toggleLike() {
       this.isLiked = !this.isLiked
       const title = this.isLiked ? 'Adicionado aos Favoritos' : 'Removido dos Favoritos'
@@ -1603,7 +1913,7 @@ export default {
     },
 
     formatTime(seconds) {
-      if (!seconds) return "0:00"
+      if (!seconds || isNaN(seconds)) return "0:00"
       const m = Math.floor(seconds / 60)
       const s = Math.floor(seconds % 60)
       return `${m}:${s.toString().padStart(2, '0')}`
@@ -1629,7 +1939,9 @@ export default {
       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjE1MCIgeT0iMTcwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4='
     },
 
-    // ===== TOAST SYSTEM =====
+    // ═══════════════════════════════════════════════════════
+    // TOAST SYSTEM
+    // ═══════════════════════════════════════════════════════
 
     showToast(title, message, type = 'success', icon = 'fa fa-check-circle') {
       if (this.toast.timer) {
@@ -2186,6 +2498,7 @@ export default {
 .note-1 { left: 0; animation-delay: 0s; }
 .note-2 { left: 30px; animation-delay: 1s; }
 .note-3 { left: 60px; animation-delay: 2s; }
+
 /* ========== SECTIONS ========== */
 .section {
   margin-bottom: 48px;
@@ -2439,6 +2752,7 @@ export default {
   background: #000;
   border-radius: 1px;
   animation: equalizer 0.5s ease-in-out infinite;
+  height: 16px;
 }
 
 .equalizer-mini span:nth-child(1) { animation-delay: 0s; height: 6px; }
@@ -2739,6 +3053,7 @@ export default {
   color: #f8fafc;
   border-color: rgba(236, 72, 153, 0.3);
 }
+
 /* ========== CARDS ========== */
 .cards-row {
   display: grid;
@@ -2908,6 +3223,13 @@ export default {
   letter-spacing: 0.5px;
   z-index: 2;
   backdrop-filter: blur(4px);
+}
+
+.time-badge.now-playing {
+  background: #1db954;
+  color: #000;
+  font-weight: 800;
+  animation: livePulse 1.5s ease-in-out infinite;
 }
 
 .match-badge {
@@ -3322,6 +3644,7 @@ export default {
 .empty-playlists .btn-primary {
   display: inline-flex;
 }
+
 /* ========== MODAL ========== */
 .modal-overlay {
   position: fixed;
@@ -3594,18 +3917,6 @@ export default {
 
 .toast-leave-active {
   animation: toastSlideOut 0.3s ease;
-}
-
-/* Embedded Player (hidden) */
-.embedded-player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Fade transition for modal */
