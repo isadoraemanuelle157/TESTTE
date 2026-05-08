@@ -101,4 +101,32 @@ router.get('/album/:id/tracks', async (req, res) => {
   }
 })
 
+router.get('/chart/0/artists', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query
+    const response = await axios.get(`${DEEZER_API_URL}/chart/0/artists`, {
+      params: { limit },
+      timeout: 5000
+    })
+    res.json(response.data)
+  } catch (error) {
+    console.error('❌ Deezer chart artists error:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar chart de artistas do Deezer' })
+  }
+})
+
+// Detalhes do artista
+router.get('/artist/:id', async (req, res) => {
+  try {
+    const response = await axios.get(
+      `${DEEZER_API_URL}/artist/${req.params.id}`,
+      { timeout: 5000 }
+    )
+    res.json(response.data)
+  } catch (error) {
+    console.error('❌ Deezer artist error:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar artista do Deezer' })
+  }
+})
+
 module.exports = router

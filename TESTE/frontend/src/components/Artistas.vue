@@ -280,27 +280,27 @@ async getFollowersCount(artist) {
     console.error(error)
   }
 },
-  async loadArtists() {
+ async loadArtists() {
   this.error = null
 
   try {
     // =========================
-    // 🔥 DEEZER
+    // 🔥 DEEZER (via backend proxy)
     // =========================
     const deezerResponse = await fetch(
-      `${this.CORS_PROXY}${this.DEEZER_API}/chart/0/artists?limit=10`
+      'http://localhost:3002/deezer/chart/0/artists?limit=10'
     )
     const deezerData = await deezerResponse.json()
 
     let deezerArtists = []
 
     if (deezerData.data) {
-      // 🔥 busca detalhes reais (IMPORTANTE)
+      // Busca detalhes reais de cada artista
       const detailed = await Promise.all(
         deezerData.data.map(async (a) => {
           try {
             const res = await fetch(
-              `${this.CORS_PROXY}${this.DEEZER_API}/artist/${a.id}`
+              `http://localhost:3002/deezer/artist/${a.id}`
             )
             const details = await res.json()
 
@@ -310,7 +310,7 @@ async getFollowersCount(artist) {
               picture: details.picture_medium,
               picture_medium: details.picture_medium,
               picture_big: details.picture_big,
-              nb_fan: details.nb_fan || 0, // ✅ REAL
+              nb_fan: details.nb_fan || 0,
               source: 'deezer'
             }
           } catch {
@@ -331,11 +331,18 @@ async getFollowersCount(artist) {
     }
 
     // =========================
-    // 🔥 SPOTIFY (DETALHE REAL)
+    // 🔥 SPOTIFY (via backend)
     // =========================
     const spotifyResponse = await fetch(
       'http://localhost:3002/spotify/artists/popular?limit=10'
     )
+    
+    // Verifica se a resposta é JSON válido
+    const contentType = spotifyResponse.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Resposta do Spotify não é JSON')
+    }
+
     const spotifyData = await spotifyResponse.json()
 
     let spotifyArtists = []
@@ -355,7 +362,7 @@ async getFollowersCount(artist) {
               picture: details.images?.[2]?.url || details.images?.[0]?.url,
               picture_medium: details.images?.[1]?.url || details.images?.[0]?.url,
               picture_big: details.images?.[0]?.url,
-              nb_fan: details.followers?.total || 0, // ✅ REAL
+              nb_fan: details.followers?.total || 0,
               source: 'spotify'
             }
           } catch {
@@ -392,13 +399,14 @@ async getFollowersCount(artist) {
       seen.add(key)
       return true
     })
+
     localStorage.setItem('artists_cache', JSON.stringify(this.artists))
 
     this.$nextTick(() => this.checkArrows())
 
   } catch (error) {
-    console.error(error)
-    this.error = 'Erro ao carregar artistas'
+    console.error('Erro ao carregar artistas:', error)
+    this.error = 'Erro ao carregar artistas. Verifique se o servidor está rodando.'
   } finally {
     this.isLoading = false
   }
@@ -422,7 +430,6 @@ normalizeMongoId(value) {
         const genres = [132, 116, 152, 113]; // Pop, Rap/Hip Hop, Rock, Dance
         const randomGenre = genres[Math.floor(Math.random() * genres.length)];
         
-        const response = await fetch(`${this.CORS_PROXY}${this.DEEZER_API}/genre/${randomGenre}/artists?limit=15`);
         const data = await response.json();
         
         if (data.data && data.data.length > 0) {

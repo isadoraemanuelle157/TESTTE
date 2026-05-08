@@ -721,7 +721,7 @@
             if (this.source === 'spotify') {
               const [artistRes, topTracksRes, albumsRes, relatedRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/spotify/artist/${artistId}`),
-                fetch(`${API_BASE_URL}/spotify/artist/${artistId}/top-tracks?market=BR`),
+                fetch(`${API_BASE_URL}/spotify/artist/${artistId}/top-tracks`),
                 fetch(`${API_BASE_URL}/spotify/artist/${artistId}/albums?limit=20`),
                 fetch(`${API_BASE_URL}/spotify/artist/${artistId}/related-artists`)
               ])

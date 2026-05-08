@@ -805,37 +805,56 @@ export default {
     }
   },
 
-  mounted() {
-    document.addEventListener('click', this.handleClickOutside)
+mounted() {
+  document.addEventListener('click', this.handleClickOutside)
 
-    const initialCategory = this.$route?.query?.q || 'Brasil'
+  // Verifica se veio de um gênero do Dashboard (query param 'q')
+  const urlQuery = this.$route?.query?.q
+  const urlType = this.$route?.query?.type
+
+  if (urlQuery) {
+    // Se veio do Dashboard via gênero
+    this.searchQuery = urlQuery
+    this.currentTopCategory = urlQuery
+    
+    if (urlType === 'genre') {
+      // Busca específica por gênero
+      this.searchAndGo(urlQuery)
+    } else {
+      // Busca normal
+      this.loadTopTracksByCategory(urlQuery)
+      this.performSearch()
+    }
+  } else {
+    // Comportamento padrão
+    const initialCategory = 'Brasil'
     this.currentTopCategory = initialCategory
-    this.searchQuery = this.$route?.query?.q || ''
-
     this.loadInitialData(initialCategory)
-    this.loadLikedTracks()
-    this.loadFavoritas()
-    this.loadVibes()
-    this.loadGeneros()
-    this.loadHistory()
-  },
+  }
+
+  this.loadLikedTracks()
+  this.loadFavoritas()
+  this.loadVibes()
+  this.loadGeneros()
+  this.loadHistory()
+},
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
     if (this.searchTimeout) clearTimeout(this.searchTimeout)
   },
-
-  watch: {
-    '$route.query.q': {
-      immediate: false,
-      handler(newValue) {
-        const category = newValue || 'Brasil'
-        this.currentTopCategory = category
-        this.loadTopTracksByCategory(category)
+watch: {
+  '$route.query.q': {
+    immediate: true,
+    handler(newValue) {
+      if (newValue) {
+        this.searchQuery = newValue
+        this.currentTopCategory = newValue
+        this.searchAndGo(newValue)
       }
     }
-  },
-
+  }
+},
   methods: {
     // ===== NOVO: Filtrar por tipo para seções separadas =====
     getFilteredByType(type) {

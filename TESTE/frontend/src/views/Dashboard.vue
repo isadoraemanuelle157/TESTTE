@@ -427,45 +427,59 @@
       </section>
 
       <!-- SEÇÃO: Top 10 Brasil -->
-      <section class="section" v-if="chartTracks.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-fire section-icon hot"></i>
-              Top 10 Brasil
-            </h2>
-            <span class="section-subtitle">Mais tocados do momento</span>
-          </div>
-          <button class="see-all" @click="loadMoreTracks">
-            {{ loadingMoreTracks ? 'Carregando...' : 'Ver mais' }}
-            <i class="fa" :class="loadingMoreTracks ? 'fa-spinner fa-spin' : 'fa-chevron-right'"></i>
-          </button>
+      <!-- SEÇÃO: Top 10 Brasil (SPOTIFY REAL) -->
+<section class="section" v-if="spotifyTop10.length > 0 || chartTracks.length > 0">
+  <div class="section-header">
+    <div class="section-title-wrapper">
+      <h2 class="section-title">
+        <i class="fa fa-fire section-icon hot"></i>
+        Top 10 Brasil
+      </h2>
+      <span class="section-subtitle">
+        {{ spotifyTop10.length > 0 ? 'Mais populares no Spotify' : 'Mais tocados do momento' }}
+        <span v-if="spotifyTop10.length > 0" class="spotify-badge">
+          <i class="fa fa-spotify"></i> Spotify
+        </span>
+      </span>
+    </div>
+    <button class="see-all" @click="showAllTop10 = !showAllTop10">
+      {{ showAllTop10 ? 'Ver menos' : 'Ver mais' }}
+      <i class="fa" :class="showAllTop10 ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
+    </button>
+  </div>
+  
+  <div class="cards-row" :class="{ 'expanded': showAllTop10 }">
+    <div
+      v-for="(track, index) in (spotifyTop10.length > 0 ? spotifyTop10 : chartTracks).slice(0, showAllTop10 ? 10 : 5)"
+      :key="'top10-'+track.id"
+      class="music-card"
+      @click="playTrack(track, 'top10', index)"
+      :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
+    >
+      <div class="card-image">
+        <img :src="track.cover || track.album?.cover_medium" @error="handleImageError" alt="Cover" />
+        <div class="rank-badge" :class="{ 'top3': index < 3 }">{{ index + 1 }}</div>
+        <div class="play-button-overlay">
+          <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
         </div>
-        <div class="cards-row">
-          <div
-            v-for="(track, index) in chartTracks.slice(0, 5)"
-            :key="'chart-'+track.id"
-            class="music-card"
-            @click="playTrack(track, 'chart', index)"
-            :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
-          >
-            <div class="card-image">
-              <img :src="track.album?.cover_medium || track.cover" @error="handleImageError" alt="Cover" />
-              <div class="rank-badge" :class="{ 'top3': index < 3 }">{{ index + 1 }}</div>
-              <div class="play-button-overlay">
-                <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
-              </div>
-              <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
-            </div>
-            <div class="card-info">
-              <h3 class="card-title">{{ track.title }}</h3>
-              <p class="card-artist">{{ track.artist?.name || track.artist }}</p>
-            </div>
-          </div>
+        <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
+          <span v-for="n in 4" :key="n"></span>
         </div>
-      </section>
+        <!-- Badge do Spotify -->
+        <div class="source-badge spotify" v-if="track.source === 'spotify'">
+          <i class="fa fa-spotify"></i>
+        </div>
+      </div>
+      <div class="card-info">
+        <h3 class="card-title">{{ track.title }}</h3>
+        <p class="card-artist">{{ track.artist?.name || track.artist }}</p>
+        <p class="card-popularity" v-if="track.popularity">
+          <i class="fa fa-fire"></i> {{ track.popularity }}% popular
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
       <!-- SEÇÃO: Artistas que Você Segue -->
       <section class="section" v-if="followedArtists.length > 0">
@@ -551,44 +565,184 @@
       </section>
 
       <!-- SEÇÃO: Lançamentos Recentes -->
-      <section class="section" v-if="newReleases.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-bullhorn section-icon new"></i>
-              Lançamentos
-            </h2>
-            <span class="section-subtitle">Novidades da semana</span>
+      <!-- SEÇÃO: Lançamentos Recentes (SPOTIFY REAL) -->
+<section class="section" v-if="spotifyNewReleases.length > 0 || newReleases.length > 0">
+  <div class="section-header">
+    <div class="section-title-wrapper">
+      <h2 class="section-title">
+        <i class="fa fa-bullhorn section-icon new"></i>
+        Lançamentos
+      </h2>
+      <span class="section-subtitle">
+        {{ spotifyNewReleases.length > 0 ? 'Novidades do Spotify' : 'Novidades da semana' }}
+        <span v-if="spotifyNewReleases.length > 0" class="spotify-badge">
+          <i class="fa fa-spotify"></i> Spotify
+        </span>
+      </span>
+    </div>
+    <button class="see-all" @click="loadMoreReleases">
+      Ver mais <i class="fa fa-chevron-right"></i>
+    </button>
+  </div>
+  
+  <div class="cards-row">
+    <div
+      v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, 5)"
+      :key="'release-'+album.id"
+      class="music-card album-card"
+      @click="playAlbumTracks(album)"
+      :class="{ 'active': isCurrentAlbum(album) }"
+    >
+      <div class="card-image">
+        <img :src="album.cover || album.cover_medium" @error="handleImageError" alt="Album Cover" />
+        <div class="play-button-overlay">
+          <i class="fa fa-play-circle"></i>
+        </div>
+        <div class="new-badge"><i class="fa fa-star"></i> NEW</div>
+        <div class="source-badge spotify" v-if="album.source === 'spotify'">
+          <i class="fa fa-spotify"></i>
+        </div>
+      </div>
+      <div class="card-info">
+        <h3 class="card-title">{{ album.title }}</h3>
+        <p class="card-artist">{{ album.artist?.name || album.artist }}</p>
+        <p class="card-date">
+          <i class="fa fa-calendar"></i> {{ formatDate(album.release_date) }}
+          <span v-if="album.total_tracks">• {{ album.total_tracks }} faixas</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO: Artistas Populares (SPOTIFY) -->
+<section class="section artists-section" v-if="spotifyPopularArtists.length > 0">
+  <div class="section-header">
+    <div class="section-title-wrapper">
+      <h2 class="section-title">
+        <i class="fa fa-users section-icon artist"></i>
+        Artistas em Alta
+      </h2>
+      <span class="section-subtitle">
+        Os maiores nomes da música global
+        <span class="spotify-badge">
+          <i class="fa fa-spotify"></i> Spotify
+        </span>
+      </span>
+    </div>
+    <button @click="openAllArtists" class="see-all">
+      Ver todos
+      <i class="fa fa-chevron-right"></i>
+    </button>
+  </div>
+
+  <!-- Carousel Container -->
+  <div v-if="spotifyPopularArtists.length && !error" class="carousel-container">
+    <button
+      v-if="showLeft"
+      class="nav-btn prev"
+      @click="scroll(-320)"
+      aria-label="Anterior"
+    >
+      <i class="fa fa-chevron-left"></i>
+    </button>
+
+    <div class="artists-track" ref="scrollContainer" @scroll="checkArrows">
+      <article
+        v-for="artist in spotifyPopularArtists"
+        :key="artist.id"
+        class="artist-card"
+        @click="goToArtist(artist)"
+      >
+        <div class="image-wrapper">
+          <div class="image-container">
+            <img 
+              :src="artist.picture_big || artist.picture_medium || artist.picture" 
+              :alt="artist.name"
+              loading="lazy"
+              @error="handleImageError"
+            />
           </div>
-          <button class="see-all" @click="loadMoreReleases">
-            Ver mais <i class="fa fa-chevron-right"></i>
+          <div class="source-badge spotify">SP</div>
+          
+          <button 
+            class="follow-btn-float"
+            :class="{ 'following': isFollowing(artist.id) }"
+            @click.stop="toggleFollow(artist)"
+          >
+            <i v-if="!isFollowing(artist.id)" class="fa fa-plus"></i>
+            <i v-else class="fa fa-check"></i>
           </button>
         </div>
-        <div class="cards-row">
-          <div
-            v-for="(album, index) in newReleases.slice(0, 5)"
-            :key="'release-'+album.id"
-            class="music-card album-card"
-            @click="playAlbumTracks(album)"
-            :class="{ 'active': isCurrentAlbum(album) }"
+        
+        <div class="artist-info">
+          <h3 class="artist-name">{{ artist.name }}</h3>
+          <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
+          <div class="monthly-listeners">
+            <span class="listeners-count">{{ formatListeners(artist.followers) }}</span>
+            <span class="listeners-label">seguidores</span>
+          </div>
+          <button 
+            class="follow-btn"
+            :class="{ 'following': isFollowing(artist.id) }"
+            @click.stop="toggleFollow(artist)"
           >
-            <div class="card-image">
-              <img :src="album.cover_medium" @error="handleImageError" alt="Album Cover" />
-              <div class="play-button-overlay">
-                <i class="fa fa-play-circle"></i>
-              </div>
-              <div class="new-badge"><i class="fa fa-star"></i> NEW</div>
+            <span class="btn-text">{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <button
+      v-if="showRight"
+      class="nav-btn next"
+      @click="scroll(320)"
+      aria-label="Próximo"
+    >
+      <i class="fa fa-chevron-right"></i>
+    </button>
+  </div>
+</section>
+
+<!-- Modal Todos os Artistas -->
+<transition name="modal">
+  <div v-if="showAllModal" class="modal-overlay" @click.self="closeAllModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Todos os Artistas</h3>
+        <button @click="closeAllModal" class="close-btn">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="artists-list">
+          <div 
+            v-for="artist in spotifyPopularArtists" 
+            :key="artist.id" 
+            class="list-item"
+            @click="goToArtist(artist)"
+          >
+            <div class="list-image">
+              <img :src="artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError">
             </div>
-            <div class="card-info">
-              <h3 class="card-title">{{ album.title }}</h3>
-              <p class="card-artist">{{ album.artist?.name }}</p>
-              <p class="card-date"><i class="fa fa-calendar"></i> {{ formatDate(album.release_date) }}</p>
+            <div class="list-info">
+              <h4>{{ artist.name }}</h4>
+              <p>{{ getArtistGenre(artist) }} • {{ formatListeners(artist.followers) }} seguidores</p>
             </div>
+            <button 
+              class="list-follow-btn"
+              :class="{ 'following': isFollowing(artist.id) }"
+              @click.stop="toggleFollow(artist)"
+            >
+              <span>{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
+            </button>
           </div>
         </div>
-      </section>
-
-
+      </div>
+    </div>
+  </div>
+</transition>
 
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">
@@ -658,6 +812,14 @@ export default {
     return {
       // API Configuration
       API_BASE_URL: 'http://localhost:3002',
+       showLeft: false,
+    showRight: true,
+    showAllModal: false,
+    showAllTop10: false,
+      spotifyTop10: [],        // ← NOVO: Top 10 real do Spotify
+    spotifyNewReleases: [],  // ← NOVO: Lançamentos reais do Spotify
+    spotifyPopularArtists: [], // ← NOVO: Artistas populares do Spotify
+    loadingSpotify: false,
 
       // User State
       currentUser: {
@@ -705,9 +867,7 @@ export default {
       showAllCurtidas: false,
 
       // API Data
-      chartTracks: [],
       popularArtists: [],
-      newReleases: [],
       genres: [],
       recommendedTracks: [],
       followedArtists: [],
@@ -787,6 +947,7 @@ mounted() {
       this.loadUserPlaylists()
       this.carregarCurtidas()
     }, 0)
+     await this.loadSpotifyData()
   },
 
   beforeDestroy() {
@@ -810,6 +971,133 @@ mounted() {
   },
 
   methods: {
+    goToArtist(artist) {
+    this.$router.push({
+      name: 'DetalheCantor',
+      params: { id: artist.id },
+      query: { source: artist.source || 'spotify' }
+    })
+  },
+
+  openAllArtists() {
+    this.showAllModal = true
+    document.body.style.overflow = 'hidden'
+  },
+
+  closeAllModal() {
+    this.showAllModal = false
+    document.body.style.overflow = ''
+  },
+
+  // ==================== CAROUSEL ====================
+  
+  scroll(amount) {
+    const container = this.$refs.scrollContainer
+    if (container) {
+      container.scrollBy({ left: amount, behavior: "smooth" })
+      setTimeout(this.checkArrows, 350)
+    }
+  },
+
+  checkArrows() {
+    const container = this.$refs.scrollContainer
+    if (!container) return
+    
+    const tolerance = 5
+    this.showLeft = container.scrollLeft > tolerance
+    this.showRight = 
+      container.scrollLeft + container.clientWidth < container.scrollWidth - tolerance
+  },
+
+  // ==================== FORMATTERS ====================
+  
+  formatListeners(num) {
+    if (!num) return '0'
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1).replace('.0', '') + 'M'
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1).replace('.0', '') + 'K'
+    }
+    return num.toString()
+  },
+  
+  getArtistGenre(artist) {
+    if (artist.genres && artist.genres.length > 0) {
+      // Pegar os 2 primeiros gêneros em português simplificado
+      const genreMap = {
+        'sertanejo': 'Sertanejo',
+        'funk': 'Funk',
+        'mpb': 'MPB',
+        'brazilian rock': 'Rock BR',
+        'pop': 'Pop',
+        'rap': 'Rap',
+        'hip hop': 'Hip Hop',
+        'reggaeton': 'Reggaeton',
+        'electronic': 'Eletrônica',
+        'indie': 'Indie'
+      }
+      
+      const mainGenre = artist.genres[0].toLowerCase()
+      for (const [key, value] of Object.entries(genreMap)) {
+        if (mainGenre.includes(key)) return value
+      }
+      return artist.genres[0].charAt(0).toUpperCase() + artist.genres[0].slice(1, 15)
+    }
+    return 'Artista'
+  },
+
+  // ==================== FOLLOW (adaptado para Spotify) ====================
+  
+  async toggleFollow(artist) {
+    // Se for artista do Spotify, só permite favoritar localmente
+    if (artist.source === 'spotify') {
+      // Implementar favorito local no banco ou localStorage
+      const favorites = JSON.parse(localStorage.getItem('favorite_artists') || '[]')
+      const index = favorites.findIndex(f => f.id === artist.id)
+      
+      if (index >= 0) {
+        favorites.splice(index, 1)
+        this.showToast('Removido', `${artist.name} removido dos favoritos`, 'info')
+      } else {
+        favorites.push({
+          id: artist.id,
+          name: artist.name,
+          picture: artist.picture,
+          source: 'spotify'
+        })
+        this.showToast('Favoritado', `${artist.name} adicionado aos favoritos`, 'success')
+      }
+      
+      localStorage.setItem('favorite_artists', JSON.stringify(favorites))
+      return
+    }
+    
+    // Se for artista do DB, usar o fluxo original...
+    // (manter código existente de toggleFollow para DB)
+  },
+
+  isFollowing(artistId) {
+    const favorites = JSON.parse(localStorage.getItem('favorite_artists') || '[]')
+    return favorites.some(f => f.id === artistId)
+  },
+    async loadSpotifyData() {
+  this.loadingSpotify = true
+  try {
+    await Promise.all([
+      this.loadSpotifyTop10(),
+      this.loadSpotifyNewReleases(),
+      this.loadSpotifyPopularArtists()
+    ])
+  } catch (error) {
+    console.error('Erro Spotify:', error)
+    // Fallback para Deezer se Spotify falhar
+    this.loadChartTracks()
+    this.loadNewReleases()
+  } finally {
+    this.loadingSpotify = false
+  }
+    },
 async loadMadeForYou() {
   try {
     const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
@@ -1958,11 +2246,18 @@ async loadGenres() {
     // NAVIGATION
     // ═══════════════════════════════════════════════════════
 
-    navigateToGenre(genre) {
-      this.$router?.push({ path: '/genre', query: { id: genre.id } })
-        || this.showToast('Gênero', `Explorando: ${genre.name}`, 'info')
-    },
-
+navigateToGenre(genre) {
+  // Navega para /search com o gênero como parâmetro de query
+  if (this.$router) {
+    this.$router.push({
+      path: '/search',
+      query: { q: genre.name, type: 'genre' }
+    })
+  } else {
+    // Fallback se router não estiver disponível
+    window.location.href = `/search?q=${encodeURIComponent(genre.name)}&type=genre`
+  }
+},
     showAllPersonal() {
       this.showAllPersonalContent = !this.showAllPersonalContent
     },
@@ -2264,7 +2559,63 @@ async loadGenres() {
   border-color: rgba(29,185,84,0.3);
   box-shadow: 0 8px 32px rgba(29,185,84,0.1);
 }
+.spotify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 8px;
+}
 
+/* Source Badge no Card */
+.source-badge.spotify {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #1db954;
+  color: #000;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 2;
+}
+
+/* Popularidade */
+.card-popularity {
+  font-size: 11px;
+  color: #ff6b6b;
+  margin: 4px 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Artists Section Adaptação */
+.artists-section {
+  padding: 40px 0;
+  background: linear-gradient(180deg, #0a0a0a 0%, #121212 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.artists-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
 .stat-icon {
   width: 48px;
   height: 48px;
