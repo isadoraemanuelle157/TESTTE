@@ -467,48 +467,6 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Recomendado para Você -->
-      <section class="section" v-if="recommendedTracks.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-lightbulb-o section-icon rec"></i>
-              Recomendado para Você
-            </h2>
-            <span class="section-subtitle">Baseado nos seus artistas favoritos</span>
-          </div>
-          <button class="see-all" @click="refreshRecommendations">
-            <i class="fa fa-refresh"></i> Atualizar
-          </button>
-        </div>
-        <div class="cards-row">
-          <div
-            v-for="(track, index) in recommendedTracks.slice(0, 5)"
-            :key="'rec-'+track.id"
-            class="music-card"
-            @click="playTrack(track, 'recommended', index)"
-            :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
-          >
-            <div class="card-image">
-              <img :src="track.album?.cover_medium || track.cover" @error="handleImageError" alt="Cover" />
-              <div class="play-button-overlay">
-                <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
-              </div>
-              <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
-              <div class="match-badge">
-                <i class="fa fa-thumbs-up"></i> {{ track.match }}% match
-              </div>
-            </div>
-            <div class="card-info">
-              <h3 class="card-title">{{ track.title }}</h3>
-              <p class="card-artist">{{ track.artist?.name || track.artist }}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- SEÇÃO: Artistas que Você Segue -->
       <section class="section" v-if="followedArtists.length > 0">
         <div class="section-header">
@@ -699,7 +657,6 @@ export default {
   data() {
     return {
       // API Configuration
-     DEEZER_API: 'https://api.deezer.com',
       API_BASE_URL: 'http://localhost:3002',
 
       // User State
@@ -886,16 +843,17 @@ async loadMadeForYou() {
         id: mix.id,
         title: mix.title,
         description: mix.description,
-        tracks: mix.tracks || mix._tracks?.length || 0,
-        cover: mix.cover || mix._tracks?.[0]?.cover || "",
+        tracks: mix.tracks || 0,
+        cover: mix.cover || "",
         gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
-        _tracks: mix._tracks || []
+        _tracks: mix._tracks || []  // ← IMPORTANTE: guardar as músicas reais
       }))
 
       console.log(`✅ ${this.madeForYou.length} mixes personalizados carregados`)
       return
     }
 
+    // Se não tem mixes, carrega mock
     this.loadMockMadeForYou()
   } catch (error) {
     console.error("❌ Erro ao carregar Feito para Você:", error)
@@ -1000,7 +958,7 @@ async loadMadeForYou() {
    * Tocar um mix personalizado
    * Agora usa as tracks reais armazenadas no mix
    */
-  playMix(mix) {
+playMix(mix) {
   if (!mix._tracks || mix._tracks.length === 0) {
     this.showToast("Mix vazio", "Nenhuma música disponível neste mix", "info", "fa fa-info-circle")
     return
@@ -1719,7 +1677,7 @@ async loadAllData() {
         this.generateRecommendations()
       }
       try {
-        const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=10`)
+        const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/tracks?limit=10`)
         const data = await response.json()
         if (data.data) {
           this.chartTracks = data.data
@@ -1730,7 +1688,7 @@ async loadAllData() {
 
     async loadNewReleases() {
       try {
-        const response = await fetch(`${this.DEEZER_API}/chart/0/albums?limit=10`)
+       const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/albums?limit=10`)
         const data = await response.json()
         if (data.data) this.newReleases = data.data
       } catch (error) {
@@ -1740,7 +1698,7 @@ async loadAllData() {
 
 async loadGenres() {
   try {
-    const response = await fetch(`${this.DEEZER_API}/genre`)
+   const response = await fetch(`${this.API_BASE_URL}/deezer/genre`)
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
@@ -1906,7 +1864,9 @@ async loadGenres() {
     async playArtistTopTrack(artist) {
       this.loading = true
       try {
-        const response = await fetch(`${this.DEEZER_API}/artist/${artist.id}/top?limit=5`)
+         const response = await fetch(
+      `${this.API_BASE_URL}/deezer/artist/${artist.id}/top?limit=5`
+    )
         const data = await response.json()
         if (data.data?.length > 0) {
           this.currentArtist = artist
@@ -1948,7 +1908,9 @@ async loadGenres() {
     async playAlbumTracks(album) {
       this.loading = true
       try {
-        const response = await fetch(`${this.DEEZER_API}/album/${album.id}/tracks`)
+        const response = await fetch(
+      `${this.API_BASE_URL}/deezer/album/${album.id}/tracks`
+    )
         const data = await response.json()
         if (data.data?.length > 0) {
           this.currentAlbum = album
