@@ -185,8 +185,6 @@ const notificacaoRoutes = safeRequire('./routes/notificacaoRoutes')
 const privacidadeRoutes = safeRequire('./routes/privacidadeAtividadeRoutes')
 const matchRoutes = safeRequire('./routes/matchMusicalRoutes')                                                               
 const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
-const deezerRoutes = require('./routes/deezerRoutes')
-const spotifyRoutes = require('./routes/spotifyRoutes') 
 // ============================================
 // 📌 ROTAS APP
 // ============================================
@@ -204,8 +202,158 @@ app.use('/historico', historicoRoutes)
 app.use('/notificacoes', notificacaoRoutes)                                                                                                                                  
 app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)
-app.use('/deezer', deezerRoutes)
-app.use('/spotify', spotifyRoutes) 
+
+// ============================================
+// 🎵 SPOTIFY SEARCH
+// ============================================
+app.get('/spotify/search', async (req, res) => {
+  try {
+    const {
+      q,
+      type = 'track,artist,album',
+      limit = 10,
+      market = 'BR'
+    } = req.query
+
+    if (!q) {
+      return res.status(400).json({
+        error: 'Query obrigatória'
+      })
+    }
+
+    const cacheKey = `spotify_search_${q}_${type}_${limit}`
+
+    const cached = getCache(cacheKey, 60000)
+
+    if (cached) {
+      return res.json(cached)
+    }
+
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: {
+        q,
+        type,
+        limit,
+        market
+      }
+    })
+
+    setCache(cacheKey, response.data)
+
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('❌ Spotify search:', error.message)
+
+    res.status(500).json({
+      error: 'Erro busca Spotify'
+    })
+  }
+})
+
+// ============================================
+// 🎵 SPOTIFY ARTIST
+// ============================================
+app.get('/spotify/artist/:id', async (req, res) => {
+  try {
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/artists/${req.params.id}`
+    })
+
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('❌ Artist error:', error.message)
+
+    res.status(500).json({
+      error: 'Erro artista Spotify'
+    })
+  }
+})
+
+// ============================================
+// 🎵 SPOTIFY ALBUM
+// ============================================
+app.get('/spotify/album/:id', async (req, res) => {
+  try {
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/albums/${req.params.id}`
+    })
+
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('❌ Album error:', error.message)
+
+    res.status(500).json({
+      error: 'Erro álbum Spotify'
+    })
+  }
+})
+
+// ============================================
+// 🎵 PLAYLIST
+// ============================================
+app.get('/spotify/playlist/:id', async (req, res) => {
+  try {
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/playlists/${req.params.id}/tracks`,
+      params: {
+        limit: 50,
+        market: 'BR'
+      }
+    })
+
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('❌ Playlist error:', error.message)
+
+    res.status(500).json({
+      error: 'Erro playlist Spotify'
+    })
+  }
+})
+
+// ============================================
+// 🎵 DEEZER SEARCH
+// ============================================
+app.get('/deezer/search', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query
+
+    if (!q) {
+      return res.status(400).json({
+        error: 'Query obrigatória'
+      })
+    }
+
+    const response = await axios.get(
+      `${DEEZER_API_URL}/search`,
+      {
+        params: {
+          q,
+          limit
+        },
+        timeout: 5000
+      }
+    )
+
+    res.json(response.data)
+
+  } catch (error) {
+    console.error('❌ Deezer error:', error.message)
+
+    res.status(500).json({
+      error: 'Erro Deezer'
+    })
+  }
+})
 
 // ============================================
 // 🎧 VIBES
@@ -239,6 +387,177 @@ const MOODS = [
     gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)'
   }
 ]
+
+app.get('/spotify/vibes', async (req, res) => {
+  try {
+    const cacheKey = 'spotify_vibes'
+
+    const cached = getCache(cacheKey, 900000)
+
+    if (cached) {
+      return res.json(cached)
+    }
+
+    const vibes = MOODS.map((mood, index) => ({
+      id: `vibe_${index}`,
+      ...mood
+    }))
+
+    setCache(cacheKey, vibes)
+
+    res.json(vibes)
+
+  } catch (error) {
+    console.error('❌ Erro vibes:', error.message)
+
+    res.status(500).json({
+      error: 'Erro vibes'
+    })
+  }
+})
+
+// ============================================
+// 🎵 ARTISTAS POPULARES
+// ============================================
+app.get('/spotify/artists/popular', async (req, res) => {
+  try {
+    const genres = [
+      'pop',
+      'rock',
+      'funk',
+      'rap',
+      'sertanejo',
+      'mpb'
+    ]
+
+    const groups = []
+
+    for (const genre of genres) {
+      try {
+        const response = await spotifyRequest({
+          method: 'GET',
+          url: `${SPOTIFY_API_URL}/search`,
+          params: {
+            q: genre,
+            type: 'artist',
+            limit: 3,
+            market: 'BR'
+          }
+        })
+
+        groups.push({
+          genre,
+          artists: response.data.artists.items
+        })
+
+        await sleep(1200)
+
+      } catch (err) {
+        console.warn(`⚠️ Falha gênero ${genre}`)
+      }
+    }
+
+    res.json({
+      totalGenres: groups.length,
+      groups
+    })
+
+  } catch (error) {
+    console.error('❌ Popular artists:', error.message)
+
+    res.status(500).json({
+      error: 'Erro artistas populares'
+    })
+  }
+})
+
+// ============================================
+// 🎵 ÁUDIO DA MÚSICA
+// ============================================
+app.get('/musicas/:id/audio', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const query = id
+
+    // Spotify
+    try {
+      const spotifyResponse = await spotifyRequest({
+        method: 'GET',
+        url: `${SPOTIFY_API_URL}/search`,
+        params: {
+          q: query,
+          type: 'track',
+          limit: 5,
+          market: 'BR'
+        }
+      })
+
+      const spotifyTrack =
+        spotifyResponse.data?.tracks?.items?.find(
+          track => track.preview_url
+        )
+
+      if (spotifyTrack) {
+        return res.json({
+          source: 'spotify',
+          url: spotifyTrack.preview_url,
+          title: spotifyTrack.name,
+          artist: spotifyTrack.artists
+            ?.map(a => a.name)
+            .join(', '),
+
+          cover:
+            spotifyTrack.album?.images?.[0]?.url
+        })
+      }
+
+    } catch (err) {
+      console.log('⚠️ Spotify preview falhou')
+    }
+
+    // Deezer fallback
+    try {
+      const deezerResponse = await axios.get(
+        `${DEEZER_API_URL}/search`,
+        {
+          params: {
+            q: query,
+            limit: 5
+          }
+        }
+      )
+
+      const track = deezerResponse.data?.data?.find(
+        t => t.preview
+      )
+
+      if (track) {
+        return res.json({
+          source: 'deezer',
+          url: track.preview,
+          title: track.title,
+          artist: track.artist?.name,
+          cover: track.album?.cover_medium
+        })
+      }
+
+    } catch (err) {
+      console.log('⚠️ Deezer preview falhou')
+    }
+
+    res.status(404).json({
+      error: 'Preview não encontrado'
+    })
+
+  } catch (error) {
+    console.error('❌ Audio error:', error.message)
+
+    res.status(500).json({
+      error: 'Erro áudio'
+    })
+  }
+})
 
 // ============================================
 // 💚 HEALTH CHECK
@@ -280,15 +599,16 @@ app.listen(PORT, () => {
   console.log('GET /spotify/artist/:id')
   console.log('GET /spotify/album/:id')
   console.log('GET /spotify/playlist/:id')
+  console.log('GET /spotify/artists/popular')
+  console.log('GET /spotify/vibes')
 
   console.log('')
   console.log('🎧 Deezer:')
   console.log('GET /deezer/search')
-  console.log('GET /deezer/chart/0/tracks')
-  console.log('GET /deezer/chart/0/albums')
-  console.log('GET /deezer/genre')
-  console.log('GET /deezer/artist/:id/top')
-  console.log('GET /deezer/album/:id/tracks')
+
+  console.log('')
+  console.log('🎵 Áudio:')
+  console.log('GET /musicas/:id/audio')
 
   console.log('')
   console.log('💚 Health:')
