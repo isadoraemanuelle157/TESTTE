@@ -1,8 +1,8 @@
+  
+  require('dotenv').config()
   const mongoose = require('mongoose');
-
-  const url = "mongodb+srv://isadoraemanuelle176:isamanu7@trabalhofinal.dj6x0yt.mongodb.net/soundUp?retryWrites=true&w=majority";
-
-  mongoose.connect(url)
+  
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log("Conectado ao MongoDB Atlas!"))
     .catch(err => console.error("Erro ao conectar:", err));
 

@@ -167,7 +167,7 @@
                   class="preset-avatar-btn"
                   :class="{ active: onboardingData.avatar === `https://i.pravatar.cc/300?img=${n + 10}` }"
                 >
-                  <img :src="`https://i.pravatar.cc/300?img=${n + 10}`" alt="Avatar option">
+                  <img :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${n + 10}`" alt="Avatar option">
                 </button>
               </div>
             </div>
@@ -926,6 +926,22 @@ async mounted() {
 },
 
     methods: {
+      selectPresetAvatar(n) {
+  this.onboardingData.avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${n + 10}`
+},
+getLoggedUser() {
+  return JSON.parse(
+    localStorage.getItem('user') ||
+    localStorage.getItem('usuario') ||
+    'null'
+  )
+},
+
+getLoggedUserId() {
+  const user = this.getLoggedUser()
+  return user?.id || user?._id || null
+},
+
       async bootstrapUser() {
   try {
     const savedAuthUser = JSON.parse(localStorage.getItem('user') || 'null')
@@ -954,12 +970,14 @@ async mounted() {
     if (data.onboardingCompleto) {
       this.hasProfile = true
 
-      await Promise.all([
-        this.buscarSugestoes(),
-        this.buscarCurtidas(),
-        this.buscarFavoritos(),
-        this.buscarMatches()
-      ])
+await Promise.all([
+  this.buscarCurtidas(),
+  this.buscarFavoritos(),
+  this.buscarMatches()
+])
+
+await this.buscarSugestoes()
+
     } else {
       this.hasProfile = false
 
@@ -979,52 +997,123 @@ async mounted() {
   }
 },
 
-      extractGenreIds(generos) {
-        if (!Array.isArray(generos)) return []
-        return generos.map(g => typeof g === 'object' ? g._id : g).filter(Boolean)
-      },
+extractGenreIds(generos) {
+  if (Array.isArray(generos)) {
+    return generos.map(g => typeof g === 'object' ? g._id || g.id : g).filter(Boolean)
+  }
 
-      mapApiUserToCurrentUser(apiUser) {
-        return {
-          name: apiUser?.nome || apiUser?.name || '',
-          age: apiUser?.idade || apiUser?.age || null,
-          avatar: apiUser?.avatar || '',
-          bio: apiUser?.bio || '',
-          location: apiUser?.localizacao || apiUser?.location || '',
-          favoriteGenres: this.extractGenreIds(apiUser?.generos || apiUser?.favoriteGenres || [])
-        }
-      },
+  if (generos && typeof generos === 'object') {
+    return (generos.locais || []).map(g => typeof g === 'object' ? g._id || g.id : g).filter(Boolean)
+  }
 
-      normalizeSong(track) {
-        return {
-          id: track.id || track.trackId || track.deezerId || track._id,
-          trackId: track.trackId || track.deezerId || track.id || track._id,
-          title: track.title || track.titulo || track.nome,
-          artist: track.artist || { name: track.artista || 'Artista desconhecido' },
-          album: track.album || {
-            title: track.genre || '',
-            cover_medium: track.cover || track.capa || track.foto || '',
-            cover_small: track.cover || track.capa || track.foto || ''
-          },
-          cover: track.cover || track.capa || track.foto || '',
-          duration: track.duration || track.duracao || 0,
-          preview: track.preview || '',
-          genre: track.genre || ''
-        }
-      },
+  return []
+},
 
-     async buscarSugestoes() {
+mapApiUserToCurrentUser(apiUser) {
+  return {
+    id: apiUser?._id || apiUser?.id,
+    _id: apiUser?._id || apiUser?.id,
+
+    name: apiUser?.nome || apiUser?.name || '',
+    age: apiUser?.idade || apiUser?.age || null,
+
+    avatar:
+      apiUser?.avatar ||
+      'https://api.dicebear.com/7.x/avataaars/svg?seed=user',
+
+    bio: apiUser?.bio || '',
+    location: apiUser?.localizacao || apiUser?.location || '',
+
+    favoriteGenres: this.extractGenreIds(
+      apiUser?.generos || apiUser?.favoriteGenres || []
+    )
+  }
+},
+
+normalizeSong(track) {
+  const id =
+    track.trackId ||
+    track.id ||
+    track.deezerId ||
+    track._id
+
+  return {
+    id: String(id),
+    trackId: String(id),
+
+    title: track.title || track.titulo || track.nome,
+
+    artist:
+      typeof track.artist === 'object'
+        ? track.artist
+        : { name: track.artist || track.artista || 'Artista desconhecido' },
+
+    album: {
+      title: track.album?.title || track.genre || '',
+      cover_medium:
+        track.album?.cover_medium ||
+        track.cover ||
+        track.capa ||
+        '',
+
+      cover_small:
+        track.album?.cover_small ||
+        track.cover ||
+        track.capa ||
+        ''
+    },
+
+    cover:
+      track.cover ||
+      track.album?.cover_medium ||
+      '',
+
+    duration: track.duration || 0,
+    preview: track.preview || '',
+    genre: track.genre || '',
+    link: track.link || ''
+  }
+},
+
+async buscarSugestoes() {
   try {
     this.loading = true
 
-    const { data } = await api.get('/matches/sugestoes')
+    const userId = this.getLoggedUserId()
+    if (!userId) throw new Error('Usuário logado não encontrado')
 
-    const cards = Array.isArray(data?.cards) ? data.cards : []
+    let tracks = []
 
-    this.songs = cards.map(track => this.normalizeSong(track))
+    try {
+      const { data } = await api.get(`/usuarios/${userId}/recomendacoes`, {
+        params: { limit: 30, source: 'mixed' }
+      })
+
+      tracks = Array.isArray(data?.tracks) ? data.tracks : []
+
+      if (!tracks.length) {
+        console.warn('Recomendações personalizadas vazias, usando fallback...')
+        const fallback = await api.get('/matches/sugestoes')
+        tracks = Array.isArray(fallback.data?.cards) ? fallback.data.cards : []
+      }
+    } catch (personalizedError) {
+      console.warn('Falha nas recomendações personalizadas, usando fallback:', personalizedError)
+      const fallback = await api.get('/matches/sugestoes')
+      tracks = Array.isArray(fallback.data?.cards) ? fallback.data.cards : []
+    }
+
+    const likedIds = new Set(this.likedSongs.map(s => String(s.id || s.trackId)))
+    const favoriteIds = new Set(this.favorites.map(s => String(s.id || s.trackId)))
+
+    this.songs = tracks
+      .map(track => this.normalizeSong(track))
+      .filter(song => {
+        const songId = String(song.id || song.trackId)
+        return !likedIds.has(songId) && !favoriteIds.has(songId)
+      })
+
     this.currentIndex = 0
-
-    console.log('Sugestões carregadas:', this.songs.length)
+    console.log('Sugestões finais carregadas:', this.songs.length)
   } catch (error) {
     console.error('Erro ao buscar sugestões:', error?.response?.data || error)
     this.songs = []
@@ -1154,19 +1243,17 @@ async mounted() {
       isGenreSelected(id) {
         return this.onboardingData.favoriteGenres.includes(id)
       },
-
-      async finishOnboarding() {
+async finishOnboarding() {
   try {
     this.creatingProfile = true
 
-    const user = JSON.parse(localStorage.getItem("usuario"))
-    const userId = user.id || user._id
+    const userId = this.getLoggedUserId()
 
     if (!userId) {
-      throw new Error('Usuário logado não encontrado. Faça login novamente.')
+      throw new Error('Usuário não encontrado')
     }
 
-    const { data } = await api.put(`/usuarios/${userId}`, {
+    const payload = {
       nome: this.onboardingData.name,
       idade: this.onboardingData.age,
       avatar: this.onboardingData.avatar,
@@ -1174,29 +1261,43 @@ async mounted() {
       localizacao: this.onboardingData.location,
       generos: this.onboardingData.favoriteGenres,
       onboardingCompleto: true
-    })
+    }
 
-    const updatedUser = data.user
+    const response = await api.put(`/usuarios/${userId}`, payload)
+
+    const updatedUser = response.data.user || response.data
 
     this.currentUser = this.mapApiUserToCurrentUser(updatedUser)
+
     this.hasProfile = true
 
-    localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
-    localStorage.setItem('user', JSON.stringify({
-      ...user,
-      ...updatedUser,
-      id: updatedUser.id || updatedUser._id || userId
-    }))
+    localStorage.setItem(
+      'musicalMatchProfile',
+      JSON.stringify(this.currentUser)
+    )
 
-    await Promise.all([
-      this.buscarSugestoes(),
-      this.buscarCurtidas(),
-      this.buscarFavoritos(),
-      this.buscarMatches()
-    ])
+    localStorage.setItem(
+      'user',
+      JSON.stringify(updatedUser)
+    )
+
+    localStorage.setItem(
+      'usuario',
+      JSON.stringify(updatedUser)
+    )
+
+    await this.buscarCurtidas()
+    await this.buscarFavoritos()
+    await this.buscarMatches()
+    await this.buscarSugestoes()
+
   } catch (error) {
-    console.error('Erro ao finalizar onboarding:', error)
-    alert(error.response?.data?.error || error.message || 'Erro ao criar perfil')
+    console.error(error)
+
+    alert(
+      error?.response?.data?.error ||
+      'Erro ao criar perfil'
+    )
   } finally {
     this.creatingProfile = false
   }
@@ -1308,75 +1409,106 @@ async mounted() {
         this.animateCard('left')
       },
 
-      async swipeRight() {
-        try {
-          const currentSong = this.songs[this.currentIndex]
-          if (!currentSong) return
+    async swipeRight() {
+  try {
 
-          await api.post('/matches/curtidas', {
-            track: currentSong,
-            tipo: 'like'
-          })
+    const currentSong = this.currentSong
 
-          if (!this.likedSongs.some(s => String(s.id) === String(currentSong.id))) {
-            this.likedSongs.push(currentSong)
-          }
+    if (!currentSong) return
 
-          this.currentIndex++
-          this.animateCard('right')
+    const alreadyLiked = this.likedSongs.some(
+      s => String(s.trackId) === String(currentSong.trackId)
+    )
 
-          const prevMatchIds = this.matches.map(m => m.id)
-          await this.buscarMatches()
+    if (!alreadyLiked) {
 
-          const newMatch = this.matches.find(m => !prevMatchIds.includes(m.id))
-          if (newMatch) {
-            this.lastMatch = newMatch
-            this.showMatchNotification = true
+      await api.post('/matches/curtidas', {
+        track: currentSong,
+        tipo: 'like'
+      })
 
-            setTimeout(() => {
-              this.showMatchNotification = false
-            }, 5000)
-          }
-        } catch (error) {
-          console.error('Erro ao curtir música:', error)
+      this.likedSongs.push(currentSong)
+    }
+
+    this.currentIndex++
+
+    this.animateCard('right')
+
+    const oldIds = this.matches.map(m => m.id)
+
+    await this.buscarMatches()
+
+    const newMatch = this.matches.find(
+      m => !oldIds.includes(m.id)
+    )
+
+    if (newMatch) {
+
+      this.lastMatch = newMatch
+      this.showMatchNotification = true
+
+      setTimeout(() => {
+        this.showMatchNotification = false
+      }, 5000)
+    }
+
+  } catch (error) {
+    console.error('Erro ao curtir:', error)
+  }
+},
+
+     async toggleFavorite() {
+  try {
+    const currentSong = this.currentSong
+
+    if (!currentSong) return
+
+    const exists = this.favorites.find(
+      f => String(f.trackId) === String(currentSong.trackId)
+    )
+
+    if (exists) {
+
+      await api.delete(
+        `/matches/curtidas/${currentSong.trackId}`,
+        {
+          params: { tipo: 'favorite' }
         }
-      },
+      )
 
-      async toggleFavorite() {
-        try {
-          const currentSong = this.songs[this.currentIndex]
-          if (!currentSong) return
+      this.favorites = this.favorites.filter(
+        f => String(f.trackId) !== String(currentSong.trackId)
+      )
 
-          const index = this.favorites.findIndex(f => String(f.id) === String(currentSong.id))
+    } else {
 
-          if (index > -1) {
-            await api.delete(`/matches/curtidas/${currentSong.id}`, {
-              params: { tipo: 'favorite' }
-            })
-            this.favorites.splice(index, 1)
-          } else {
-            await api.post('/matches/curtidas', {
-              track: currentSong,
-              tipo: 'favorite'
-            })
+      await api.post('/matches/curtidas', {
+        track: currentSong,
+        tipo: 'favorite'
+      })
 
-            this.favorites.push(currentSong)
-            this.lastFavorited = currentSong
-            this.showFavoriteToast = true
+      this.favorites.push(currentSong)
 
-            setTimeout(() => {
-              this.showFavoriteToast = false
-            }, 3000)
-          }
-        } catch (error) {
-          console.error('Erro ao favoritar música:', error)
-        }
-      },
+      this.lastFavorited = currentSong
+      this.showFavoriteToast = true
 
-      isFavorite(song) {
-        if (!song) return false
-        return this.favorites.some(f => String(f.id) === String(song.id))
-      },
+      setTimeout(() => {
+        this.showFavoriteToast = false
+      }, 3000)
+    }
+
+  } catch (error) {
+    console.error('Erro ao favoritar:', error)
+  }
+},
+
+isFavorite(song) {
+  if (!song) return false
+
+  return this.favorites.some(
+    f => String(f.trackId) === String(song.trackId)
+  )
+},
 
       async removeFavorite(song) {
         try {
@@ -1512,9 +1644,8 @@ async mounted() {
 
       async saveProfile() {
         try {
-          const user = JSON.parse(localStorage.getItem("usuario"))
-          
-          const userId = user.id || user._id
+const user = this.getLoggedUser()
+const userId = this.getLoggedUserId()
 
           if (!userId) {
             throw new Error('Usuário não encontrado no localStorage')

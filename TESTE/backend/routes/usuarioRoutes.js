@@ -11,6 +11,9 @@ router.post('/login', userController.login)
 // SEARCH
 router.get('/search', authMiddleware, userController.search)
 
+// 🎯 FEITO PARA VOCÊ - Mixes Personalizados
+router.get('/:id/mixes', authMiddleware, userController.getMixes)
+
 // DADOS PÚBLICOS / CONTROLADOS
 router.get('/:id/playlists/publicas', authMiddleware, userController.getPublicPlaylists)
 router.get('/:id/curtidas/publicas', authMiddleware, userController.getPublicCurtidas)

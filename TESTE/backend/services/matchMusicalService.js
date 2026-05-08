@@ -93,10 +93,19 @@ const normalizeTrack = (track) => {
 }
 
 const buildCommonGenres = (userA, userB) => {
-  const a = (userA?.generos || []).map(g => g.nome).filter(Boolean)
-  const b = (userB?.generos || []).map(g => g.nome).filter(Boolean)
+  const a = [
+    ...(userA?.generos?.locais || []).map(g => g.nome),
+    ...(userA?.generos?.externos || []).map(g => g.nome)
+  ].filter(Boolean)
+
+  const b = [
+    ...(userB?.generos?.locais || []).map(g => g.nome),
+    ...(userB?.generos?.externos || []).map(g => g.nome)
+  ].filter(Boolean)
+
   return [...new Set(a.filter(nome => b.includes(nome)))]
 }
+
 
 const calcCompatibility = (songsCount, genresCount) => {
   const value = 50 + (songsCount * 12) + (genresCount * 8)
@@ -105,8 +114,8 @@ const calcCompatibility = (songsCount, genresCount) => {
 
 const recalculateMatchBetweenUsers = async (userAId, userBId) => {
   const [userA, userB, likesA, likesB, existing] = await Promise.all([
-    Usuario.findById(userAId).populate('generos', 'nome').lean(),
-    Usuario.findById(userBId).populate('generos', 'nome').lean(),
+Usuario.findById(userAId).populate('generos.locais', 'nome').lean(),
+Usuario.findById(userBId).populate('generos.locais', 'nome').lean(),
     MatchInteracao.find({ usuario: userAId, tipo: 'like' }).lean(),
     MatchInteracao.find({ usuario: userBId, tipo: 'like' }).lean(),
     MatchMusical.findOne({ pairKey: pairKeyFromUsers(userAId, userBId) }).lean()
@@ -164,53 +173,78 @@ const updateMatchesForLike = async (userId, trackId) => {
 }
 
 const getSuggestions = async (userId) => {
-  const user = await Usuario.findById(userId).populate('generos', '_id nome').lean()
+  const user = await Usuario.findById(userId)
+    .populate('generos.locais', '_id nome')
+    .populate('artistasFavoritos.locais', '_id nome')
+    .lean()
 
-  const interactions = await MatchInteracao.find({ usuario: userId }).select('trackId').lean()
+  const interactions = await MatchInteracao.find({ usuario: userId })
+    .select('trackId')
+    .lean()
+
   const interactedIds = interactions
     .map(item => item.trackId)
     .filter(id => mongoose.Types.ObjectId.isValid(id))
     .map(id => new mongoose.Types.ObjectId(id))
 
-  let query = {}
+  const genreIds = (user?.generos?.locais || []).map(g => g._id || g)
+  const artistIds = (user?.artistasFavoritos?.locais || []).map(a => a._id || a)
 
+  const baseQuery = {}
   if (interactedIds.length > 0) {
-    query._id = { $nin: interactedIds }
+    baseQuery._id = { $nin: interactedIds }
   }
 
-  if (user?.generos?.length) {
-    query.generos = { $in: user.generos.map(g => g._id) }
+  const orConditions = []
+
+  if (genreIds.length > 0) {
+    orConditions.push({ generos: { $in: genreIds } })
   }
 
-  let musicas = await Musica.find(query)
-    .populate('generos', 'nome')
-    .populate('albuns', 'nome')
-    .populate('cantores', 'nome')
-    .limit(60)
-    .lean()
+  if (artistIds.length > 0) {
+    orConditions.push({ cantores: { $in: artistIds } })
+  }
 
-  if (!musicas.length) {
-    const fallbackQuery = interactedIds.length > 0
-      ? { _id: { $nin: interactedIds } }
-      : {}
+  let musicas = []
 
-    musicas = await Musica.find(fallbackQuery)
+  if (orConditions.length > 0) {
+    musicas = await Musica.find({
+      ...baseQuery,
+      $or: orConditions
+    })
       .populate('generos', 'nome')
       .populate('albuns', 'nome')
       .populate('cantores', 'nome')
-      .limit(60)
+      .limit(80)
       .lean()
   }
 
   if (!musicas.length) {
-    return { cards: [] }
+    musicas = await Musica.find(baseQuery)
+      .populate('generos', 'nome')
+      .populate('albuns', 'nome')
+      .populate('cantores', 'nome')
+      .limit(80)
+      .lean()
   }
 
-  const cards = shuffleArray(musicas)
-    .slice(0, 20)
-    .map(formatMusicaToCard)
+  const ranked = musicas
+    .map(musica => {
+      const musicaGenreIds = (musica.generos || []).map(g => String(g._id || g))
+      const musicaArtistIds = (musica.cantores || []).map(c => String(c._id || c))
 
-  return { cards }
+      let score = 0
+
+      if (genreIds.some(id => musicaGenreIds.includes(String(id)))) score += 2
+      if (artistIds.some(id => musicaArtistIds.includes(String(id)))) score += 3
+
+      return { musica, score }
+    })
+    .sort((a, b) => b.score - a.score || Math.random() - 0.5)
+    .slice(0, 20)
+    .map(item => formatMusicaToCard(item.musica))
+
+  return { cards: ranked }
 }
 
 const listCurtidas = async (userId, tipo) => {

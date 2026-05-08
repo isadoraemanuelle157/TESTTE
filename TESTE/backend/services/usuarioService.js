@@ -2,6 +2,7 @@ const Usuario = require('../models/Usuario')
 const Follow = require('../models/Follow')
 const PrivacidadeAtividade = require('../models/PrivacidadeAtividade')
 const bcrypt = require('bcrypt')
+const axios = require('axios')
 
 const formatUser = (user) => {
   if (!user) return null
@@ -395,10 +396,528 @@ const getUserStats = async (userId) => {
 
   return { musicasCurtidas, playlists }
 }
+const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
+const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token'
+const SPOTIFY_API_URL = 'https://api.spotify.com/v1'
+const DEEZER_API_URL = 'https://api.deezer.com'
+
+let spotifyToken = null
+let tokenExpiresAt = 0
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function getSpotifyToken() {
+  if (spotifyToken && Date.now() < tokenExpiresAt - 60000) {
+    return spotifyToken
+  }
+
+  try {
+    const response = await axios.post(
+      SPOTIFY_AUTH_URL,
+      'grant_type=client_credentials',
+      {
+        headers: {
+          Authorization: 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+
+    spotifyToken = response.data.access_token
+    tokenExpiresAt = Date.now() + response.data.expires_in * 1000
+    console.log('🎵 Token Spotify renovado (service)')
+    return spotifyToken
+  } catch (error) {
+    console.error('❌ Erro token Spotify:', error.response?.data || error.message)
+    throw new Error('Falha autenticação Spotify')
+  }
+}
+
+async function spotifyRequest(config, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const token = await getSpotifyToken()
+      const response = await axios({
+        ...config,
+        headers: {
+          ...(config.headers || {}),
+          Authorization: `Bearer ${token}`
+        }
+      })
+      return response
+    } catch (error) {
+      if (error.response?.status === 429 && i < retries - 1) {
+        const retryAfter = parseInt(error.response.headers['retry-after'] || '2', 10)
+        const delay = Math.min(retryAfter * 1000, 15000)
+        console.warn(`⏳ Spotify Rate Limit → ${delay}ms`)
+        await sleep(delay)
+      } else if (error.response?.status === 401) {
+        spotifyToken = null
+      } else {
+        throw error
+      }
+    }
+  }
+  throw new Error('Spotify max retries exceeded')
+}
+
+// Gradients pré-definidos
+const MIX_GRADIENTS = [
+  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+  "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+  "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+  "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+  "linear-gradient(135deg, #30cfd0 0%, #330867 100%)"
+]
+
+// Mapeamento de vibes para termos de busca
+const VIBE_SEARCH_MAP = {
+  'Festa': ['party', 'dance', 'electronic', 'funk'],
+  'Chill': ['chill', 'relax', 'acoustic', 'indie'],
+  'Treino': ['workout', 'gym', 'motivation', 'electronic'],
+  'Focus': ['focus', 'study', 'instrumental', 'ambient'],
+  'Triste': ['sad', 'melancholic', 'acoustic', 'piano'],
+  'Romântico': ['romance', 'love', 'acoustic', 'pop'],
+  'Viajante': ['road trip', 'travel', 'indie', 'rock']
+}
+
+// ============================================
+// 🎯 FUNÇÃO PRINCIPAL: GET USER MIXES
+// ============================================
+
+const getUserMixes = async (userId, limit = 6) => {
+  const mongoose = require('mongoose')
+  
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('ID inválido')
+  }
+
+  const usuario = await Usuario.findById(userId)
+    .populate('generos.locais', 'nome icon color')
+    .populate('artistasFavoritos.locais', 'nome foto generos')
+    .populate('vibesFavoritas.locais', 'nome emoji descricao gradient tags')
+    .lean()
+
+  if (!usuario) {
+    throw new Error('Usuário não encontrado')
+  }
+
+  if (!usuario.onboardingCompleto) {
+    return { 
+      mixes: [],
+      message: 'Onboarding não completado',
+      hasPreferences: false 
+    }
+  }
+
+  const mixes = []
+  const usedTrackIds = new Set()
+
+  // Helper para extrair dados do usuário
+  const getGeneros = () => {
+    const locais = (usuario.generos?.locais || []).map(g => ({
+      id: g._id?.toString(),
+      nome: g.nome,
+      icon: g.icon,
+      color: g.color,
+      source: 'local'
+    }))
+    const externos = (usuario.generos?.externos || []).map(g => ({
+      id: `ext_${g.source}_${g.externalId}`,
+      nome: g.nome,
+      icon: g.icon,
+      color: g.color,
+      source: g.source
+    }))
+    return [...locais, ...externos]
+  }
+
+  const getArtistas = () => {
+    const locais = (usuario.artistasFavoritos?.locais || []).map(a => ({
+      id: a._id?.toString(),
+      nome: a.nome,
+      foto: a.foto,
+      source: 'local'
+    }))
+    const externos = (usuario.artistasFavoritos?.externos || []).map(a => ({
+      id: `ext_${a.source}_${a.externalId}`,
+      nome: a.nome,
+      foto: a.imagem,
+      source: a.source
+    }))
+    return [...locais, ...externos]
+  }
+
+  const getVibes = () => {
+    const locais = (usuario.vibesFavoritas?.locais || []).map(v => ({
+      id: v._id?.toString(),
+      nome: v.nome,
+      emoji: v.emoji,
+      descricao: v.descricao,
+      gradient: v.gradient,
+      tags: v.tags,
+      source: 'local'
+    }))
+    const externas = (usuario.vibesFavoritas?.externas || []).map(v => ({
+      id: `ext_${v.source}_${v.externalId}`,
+      nome: v.nome,
+      emoji: v.emoji,
+      descricao: v.descricao,
+      gradient: v.gradient,
+      tags: v.tags,
+      source: v.source
+    }))
+    return [...locais, ...externas]
+  }
+
+  const generosCompletos = getGeneros()
+  const artistasCompletos = getArtistas()
+  const vibesCompletas = getVibes()
+
+  // ============================================
+  // MIX 1: Baseado nos GÊNEROS favoritos
+  // ============================================
+  if (generosCompletos.length > 0) {
+    const generoPrincipal = generosCompletos[0]
+    const tracksGenero = await buscarTracksPorGenero(
+      generoPrincipal.nome, 
+      10, 
+      usedTrackIds
+    )
+    
+    if (tracksGenero.length > 0) {
+      tracksGenero.forEach(t => usedTrackIds.add(t.id))
+      
+      mixes.push({
+        id: `mix_genero_${generoPrincipal.id}`,
+        title: `${generoPrincipal.nome} para Você`,
+        description: `Os melhores hits de ${generoPrincipal.nome} selecionados especialmente`,
+        tracks: tracksGenero.length,
+        cover: tracksGenero[0]?.cover || tracksGenero[0]?.album?.cover_medium || '',
+        gradient: generoPrincipal.color 
+          ? `linear-gradient(135deg, ${generoPrincipal.color} 0%, #764ba2 100%)`
+          : MIX_GRADIENTS[0],
+        _tracks: tracksGenero,
+        tipo: 'genero',
+        basedOn: generoPrincipal.nome
+      })
+    }
+  }
+
+  // ============================================
+  // MIX 2: Baseado nos ARTISTAS favoritos
+  // ============================================
+  if (artistasCompletos.length > 0) {
+    const artistasSelecionados = artistasCompletos.slice(0, 3)
+    const tracksArtistas = []
+    
+    for (const artista of artistasSelecionados) {
+      const tracks = await buscarTracksPorArtista(
+        artista.nome, 
+        5, 
+        usedTrackIds
+      )
+      tracks.forEach(t => {
+        usedTrackIds.add(t.id)
+        tracksArtistas.push(t)
+      })
+    }
+    
+    if (tracksArtistas.length > 0) {
+      const shuffled = tracksArtistas.sort(() => Math.random() - 0.5)
+      
+      mixes.push({
+        id: `mix_artistas_${Date.now()}`,
+        title: `Seus Artistas Favoritos`,
+        description: artistasSelecionados.map(a => a.nome).join(', ') + ' e mais',
+        tracks: shuffled.length,
+        cover: shuffled[0]?.cover || shuffled[0]?.album?.cover_medium || '',
+        gradient: MIX_GRADIENTS[1],
+        _tracks: shuffled,
+        tipo: 'artistas',
+        basedOn: artistasSelecionados.map(a => a.nome).join(', ')
+      })
+    }
+  }
+
+  // ============================================
+  // MIX 3: Baseado nas VIBES favoritas
+  // ============================================
+  if (vibesCompletas.length > 0) {
+    const vibePrincipal = vibesCompletas[0]
+    const searchTerms = VIBE_SEARCH_MAP[vibePrincipal.nome] || [vibePrincipal.nome.toLowerCase()]
+    
+    const tracksVibe = await buscarTracksPorVibe(
+      searchTerms, 
+      10, 
+      usedTrackIds
+    )
+    
+    if (tracksVibe.length > 0) {
+      tracksVibe.forEach(t => usedTrackIds.add(t.id))
+      
+      mixes.push({
+        id: `mix_vibe_${vibePrincipal.id}`,
+        title: `${vibePrincipal.nome} ${vibePrincipal.emoji || '✨'}`,
+        description: vibePrincipal.descricao || `Músicas perfeitas para ${vibePrincipal.nome}`,
+        tracks: tracksVibe.length,
+        cover: tracksVibe[0]?.cover || tracksVibe[0]?.album?.cover_medium || '',
+        gradient: vibePrincipal.gradient || MIX_GRADIENTS[2],
+        _tracks: tracksVibe,
+        tipo: 'vibe',
+        basedOn: vibePrincipal.nome
+      })
+    }
+  }
+
+  // ============================================
+  // MIX 4: Descobertas (gêneros + artistas misturados)
+  // ============================================
+  if (generosCompletos.length > 1 || artistasCompletos.length > 1) {
+    const termosBusca = [
+      ...generosCompletos.slice(1).map(g => g.nome),
+      ...artistasCompletos.slice(1).map(a => a.nome)
+    ].filter(Boolean)
+    
+    if (termosBusca.length > 0) {
+      const tracksDescobertas = await buscarTracksDescobertas(
+        termosBusca,
+        10,
+        usedTrackIds
+      )
+      
+      if (tracksDescobertas.length > 0) {
+        tracksDescobertas.forEach(t => usedTrackIds.add(t.id))
+        
+        mixes.push({
+          id: `mix_descobertas_${Date.now()}`,
+          title: `Descobertas da Semana`,
+          description: `Novas músicas baseadas no seu gosto por ${generosCompletos[0]?.nome || 'vários estilos'}`,
+          tracks: tracksDescobertas.length,
+          cover: tracksDescobertas[0]?.cover || tracksDescobertas[0]?.album?.cover_medium || '',
+          gradient: MIX_GRADIENTS[3],
+          _tracks: tracksDescobertas,
+          tipo: 'descobertas',
+          basedOn: 'múltiplos gostos'
+        })
+      }
+    }
+  }
+
+  // ============================================
+  // MIX 5: Top do Gênero Principal
+  // ============================================
+  if (mixes.length < limit && generosCompletos.length > 0) {
+    const tracksTop = await buscarTracksTopGenero(
+      generosCompletos[0].nome,
+      10,
+      usedTrackIds
+    )
+    
+    if (tracksTop.length > 0) {
+      mixes.push({
+        id: `mix_top_${Date.now()}`,
+        title: `Top ${generosCompletos[0].nome}`,
+        description: `As mais tocadas do momento em ${generosCompletos[0].nome}`,
+        tracks: tracksTop.length,
+        cover: tracksTop[0]?.cover || tracksTop[0]?.album?.cover_medium || '',
+        gradient: MIX_GRADIENTS[4],
+        _tracks: tracksTop,
+        tipo: 'top',
+        basedOn: generosCompletos[0].nome
+      })
+    }
+  }
+
+  const mixesFinal = mixes.slice(0, limit)
+
+  return {
+    mixes: mixesFinal,
+    total: mixesFinal.length,
+    hasPreferences: true,
+    preferences: {
+      generos: generosCompletos.map(g => g.nome),
+      artistas: artistasCompletos.map(a => a.nome),
+      vibes: vibesCompletas.map(v => v.nome)
+    }
+  }
+}
+
+// ============================================
+// 🔍 BUSCAS NAS APIs DE MÚSICA
+// ============================================
+
+async function buscarTracksPorGenero(genero, limit = 10, excludeIds = new Set()) {
+  try {
+    const spotifyResponse = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: {
+        q: `genre:${genero.toLowerCase()}`,
+        type: 'track',
+        limit: limit * 2,
+        market: 'BR'
+      }
+    })
+    
+    const tracks = spotifyResponse.data?.tracks?.items
+      ?.filter(t => t.preview_url && !excludeIds.has(t.id))
+      ?.map(t => normalizarTrackSpotify(t))
+      ?.slice(0, limit)
+    
+    if (tracks && tracks.length > 0) return tracks
+    
+    const deezerResponse = await axios.get(`${DEEZER_API_URL}/search`, {
+      params: { q: genero, limit: limit * 2 },
+      timeout: 5000
+    })
+    
+    return deezerResponse.data?.data
+      ?.filter(t => t.preview && !excludeIds.has(t.id.toString()))
+      ?.map(t => normalizarTrackDeezer(t))
+      ?.slice(0, limit) || []
+      
+  } catch (error) {
+    console.warn(`⚠️ Erro busca gênero ${genero}:`, error.message)
+    return []
+  }
+}
+
+async function buscarTracksPorArtista(artista, limit = 5, excludeIds = new Set()) {
+  try {
+    const searchResponse = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: {
+        q: `artist:${artista}`,
+        type: 'artist',
+        limit: 1,
+        market: 'BR'
+      }
+    })
+    
+    const artistId = searchResponse.data?.artists?.items?.[0]?.id
+    
+    if (artistId) {
+      const topTracks = await spotifyRequest({
+        method: 'GET',
+        url: `${SPOTIFY_API_URL}/artists/${artistId}/top-tracks`,
+        params: { market: 'BR' }
+      })
+      
+      const tracks = topTracks.data?.tracks
+        ?.filter(t => t.preview_url && !excludeIds.has(t.id))
+        ?.map(t => normalizarTrackSpotify(t))
+        ?.slice(0, limit)
+      
+      if (tracks && tracks.length > 0) return tracks
+    }
+    
+    const deezerResponse = await axios.get(`${DEEZER_API_URL}/search`, {
+      params: { q: `artist:"${artista}"`, limit: limit * 2 },
+      timeout: 5000
+    })
+    
+    return deezerResponse.data?.data
+      ?.filter(t => t.preview && !excludeIds.has(t.id.toString()))
+      ?.map(t => normalizarTrackDeezer(t))
+      ?.slice(0, limit) || []
+      
+  } catch (error) {
+    console.warn(`⚠️ Erro busca artista ${artista}:`, error.message)
+    return []
+  }
+}
+
+async function buscarTracksPorVibe(searchTerms, limit = 10, excludeIds = new Set()) {
+  try {
+    const query = searchTerms.join(' OR ')
+    
+    const spotifyResponse = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: {
+        q: query,
+        type: 'track',
+        limit: limit * 2,
+        market: 'BR'
+      }
+    })
+    
+    const tracks = spotifyResponse.data?.tracks?.items
+      ?.filter(t => t.preview_url && !excludeIds.has(t.id))
+      ?.map(t => normalizarTrackSpotify(t))
+      ?.slice(0, limit)
+    
+    if (tracks && tracks.length > 0) return tracks
+    
+    const deezerResponse = await axios.get(`${DEEZER_API_URL}/search`, {
+      params: { q: searchTerms[0], limit: limit * 2 },
+      timeout: 5000
+    })
+    
+    return deezerResponse.data?.data
+      ?.filter(t => t.preview && !excludeIds.has(t.id.toString()))
+      ?.map(t => normalizarTrackDeezer(t))
+      ?.slice(0, limit) || []
+      
+  } catch (error) {
+    console.warn(`⚠️ Erro busca vibe:`, error.message)
+    return []
+  }
+}
+
+async function buscarTracksDescobertas(termos, limit = 10, excludeIds = new Set()) {
+  const query = termos.slice(0, 3).join(' ')
+  return buscarTracksPorVibe([query], limit, excludeIds)
+}
+
+async function buscarTracksTopGenero(genero, limit = 10, excludeIds = new Set()) {
+  return buscarTracksPorGenero(genero, limit, excludeIds)
+}
+
+// ============================================
+// 🔄 NORMALIZAÇÃO DE TRACKS
+// ============================================
+
+function normalizarTrackSpotify(track) {
+  return {
+    id: track.id,
+    title: track.name,
+    artist: track.artists?.map(a => a.name).join(', '),
+    album: track.album?.name,
+    cover: track.album?.images?.[0]?.url || track.album?.images?.[1]?.url || '',
+    url: track.preview_url,
+    duration: Math.floor(track.duration_ms / 1000),
+    source: 'spotify',
+    popularity: track.popularity
+  }
+}
+
+function normalizarTrackDeezer(track) {
+  return {
+    id: track.id.toString(),
+    title: track.title,
+    artist: track.artist?.name,
+    album: track.album?.title,
+    cover: track.album?.cover_medium || track.album?.cover || '',
+    url: track.preview,
+    duration: track.duration,
+    source: 'deezer',
+    popularity: track.rank
+  }
+}
+
+// ============================================
+// EXPORTS ATUALIZADOS
+// ============================================
 
 module.exports = {
   createUser, loginUser, getUsers, getUserById,
   updateUser, deleteUser, searchUsers,
   generateDefaultAvatar, getUserStats,
-  canAccessProfile, hasPendingFollowRequest, isResourceBlocked
+  canAccessProfile, hasPendingFollowRequest, isResourceBlocked,
+  getUserMixes  // 🎯 NOVO
 }

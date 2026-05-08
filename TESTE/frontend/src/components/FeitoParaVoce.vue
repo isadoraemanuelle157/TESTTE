@@ -129,7 +129,7 @@
       @click="toggleArtist(artist)"
     >
       <div class="artist-image">
-        <img :src="artist.photo" :alt="artist.name" @error="$event.target.src = 'https://via.placeholder.com/400/333/fff?text=🎤'">
+        <img :src="artist.photo" :alt="artist.name" @error="$event.target.src = 'https://i.pravatar.cc/400?img=12'">
         <div class="artist-gradient"></div>
         <div class="selection-indicator">
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -642,7 +642,7 @@ console.log("🎧 vibes API:", data)
         description: "Gerado automaticamente",
         gradient: this.getGradient(Math.floor(Math.random() * 10)),
         tags: map[key].tags,
-        source: "auto"
+        source: "externo"
       })
     }
   })
@@ -777,107 +777,135 @@ console.log("🎧 vibes API:", data)
       }
     },
 
-    async finishOnboarding() {
-      try {
-        const usuario = JSON.parse(localStorage.getItem("usuario"))
-        const userId = usuario?._id || usuario?.id
-        const token = localStorage.getItem("token")
+   async finishOnboarding() {
+  try {
+    const usuario = JSON.parse(localStorage.getItem("usuario"))
+    const userId = usuario?._id || usuario?.id
+    const token = localStorage.getItem("token")
 
-        if (!userId) {
-          throw new Error("Usuario nao encontrado")
-        }
-
-        const generosPayload = this.selectedGenres.map(g => ({
-          id: g.id,
-          source: g.source || 'local',
-          nome: g.name,
-          icon: g.emoji || '🎵',
-          color: g.color
-        }))
-
-        const artistasPayload = this.selectedArtists.map(a => ({
-          id: a.id,
-          source: a.source || 'local',
-          nome: a.name,
-          imagem: a.photo,
-          extra: {
-            genero: a.genre,
-            popularidade: a.popularity
-          }
-        }))
-
-        const vibesPayload = this.selectedVibes.map(v => ({
-          id: v.id,
-          source: v.source || 'local',
-          nome: v.name,
-          emoji: v.emoji,
-          descricao: v.description,
-          gradient: v.gradient,
-          tags: v.tags
-        }))
-
-        await fetch(`http://localhost:3002/usuarios/${userId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            generos: generosPayload,
-            artistasFavoritos: artistasPayload,
-            vibesFavoritas: vibesPayload,
-            onboardingCompleto: true
-          })
-        })
-
-        const artistasLocais = this.selectedArtists.filter(a => !a.source || a.source === 'local')
-
-        await Promise.all(
-          artistasLocais.map(artist =>
-            fetch(`http://localhost:3002/favoritas/${artist.id}/favoritar`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`
-              },
-              body: JSON.stringify({ tipo: "cantor" })
-            })
-          )
-        )
-
-        localStorage.setItem(
-          "artistasFavoritos",
-          JSON.stringify(this.selectedArtists.map(a => a.id))
-        )
-
-        await Swal.fire({
-          title: "Conta criada com sucesso! 🎉",
-          text: "Seu perfil esta pronto. Bora ouvir musica!",
-          icon: "success",
-          background: "#121212",
-          color: "#fff",
-          confirmButtonText: "Ir para o Dashboard 🚀",
-          confirmButtonColor: "#1DB954",
-          timer: 2500,
-          timerProgressBar: true,
-          showClass: {
-            popup: "animate__animated animate__zoomIn"
-          },
-          hideClass: {
-            popup: "animate__animated animate__fadeOut"
-          }
-        })
-
-        this.$router.push('/dashboard')
-      } catch (err) {
-        console.error(err)
-        Swal.fire({
-          title: "Erro 😢",
-          text: "Nao foi possivel finalizar o cadastro",
-          icon: "error"
-        })
-      }
+    if (!userId) {
+      throw new Error("Usuario nao encontrado")
     }
+
+    // Formatar dados no formato que o backend espera (arrays simples)
+    // O pre-save hook do schema vai converter para o formato interno { locais, externos }
+    const generosPayload = this.selectedGenres.map(g => ({
+      id: g.id,
+      source: g.source || 'local',
+      nome: g.name || g.nome,
+      icon: g.emoji || g.icon || '🎵',
+      color: g.color || '#1DB954'
+    }))
+
+    const artistasPayload = this.selectedArtists.map(a => ({
+      id: a.id,
+      source: a.source || 'local',
+      nome: a.name || a.nome,
+      imagem: a.photo || a.imagem || a.foto || null,
+      extra: {
+        genero: a.genre || a.genero || '',
+        popularidade: a.popularity || 0
+      }
+    }))
+
+    const vibesPayload = this.selectedVibes.map(v => ({
+      id: v.id,
+      source: v.source || 'local',
+      nome: v.name || v.nome,
+      emoji: v.emoji || '✨',
+      descricao: v.description || v.descricao || '',
+      gradient: v.gradient || 'linear-gradient(135deg,#667eea,#764ba2)',
+      tags: v.tags || []
+    }))
+
+    console.log('📤 Enviando dados do onboarding:', {
+      generos: generosPayload.length,
+      artistas: artistasPayload.length,
+      vibes: vibesPayload.length
+    })
+
+    const response = await fetch(`http://localhost:3002/usuarios/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        generos: generosPayload,
+        artistasFavoritos: artistasPayload,
+        vibesFavoritas: vibesPayload,
+        onboardingCompleto: true
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Erro ${response.status}`)
+    }
+const updatedResponse = await response.json()
+const updatedUser = updatedResponse.user || updatedResponse
+
+localStorage.setItem("usuario", JSON.stringify({
+  ...usuario,
+  ...updatedUser,
+  onboardingCompleto: true
+}))
+
+
+    // Favoritar artistas locais automaticamente
+    const artistasLocais = this.selectedArtists.filter(a => !a.source || a.source === 'local')
+
+    if (artistasLocais.length > 0) {
+      await Promise.allSettled(
+        artistasLocais.map(artist =>
+          fetch(`http://localhost:3002/favoritas/${artist.id}/favoritar`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ tipo: "cantor" })
+          })
+        )
+      )
+    }
+
+    localStorage.setItem(
+      "artistasFavoritos",
+      JSON.stringify(this.selectedArtists.map(a => a.id))
+    )
+
+    await Swal.fire({
+      title: "Conta criada com sucesso! 🎉",
+      text: "Seu perfil esta pronto. Bora ouvir musica!",
+      icon: "success",
+      background: "#121212",
+      color: "#fff",
+      confirmButtonText: "Ir para o Dashboard 🚀",
+      confirmButtonColor: "#1DB954",
+      timer: 2500,
+      timerProgressBar: true,
+      showClass: {
+        popup: "animate__animated animate__zoomIn"
+      },
+      hideClass: {
+        popup: "animate__animated animate__fadeOut"
+      }
+    })
+
+    this.$router.push('/dashboard')
+  } catch (err) {
+    console.error('❌ Erro ao finalizar onboarding:', err)
+    Swal.fire({
+      title: "Erro 😢",
+      text: err.message || "Nao foi possivel finalizar o cadastro",
+      icon: "error",
+      background: "#121212",
+      color: "#fff",
+      confirmButtonColor: "#ff4757"
+    })
+  }
+}
   }
 }
 </script>

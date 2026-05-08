@@ -264,7 +264,7 @@
               <i class="fa fa-magic section-icon personal"></i>
               Feito para Você
             </h2>
-            <span class="section-subtitle">Baseado no seu gosto musical</span>
+     <span class="section-subtitle">Baseado nas suas escolhas de gêneros, artistas e vibes</span>
           </div>
           <button class="see-all" @click="showAllPersonal">
             Ver tudo <i class="fa fa-chevron-right"></i>
@@ -630,8 +630,7 @@
         </div>
       </section>
 
-      <!-- LOADING STATE -->
-      <div v-if="!chartTracks.length" class="skeleton"></div>
+
 
       <!-- TOAST NOTIFICATION -->
       <transition name="toast">
@@ -700,7 +699,7 @@ export default {
   data() {
     return {
       // API Configuration
-      DEEZER_API: 'https://api.allorigins.win/raw?url=https://api.deezer.com',
+     DEEZER_API: 'https://api.deezer.com',
       API_BASE_URL: 'http://localhost:3002',
 
       // User State
@@ -808,36 +807,24 @@ export default {
     }
   },
 
-  mounted() {
-    this.checkAuth()
-    this.loadAllData()
-    this.loadUserFromStorage()
-    this.updateGreeting()
+mounted() {
+  this.checkAuth()
+  this.loadUserFromStorage()
+  this.updateGreeting()
+  this.loadAllData()
 
-    // ═══════════════════════════════════════════════════════
-    // EVENTOS DO PLAYER (NOVO)
-    // ═══════════════════════════════════════════════════════
-    window.addEventListener('player-state-changed', this.handlePlayerStateChange)
-    window.addEventListener('player-track-ended', this.handlePlayerTrackEnded)
-    window.addEventListener('play-song', this.handlePlaySongFromDashboard)
+  window.addEventListener('player-state-changed', this.handlePlayerStateChange)
+  window.addEventListener('player-track-ended', this.handlePlayerTrackEnded)
+  window.addEventListener('play-song', this.handlePlaySongFromDashboard)
 
-    // Eventos legados
-    window.addEventListener('artists-updated', this.loadFollowedArtists)
-    window.addEventListener('playlist-updated', this.loadUserPlaylists)
-    window.addEventListener('curtidas-updated', this.carregarCurtidas)
-    window.addEventListener('likes-updated', this.carregarCurtidas)
-    document.addEventListener('click', this.handleClickOutside)
+  window.addEventListener('artists-updated', this.loadFollowedArtists)
+  window.addEventListener('playlist-updated', this.loadUserPlaylists)
+  window.addEventListener('curtidas-updated', this.carregarCurtidas)
+  window.addEventListener('likes-updated', this.carregarCurtidas)
+  document.addEventListener('click', this.handleClickOutside)
+  window.addEventListener('profile-updated', this.loadMadeForYou)
 
-     // DEBUG: Verificar se eventos estão chegando
-  window.addEventListener('player-track-ended', (e) => {
-    console.log('🔍 DEBUG Dashboard recebeu player-track-ended:', e.detail)
-  })
- 
-  window.addEventListener('player-state-changed', (e) => {
-    console.log('🔍 DEBUG Dashboard recebeu player-state-changed:', e.detail?.track?.title, 'isPlaying:', e.detail?.isPlaying)
-  })
-
-    setInterval(this.updateGreeting, 60000)
+  setInterval(this.updateGreeting, 60000)
 
     setTimeout(() => {
       this.loadUserPlaylists()
@@ -855,6 +842,7 @@ export default {
     window.removeEventListener('curtidas-updated', this.carregarCurtidas)
     window.removeEventListener('likes-updated', this.carregarCurtidas)
     document.removeEventListener('click', this.handleClickOutside)
+    window.removeEventListener('profile-updated', this.loadMadeForYou)
 
     if (this.toast.timer) {
       clearInterval(this.toast.timer)
@@ -865,6 +853,203 @@ export default {
   },
 
   methods: {
+async loadMadeForYou() {
+  try {
+    const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
+    const userId = usuario?._id || usuario?.id
+    const token = localStorage.getItem("token")
+
+    if (!userId || !token) {
+      console.log("⚠️ Usuário não autenticado")
+      this.loadMockMadeForYou()
+      return
+    }
+
+    const response = await fetch(
+      `${this.API_BASE_URL}/usuarios/${userId}/mixes?limit=12`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (Array.isArray(data.mixes) && data.mixes.length > 0) {
+      this.madeForYou = data.mixes.map((mix, index) => ({
+        id: mix.id,
+        title: mix.title,
+        description: mix.description,
+        tracks: mix.tracks || mix._tracks?.length || 0,
+        cover: mix.cover || mix._tracks?.[0]?.cover || "",
+        gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
+        _tracks: mix._tracks || []
+      }))
+
+      console.log(`✅ ${this.madeForYou.length} mixes personalizados carregados`)
+      return
+    }
+
+    this.loadMockMadeForYou()
+  } catch (error) {
+    console.error("❌ Erro ao carregar Feito para Você:", error)
+    this.loadMockMadeForYou()
+  }
+},
+
+  /**
+   * Carrega mixes adicionais (gêneros, artistas, vibes)
+   * NOTA: Se a rota /usuarios/:id/mixes não existir no backend,
+   * comente ou remova esta função
+   */
+  async loadAdditionalMixes(userId, token) {
+    try {
+      const response = await fetch(
+        `http://localhost:3002/usuarios/${userId}/mixes`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+
+      if (!response.ok) return
+
+      const data = await response.json()
+
+      if (data.mixes && data.mixes.length > 0) {
+        // Adicionar mixes adicionais (máximo 4 total)
+        const additionalMixes = data.mixes.slice(0, 4).map((mix, index) => ({
+          id: mix.id || `mix_${index}`,
+          title: mix.title,
+          description: mix.description,
+          tracks: mix.tracks || 10,
+          cover: mix.cover || '',
+          gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
+          _tracks: mix._tracks || []
+        }))
+
+        this.madeForYou = [...this.madeForYou, ...additionalMixes]
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro ao carregar mixes adicionais:', error)
+    }
+  },
+
+  /**
+   * Dados mockados de fallback
+   */
+  loadMockMadeForYou() {
+    this.madeForYou = [
+      {
+        id: 1,
+        title: "Mix Diário 1",
+        description: "Marília Mendonça, Maiara & Maraisa...",
+        tracks: 50,
+        cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg",
+        gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        _tracks: []
+      },
+      {
+        id: 2,
+        title: "Mix Diário 2",
+        description: "Henrique & Juliano, Jorge & Mateus...",
+        tracks: 45,
+        cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg",
+        gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+        _tracks: []
+      },
+      {
+        id: 3,
+        title: "Descobertas",
+        description: "Novas músicas para você",
+        tracks: 30,
+        cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg",
+        gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+        _tracks: []
+      },
+      {
+        id: 4,
+        title: "On Repeat",
+        description: "Músicas que você ama",
+        tracks: 100,
+        cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg",
+        gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+        _tracks: []
+      },
+      {
+        id: 5,
+        title: "Radar",
+        description: "Atualizado toda sexta",
+        tracks: 30,
+        cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg",
+        gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+        _tracks: []
+      }
+    ]
+  },
+
+  /**
+   * Tocar um mix personalizado
+   * Agora usa as tracks reais armazenadas no mix
+   */
+  playMix(mix) {
+  if (!mix._tracks || mix._tracks.length === 0) {
+    this.showToast("Mix vazio", "Nenhuma música disponível neste mix", "info", "fa fa-info-circle")
+    return
+  }
+
+  const playerSongs = mix._tracks.map(t => ({
+    id: t.id,
+    title: t.title,
+    artist: t.artist,
+    cover: t.cover,
+    url: t.preview || t.url,
+    duration: t.duration || 30,
+    source: t.source || "mixed"
+  }))
+
+  window.dispatchEvent(new CustomEvent("play-song", {
+    detail: {
+      song: playerSongs[0],
+      playlist: playerSongs,
+      index: 0,
+      context: "made-for-you"
+    }
+  }))
+
+  this.showToast("Tocando Mix", mix.title, "success", "fa fa-music")
+},
+
+  // ═══════════════════════════════════════════════════════
+  // ATUALIZAÇÃO DO loadAllData()
+  // ═══════════════════════════════════════════════════════
+async loadAllData() {
+  this.loading = true
+  try {
+    await Promise.all([
+      this.loadChartTracks(),
+      this.loadMadeForYou(),
+      this.loadNewReleases(),
+      this.loadGenres(),
+      this.loadFollowedArtists(),
+      Promise.resolve(this.loadRecentlyPlayed()),
+      this.loadUserPlaylists(),
+      this.carregarCurtidas()
+    ])
+  } catch (error) {
+    console.error("Erro ao carregar dashboard:", error)
+  } finally {
+    this.loading = false
+  }
+},
     // ═══════════════════════════════════════════════════════
     // PLAYER SYNC METHODS (NOVO)
     // ═══════════════════════════════════════════════════════
@@ -932,53 +1117,36 @@ export default {
         return
       }
 
-      // Adicionar ao início do "Tocadas Recentemente"
-      this.addToRecentlyPlayed(track, context)
-
-      // Resetar flag
-      this._lastAddedToRecent = null
-    },
-
-    /**
-     * Adiciona uma música ao "Tocadas Recentemente"
-     */
-    addToRecentlyPlayed(track, context) {
+  // ✅ CHAME A FUNÇÃO AQUI
+  this.addToRecentlyPlayed(track, context)
+  },
       // Normalizar dados do track
-      const normalizedTrack = {
-        id: track.id,
-        title: track.title || 'Sem título',
-        artist: track.artist || 'Artista desconhecido',
-        cover: track.cover || track.album?.cover_medium || '',
-        url: track.url || track.preview,
-        duration: track.duration || 0,
-        source: track.source || context || 'unknown',
-        playedAt: Date.now()
-      }
+    addToRecentlyPlayed(track, context) {
+  const normalizedTrack = {
+    id: track.id,
+    title: track.title || 'Sem título',
+    artist: track.artist || 'Artista desconhecido',
+    cover: track.cover || track.album?.cover_medium || '',
+    url: track.url || track.preview,
+    duration: track.duration || 0,
+    source: track.source || context || 'unknown',
+    playedAt: Date.now()
+  }
 
-      console.log('➕ Adicionando ao histórico:', normalizedTrack.title)
+  const existingIndex = this.recentlyPlayed.findIndex(t => t.id === normalizedTrack.id)
+  if (existingIndex >= 0) {
+    this.recentlyPlayed.splice(existingIndex, 1)
+  }
 
-      // Remover se já existe (para mover para o topo)
-      const existingIndex = this.recentlyPlayed.findIndex(t => t.id === normalizedTrack.id)
-      if (existingIndex >= 0) {
-        this.recentlyPlayed.splice(existingIndex, 1)
-      }
+  this.recentlyPlayed.unshift(normalizedTrack)
 
-      // Adicionar no início
-      this.recentlyPlayed.unshift(normalizedTrack)
+  if (this.recentlyPlayed.length > 20) {
+    this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
+  }
 
-      // Manter máximo de 20 itens
-      if (this.recentlyPlayed.length > 20) {
-        this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
-      }
-
-      // Persistir no localStorage
-      this.saveRecentlyPlayed()
-
-      // Mostrar toast de confirmação (opcional)
-      // this.showToast('Adicionada ao histórico', `"${normalizedTrack.title}"`, 'success', 'fa fa-history')
-
-      console.log('📋 Histórico atualizado. Total:', this.recentlyPlayed.length)
-    },
+  this.saveRecentlyPlayed()
+  console.log('📋 Histórico atualizado. Total:', this.recentlyPlayed.length)
+},
    
     /**
      * Atualiza o "Continue Ouvindo" com dados em tempo real do player
@@ -1544,23 +1712,6 @@ export default {
     // DATA LOADING
     // ═══════════════════════════════════════════════════════
 
-    async loadAllData() {
-      this.loading = true
-      try {
-        await this.loadChartTracks()
-        this.generateRecommendations()
-        this.loadNewReleases()
-        this.loadGenres()
-        this.loadMockUserData()
-        this.loadFollowedArtists()
-        this.loadRecentlyPlayed() // Carregar histórico persistido
-      } catch (error) {
-        console.error(error)
-      } finally {
-        this.loading = false
-      }
-    },
-
     async loadChartTracks() {
       const cache = localStorage.getItem('dashboard_chart')
       if (cache) {
@@ -1587,17 +1738,27 @@ export default {
       }
     },
 
-    async loadGenres() {
-      try {
-        const response = await fetch(`${this.DEEZER_API}/genre`)
-        const data = await response.json()
-        if (data.data) {
-          this.genres = data.data.filter(g => g.id !== 0)
-        }
-      } catch (error) {
-        console.error('Erro gêneros:', error)
-      }
-    },
+async loadGenres() {
+  try {
+    const response = await fetch(`${this.DEEZER_API}/genre`)
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.data) {
+      this.genres = data.data.filter(g => g.id !== 0)
+    } else {
+      this.genres = []
+    }
+
+  } catch (error) {
+    console.error('❌ Erro gêneros:', error)
+    this.genres = []
+  }
+},
 
     async loadFollowedArtists() {
       try {
@@ -1632,17 +1793,6 @@ export default {
         console.error('Erro ao carregar artistas seguidos:', error)
         this.followedArtists = []
       }
-    },
-
-    loadMockUserData() {
-      // Dados mockados para "Feito para Você" (mantidos como recomendações estáticas)
-      this.madeForYou = [
-        { id: 1, title: "Mix Diário 1", description: "Marília Mendonça, Maiara & Maraisa...", tracks: 50, cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
-        { id: 2, title: "Mix Diário 2", description: "Henrique & Juliano, Jorge & Mateus...", tracks: 45, cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
-        { id: 3, title: "Descobertas", description: "Novas músicas para você", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
-        { id: 4, title: "On Repeat", description: "Músicas que você ama", tracks: 100, cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)" },
-        { id: 5, title: "Radar", description: "Atualizado toda sexta", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" }
-      ]
     },
 
     generateRecommendations() {
@@ -1697,9 +1847,6 @@ export default {
       }))
     },
 
-    playMix(mix) {
-      this.showToast('Tocando Mix', mix.title, 'success', 'fa fa-music')
-    },
 
     playPlaylist(playlist) {
       this.currentPlaylist = playlist

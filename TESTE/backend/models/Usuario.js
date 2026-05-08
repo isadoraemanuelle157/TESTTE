@@ -18,7 +18,7 @@ const GeneroExternoSchema = new mongoose.Schema({
 }, { _id: false })
 
 const VibeExternaSchema = new mongoose.Schema({
-  source: { type: String, enum: ['local', 'externo'], required: true },
+  source: { type: String,  enum: ['local', 'externo', 'spotify', 'deezer', 'auto'], required: true },
   externalId: { type: String, default: null },
   nome: { type: String, required: true },
   emoji: { type: String, default: '✨' },
@@ -179,6 +179,81 @@ usuarioSchema.methods.getVibesCompletas = async function() {
   }))
   
   return [...locaisFormatados, ...externasFormatadas]
+}
+
+usuarioSchema.pre('save', function(next) {
+  // Se generos vier como array simples (do onboarding), converter para formato interno
+  if (Array.isArray(this.generos)) {
+    const externos = this.generos
+      .filter(g => g.source && g.source !== 'local')
+      .map(g => ({
+        source: g.source,
+        externalId: g.id?.toString() || g.externalId,
+        nome: g.nome || g.name,
+        icon: g.icon || '🎵',
+        color: g.color || '#1DB954'
+      }))
+    
+    const locais = this.generos
+      .filter(g => !g.source || g.source === 'local')
+      .map(g => g.id || g._id)
+      .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+    
+    this.generos = { locais, externos }
+  }
+  
+  // Se artistasFavoritos vier como array simples
+  if (Array.isArray(this.artistasFavoritos)) {
+    const externos = this.artistasFavoritos
+      .filter(a => a.source && a.source !== 'local')
+      .map(a => ({
+        source: a.source,
+        externalId: a.id?.toString() || a.externalId,
+        nome: a.nome || a.name,
+        imagem: a.imagem || a.photo || null,
+        extra: a.extra || {}
+      }))
+    
+    const locais = this.artistasFavoritos
+      .filter(a => !a.source || a.source === 'local')
+      .map(a => a.id || a._id)
+      .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+    
+    this.artistasFavoritos = { locais, externos }
+  }
+  
+  // Se vibesFavoritas vier como array simples
+  if (Array.isArray(this.vibesFavoritas)) {
+    const externas = this.vibesFavoritas
+      .filter(v => v.source && v.source !== 'local')
+      .map(v => ({
+        source: v.source,
+        externalId: v.id?.toString() || v.externalId,
+        nome: v.nome || v.name,
+        emoji: v.emoji || '✨',
+        descricao: v.descricao || v.description || '',
+        gradient: v.gradient || 'linear-gradient(135deg,#667eea,#764ba2)',
+        tags: v.tags || []
+      }))
+    
+    const locais = this.vibesFavoritas
+      .filter(v => !v.source || v.source === 'local')
+      .map(v => v.id || v._id)
+      .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+    
+    this.vibesFavoritas = { locais, externas }
+  }
+  
+  next()
+})
+
+// Também adicione um método para facilitar o update do onboarding:
+usuarioSchema.methods.updateOnboarding = async function(generos, artistas, vibes) {
+  this.generos = generos || []
+  this.artistasFavoritos = artistas || []
+  this.vibesFavoritas = vibes || []
+  this.onboardingCompleto = true
+  return this.save()
 }
 
 module.exports = mongoose.model('Usuario', usuarioSchema)

@@ -117,6 +117,33 @@ const search = async (req, res) => {
   }
 }
 
+// 🎯 NOVO: GET MIXES (Feito para Você)
+const getMixes = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { limit = 6 } = req.query
+    const viewerId = req.user?.id
+
+    // Verificar permissão de acesso ao perfil
+    const podeAcessar = await userService.canAccessProfile(id, viewerId)
+    if (!podeAcessar) {
+      return res.status(403).json({ message: "Perfil privado" })
+    }
+
+    const bloqueado = await userService.isResourceBlocked(id, viewerId, 'mixes')
+    if (bloqueado) {
+      return res.status(403).json({ message: "Mixes ocultos para você" })
+    }
+
+    const mixes = await userService.getUserMixes(id, parseInt(limit))
+    res.json(mixes)
+
+  } catch (error) {
+    console.error('❌ Erro getMixes:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 const getPublicCurtidas = async (req, res) => {
   try {
     const { id } = req.params
@@ -248,6 +275,7 @@ module.exports = {
   update,
   remove,
   search,
+  getMixes,           // 🎯 NOVO
   getPublicCurtidas,
   getPublicPlaylists,
   getEstatisticas
