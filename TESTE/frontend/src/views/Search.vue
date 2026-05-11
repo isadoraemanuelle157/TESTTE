@@ -529,6 +529,7 @@ export default {
       showCategoriesDropdown: false,
       activeFilter: 'Todos',
       isLoading: false,
+      
       activeCategoryTab: 'genres',
 
       currentTopCategory: 'Brasil',
