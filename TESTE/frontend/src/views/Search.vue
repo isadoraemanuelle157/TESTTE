@@ -250,6 +250,32 @@
                             </div>
                           </div>
                         </div>
+                                              <!-- Tab: Locais -->
+                      <div v-if="activeCategoryTab === 'locals'" class="category-tab-content">
+                        <div class="local-section" style="margin: 0;">
+                          <div class="local-header" style="margin-bottom: 16px;">
+                            <h4 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 0 0 4px 0;">
+                              🗺️ Explorar por Local
+                            </h4>
+                            <p style="font-size: 12px; color: #888; margin: 0;">Descubra sons de cada canto do Brasil</p>
+                          </div>
+                          <div class="local-grid" style="grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                            <div
+                              v-for="loc in localizacoes"
+                              :key="loc"
+                              class="local-card"
+                              @click="searchAndGo(loc); showCategoriesDropdown = false"
+                              style="padding: 10px; border-radius: 10px;"
+                            >
+                              <div class="local-card-bg" :style="getLocalGradient(loc)" style="aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 8px;">
+                                <span class="local-emoji" style="font-size: 24px;">📍</span>
+                              </div>
+                              <span class="local-name" style="font-size: 12px;">{{ loc }}</span>
+                              <span class="local-desc" style="font-size: 10px;">Música local</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                       </div>
                     </div>
                   </div>
@@ -267,17 +293,148 @@
     {{ cat }}
   </button>
 </div>
-
-          </div>
+</div>
 
           <!-- Top Músicas - Layout em Linha tipo Spotify -->
           <div class="top-section" v-if="chartTracks.length > 0">
-            <div class="top-header">
-              <h3>{{ topSectionTitle }}</h3>
-              <button @click="searchAndGo(currentTopCategory)" class="view-all">
-                Ver todas
-              </button>
+           <div class="top-header">
+  <h3>{{ topSectionTitle }}</h3>
+  <div class="top-header-actions">
+    <!-- Dropdown Customizado de Gêneros/Local -->
+   <div class="custom-dropdown-wrapper" ref="genreDropdownRef">
+  <button 
+    class="custom-dropdown-trigger"
+    @click="toggleGenreDropdown"
+    :class="{ active: showGenreDropdown }"
+  >
+    <span class="dropdown-current">
+      <i :class="getCategoryIcon(currentTopCategory)"></i>
+      {{ currentTopCategory === 'Brasil' ? '🇧🇷 Brasil' : currentTopCategory }}
+    </span>
+    <i class="fa fa-chevron-down dropdown-chevron"></i>
+  </button>
+  
+  <transition name="dropdown-slide">
+    <div v-if="showGenreDropdown" class="custom-dropdown-menu">
+      
+      <!-- Barra de busca -->
+      <div class="dropdown-search-box">
+        <i class="fa fa-search"></i>
+        <input 
+          type="text" 
+          v-model="dropdownSearchQuery" 
+          placeholder="Buscar gênero ou local..."
+        />
+        <button v-if="dropdownSearchQuery" @click="dropdownSearchQuery = ''" class="clear-search">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <!-- Brasil -->
+      <div class="dropdown-section highlight">
+        <span class="dropdown-section-label">🌍 Região</span>
+        <button 
+          class="dropdown-item featured"
+          :class="{ active: currentTopCategory === 'Brasil' }"
+          @click="selectCategory('Brasil')"
+        >
+          <span class="item-icon">🇧🇷</span>
+          <div class="item-info">
+            <span class="item-text">Brasil</span>
+            <span class="item-sub">Top nacional</span>
+          </div>
+          <i v-if="currentTopCategory === 'Brasil'" class="fa fa-check item-check"></i>
+        </button>
+      </div>
+      
+      <!-- Recentes -->
+      <div class="dropdown-section" v-if="recentCategories.length > 0">
+        <span class="dropdown-section-label">⏱️ Recentes</span>
+        <button
+          v-for="cat in recentCategories"
+          :key="cat"
+          class="dropdown-item"
+          :class="{ active: currentTopCategory === cat }"
+          @click="selectCategory(cat)"
+        >
+          <span class="item-icon">{{ getCategoryEmoji(cat) }}</span>
+          <span class="item-text">{{ cat }}</span>
+          <i v-if="currentTopCategory === cat" class="fa fa-check item-check"></i>
+        </button>
+      </div>
+      
+      <!-- Localizações -->
+      <div class="dropdown-section" v-if="filteredLocalizacoes.length > 0">
+        <span class="dropdown-section-label">📍 Localizações</span>
+        <div class="dropdown-scrollable">
+          <button
+            v-for="loc in filteredLocalizacoes"
+            :key="loc"
+            class="dropdown-item"
+            :class="{ active: currentTopCategory === loc }"
+            @click="selectCategory(loc)"
+          >
+            <span class="item-icon">📍</span>
+            <span class="item-text">{{ loc }}</span>
+            <i v-if="currentTopCategory === loc" class="fa fa-check item-check"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Gêneros do Banco -->
+      <div class="dropdown-section" v-if="filteredGenerosDB.length > 0">
+        <span class="dropdown-section-label">🎵 Gêneros do Banco</span>
+        <div class="dropdown-scrollable">
+          <button
+            v-for="genre in filteredGenerosDB"
+            :key="genre._id"
+            class="dropdown-item"
+            :class="{ active: currentTopCategory === genre.nome }"
+            @click="selectCategory(genre.nome)"
+          >
+            <span class="item-icon">🎵</span>
+            <div class="item-info">
+              <span class="item-text">{{ genre.nome }}</span>
+              <span v-if="genre.musicas?.length" class="item-count">{{ genre.musicas.length }} músicas</span>
             </div>
+            <i v-if="currentTopCategory === genre.nome" class="fa fa-check item-check"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Gêneros API -->
+      <div class="dropdown-section" v-if="filteredApiGenres.length > 0">
+        <span class="dropdown-section-label">🌐 Gêneros API</span>
+        <div class="dropdown-scrollable">
+          <button
+            v-for="genre in filteredApiGenres"
+            :key="genre.id"
+            class="dropdown-item"
+            :class="{ active: currentTopCategory === genre.name }"
+            @click="selectCategory(genre.name)"
+          >
+            <span class="item-icon">🌐</span>
+            <span class="item-text">{{ genre.name }}</span>
+            <i v-if="currentTopCategory === genre.name" class="fa fa-check item-check"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Vazio -->
+      <div v-if="isDropdownEmpty" class="dropdown-empty">
+        <i class="fa fa-search"></i>
+        <span>Nenhum resultado encontrado</span>
+      </div>
+      
+    </div>
+  </transition>
+</div>
+    
+    <button @click="searchAndGo(currentTopCategory)" class="view-all">
+      Ver todas
+    </button>
+  </div>
+</div>
             <div class="top-tracks">
               <div
                 v-for="(track, index) in chartTracks.slice(0, 5)"
@@ -305,26 +462,6 @@
                 <button class="track-play">
                   <i class="fa fa-play"></i>
                 </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Artistas Populares - Grid de Cards -->
-          <div class="top-section" v-if="popularArtistsReal.length > 0">
-            <div class="top-header">
-              <h3>Artistas Populares</h3>
-              <button @click="searchAndGo('Artistas')" class="view-all">Ver todos</button>
-            </div>
-            <div class="artists-row">
-              <div
-                v-for="artist in popularArtistsReal.slice(0, 6)"
-                :key="artist.id"
-                class="artist-item"
-                @click="searchArtist(artist.name, artist.id)"
-              >
-                <img :src="artist.picture_medium" :alt="artist.name" @error="$event.target.style.display='none'">
-                <span class="artist-name">{{ artist.name }}</span>
-                <span class="artist-fans">{{ formatFans(artist.nb_fan) }}</span>
               </div>
             </div>
           </div>
@@ -493,6 +630,26 @@
               </div>
             </div>
           </div>
+<!-- LOCAIS - Grid de Cards de Localização -->
+<div v-if="getFilteredByType('local').length > 0" class="results-section">
+  <div class="section-header-row">
+    <h3 class="section-title">Locais</h3>
+  </div>
+  <div class="locals-grid">
+    <div
+      v-for="loc in getFilteredByType('local')"
+      :key="loc.id"
+      class="local-result-card"
+      @click="searchAndGo(loc.name)"
+    >
+      <div class="local-result-bg" :style="getLocalGradient(loc.name)">
+        <span class="local-result-emoji">📍</span>
+      </div>
+      <span class="local-result-name">{{ loc.name }}</span>
+      <span class="local-result-desc">{{ loc.description || 'Música local' }}</span>
+    </div>
+  </div>
+</div>
 
         </div>
 
@@ -532,7 +689,13 @@ export default {
       
       activeCategoryTab: 'genres',
 
-      currentTopCategory: 'Brasil',
+currentTopCategory: 'Brasil',
+      showGenreDropdown: false,
+            dropdownSearchQuery: '',
+      recentCategories: [],
+
+      // Localizações para busca regional
+ localizacoes: [],
 
       // importante
       searchTimeout: null,
@@ -552,10 +715,11 @@ export default {
       chartTracks: [],
       popularArtistsReal: [],
 
-      categoryTabs: [
+       categoryTabs: [
         { id: 'genres', name: 'Gêneros', icon: 'fa fa-music' },
         { id: 'moods', name: 'Atividades', icon: 'fa fa-smile-o' },
-        { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' }
+        { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' },
+        { id: 'locals', name: 'Locais', icon: 'fa fa-map-marker' }
       ],
       decadeColors: {
         '2020s': '#1db954',
@@ -623,7 +787,7 @@ export default {
         ]
       },
 
-   searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Gêneros', 'Décadas'],
+searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Gêneros', 'Locais', 'Décadas'],
 
       trending: [
         'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional',
@@ -670,6 +834,31 @@ export default {
   },
 
   computed: {
+      filteredLocalizacoes() {
+    if (!this.dropdownSearchQuery) return this.localizacoes
+    const q = this.dropdownSearchQuery.toLowerCase()
+    return this.localizacoes.filter(loc => loc.toLowerCase().includes(q))
+  },
+  
+  filteredGenerosDB() {
+    if (!this.dropdownSearchQuery) return this.generosDB
+    const q = this.dropdownSearchQuery.toLowerCase()
+    return this.generosDB.filter(g => g.nome?.toLowerCase().includes(q))
+  },
+  
+  filteredApiGenres() {
+    if (!this.dropdownSearchQuery) return this.apiGenres
+    const q = this.dropdownSearchQuery.toLowerCase()
+    return this.apiGenres.filter(g => g.name?.toLowerCase().includes(q))
+  },
+  
+  isDropdownEmpty() {
+    return this.filteredLocalizacoes.length === 0 && 
+           this.filteredGenerosDB.length === 0 && 
+           this.filteredApiGenres.length === 0 &&
+           this.dropdownSearchQuery
+  },
+
     allGenres() {
   const local = (this.generosDB || []).map(g => this.normalizeLocalGenre(g))
   const api = (this.apiGenres || []).map(g => this.normalizeApiGenre(g))
@@ -738,7 +927,8 @@ const typeMap = {
   'Artistas': 'artist',
   'Álbuns': 'album',
   'Usuários': 'user',
-  'Gêneros': 'genre'
+  'Gêneros': 'genre',
+  'Locais': 'local'
 }
 
 
@@ -849,6 +1039,7 @@ genreCategorySections() {
 
 mounted() {
   document.addEventListener('click', this.handleClickOutside)
+  document.addEventListener('click', this.handleGenreDropdownClickOutside)
 
   // Verifica se veio de um gênero do Dashboard (query param 'q')
   const urlQuery = this.$route?.query?.q
@@ -880,6 +1071,8 @@ mounted() {
   this.loadGeneros()
   this.loadApiGenres()
   this.loadHistory()
+  this.loadLocalizacoes()
+      this.loadRecentCategories()
 },
 
   beforeUnmount() {
@@ -948,6 +1141,77 @@ normalizeApiGenre(g) {
     cantoresCount: 0
   }
 },
+async loadLocalMusicas(localNome) {
+  try {
+    this.isLoading = true
+    
+    const res = await fetch(`http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`)
+    const data = await res.json()
+    
+    if (data.results && Array.isArray(data.results)) {
+      // Converte os resultados para o formato do chartTracks (tracks para o Top Músicas)
+      const tracks = data.results
+        .filter(r => r.type === 'track')
+        .map(t => ({
+          id: t.id,
+          title: t.title,
+          artist: { name: t.artist?.name || 'Artista desconhecido' },
+          album: {
+            cover_medium: t.album?.cover_medium || t.cover || ''
+          },
+          preview: t.preview,
+          duration: t.duration,
+          source: t.source,
+          localContext: t.localContext
+        }))
+      
+      this.chartTracks = tracks
+      
+      // Se não encontrou tracks, mas tem artistas/álbuns, mostra na busca geral
+      if (tracks.length === 0 && data.results.length > 0) {
+        this.searchResults = data.results.map(r => {
+          if (r.type === 'artist') {
+            return {
+              id: r.id,
+              name: r.name,
+              picture: r.picture || r.picture_medium,
+              picture_medium: r.picture_medium,
+              nb_fan: r.nb_fan || 0,
+              type: 'artist',
+              source: r.source
+            }
+          }
+          if (r.type === 'album') {
+            return {
+              id: r.id,
+              title: r.title,
+              artist: r.artist,
+              cover: r.cover || r.cover_medium,
+              cover_medium: r.cover_medium,
+              type: 'album',
+              source: r.source
+            }
+          }
+          return r
+        })
+        this.hasSearched = true
+      }
+      
+      console.log(`✅ ${data.total} resultados carregados para ${localNome}`)
+    } else {
+      // Sem resultados
+      this.chartTracks = []
+      this.showToast(`Nenhum resultado encontrado para ${localNome}`, 'info')
+    }
+  } catch (err) {
+    console.error('Erro ao carregar músicas do local:', err)
+    this.chartTracks = []
+    this.showToast('Erro ao buscar músicas do local', 'error')
+  } finally {
+    this.isLoading = false
+  }
+},
+
 
 detectGenreCategory(name = '') {
   const value = String(name).toLowerCase().trim()
@@ -994,7 +1258,17 @@ detectGenreCategory(name = '') {
 
   return 'outros'
 },
-
+async loadLocalizacoes() {
+  try {
+    const res = await fetch('http://localhost:3002/locais')
+    const data = await res.json()
+    if (data.locais && Array.isArray(data.locais)) {
+      this.localizacoes = data.locais.map(l => l.nome)
+    }
+  } catch (err) {
+    console.error('Erro ao carregar localizações:', err)
+  }
+},
     // ===== NOVO: Filtrar por tipo para seções separadas =====
     getFilteredByType(type) {
       if (this.activeFilter === 'Todos') {
@@ -1010,6 +1284,25 @@ detectGenreCategory(name = '') {
         local: 'fa fa-database'
       }
       return icons[source] || 'fa fa-music'
+    },
+        getCategoryEmoji(category) {
+      if (category === 'Brasil') return '🇧🇷'
+      if (this.localizacoes.includes(category)) return '📍'
+      return '🎵'
+    },
+    
+    saveRecentCategory(category) {
+      if (!category || category === 'Brasil') return
+      let recents = JSON.parse(localStorage.getItem('soundup_recent_categories') || '[]')
+      recents = recents.filter(c => c !== category)
+      recents.unshift(category)
+      recents = recents.slice(0, 5)
+      localStorage.setItem('soundup_recent_categories', JSON.stringify(recents))
+      this.recentCategories = recents
+    },
+    
+    loadRecentCategories() {
+      this.recentCategories = JSON.parse(localStorage.getItem('soundup_recent_categories') || '[]')
     },
 
     // ===== SISTEMA DE CURTIDAS =====
@@ -1314,23 +1607,28 @@ detectGenreCategory(name = '') {
       }
     },
 
-    handleResultClick(result) {
-      if (result.type === 'track') {
-        return this.playTrack(result)
-      }
+ handleResultClick(result) {
+  if (result.type === 'track') {
+    return this.playTrack(result)
+  }
 
-      if (result.type === 'album' && result.source === 'local') {
-        return this.$router.push(`/album/${result.id}`)
-      }
+  if (result.type === 'album' && result.source === 'local') {
+    return this.$router.push(`/album/${result.id}`)
+  }
 
-      if (result.type === 'artist' && result.source === 'local') {
-        return this.$router.push(`/cantor/${result.id}`)
-      }
+  if (result.type === 'artist' && result.source === 'local') {
+    return this.$router.push(`/cantor/${result.id}`)
+  }
 
-      if (result.type === 'user') {
-        return this.goToUserProfile(result)
-      }
-    },
+  if (result.type === 'user') {
+    return this.goToUserProfile(result)
+  }
+  
+  // Se clicar em um local, busca as músicas dele
+  if (result.type === 'local') {
+    return this.searchAndGo(result.name)
+  }
+},
 
     goToUserProfile(user) {
       if (!user) return
@@ -1659,6 +1957,86 @@ detectGenreCategory(name = '') {
             source: 'deezer'
           })))
         }  
+        // LOCAIS - busca por localizações que correspondem à query
+const matchedLocal = this.localizacoes.find(loc => 
+  loc.toLowerCase() === query.toLowerCase()
+)
+
+if (matchedLocal) {
+  try {
+    const localRes = await fetch(
+      `http://localhost:3002/locais/${encodeURIComponent(matchedLocal)}/musicas`
+    ).then(r => r.json())
+    
+    if (localRes.results && Array.isArray(localRes.results)) {
+      results.push(...localRes.results.map(r => {
+        if (r.type === 'track') {
+          return {
+            id: r.id,
+            title: r.title,
+            artist: { name: r.artist?.name || 'Artista desconhecido' },
+            album: {
+              title: r.album?.title || '',
+              cover: r.album?.cover_medium || r.cover || ''
+            },
+            cover: r.cover || r.album?.cover_medium,
+            preview: r.preview,
+            duration: r.duration,
+            type: 'track',
+            source: r.source,
+            localContext: r.localContext
+          }
+        }
+        if (r.type === 'artist') {
+          return {
+            id: r.id,
+            name: r.name,
+            picture: r.picture || r.picture_medium,
+            picture_medium: r.picture_medium,
+            nb_fan: r.nb_fan || 0,
+            type: 'artist',
+            source: r.source,
+            localContext: r.localContext
+          }
+        }
+        if (r.type === 'album') {
+          return {
+            id: r.id,
+            title: r.title,
+            artist: { name: r.artist?.name || 'Artista' },
+            cover: r.cover || r.cover_medium,
+            cover_medium: r.cover_medium,
+            type: 'album',
+            source: r.source,
+            localContext: r.localContext
+          }
+        }
+        return r
+      }))
+    }
+  } catch (err) {
+    console.warn('Erro ao buscar músicas do local:', err)
+  }
+}
+
+// Cards de local apenas para matches parciais (busca não exata)
+const partialMatchedLocais = this.localizacoes
+  .filter(loc => {
+    const locLower = loc.toLowerCase()
+    const queryLower = query.toLowerCase()
+    return locLower.includes(queryLower) && locLower !== queryLower
+  })
+  .map((loc, index) => ({
+    id: `local-${index}`,
+    name: loc,
+    description: `Música de ${loc}`,
+    type: 'local',
+    source: 'local'
+  }))
+
+if (partialMatchedLocais.length > 0) {
+  results.push(...partialMatchedLocais)
+}
 
         // GÊNEROS
         if (Array.isArray(localGeneros)) {
@@ -1676,6 +2054,7 @@ detectGenreCategory(name = '') {
       .filter(item => item.type === 'genre')
       .map(item => (item.name || '').toLowerCase())
   )
+
 
   results.push(
     ...matchedApiGenres
@@ -1930,6 +2309,7 @@ detectGenreCategory(name = '') {
       if (item.type === 'artist') return item.name
       if (item.type === 'album') return item.title
       if (item.type === 'user') return item.name || item.username
+      if (item.type === 'local') return item.name
       return item.name || item.title || 'Desconhecido'
     },
 
@@ -1980,6 +2360,9 @@ detectGenreCategory(name = '') {
       if (item.type === 'genre') {
         return item.description || 'Gênero musical'
       }
+      if (item.type === 'local') {
+  return item.description || `Descubra música de ${item.name}`
+}
 
       return ''
     },
@@ -1990,37 +2373,41 @@ detectGenreCategory(name = '') {
         'artist': 'Artista',
         'album': 'Álbum',
         'user': 'Usuário',
-        'genre': 'Gênero'
+        'genre': 'Gênero',
+        'local': 'Local'
       }
       return typeMap[item.type] || item.type
     },
 
-    getBestImage(item) {
-      if (item.source === 'deezer') {
-        if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
-        if (item.type === 'artist') return item.picture_medium || item.picture
-        if (item.type === 'album') return item.cover_medium || item.cover
-        return item.picture_medium || item.cover_medium || item.cover || ''
-      }
+   getBestImage(item) {
+  // Se for um local sem imagem, retorna vazio (o gradient será usado)
+  if (item.type === 'local') return ''
+  
+  if (item.source === 'deezer') {
+    if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
+    if (item.type === 'artist') return item.picture_medium || item.picture
+    if (item.type === 'album') return item.cover_medium || item.cover
+    return item.picture_medium || item.cover_medium || item.cover || ''
+  }
 
-      if (item.source === 'spotify') {
-        if (item.type === 'track') return item.album?.cover || item.cover
-        if (item.type === 'artist') return item.picture
-        if (item.type === 'album') return item.cover
-        return item.cover || item.picture || ''
-      }
+  if (item.source === 'spotify') {
+    if (item.type === 'track') return item.album?.cover || item.cover
+    if (item.type === 'artist') return item.picture
+    if (item.type === 'album') return item.cover
+    return item.cover || item.picture || ''
+  }
 
-      if (item.source === 'local') {
-        if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
-        if (item.type === 'artist') return item.picture || item.foto || ''
-        if (item.type === 'album') return item.cover || item.foto || ''
-        if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
-        if (item.type === 'genre') return item.foto || '/default-genre.png'
-        return item.foto || item.cover || item.picture || ''
-      }
+  if (item.source === 'local') {
+    if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
+    if (item.type === 'artist') return item.picture || item.foto || ''
+    if (item.type === 'album') return item.cover || item.foto || ''
+    if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
+    if (item.type === 'genre') return item.foto || '/default-genre.png'
+    return item.foto || item.cover || item.picture || ''
+  }
 
-      return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
-    },
+  return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
+},
 
     getIconForType(type) {
       const icons = {
@@ -2028,7 +2415,8 @@ detectGenreCategory(name = '') {
         'Música': 'fa fa-music',
         'Álbum': 'fa fa-circle',
         'Usuário': 'fa fa-user-circle',
-        'Gênero': 'fa fa-music'
+        'Gênero': 'fa fa-music',
+        'Local': 'fa fa-map-marker'
       }
       return icons[type] || 'fa fa-music'
     },
@@ -2044,11 +2432,17 @@ detectGenreCategory(name = '') {
       return this.trendGradients[index % this.trendGradients.length]
     },
 
-    // Interaction Methods
-    handleClickOutside(event) {
+handleClickOutside(event) {
       const categoriesEl = this.$refs.categoriesContainer
       if (categoriesEl && !categoriesEl.contains(event.target)) {
         this.showCategoriesDropdown = false
+      }
+    },
+    
+    handleGenreDropdownClickOutside(event) {
+      const dropdownEl = this.$refs.genreDropdownRef
+      if (dropdownEl && !dropdownEl.contains(event.target)) {
+        this.showGenreDropdown = false
       }
     },
 
@@ -2152,13 +2546,72 @@ detectGenreCategory(name = '') {
         console.error("Erro ao salvar histórico:", err)
       }
     },
-
-    searchAndGo(term) {
-      this.currentTopCategory = term || 'Brasil'
-      this.searchQuery = term
-      this.loadTopTracksByCategory(this.currentTopCategory)
-      this.performSearch()
+    toggleGenreDropdown() {
+      this.showGenreDropdown = !this.showGenreDropdown
     },
+
+    closeGenreDropdown() {
+      this.showGenreDropdown = false
+    },
+    
+    selectCategory(category) {
+      this.currentTopCategory = category
+      this.showGenreDropdown = false
+      this.dropdownSearchQuery = ''
+      this.saveRecentCategory(category)
+      this.loadTopTracksByCategory(category)
+    },
+    
+    getCategoryIcon(category) {
+      if (category === 'Brasil') return 'fa fa-globe'
+      if (this.localizacoes.includes(category)) return 'fa fa-map-marker'
+      return 'fa fa-music'
+    },
+
+    onGenreChange() {
+      const genre = this.currentTopCategory
+      this.loadTopTracksByCategory(genre)
+    },
+
+
+  getLocalGradient(loc) {
+      const colors = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+        'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
+        'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
+      ]
+      const index = loc.length % colors.length
+      return { background: colors[index] }
+    },
+
+
+async searchAndGo(term) {
+  this.currentTopCategory = term || 'Brasil'
+  this.searchQuery = term
+  this.hasSearched = true  // Importante: marca que já fez busca
+  this.showSuggestions = false
+  
+  // Se for um local, busca as músicas do local
+  if (this.localizacoes.includes(term)) {
+    await this.loadLocalMusicas(term)
+  } else {
+    await this.loadTopTracksByCategory(this.currentTopCategory)
+  }
+  
+  // Só chama performSearch se não for local (evita duplicar)
+  if (!this.localizacoes.includes(term)) {
+    await this.performSearch()
+  }
+},
 
     searchArtist(artistName, artistId) {
       if (artistId) {
@@ -2921,6 +3374,492 @@ html, body, #app {
   cursor: pointer;
   transition: all 0.2s;
 }
+/* ===== WRAPPER ===== */
+.custom-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* ===== TRIGGER BUTTON ===== */
+.custom-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px 10px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 500px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 180px;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.custom-dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.custom-dropdown-trigger.active {
+  background: #1db954;
+  border-color: #1db954;
+  color: #000;
+  box-shadow: 0 4px 20px rgba(29, 185, 84, 0.35);
+}
+
+.custom-dropdown-trigger.active:hover {
+  background: #1ed760;
+  border-color: #1ed760;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(29, 185, 84, 0.45);
+}
+
+/* Current selection display */
+.dropdown-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-current i {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* Chevron animation */
+.dropdown-chevron {
+  font-size: 11px;
+  color: currentColor;
+  opacity: 0.7;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.custom-dropdown-trigger:hover .dropdown-chevron {
+  opacity: 1;
+}
+
+.custom-dropdown-trigger.active .dropdown-chevron {
+  opacity: 1;
+  color: #000;
+}
+
+.custom-dropdown-trigger.active .dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+/* ===== DROPDOWN MENU ===== */
+.custom-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 340px;
+  max-height: 480px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #121212;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 24px 48px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  z-index: 1000;
+  padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* ===== SEARCH BOX ===== */
+.dropdown-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.dropdown-search-box:focus-within {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.15);
+}
+
+.dropdown-search-box i {
+  font-size: 14px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.dropdown-search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.dropdown-search-box input::placeholder {
+  color: #666;
+}
+
+.clear-search {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #888;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dropdown-search-box:focus-within .clear-search,
+.clear-search[style*="display: block"],
+.clear-search:not([style*="display: none"]) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.clear-search:hover {
+  background: rgba(255, 68, 68, 0.8);
+  color: #fff;
+}
+
+/* ===== SECTIONS ===== */
+.dropdown-section {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.dropdown-section:last-child {
+  border-bottom: none;
+}
+
+.dropdown-section.highlight {
+  background: rgba(29, 185, 84, 0.04);
+  margin: 0 8px 6px;
+  border-radius: 8px;
+  border-bottom: none;
+  padding: 6px 0;
+}
+
+/* Section label */
+.dropdown-section-label {
+  display: block;
+  padding: 8px 16px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #666;
+}
+
+.dropdown-section.highlight .dropdown-section-label {
+  color: #1db954;
+  padding-left: 12px;
+}
+
+/* ===== DROPDOWN ITEMS ===== */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  position: relative;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.dropdown-item:active {
+  transform: scale(0.98);
+}
+
+/* Active/Selected state */
+.dropdown-item.active {
+  background: rgba(29, 185, 84, 0.12);
+  color: #1db954;
+}
+
+.dropdown-item.active:hover {
+  background: rgba(29, 185, 84, 0.18);
+}
+
+/* Featured item (Brasil) */
+.dropdown-item.featured {
+  font-weight: 700;
+  color: #fff;
+}
+
+.dropdown-item.featured:hover {
+  background: rgba(29, 185, 84, 0.15);
+}
+
+.dropdown-item.featured.active {
+  background: rgba(29, 185, 84, 0.2);
+  color: #1db954;
+}
+
+/* Item icon */
+.item-icon {
+  font-size: 16px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.dropdown-item.featured .item-icon {
+  font-size: 18px;
+}
+
+/* Item info (for complex items) */
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-text {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-sub {
+  font-size: 11px;
+  color: #666;
+  font-weight: 400;
+}
+
+.dropdown-item.active .item-sub {
+  color: rgba(29, 185, 84, 0.7);
+}
+
+.item-count {
+  font-size: 11px;
+  color: #666;
+  font-weight: 400;
+  margin-left: auto;
+  padding-left: 8px;
+  flex-shrink: 0;
+}
+
+/* Checkmark */
+.item-check {
+  font-size: 12px;
+  color: #1db954;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(29, 185, 84, 0.15);
+}
+
+/* ===== SCROLLABLE AREA ===== */
+.dropdown-scrollable {
+  max-height: 160px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.dropdown-scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+
+/* ===== EMPTY STATE ===== */
+.dropdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 10px;
+  color: #555;
+  text-align: center;
+}
+
+.dropdown-empty i {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.dropdown-empty span {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ===== ANIMATIONS ===== */
+.dropdown-slide-enter-active {
+  animation: dropdownSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-slide-leave-active {
+  animation: dropdownSlideOut 0.18s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dropdownSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+    filter: blur(4px);
+  }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .custom-dropdown-menu {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-radius: 20px 20px 0 0;
+    animation: dropdownSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes dropdownSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .dropdown-slide-leave-active {
+    animation: dropdownSlideDown 0.2s ease;
+  }
+
+  @keyframes dropdownSlideDown {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+
+  .custom-dropdown-trigger {
+    min-width: 150px;
+    padding: 8px 14px 8px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .custom-dropdown-trigger {
+    min-width: auto;
+    padding: 8px 12px;
+  }
+
+  .dropdown-current span {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
 
 .tag-btn.detailed:hover {
   background: rgba(255,255,255,0.05);
@@ -3318,7 +4257,35 @@ html, body, #app {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* Estado vazio para locais */
+.empty-local {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: #888;
+  text-align: center;
+}
 
+.empty-local i {
+  font-size: 48px;
+  color: #1db954;
+  opacity: 0.5;
+}
+
+.empty-local h4 {
+  font-size: 18px;
+  color: #fff;
+  margin: 0;
+}
+
+.empty-local p {
+  font-size: 14px;
+  color: #666;
+  max-width: 400px;
+}
 .filter-tabs button {
   padding: 8px 20px;
   border-radius: 20px;
@@ -3476,7 +4443,56 @@ html, body, #app {
   width: 40px;
   text-align: right;
 }
+.locals-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
 
+.local-result-card {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 16px;
+  border-radius: 8px;
+  background: #181818;
+}
+
+.local-result-card:hover {
+  background: #282828;
+  transform: translateY(-4px);
+}
+
+.local-result-bg {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.local-result-emoji {
+  font-size: 32px;
+}
+
+.local-result-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.local-result-desc {
+  font-size: 12px;
+  color: #888;
+}
 .btn-like-list {
   width: 32px;
   height: 32px;
@@ -3506,7 +4522,160 @@ html, body, #app {
   opacity: 1;
   color: #ec4899;
 }
+/* ===== CUSTOM DROPDOWN ===== */
+.top-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
+
+
+
+
+.dropdown-section {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-section:last-child {
+  border-bottom: none;
+}
+
+.dropdown-section-label {
+  display: block;
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dropdown-item.active {
+  background: rgba(29, 185, 84, 0.1);
+  color: #1db954;
+}
+
+.item-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
+}
+
+.item-text {
+  flex: 1;
+}
+
+.item-check {
+  font-size: 12px;
+  color: #1db954;
+}
+
+/* Animação do dropdown */
+.dropdown-slide-enter-active {
+  animation: dropdownSlideIn 0.2s ease;
+}
+
+.dropdown-slide-leave-active {
+  animation: dropdownSlideOut 0.15s ease;
+}
+
+@keyframes dropdownSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropdownSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ===== LOCAL SECTION ===== */
+.local-section {
+  margin-bottom: 32px;
+}
+
+.local-header {
+  margin-bottom: 16px;
+}
+
+.local-subtitle {
+  font-size: 13px;
+  color: #888;
+  margin: 4px 0 0 0;
+}
+
+.local-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.local-card {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 12px;
+  border-radius: 12px;
+  background: #181818;
+}
+
+.local-card:hover {
+  background: #282828;
+  transform: translateY(-4px);
+}
+
+.local-card-bg {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.local-emoji {
+  font-size: 32px;
+}
+
+.local-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.local-desc {
+  font-size: 11px;
+  color: #888;
+}
 /* ===== ARTISTS GRID ===== */
 .artists-grid {
   display: grid;

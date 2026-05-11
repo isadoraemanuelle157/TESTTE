@@ -186,6 +186,7 @@ const privacidadeRoutes = safeRequire('./routes/privacidadeAtividadeRoutes')
 const matchRoutes = safeRequire('./routes/matchMusicalRoutes')                                                               
 const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
 const deezerRoutes = safeRequire('./routes/deezerRoutes')
+const locaisRoutes = safeRequire('./routes/locaisRoutes')
 
 // ============================================
 // 📌 ROTAS APP
@@ -205,6 +206,7 @@ app.use('/notificacoes', notificacaoRoutes)
 app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)
 app.use('/deezer', deezerRoutes)
+app.use('/locais', locaisRoutes)
 
 // ============================================
 // 🎵 SPOTIFY SEARCH
@@ -604,6 +606,11 @@ app.listen(PORT, () => {
   console.log('GET /spotify/playlist/:id')
   console.log('GET /spotify/artists/popular')
   console.log('GET /spotify/vibes')
+
+  console.log('📍 Locais:')
+console.log('GET /locais')
+console.log('GET /locais/search')
+console.log('GET /locais/:nome/musicas')
 
   console.log('')
   console.log('🎧 Deezer:')

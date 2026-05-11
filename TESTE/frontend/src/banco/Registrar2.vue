@@ -98,13 +98,15 @@
 
         <!-- Localização -->
         <!-- CEP -->
-        <div class="input-group">
+        <!-- CEP -->
+        <div class="input-group" :class="{ 'focused': focused === 'cep', 'filled': form.cep }">
           <div class="input-wrapper">
             <span class="input-icon">📮</span>
             <input 
               v-model="form.cep"
               type="text"
               maxlength="9"
+              @focus="focused = 'cep'"
               @blur="buscarCEP"
               placeholder=" "
             />
@@ -113,51 +115,79 @@
         </div>
 
         <!-- Rua -->
-        <div class="input-group">
+        <div class="input-group" :class="{ 'focused': focused === 'rua', 'filled': form.rua }">
           <div class="input-wrapper">
             <span class="input-icon">🏠</span>
-            <input v-model="form.rua" type="text" placeholder=" " />
+            <input 
+              v-model="form.rua" 
+              type="text" 
+              @focus="focused = 'rua'"
+              @blur="focused = null"
+              placeholder=" " 
+            />
             <label>Rua</label>
           </div>
         </div>
 
         <!-- Número -->
-        <div class="input-group">
+        <div class="input-group" :class="{ 'focused': focused === 'numero', 'filled': form.numero }">
           <div class="input-wrapper">
             <span class="input-icon">🔢</span>
-            <input v-model="form.numero" @input="atualizarLocalizacao" type="text" placeholder=" " />
+            <input 
+              v-model="form.numero" 
+              @input="atualizarLocalizacao" 
+              type="text" 
+              @focus="focused = 'numero'"
+              @blur="focused = null"
+              placeholder=" " 
+            />
             <label>Número</label>
           </div>
         </div>
+
         <!-- Bairro -->
-        <div class="input-group">
+        <div class="input-group" :class="{ 'focused': focused === 'bairro', 'filled': form.bairro }">
           <div class="input-wrapper">
             <span class="input-icon">📍</span>
-            <input v-model="form.bairro" type="text" placeholder=" " />
+            <input 
+              v-model="form.bairro" 
+              type="text" 
+              @focus="focused = 'bairro'"
+              @blur="focused = null"
+              placeholder=" " 
+            />
             <label>Bairro</label>
           </div>
         </div>
 
         <!-- Cidade -->
-        <div class="input-group">
+        <div class="input-group" :class="{ 'focused': focused === 'cidade', 'filled': form.cidade }">
           <div class="input-wrapper">
             <span class="input-icon">🏙️</span>
-            <input v-model="form.cidade" type="text" placeholder=" " />
+            <input 
+              v-model="form.cidade" 
+              type="text" 
+              @focus="focused = 'cidade'"
+              @blur="focused = null"
+              placeholder=" " 
+            />
             <label>Cidade</label>
           </div>
         </div>
 
         <!-- Estado -->
-        <div class="input-group">
+        <div class="input-group" :class="{ 'focused': focused === 'estado', 'filled': form.estado }">
           <div class="input-wrapper">
             <span class="input-icon">🗺️</span>
-            <input v-model="form.estado" type="text" placeholder=" " />
+            <input 
+              v-model="form.estado" 
+              type="text" 
+              @focus="focused = 'estado'"
+              @blur="focused = null"
+              placeholder=" " 
+            />
             <label>Estado</label>
           </div>
-        </div>
-        <div v-if="form.localizacao" class="location-preview">
-          📍 Sua localização será:
-          <strong>{{ form.localizacao }}</strong>
         </div>
 
         <!-- Cover Image URL -->
@@ -1007,6 +1037,79 @@ textarea:not(:placeholder-shown) + label {
 .slide-up-enter-from, .slide-up-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+
+/* Labels flutuantes para campos de endereço */
+.input-group {
+  position: relative;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 16px;
+  font-size: 1.25rem;
+  z-index: 2;
+  transition: all 0.3s ease;
+  opacity: 0.6;
+}
+
+.input-group.focused .input-icon {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+input {
+  width: 100%;
+  padding: 16px 16px 16px 48px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  color: white;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+input:focus {
+  border-color: #6366f1;
+  background: rgba(30, 41, 59, 0.8);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+.input-group.focused input {
+  border-color: #6366f1;
+}
+
+label {
+  position: absolute;
+  left: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 1rem;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  background: transparent;
+  padding: 0 4px;
+}
+
+/* EFEITO: Label sobe ao focar ou preencher */
+input:focus + label,
+input:not(:placeholder-shown) + label,
+.input-group.filled label {
+  top: 0;
+  transform: translateY(-50%) scale(0.85);
+  color: #6366f1;
+  background: #111827;
+  font-weight: 500;
 }
 
 /* Responsive */

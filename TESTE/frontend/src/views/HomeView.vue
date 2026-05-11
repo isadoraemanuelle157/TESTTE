@@ -1,6 +1,33 @@
 <template>
   <div class="home">
     <div class="home-content">
+<!-- ===== BANNER INFORMATIVO ===== -->
+<div class="info-banner-top">
+  <div class="banner-inner">
+    <div class="banner-left">
+      <div class="banner-icon-circle">
+        <i class="fa fa-info-circle"></i>
+      </div>
+      <div class="banner-text-content">
+        <h3 class="banner-main-title">Explore o Universo Musical SoundUp</h3>
+        <p class="banner-sub-text">
+          Milhões de faixas, artistas em alta e playlists exclusivas.
+          <span class="highlight-green">Ouça previews de 30 segundos agora</span>. Para acesso completo e playlists personalizadas, faça seu login.
+        </p>
+      </div>
+    </div>
+    <div class="banner-right-actions">
+      <div class="banner-perks">
+        <span class="perk"><i class="fa fa-check"></i>Músicas Completas</span>
+        <span class="perk"><i class="fa fa-check"></i> Spotify API</span>
+        <span class="perk"><i class="fa fa-check"></i> Sem Limites</span>
+      </div>
+      <button class="btn-banner-login" @click="goToLogin">
+        <i class="fa fa-user"></i> ACESSAR TUDO
+      </button>
+    </div>
+  </div>
+</div>
 
       <!-- HEADER COM BRAND SOUNDUP -->
       <header class="home-header">
@@ -37,7 +64,7 @@
             {{ heroDescription }}
             <span class="highlight">{{ heroHighlight }}</span>
           </p>
-          
+         
           <div class="hero-progress" v-if="currentTrack && isPlaying">
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
@@ -86,9 +113,9 @@
             <div class="vinyl-record">
               <div class="vinyl-grooves"></div>
               <div class="vinyl-label">
-                <img 
-                  v-if="currentRandomSong && currentRandomSong.cover" 
-                  :src="currentRandomSong.cover" 
+                <img
+                  v-if="currentRandomSong && currentRandomSong.cover"
+                  :src="currentRandomSong.cover"
                   @error="handleImageError"
                   alt="Album Cover"
                 />
@@ -107,9 +134,9 @@
 
       <!-- PLAYER EMBEDDED -->
       <div class="embedded-player" v-if="currentTrack">
-        <audio 
-          ref="audioPlayer" 
-          :src="currentTrack.preview" 
+        <audio
+          ref="audioPlayer"
+          :src="currentTrack.preview"
           @timeupdate="updateProgress"
           @ended="onTrackEnded"
           @loadedmetadata="onLoadedMetadata"
@@ -132,8 +159,8 @@
           </button>
         </div>
         <div class="cards-row" :class="{ 'expanded': showAllRecentTracks }">
-          <div 
-            v-for="(track, index) in recentlyPlayed.slice(0, showAllRecentTracks ? 12 : 6)" 
+          <div
+            v-for="(track, index) in recentlyPlayed.slice(0, showAllRecentTracks ? 12 : 6)"
             :key="'recent-'+track.id"
             class="music-card"
             @click="playTrack(track, 'recent', index)"
@@ -171,13 +198,13 @@
             <span class="section-subtitle">Mais tocados do momento</span>
           </div>
           <button class="see-all" @click="loadMoreTracks">
-            {{ loadingMoreTracks ? 'Carregando...' : 'Ver mais' }} 
+            {{ loadingMoreTracks ? 'Carregando...' : 'Ver mais' }}
             <i class="fa" :class="loadingMoreTracks ? 'fa-spinner fa-spin' : 'fa-chevron-right'"></i>
           </button>
         </div>
         <div class="cards-row">
-          <div 
-            v-for="(track, index) in chartTracks.slice(0, 5)" 
+          <div
+            v-for="(track, index) in chartTracks.slice(0, 5)"
             :key="'chart-'+track.id"
             class="music-card"
             @click="playTrack(track, 'chart', index)"
@@ -217,8 +244,8 @@
           </button>
         </div>
         <div class="cards-row">
-          <div 
-            v-for="(album, index) in newReleases.slice(0, 5)" 
+          <div
+            v-for="(album, index) in newReleases.slice(0, 5)"
             :key="'release-'+album.id"
             class="music-card album-card"
             @click="playAlbumTracks(album)"
@@ -255,8 +282,8 @@
           </button>
         </div>
         <div class="cards-row artists-row">
-          <div 
-            v-for="(artist, index) in popularArtists.slice(0, 5)" 
+          <div
+            v-for="(artist, index) in popularArtists.slice(0, 5)"
             :key="'artist-'+artist.id"
             class="music-card artist-card"
             @click="playArtistTopTrack(artist)"
@@ -304,10 +331,10 @@
                 Explorar <i class="fa fa-arrow-right"></i>
               </span>
             </div>
-            <img 
-              v-if="genre.picture_medium" 
-              :src="genre.picture_medium" 
-              class="genre-image" 
+            <img
+              v-if="genre.picture_medium"
+              :src="genre.picture_medium"
+              class="genre-image"
               @error="handleImageError"
               alt="Genre"
             />
@@ -331,8 +358,8 @@
           </button>
         </div>
         <div class="cards-row">
-          <div 
-            v-for="(playlist, index) in popularPlaylists.slice(0, 5)" 
+          <div
+            v-for="(playlist, index) in popularPlaylists.slice(0, 5)"
             :key="'playlist-'+playlist.id"
             class="music-card playlist-card"
             @click="playPlaylistTracks(playlist)"
@@ -370,8 +397,8 @@
           </button>
         </div>
         <div class="cards-row">
-          <div 
-            v-for="(track, index) in recommendedTracks.slice(0, 5)" 
+          <div
+            v-for="(track, index) in recommendedTracks.slice(0, 5)"
             :key="'rec-'+track.id"
             class="music-card"
             @click="playTrack(track, 'recommended', index)"
@@ -407,8 +434,8 @@
           </div>
         </div>
         <div class="mixes-grid">
-          <div 
-            v-for="(mix, index) in radioMixes.slice(0, 4)" 
+          <div
+            v-for="(mix, index) in radioMixes.slice(0, 4)"
             :key="'mix-'+mix.id"
             class="mix-card"
             @click="playRadioTracks(mix)"
@@ -441,8 +468,8 @@
           </button>
         </div>
         <div class="cards-row">
-          <div 
-            v-for="(radio, index) in radios.slice(0, 5)" 
+          <div
+            v-for="(radio, index) in radios.slice(0, 5)"
             :key="'radio-'+radio.id"
             class="music-card radio-card"
             @click="playRadioTracks(radio)"
@@ -526,7 +553,7 @@ export default {
     return {
       // API Configuration
       DEEZER_API: 'https://api.allorigins.win/raw?url=https://api.deezer.com',
-      
+     
       // Player State
       isPlaying: false,
       isLiked: false,
@@ -538,12 +565,12 @@ export default {
       loading: false,
       loadingMoreTracks: false,
       showAllRecentTracks: false,
-      
+     
       // Audio Progress
       currentTime: 0,
       duration: 30,
       progressPercent: 0,
-      
+     
       // API Data
       chartTracks: [],
       popularArtists: [],
@@ -554,7 +581,7 @@ export default {
       recommendedTracks: [],
       radioMixes: [],
       allApiTracksPool: [],
-      
+     
       // Hero Section
       heroTitle: "Descubra Agora",
       heroArtist: "Artistas em destaque",
@@ -563,10 +590,10 @@ export default {
       heroBadge: "SoundUp",
       heroGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
       currentRandomSong: null,
-      
+     
       // Recently Played
       recentlyPlayed: [],
-      
+     
       // Toast
       toast: {
         visible: false,
@@ -621,13 +648,13 @@ export default {
 
   methods: {
     // ============ NAVIGATION ============
-    
+   
     navigateToSearch(query) {
       // Navega para a rota de busca com o parâmetro de query
       if (this.$router) {
-        this.$router.push({ 
-          path: '/search', 
-          query: { q: query } 
+        this.$router.push({
+          path: '/search',
+          query: { q: query }
         })
       } else {
         // Fallback para navegação direta se router não estiver disponível
@@ -637,7 +664,7 @@ export default {
     },
 
     // ============ API LOADING ============
-    
+   
 async loadAllApiData() {
   this.loading = true
 
@@ -781,19 +808,19 @@ async loadChartTracks() {
 
     selectRandomHeroSong() {
       if (this.allApiTracksPool.length === 0) return
-      
+     
       const randomIndex = Math.floor(Math.random() * this.allApiTracksPool.length)
       const track = this.allApiTracksPool[randomIndex]
-      
+     
       this.currentRandomSong = this.convertTrackForPlayer(track)
-      
+     
       if (this.currentRandomSong) {
         this.heroTitle = this.currentRandomSong.title
         this.heroArtist = this.currentRandomSong.artist
         this.heroDescription = "Preview disponível"
         this.heroHighlight = "30 segundos de música"
         this.heroBadge = "Descoberta do Dia"
-        
+       
         const gradients = [
           "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
           "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
@@ -807,7 +834,7 @@ async loadChartTracks() {
 
     playHeroSong() {
       if (!this.currentRandomSong) return
-      
+     
       if (this.isCurrentTrack(this.currentRandomSong) && this.isPlaying) {
         this.pauseTrack()
       } else {
@@ -870,9 +897,9 @@ async loadChartTracks() {
 
       this.currentTrack = track
       const playerTrack = this.convertTrackForPlayer(track)
-      
+     
       this.addToRecentlyPlayed(playerTrack)
-      
+     
       let playlist = []
       if (context === 'chart') {
         playlist = this.chartTracks.map(t => this.convertTrackForPlayer(t))
@@ -883,7 +910,7 @@ async loadChartTracks() {
       } else {
         playlist = [playerTrack]
       }
-      
+     
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerTrack,
@@ -892,7 +919,7 @@ async loadChartTracks() {
           context: context
         }
       }))
-      
+     
       this.$nextTick(() => {
         const audio = this.$refs.audioPlayer
         if (audio) {
@@ -996,7 +1023,7 @@ async loadChartTracks() {
 
     convertTrackForPlayer(track) {
       if (track.type === 'api') return track
-      
+     
       return {
         id: track.id,
         title: track.title,
@@ -1073,13 +1100,13 @@ async loadChartTracks() {
     },
 
     // ============ TOAST SYSTEM ============
-    
+   
     showToast(title, message, type = 'success', icon = 'fa fa-check-circle') {
       // Limpa timer anterior se existir
       if (this.toast.timer) {
         clearInterval(this.toast.timer)
       }
-      
+     
       this.toast = {
         visible: true,
         title,
@@ -1089,12 +1116,12 @@ async loadChartTracks() {
         progress: 100,
         timer: null
       }
-      
+     
       // Animação da barra de progresso
       const duration = 3000 // 3 segundos
       const interval = 30
       const step = 100 / (duration / interval)
-      
+     
       this.toast.timer = setInterval(() => {
         this.toast.progress -= step
         if (this.toast.progress <= 0) {
@@ -2491,19 +2518,19 @@ async loadChartTracks() {
   .cards-row {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+ 
   .cards-row.expanded {
     grid-template-columns: repeat(4, 1fr);
   }
-  
+ 
   .mixes-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+ 
   .categories-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+ 
   .hero-title {
     font-size: 48px;
   }
@@ -2514,55 +2541,55 @@ async loadChartTracks() {
     margin-left: 200px;
     width: calc(100% - 200px);
   }
-  
+ 
   .hero-banner {
     flex-direction: column;
     text-align: center;
     padding: 40px 32px;
     min-height: auto;
   }
-  
+ 
   .hero-content {
     max-width: 100%;
     order: 2;
   }
-  
+ 
   .hero-image {
     order: 1;
     margin-bottom: 32px;
     flex: 0 0 auto;
   }
-  
+ 
   .vinyl-container {
     width: 220px;
     height: 220px;
   }
-  
+ 
   .hero-actions {
     justify-content: center;
   }
-  
+ 
   .hero-stats {
     justify-content: center;
   }
-  
+ 
   .hero-progress {
     margin: 0 auto 24px;
   }
-  
+ 
   .cards-row,
   .cards-row.expanded {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+ 
   .mixes-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .toast-notification {
     left: 24px;
     right: 24px;
@@ -2575,79 +2602,79 @@ async loadChartTracks() {
     margin-left: 0;
     width: 100%;
   }
-  
+ 
   .home-content {
     padding: 0 16px;
   }
-  
+ 
   .home-header {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  
+ 
   .hero-banner {
     padding: 32px 24px;
     margin-bottom: 32px;
   }
-  
+ 
   .hero-title {
     font-size: 36px;
   }
-  
+ 
   .hero-artist {
     font-size: 18px;
   }
-  
+ 
   .hero-actions {
     flex-direction: column;
     width: 100%;
   }
-  
+ 
   .btn-primary,
   .btn-secondary {
     width: 100%;
     justify-content: center;
   }
-  
+ 
   .cards-row,
   .cards-row.expanded {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
-  
+ 
   .section-title {
     font-size: 20px;
   }
-  
+ 
   .section-icon {
     width: 36px;
     height: 36px;
     font-size: 18px;
   }
-  
+ 
   .mixes-grid {
     grid-template-columns: 1fr;
   }
-  
+ 
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
-  
+ 
   .category-tile {
     height: 140px;
   }
-  
+ 
   .category-tile h3 {
     font-size: 18px;
   }
-  
+ 
   .vinyl-container {
     width: 180px;
     height: 180px;
   }
-  
+ 
   .toast-notification {
     left: 16px;
     right: 16px;
@@ -2655,16 +2682,16 @@ async loadChartTracks() {
     min-width: auto;
     padding: 12px 16px;
   }
-  
+ 
   .toast-icon-wrapper {
     width: 36px;
     height: 36px;
   }
-  
+ 
   .toast-title {
     font-size: 13px;
   }
-  
+ 
   .toast-message {
     font-size: 12px;
   }
@@ -2674,85 +2701,85 @@ async loadChartTracks() {
   .hero-banner {
     padding: 24px 16px;
   }
-  
+ 
   .hero-title {
     font-size: 28px;
   }
-  
+ 
   .hero-artist {
     font-size: 16px;
   }
-  
+ 
   .hero-badge {
     font-size: 10px;
     padding: 6px 12px;
   }
-  
+ 
   .cards-row,
   .cards-row.expanded {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
+ 
   .music-card {
     padding: 12px;
   }
-  
+ 
   .card-title {
     font-size: 13px;
   }
-  
+ 
   .card-artist {
     font-size: 11px;
   }
-  
+ 
   .vinyl-container {
     width: 150px;
     height: 150px;
   }
-  
+ 
   .play-button-overlay {
     width: 40px;
     height: 40px;
   }
-  
+ 
   .play-button-overlay i {
     font-size: 16px;
   }
-  
+ 
   .rank-badge {
     width: 28px;
     height: 28px;
     font-size: 12px;
   }
-  
+ 
   .section-title {
     font-size: 18px;
   }
-  
+ 
   .see-all {
     font-size: 11px;
     padding: 6px 12px;
   }
-  
+ 
   .category-tile {
     height: 120px;
     padding: 16px;
   }
-  
+ 
   .category-tile h3 {
     font-size: 16px;
   }
-  
+ 
   .mix-card {
     padding: 16px;
     min-height: 100px;
   }
-  
+ 
   .mix-title {
     font-size: 16px;
   }
-  
+ 
   .mix-description {
     font-size: 11px;
   }
@@ -2769,4 +2796,123 @@ async loadChartTracks() {
   opacity: 0;
   pointer-events: none;
 }
+/* ========== ESTILO DO BANNER INFORMATIVO ========== */
+.info-banner-top {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.15) 0%, rgba(29, 185, 84, 0.05) 100%);
+  border: 1px solid rgba(29, 185, 84, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 32px;
+  backdrop-filter: blur(10px);
+  animation: slideDown 0.6s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.banner-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.banner-icon-circle {
+  width: 56px;
+  height: 56px;
+  background: rgba(29, 185, 84, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #1db954;
+  flex-shrink: 0;
+}
+
+.banner-main-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.banner-sub-text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+}
+
+.highlight-green {
+  color: #1db954;
+  font-weight: 600;
+}
+
+.banner-right-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.banner-perks {
+  display: flex;
+  gap: 12px;
+}
+
+.perk {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.perk i { color: #1db954; }
+
+.btn-banner-login {
+  background: #1db954;
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-banner-login:hover {
+  background: #1ed760;
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(29, 185, 84, 0.3);
+}
+
+/* Responsividade do Banner */
+@media (max-width: 768px) {
+  .banner-inner { flex-direction: column; text-align: center; }
+  .banner-left { flex-direction: column; min-width: auto; }
+  .banner-right-actions { align-items: center; }
+}
+
+
 </style>

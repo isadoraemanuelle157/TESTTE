@@ -816,6 +816,8 @@ export default {
     showRight: true,
     showAllModal: false,
     showAllTop10: false,
+    chartTracks: [],
+newReleases: [],
       spotifyTop10: [],        // ← NOVO: Top 10 real do Spotify
     spotifyNewReleases: [],  // ← NOVO: Lançamentos reais do Spotify
     spotifyPopularArtists: [], // ← NOVO: Artistas populares do Spotify
@@ -971,6 +973,17 @@ async mounted() {
   },
 
   methods: {
+    async loadSpotifyTop10() {
+  this.spotifyTop10 = []
+},
+
+async loadSpotifyNewReleases() {
+  this.spotifyNewReleases = []
+},
+
+async loadSpotifyPopularArtists() {
+  this.spotifyPopularArtists = []
+},
     goToArtist(artist) {
     this.$router.push({
       name: 'DetalheCantor',
@@ -1415,7 +1428,7 @@ async loadAllData() {
 
       if (existingIndex >= 0) {
         // Atualizar existente
-        this.$set(this.continueListening, existingIndex, trackData)
+       this.continueListening.splice(existingIndex, 1, trackData)
       } else {
         // Adicionar no início
         this.continueListening.unshift(trackData)
