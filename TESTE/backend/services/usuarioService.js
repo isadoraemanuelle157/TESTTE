@@ -487,6 +487,10 @@ const VIBE_SEARCH_MAP = {
 // 🎯 FUNÇÃO PRINCIPAL: GET USER MIXES
 // ============================================
 
+// ============================================
+// 🎯 FUNÇÃO PRINCIPAL: GET USER MIXES (AJUSTADA)
+// ============================================
+
 const getUserMixes = async (userId, limit = 6) => {
   const mongoose = require('mongoose')
   
@@ -504,10 +508,15 @@ const getUserMixes = async (userId, limit = 6) => {
     throw new Error('Usuário não encontrado')
   }
 
-  if (!usuario.onboardingCompleto) {
+  // ✅ VERIFICA SE TEM PREFERÊNCIAS (locais OU externos)
+  const temGeneros = (usuario.generos?.locais?.length > 0) || (usuario.generos?.externos?.length > 0)
+  const temArtistas = (usuario.artistasFavoritos?.locais?.length > 0) || (usuario.artistasFavoritos?.externos?.length > 0)
+  const temVibes = (usuario.vibesFavoritas?.locais?.length > 0) || (usuario.vibesFavoritas?.externas?.length > 0)
+
+  if (!temGeneros && !temArtistas && !temVibes) {
     return { 
       mixes: [],
-      message: 'Onboarding não completado',
+      message: 'Nenhuma preferência encontrada. Complete o onboarding primeiro.',
       hasPreferences: false 
     }
   }
@@ -515,7 +524,7 @@ const getUserMixes = async (userId, limit = 6) => {
   const mixes = []
   const usedTrackIds = new Set()
 
-  // Helper para extrair dados do usuário
+  // Helper para extrair dados do usuário (funciona com locais E externos)
   const getGeneros = () => {
     const locais = (usuario.generos?.locais || []).map(g => ({
       id: g._id?.toString(),
@@ -910,6 +919,23 @@ function normalizarTrackDeezer(track) {
   }
 }
 
+const recuperarSenha = async (email, novaSenha) => {
+  const usuario = await Usuario.findOne({ email })
+
+  if (!usuario) {
+    throw new Error('Usuário não encontrado')
+  }
+
+  const senhaHash = await bcrypt.hash(novaSenha, 10)
+
+  await Usuario.updateOne(
+    { email },
+    { $set: { senha: senhaHash } }
+  )
+
+  return true
+}
+
 // ============================================
 // EXPORTS ATUALIZADOS
 // ============================================
@@ -919,5 +945,5 @@ module.exports = {
   updateUser, deleteUser, searchUsers,
   generateDefaultAvatar, getUserStats,
   canAccessProfile, hasPendingFollowRequest, isResourceBlocked,
-  getUserMixes  // 🎯 NOVO
+  getUserMixes, recuperarSenha  // 🎯 NOVO
 }

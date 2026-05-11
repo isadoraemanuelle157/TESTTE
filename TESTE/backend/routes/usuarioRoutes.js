@@ -8,6 +8,9 @@ const authMiddleware = require('../middleware/authMiddleware')
 router.post('/registrar', userController.create)
 router.post('/login', userController.login)
 
+// 🔥 RECUPERAR SENHA
+router.put('/recuperar-senha', userController.recuperarSenha)
+
 // SEARCH
 router.get('/search', authMiddleware, userController.search)
 
@@ -25,4 +28,4 @@ router.get('/:id', authMiddleware, userController.getById)
 router.put('/:id', authMiddleware, userController.update)
 router.delete('/:id', authMiddleware, userController.remove)
 
-module.exports = router
+module.exports = router 

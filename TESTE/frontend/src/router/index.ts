@@ -30,6 +30,7 @@ import SelecionarAvatar from '@/components/SelecionarAvatar.vue'
 import PerfilUsuario from '@/views/PerfilUsuario.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import DetalheCantor from '@/views/DetalheCantor.vue'
+import RecuperarSenha from '@/banco/RecuperarSenha.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -85,6 +86,11 @@ const router = createRouter({
       component: Notificacoes,
       meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
+       {
+  path: '/recuperar-senha',
+  name: 'RecuperarSenha',
+  component: RecuperarSenha
+},
     {
       path: '/artistas',
       name: 'artistas',

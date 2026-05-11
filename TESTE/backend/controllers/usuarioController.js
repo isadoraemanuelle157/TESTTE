@@ -1,4 +1,4 @@
-const userService = require('../services/usuarioService')
+ const userService = require('../services/usuarioService')
 const jwt = require('jsonwebtoken')
 
 const create = async (req, res) => {
@@ -267,6 +267,23 @@ const getEstatisticas = async (req, res) => {
   }
 }
 
+const recuperarSenha = async (req, res) => {
+  try {
+    const { email, novaSenha } = req.body
+
+    await userService.recuperarSenha(email, novaSenha)
+
+    res.json({
+      message: 'Senha alterada com sucesso'
+    })
+
+  } catch (error) {
+    res.status(400).json({
+      error: error.message
+    })
+  }
+}
+
 module.exports = {
   create,
   login,
@@ -278,5 +295,6 @@ module.exports = {
   getMixes,           // 🎯 NOVO
   getPublicCurtidas,
   getPublicPlaylists,
-  getEstatisticas
+  getEstatisticas,
+  recuperarSenha
 }
