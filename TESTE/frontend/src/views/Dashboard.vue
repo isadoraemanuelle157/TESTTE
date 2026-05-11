@@ -924,7 +924,7 @@ export default {
     }
   },
 
-mounted() {
+async mounted() {
   this.checkAuth()
   this.loadUserFromStorage()
   this.updateGreeting()

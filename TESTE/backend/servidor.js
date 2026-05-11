@@ -185,6 +185,8 @@ const notificacaoRoutes = safeRequire('./routes/notificacaoRoutes')
 const privacidadeRoutes = safeRequire('./routes/privacidadeAtividadeRoutes')
 const matchRoutes = safeRequire('./routes/matchMusicalRoutes')                                                               
 const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
+const deezerRoutes = safeRequire('./routes/deezerRoutes')
+
 // ============================================
 // 📌 ROTAS APP
 // ============================================
@@ -202,6 +204,7 @@ app.use('/historico', historicoRoutes)
 app.use('/notificacoes', notificacaoRoutes)                                                                                                                                  
 app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)
+app.use('/deezer', deezerRoutes)
 
 // ============================================
 // 🎵 SPOTIFY SEARCH

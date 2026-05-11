@@ -175,60 +175,37 @@
                    
                     <div class="categories-content">
                       <!-- Tab: Gêneros -->
-                      <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
-                        <div class="category-section">
-                          <h4>Populares</h4>
-                          <div v-if="generosPorCategoria.popular.length === 0" class="empty-category">
-                            <span class="empty-text">Nenhum gênero popular cadastrado</span>
-                          </div>
-                          <div class="category-tags detailed">
-                            <button
-                              v-for="genre in generosPorCategoria.popular"
-                              :key="genre._id"
-                              class="tag-btn detailed"
-                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-                            >
-                              <i class="fa fa-music"></i>
-                              <span>{{ genre.nome }}</span>
-                              <small>
-                                🎵 {{ genre.musicas?.length || 0 }} •
-                                💿 {{ genre.albuns?.length || 0 }} •
-                                🎤 {{ genre.cantores?.length || 0 }}
-                              </small>
-                            </button>
-                          </div>
-                        </div>
+                     <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
+  <div
+    v-for="section in genreCategorySections"
+    :key="section.key"
+    class="category-section"
+  >
+    <h4>{{ section.title }}</h4>
 
-                        <div class="category-section">
-                          <h4>Estilos Regionais</h4>
-                          <div class="category-tags detailed">
-                            <button
-                              v-for="genre in generosPorCategoria.regional"
-                              :key="genre._id"
-                              class="tag-btn detailed"
-                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-                            >
-                              <i class="fa fa-map"></i>
-                              <span>{{ genre.nome }}</span>
-                            </button>
-                          </div>
-                        </div>
-                       
-                        <div class="category-section">
-                          <h4>Eletrônica & Dance</h4>
-                          <div class="category-tags detailed">
-                            <button
-                              v-for="genre in generosPorCategoria.electronic"
-                              :key="genre._id"
-                              class="tag-btn detailed"
-                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-                            >
-                              <i class="fa fa-headphones"></i>
-                              <span>{{ genre.nome }}</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+    <div class="category-tags detailed">
+      <button
+        v-for="genre in section.items"
+        :key="genre.id"
+        class="tag-btn detailed"
+        @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+      >
+        <i :class="section.icon"></i>
+        <span>{{ genre.nome }}</span>
+
+        <small v-if="genre.source === 'local'">
+          🎵 {{ genre.musicasCount || 0 }} •
+          💿 {{ genre.albunsCount || 0 }} •
+          🎤 {{ genre.cantoresCount || 0 }}
+        </small>
+
+        <small v-else>
+          API
+        </small>
+      </button>
+    </div>
+  </div>
+</div>
                      
                       <!-- Tab: Moods -->
                       <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
@@ -280,16 +257,17 @@
               </div>
             </div>
            
-            <div class="tags-row">
-              <button
-                v-for="cat in quickCategories"
-                :key="cat"
-                class="tag-btn"
-                @click="searchAndGo(cat)"
-              >
-                {{ cat }}
-              </button>
-            </div>
+<div class="tags-row">
+  <button
+    v-for="cat in exploreGenres"
+    :key="cat"
+    class="tag-btn"
+    @click="searchAndGo(cat)"
+  >
+    {{ cat }}
+  </button>
+</div>
+
           </div>
 
           <!-- Top Músicas - Layout em Linha tipo Spotify -->
@@ -565,6 +543,7 @@ export default {
       favoriteArtists: [],
       vibes: [],
       generosDB: [],
+      apiGenres: [],
 
       // Data
       searchHistory: [],
@@ -643,7 +622,7 @@ export default {
         ]
       },
 
-      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Décadas'],
+   searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Gêneros', 'Décadas'],
 
       trending: [
         'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional',
@@ -690,6 +669,47 @@ export default {
   },
 
   computed: {
+    allGenres() {
+  const local = (this.generosDB || []).map(g => this.normalizeLocalGenre(g))
+  const api = (this.apiGenres || []).map(g => this.normalizeApiGenre(g))
+
+  const map = new Map()
+
+  ;[...local, ...api].forEach(genre => {
+    const key = (genre.nome || '').trim().toLowerCase()
+    if (!key) return
+
+    if (!map.has(key)) {
+      map.set(key, genre)
+      return
+    }
+
+    const current = map.get(key)
+
+    map.set(key, {
+      ...current,
+      ...genre,
+      id: current.id,
+      nome: current.nome || genre.nome,
+      foto: current.foto || genre.foto || '',
+      descricao: current.descricao || genre.descricao,
+      categoria: current.categoria || genre.categoria || 'outros',
+      source: current.source === 'local' ? 'local' : genre.source,
+      musicasCount: current.musicasCount || genre.musicasCount || 0,
+      albunsCount: current.albunsCount || genre.albunsCount || 0,
+      cantoresCount: current.cantoresCount || genre.cantoresCount || 0
+    })
+  })
+
+  return Array.from(map.values()).sort((a, b) =>
+    a.nome.localeCompare(b.nome, 'pt-BR')
+  )
+},
+
+exploreGenres() {
+  return this.allGenres.slice(0, 12).map(g => g.nome)
+},
+
     topSectionTitle() {
       return this.currentTopCategory && this.currentTopCategory !== 'Brasil'
         ? `Top músicas de ${this.currentTopCategory}`
@@ -712,42 +732,63 @@ export default {
 
       if (this.activeFilter === 'Todos') return this.searchResults
 
-      const typeMap = {
-        'Músicas': 'track',
-        'Artistas': 'artist',
-        'Álbuns': 'album',
-        'Usuários': 'user'
-      }
+const typeMap = {
+  'Músicas': 'track',
+  'Artistas': 'artist',
+  'Álbuns': 'album',
+  'Usuários': 'user',
+  'Gêneros': 'genre'
+}
+
 
       const filterType = typeMap[this.activeFilter]
       return this.searchResults.filter(r => r.type === filterType)
     },
 
-    generosPorCategoria() {
-      const grupos = {
-        popular: [],
-        regional: [],
-        electronic: [],
-        classical: [],
-        jazz: [],
-        rock: [],
-        pop: [],
-        hiphop: [],
-        outros: []
-      }
+generosPorCategoria() {
+  const grupos = {
+    popular: [],
+    regional: [],
+    electronic: [],
+    classical: [],
+    jazz: [],
+    rock: [],
+    pop: [],
+    hiphop: [],
+    outros: []
+  }
 
-      if (!Array.isArray(this.generosDB) || this.generosDB.length === 0) {
-        return grupos
-      }
+  this.allGenres.forEach(g => {
+    const cat = (g.categoria || this.detectGenreCategory(g.nome) || 'outros')
+      .toLowerCase()
+      .trim()
 
-      this.generosDB.forEach(g => {
-        const cat = (g.categoria || 'outros').toLowerCase().trim()
-        if (grupos[cat]) grupos[cat].push(g)
-        else grupos.outros.push(g)
-      })
+    if (grupos[cat]) grupos[cat].push(g)
+    else grupos.outros.push(g)
+  })
 
-      return grupos
-    },
+  return grupos
+},
+genreCategorySections() {
+  const sections = [
+    { key: 'popular', title: 'Populares', icon: 'fa fa-music' },
+    { key: 'regional', title: 'Estilos Regionais', icon: 'fa fa-map' },
+    { key: 'electronic', title: 'Eletrônica & Dance', icon: 'fa fa-headphones' },
+    { key: 'rock', title: 'Rock & Alternativo', icon: 'fa fa-bolt' },
+    { key: 'pop', title: 'Pop', icon: 'fa fa-star' },
+    { key: 'hiphop', title: 'Hip Hop, Rap & R&B', icon: 'fa fa-microphone' },
+    { key: 'jazz', title: 'Jazz, Soul & Blues', icon: 'fa fa-moon-o' },
+    { key: 'classical', title: 'Clássica & Instrumental', icon: 'fa fa-university' },
+    { key: 'outros', title: 'Outros Gêneros', icon: 'fa fa-th-large' }
+  ]
+
+  return sections
+    .map(section => ({
+      ...section,
+      items: this.generosPorCategoria[section.key] || []
+    }))
+    .filter(section => section.items.length > 0)
+},
 
     groupedSuggestions() {
       if (!this.searchQuery.trim()) return []
@@ -836,6 +877,7 @@ mounted() {
   this.loadFavoritas()
   this.loadVibes()
   this.loadGeneros()
+  this.loadApiGenres()
   this.loadHistory()
 },
 
@@ -856,6 +898,102 @@ watch: {
   }
 },
   methods: {
+    async loadApiGenres() {
+  try {
+    const res = await fetch('http://localhost:3002/deezer/genre')
+    const data = await res.json()
+
+    const genres = Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data)
+        ? data
+        : []
+
+    this.apiGenres = genres.filter(g =>
+      g &&
+      g.id !== 0 &&
+      g.name &&
+      g.name.toLowerCase() !== 'all'
+    )
+  } catch (err) {
+    console.error('Erro ao carregar gêneros da API:', err)
+    this.apiGenres = []
+  }
+},
+normalizeLocalGenre(g) {
+  return {
+    id: `local-${g._id}`,
+    nome: g.nome,
+    descricao: g.descricao || 'Gênero musical',
+    foto: g.foto || '',
+    categoria: g.categoria || this.detectGenreCategory(g.nome),
+    source: 'local',
+    musicasCount: g.musicas?.length || 0,
+    albunsCount: g.albuns?.length || 0,
+    cantoresCount: g.cantores?.length || 0
+  }
+},
+
+normalizeApiGenre(g) {
+  return {
+    id: `deezer-${g.id}`,
+    nome: g.name,
+    descricao: 'Gênero da API',
+    foto: g.picture_medium || g.picture || g.picture_big || '',
+    categoria: this.detectGenreCategory(g.name),
+    source: 'deezer',
+    musicasCount: 0,
+    albunsCount: 0,
+    cantoresCount: 0
+  }
+},
+
+detectGenreCategory(name = '') {
+  const value = String(name).toLowerCase().trim()
+
+  if (
+    ['house', 'techno', 'trance', 'edm', 'dubstep', 'drum & bass', 'electro', 'dance', 'electronic']
+      .some(term => value.includes(term))
+  ) return 'electronic'
+
+  if (
+    ['sertanejo', 'funk', 'mpb', 'gospel', 'forró', 'forro', 'pagode', 'samba', 'bossa', 'arrocha', 'piseiro']
+      .some(term => value.includes(term))
+  ) return 'regional'
+
+  if (
+    ['rock', 'metal', 'punk', 'grunge', 'alternative']
+      .some(term => value.includes(term))
+  ) return 'rock'
+
+  if (
+    ['hip hop', 'hip-hop', 'rap', 'trap', 'r&b']
+      .some(term => value.includes(term))
+  ) return 'hiphop'
+
+  if (
+    ['jazz', 'blues', 'soul']
+      .some(term => value.includes(term))
+  ) return 'jazz'
+
+  if (
+    ['classical', 'clássico', 'classico', 'opera', 'orquestra', 'instrumental']
+      .some(term => value.includes(term))
+  ) return 'classical'
+
+  if (
+    ['pop']
+      .some(term => value.includes(term))
+  ) return 'pop'
+
+  if (
+    ['pop', 'rock', 'hip hop', 'rap', 'funk', 'sertanejo', 'dance', 'electronic']
+      .some(term => value.includes(term))
+  ) return 'popular'
+
+  return 'outros'
+},
+
     // ===== NOVO: Filtrar por tipo para seções separadas =====
     getFilteredByType(type) {
       if (this.activeFilter === 'Todos') {
@@ -1376,6 +1514,10 @@ watch: {
           `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
         ).then(r => r.json())
 
+        const matchedApiGenres = (this.apiGenres || []).filter(g =>
+  g.name?.toLowerCase().includes(query.toLowerCase())
+)
+
         let results = []
 
         // USUÁRIOS LOCAIS
@@ -1527,6 +1669,27 @@ watch: {
             source: 'local'
           })))
         }
+        if (matchedApiGenres.length > 0) {
+  const existingGenreNames = new Set(
+    results
+      .filter(item => item.type === 'genre')
+      .map(item => (item.name || '').toLowerCase())
+  )
+
+  results.push(
+    ...matchedApiGenres
+      .filter(g => !existingGenreNames.has(g.name.toLowerCase()))
+      .map(g => ({
+        id: `deezer-genre-${g.id}`,
+        name: g.name,
+        description: 'Gênero da API',
+        picture: g.picture_medium || g.picture || g.picture_big || '',
+        picture_medium: g.picture_medium || g.picture || g.picture_big || '',
+        type: 'genre',
+        source: 'deezer'
+      }))
+  )
+}
 
         this.searchResults = results
       } catch (err) {
