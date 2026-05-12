@@ -1,10 +1,7 @@
 <template>
   <aside class="sidebar" :class="{ 'open': isOpen }">
     <div class="sidebar-content">
-      <!-- Botão fechar (X) dentro do sidebar -->
-      <button class="close-btn" @click="$emit('close')" v-if="isOpen">
-        <i class="fa fa-times"></i>
-      </button>
+      
 
       <div>
         <!-- Logo FODA -->

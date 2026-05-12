@@ -426,61 +426,6 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Top 10 Brasil -->
-      <!-- SEÇÃO: Top 10 Brasil (SPOTIFY REAL) -->
-<section class="section" v-if="spotifyTop10.length > 0 || chartTracks.length > 0">
-  <div class="section-header">
-    <div class="section-title-wrapper">
-      <h2 class="section-title">
-        <i class="fa fa-fire section-icon hot"></i>
-        Top 10 Brasil
-      </h2>
-      <span class="section-subtitle">
-        {{ spotifyTop10.length > 0 ? 'Mais populares no Spotify' : 'Mais tocados do momento' }}
-        <span v-if="spotifyTop10.length > 0" class="spotify-badge">
-          <i class="fa fa-spotify"></i> Spotify
-        </span>
-      </span>
-    </div>
-    <button class="see-all" @click="showAllTop10 = !showAllTop10">
-      {{ showAllTop10 ? 'Ver menos' : 'Ver mais' }}
-      <i class="fa" :class="showAllTop10 ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
-    </button>
-  </div>
-  
-  <div class="cards-row" :class="{ 'expanded': showAllTop10 }">
-    <div
-      v-for="(track, index) in (spotifyTop10.length > 0 ? spotifyTop10 : chartTracks).slice(0, showAllTop10 ? 10 : 5)"
-      :key="'top10-'+track.id"
-      class="music-card"
-      @click="playTrack(track, 'top10', index)"
-      :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
-    >
-      <div class="card-image">
-        <img :src="track.cover || track.album?.cover_medium" @error="handleImageError" alt="Cover" />
-        <div class="rank-badge" :class="{ 'top3': index < 3 }">{{ index + 1 }}</div>
-        <div class="play-button-overlay">
-          <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
-        </div>
-        <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
-          <span v-for="n in 4" :key="n"></span>
-        </div>
-        <!-- Badge do Spotify -->
-        <div class="source-badge spotify" v-if="track.source === 'spotify'">
-          <i class="fa fa-spotify"></i>
-        </div>
-      </div>
-      <div class="card-info">
-        <h3 class="card-title">{{ track.title }}</h3>
-        <p class="card-artist">{{ track.artist?.name || track.artist }}</p>
-        <p class="card-popularity" v-if="track.popularity">
-          <i class="fa fa-fire"></i> {{ track.popularity }}% popular
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
       <!-- SEÇÃO: Artistas que Você Segue -->
       <section class="section" v-if="followedArtists.length > 0">
         <div class="section-header">
@@ -815,8 +760,6 @@ export default {
        showLeft: false,
     showRight: true,
     showAllModal: false,
-    showAllTop10: false,
-    chartTracks: [],
 newReleases: [],
       spotifyTop10: [],        // ← NOVO: Top 10 real do Spotify
     spotifyNewReleases: [],  // ← NOVO: Lançamentos reais do Spotify
@@ -1294,7 +1237,6 @@ async loadAllData() {
   this.loading = true
   try {
     await Promise.all([
-      this.loadChartTracks(),
       this.loadMadeForYou(),
       this.loadNewReleases(),
       this.loadGenres(),
@@ -1967,26 +1909,6 @@ async loadAllData() {
       this.$router?.push('/artistas') || this.showToast('Artistas', 'Ver todos os artistas...', 'info')
     },
 
-    // ═══════════════════════════════════════════════════════
-    // DATA LOADING
-    // ═══════════════════════════════════════════════════════
-
-    async loadChartTracks() {
-      const cache = localStorage.getItem('dashboard_chart')
-      if (cache) {
-        this.chartTracks = JSON.parse(cache)
-        this.generateRecommendations()
-      }
-      try {
-        const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/tracks?limit=10`)
-        const data = await response.json()
-        if (data.data) {
-          this.chartTracks = data.data
-          localStorage.setItem('dashboard_chart', JSON.stringify(data.data))
-        }
-      } catch (e) {}
-    },
-
     async loadNewReleases() {
       try {
        const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/albums?limit=10`)
@@ -2571,45 +2493,6 @@ navigateToGenre(genre) {
   transform: translateY(-2px);
   border-color: rgba(29,185,84,0.3);
   box-shadow: 0 8px 32px rgba(29,185,84,0.1);
-}
-.spotify-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(29, 185, 84, 0.15);
-  color: #1db954;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  margin-left: 8px;
-}
-
-/* Source Badge no Card */
-.source-badge.spotify {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: #1db954;
-  color: #000;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  z-index: 2;
-}
-
-/* Popularidade */
-.card-popularity {
-  font-size: 11px;
-  color: #ff6b6b;
-  margin: 4px 0 0 0;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 /* Artists Section Adaptação */

@@ -52,12 +52,14 @@
       <div class="hero-banner" :style="heroGradient">
         <div class="hero-ambient"></div>
         <div class="hero-content">
-          <div class="hero-badge">
-            <i class="fa fa-certificate"></i> {{ heroBadge }}
-            <span class="badge-live" v-if="isPlaying">
-              <span class="live-dot"></span> AO VIVO
-            </span>
-          </div>
+      <div class="hero-badge">
+  <i class="fa" :class="isPlayerActive ? 'fa-play-circle' : 'fa-certificate'"></i> 
+  {{ heroBadge }}
+  <span class="badge-live" v-if="isPlaying">
+    <span class="live-dot"></span> 
+    {{ isPlayerActive ? 'PLAYER' : 'AO VIVO' }}
+  </span>
+</div>
           <h1 class="hero-title">{{ heroTitle }}</h1>
           <p class="hero-artist">{{ heroArtist }}</p>
           <p class="hero-description">
@@ -76,16 +78,15 @@
           </div>
 
           <div class="hero-actions">
-            <button class="btn-primary btn-glow" @click="playHeroSong" :disabled="!currentRandomSong">
+            <button class="btn-primary btn-glow" @click="playHeroSong" :disabled="!currentRandomSong && !playerTrack">
               <i class="fa" :class="isPlaying && isCurrentTrack(currentRandomSong) ? 'fa-pause' : 'fa-play'"></i>
               {{ isPlaying && isCurrentTrack(currentRandomSong) ? 'Pausar' : 'Ouvir Agora' }}
             </button>
-            <button class="btn-secondary" @click="skipHeroSong" :disabled="loading">
-              <i class="fa fa-step-forward"></i> Próxima
-            </button>
-            <button class="btn-secondary btn-icon" @click="toggleLike" :class="{ 'active': isLiked }">
-              <i class="fa" :class="isLiked ? 'fa-heart' : 'fa-heart-o'"></i>
-            </button>
+  <button class="btn-secondary" @click="skipHeroSong">
+  <i class="fa fa-step-forward"></i> 
+  {{ isPlayerActive ? 'Próxima' : 'Próxima' }}
+</button>
+
           </div>
 
           <div class="hero-stats" v-if="currentRandomSong">
@@ -183,48 +184,6 @@
             <button class="card-more" @click.stop="showTrackOptions(track)">
               <i class="fa fa-ellipsis-h"></i>
             </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- SEÇÃO: Top 10 Brasil -->
-      <section class="section" v-if="chartTracks.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-fire section-icon hot"></i>
-              Top 10 Brasil
-            </h2>
-            <span class="section-subtitle">Mais tocados do momento</span>
-          </div>
-          <button class="see-all" @click="loadMoreTracks">
-            {{ loadingMoreTracks ? 'Carregando...' : 'Ver mais' }}
-            <i class="fa" :class="loadingMoreTracks ? 'fa-spinner fa-spin' : 'fa-chevron-right'"></i>
-          </button>
-        </div>
-        <div class="cards-row">
-          <div
-            v-for="(track, index) in chartTracks.slice(0, 5)"
-            :key="'chart-'+track.id"
-            class="music-card"
-            @click="playTrack(track, 'chart', index)"
-            :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
-          >
-            <div class="card-image">
-              <img :src="track.album?.cover_medium || track.cover" @error="handleImageError" alt="Cover" />
-              <div class="rank-badge" :class="{ 'top3': index < 3 }">{{ index + 1 }}</div>
-              <div class="play-button-overlay">
-                <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
-              </div>
-              <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
-              <div class="preview-badge"><i class="fa fa-headphones"></i> Preview</div>
-            </div>
-            <div class="card-info">
-              <h3 class="card-title">{{ track.title }}</h3>
-              <p class="card-artist">{{ track.artist?.name || track.artist }}</p>
-            </div>
           </div>
         </div>
       </section>
@@ -484,7 +443,48 @@
             <!-- artistas import: -->
 <artistas />
 
-
+<!-- SEÇÃO: Top 10 Brasil (Deezer) -->
+<section class="section" v-if="chartTracks.length > 0">
+  <div class="section-header">
+    <div class="section-title-wrapper">
+      <h2 class="section-title">
+        <i class="fa fa-fire section-icon hot"></i>
+        Top 10 Brasil
+      </h2>
+      <span class="section-subtitle">Mais tocados do momento no Deezer</span>
+    </div>
+    <button class="see-all" @click="showAllTop10 = !showAllTop10">
+      {{ showAllTop10 ? 'Ver menos' : 'Ver mais' }}
+      <i class="fa" :class="showAllTop10 ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
+    </button>
+  </div>
+  
+  <div class="cards-row" :class="{ 'expanded': showAllTop10 }">
+    <div
+      v-for="(track, index) in chartTracks.slice(0, showAllTop10 ? 10 : 5)"
+      :key="'top10-'+track.id"
+      class="music-card"
+      @click="playTrack(track, 'top10', index)"
+      :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
+    >
+      <div class="card-image">
+        <img :src="track.album?.cover_medium || track.cover" @error="handleImageError" alt="Cover" />
+        <div class="rank-badge" :class="{ 'top3': index < 3 }">{{ index + 1 }}</div>
+        <div class="play-button-overlay">
+          <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
+        </div>
+        <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
+          <span v-for="n in 4" :key="n"></span>
+        </div>
+        <div class="preview-badge"><i class="fa fa-headphones"></i> Preview</div>
+      </div>
+      <div class="card-info">
+        <h3 class="card-title">{{ track.title }}</h3>
+        <p class="card-artist">{{ track.artist?.name || track.artist }}</p>
+      </div>
+    </div>
+  </div>
+</section>
 
       <!-- LOADING STATE -->
       <div v-if="!chartTracks.length" class="skeleton"></div>
@@ -522,7 +522,7 @@ export default {
   data() {
     return {
       // API Configuration
-      DEEZER_API: 'https://api.allorigins.win/raw?url=https://api.deezer.com',
+    API_BASE_URL: 'http://localhost:3002', 
      
      
       // Player State
@@ -544,6 +544,9 @@ export default {
      
       // API Data
       chartTracks: [],
+      playerTrack: null,
+      isPlayerActive: false,
+      showAllTop10: false,
       popularArtists: [],
       newReleases: [],
       popularPlaylists: [],
@@ -604,11 +607,13 @@ export default {
 
   mounted() {
     window.addEventListener('player-update', this.handlePlayerUpdate)
+        window.addEventListener('player-state-changed', this.handlePlayerStateChange)
     this.loadAllApiData()
+    
   },
 
   beforeDestroy() {
-    window.removeEventListener('player-update', this.handlePlayerUpdate)
+        window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
     if (this.$refs.audioPlayer) {
       this.$refs.audioPlayer.pause()
     }
@@ -618,6 +623,35 @@ export default {
   },
 
   methods: {
+        handlePlayerStateChange(e) {
+      const { track, isPlaying, currentTime, duration, progress } = e.detail || {}
+      if (!track) return
+
+      this.playerTrack = track
+      this.isPlayerActive = true
+      this.isPlaying = isPlaying
+
+      // Atualiza HERO
+      this.heroTitle = track.title
+      this.heroArtist = track.artist
+      this.heroDescription = isPlaying ? '▶ Reproduzindo agora' : '⏸ Pausado'
+      this.heroHighlight = this.formatTime(currentTime) + ' / ' + this.formatTime(duration)
+      this.heroBadge = 'Tocando Agora'
+
+      // Atualiza vinyl
+      this.currentRandomSong = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        cover: track.cover,
+        duration: duration || track.duration
+      }
+
+      this.currentTime = currentTime || 0
+      this.duration = duration || 30
+      this.progressPercent = progress || 0
+    },
+
     // ============ NAVIGATION ============
    
 navigateToSearch(query) {
@@ -690,21 +724,36 @@ async loadAllApiData() {
     },
 
 async loadChartTracks() {
+  // Tenta cache primeiro
   const cache = localStorage.getItem('chartTracks')
-
   if (cache) {
     this.chartTracks = JSON.parse(cache)
   }
 
   try {
-    const response = await fetch(`${this.DEEZER_API}/chart/0/tracks?limit=20`)
+    // ✅ Usa seu backend proxy em vez do allorigins
+    const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/tracks?limit=20`)
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    
     const data = await response.json()
 
-    if (data.data) {
+    if (data.data && Array.isArray(data.data)) {
       this.chartTracks = data.data
       localStorage.setItem('chartTracks', JSON.stringify(data.data))
+      console.log('✅ Chart carregado:', this.chartTracks.length, 'músicas')
+    } else {
+      console.warn('⚠️ Resposta do chart sem data:', data)
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('❌ Erro ao carregar chart:', e)
+    // Fallback: usa cache se existir
+    if (!this.chartTracks.length && cache) {
+      this.chartTracks = JSON.parse(cache)
+    }
+  }
 },
 
     async loadPopularArtists() {
@@ -825,6 +874,11 @@ async loadChartTracks() {
     },
 
     playHeroSong() {
+         if (this.isPlayerActive) {
+        window.dispatchEvent(new CustomEvent('player-toggle-play'))
+        return
+      }
+
       if (!this.currentRandomSong) return
      
       if (this.isCurrentTrack(this.currentRandomSong) && this.isPlaying) {
@@ -835,6 +889,10 @@ async loadChartTracks() {
     },
 
     skipHeroSong() {
+         if (this.isPlayerActive) {
+        window.dispatchEvent(new CustomEvent('player-next-track'))
+        return
+      }
       this.selectRandomHeroSong()
       this.showToast('Nova Música', 'Nova descoberta selecionada', 'info', 'fa fa-music')
     },
@@ -1855,7 +1913,27 @@ async loadChartTracks() {
   color: #000;
   margin-left: 2px;
 }
+.cards-row.expanded {
+  grid-template-columns: repeat(6, 1fr);
+}
 
+@media (max-width: 1200px) {
+  .cards-row.expanded {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .cards-row.expanded {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .cards-row.expanded {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 /* Equalizer Animation */
 .equalizer {
   position: absolute;

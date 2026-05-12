@@ -1,7 +1,7 @@
 <template>
   <div class="app" :class="{ 'sidebar-open': sidebarOpen }">
     
-    <!-- 🔥 Botão de Menu Fixo no Canto Superior Esquerdo -->
+    <!-- Botão de Menu -->
     <button 
       class="menu-toggle"
       @click="toggleSidebar"
@@ -15,13 +15,13 @@
       </div>
     </button>
 
-    <!-- Sidebar (agora é um overlay drawer) -->
+    <!-- Sidebar -->
     <Sidebar 
       :isOpen="sidebarOpen" 
       @close="sidebarOpen = false"
     />
 
-    <!-- Overlay escuro quando sidebar aberto (mobile) -->
+    <!-- Overlay -->
     <div 
       v-if="sidebarOpen" 
       class="sidebar-overlay"
@@ -29,14 +29,18 @@
     ></div>
 
     <div class="main" :class="{ 'full-width': !sidebarOpen }">
+      <!-- NAVBAR - SEMPRE VISÍVEL -->
       <Navbar :sidebarOpen="sidebarOpen" />
+      
       <div class="content">
         <router-view />
+        <!-- FOOTER - SÓ SOME NAS PÁGINAS DE AUTH -->
+        <Footer v-show="showFooter" />
       </div>
     </div>
 
-      <MusicPlayer />
-
+    <!-- MUSICPLAYER - SEMPRE VISÍVEL -->
+    <MusicPlayer />
   </div>
 </template>
 
@@ -44,17 +48,34 @@
 import Sidebar from "@/components/Sidebar.vue"
 import Navbar from "@/components/Navbar.vue"
 import MusicPlayer from "@/components/MusicPlayer.vue"
+import Footer from "@/components/Footer.vue"
 
 export default {
+  name: 'App',
+  
   components: {
     Sidebar,
     Navbar,
-    MusicPlayer
+    MusicPlayer,
+    Footer
   },
   
   data() {
     return {
-      sidebarOpen: false // 🔥 Começa fechado por padrão
+      sidebarOpen: false,
+      showFooter: true
+    }
+  },
+
+  watch: {
+    // 🔥 Observa mudanças de rota
+    '$route.path': {
+      immediate: true,
+      handler(newPath) {
+        const authPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha']
+        this.showFooter = !authPages.includes(newPath)
+        console.log('[App] Rota:', newPath, '| Footer visível:', this.showFooter)
+      }
     }
   },
 
@@ -76,17 +97,15 @@ html, body, #app {
   height: 100%;
 }
 
-/* layout geral */
 .app {
   display: flex;
   height: 100vh;
   position: relative;
 }
 
-/* 🔥 Botão de Menu Fixo */
 .menu-toggle {
   position: fixed;
-  top: 20px;
+  top: 12px;
   left: 20px;
   z-index: 1001;
   width: 48px;
@@ -115,7 +134,6 @@ html, body, #app {
   background: linear-gradient(135deg, #ec4899 0%, #7c3aed 100%);
 }
 
-/* Hamburger Icon */
 .hamburger {
   width: 24px;
   height: 18px;
@@ -135,10 +153,19 @@ html, body, #app {
   transform-origin: center;
 }
 
-/* Animação quando ativo */
+.menu-toggle.active .hamburger span:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+}
 
+.menu-toggle.active .hamburger span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
 
-/* 🔥 Overlay escuro */
+.menu-toggle.active .hamburger span:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -153,45 +180,40 @@ html, body, #app {
   to { opacity: 1; }
 }
 
-/* lado direito */
 .main {
-    width: 100%;
+  width: 100%;
   overflow-x: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
-  margin-left: 0; /* Sem margem quando sidebar fechado */
+  margin-left: 0;
   transition: margin-left 0.3s ease;
 }
 
-/* Quando sidebar está aberto em desktop */
 .app.sidebar-open .main {
-  margin-left: 260px; /* Empurra conteúdo no desktop */
+  margin-left: 260px;
 }
 
-/* 🔥 Conteúdo que rola */
 .content {
   flex: 1;
   overflow-y: auto;
-  padding-top: 80px; /* Espaço para o botão de menu não cobrir conteúdo */
+  padding-top: 80px;
 }
 
-/* ========== RESPONSIVIDADE ========== */
 @media (max-width: 768px) {
   .menu-toggle {
-    top: 16px;
+    top: 8px;
     left: 16px;
     width: 44px;
     height: 44px;
   }
 
   .menu-toggle.active {
-    left: 16px; /* Não move no mobile, fica no mesmo lugar */
+    left: 16px;
     background: rgba(236, 72, 153, 0.9);
   }
 
-  /* No mobile, sidebar é overlay e não empurra conteúdo */
   .app.sidebar-open .main {
     margin-left: 0;
   }
@@ -201,7 +223,6 @@ html, body, #app {
   }
 }
 
-/* Animação suave para o botão */
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 
