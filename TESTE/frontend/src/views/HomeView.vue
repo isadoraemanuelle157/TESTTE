@@ -42,9 +42,7 @@
           </div>
         </div>
         <div class="header-actions">
-          <button class="btn-header" @click="refreshAllData" title="Atualizar">
-            <i class="fa fa-refresh" :class="{ 'spinning': loading }"></i>
-          </button>
+
         </div>
       </header>
 
@@ -78,14 +76,23 @@
           </div>
 
           <div class="hero-actions">
-            <button class="btn-primary btn-glow" @click="playHeroSong" :disabled="!currentRandomSong && !playerTrack">
-              <i class="fa" :class="isPlaying && isCurrentTrack(currentRandomSong) ? 'fa-pause' : 'fa-play'"></i>
-              {{ isPlaying && isCurrentTrack(currentRandomSong) ? 'Pausar' : 'Ouvir Agora' }}
-            </button>
+       <!-- SUBSTITUIR o botão btn-primary do hero-actions por este: -->
+<button class="btn-primary btn-glow" @click="playHeroSong" :disabled="!currentRandomSong && !playerTrack">
+  <i class="fa" :class="isPlaying ? 'fa-pause' : 'fa-play'"></i>
+  {{ isPlaying ? 'Pausar' : 'Ouvir Agora' }}
+</button>
   <button class="btn-secondary" @click="skipHeroSong">
   <i class="fa fa-step-forward"></i> 
   {{ isPlayerActive ? 'Próxima' : 'Próxima' }}
 </button>
+<button 
+    class="btn-secondary btn-back" 
+    @click="prevHeroSong" 
+    :disabled="recentlyPlayed.length < 2"
+    title="Voltar à música anterior"
+  >
+    <i class="fa fa-step-backward"></i> Voltar
+  </button>
 
           </div>
 
@@ -412,34 +419,34 @@
       </section>
 
       <!-- SEÇÃO: Categorias -->
-      <section class="section">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-compass section-icon browse"></i>
-              Navegar por Categoria
-            </h2>
-            <span class="section-subtitle">Encontre seu estilo</span>
-          </div>
-        </div>
-        <div class="categories-grid">
-          <div
-            v-for="(cat, index) in categories"
-            :key="index"
-            class="category-tile"
-            @click="navigateToSearch(cat.name)"
-            :style="{ background: cat.gradient }"
-          >
-            <div class="category-content">
-              <h3>{{ cat.name }}</h3>
-              <span class="category-explore">
-                Explorar <i class="fa fa-arrow-right"></i>
-              </span>
-            </div>
-            <i :class="cat.icon" class="category-icon"></i>
-          </div>
-        </div>
-      </section>
+<section class="section">
+  <div class="section-header">
+    <div class="section-title-wrapper">
+      <h2 class="section-title">
+        <i class="fa fa-compass section-icon browse"></i>
+        Navegar por Categoria
+      </h2>
+      <span class="section-subtitle">Encontre seu estilo</span>
+    </div>
+  </div>
+  <div class="categories-grid">
+    <div
+      v-for="(cat, index) in categories"
+      :key="index"
+      class="category-tile"
+      @click="navigateToSearch(cat.name)"
+      :style="{ backgroundImage: 'url(' + cat.image + '), ' + cat.gradient }"
+    >
+      <div class="category-content">
+        <h3>{{ cat.name }}</h3>
+        <span class="category-explore">
+          Explorar <i class="fa fa-arrow-right"></i>
+        </span>
+      </div>
+      <i :class="cat.icon" class="category-icon"></i>
+    </div>
+  </div>
+</section>
             <!-- artistas import: -->
 <artistas />
 
@@ -580,16 +587,65 @@ export default {
       },
 
       // Categories with Font Awesome icons only
-      categories: [
-        { name: "Pop", icon: "fa fa-star", gradient: "linear-gradient(135deg, #f093fb, #f5576c)" },
-        { name: "Rock", icon: "fa fa-bolt", gradient: "linear-gradient(135deg, #fa709a, #fee140)" },
-        { name: "Hip Hop", icon: "fa fa-fire", gradient: "linear-gradient(135deg, #ff0844, #ffb199)" },
-        { name: "Eletrônica", icon: "fa fa-headphones", gradient: "linear-gradient(135deg, #4facfe, #00f2fe)" },
-        { name: "Sertanejo", icon: "fa fa-guitar", gradient: "linear-gradient(135deg, #8fd3f4, #84fab0)" },
-        { name: "Funk", icon: "fa fa-fire", gradient: "linear-gradient(135deg, #ff5722, #ffab91)" },
-        { name: "MPB", icon: "fa fa-music", gradient: "linear-gradient(135deg, #9C27B0, #E1BEE7)" },
-        { name: "Jazz", icon: "fa fa-saxophone", gradient: "linear-gradient(135deg, #FFC107, #FFECB3)" }
-      ],
+// SUBSTITUIR o array categories atual por este:
+// SUBSTITUIR o array categories atual por este:
+categories: [
+  { 
+    name: "Pop", 
+    icon: "fa fa-star", 
+    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(240,147,251,0.75), rgba(245,87,108,0.75))" 
+  },
+
+  { 
+    name: "Rock", 
+    icon: "fa fa-bolt", 
+    image: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(250,112,154,0.75), rgba(254,225,64,0.75))" 
+  },
+
+  { 
+    name: "Hip Hop", 
+    icon: "fa fa-fire", 
+    image: "https://images.unsplash.com/photo-1521334884684-d80222895322?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(255,8,68,0.75), rgba(255,177,153,0.75))" 
+  },
+
+  { 
+    name: "Eletrônica", 
+    icon: "fa fa-headphones", 
+    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(79,172,254,0.75), rgba(0,242,254,0.75))" 
+  },
+
+  { 
+    name: "Sertanejo", 
+    icon: "fa fa-guitar", 
+    image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(143,211,244,0.75), rgba(132,250,176,0.75))" 
+  },
+
+  { 
+    name: "Funk", 
+    icon: "fa fa-fire", 
+    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(255,87,34,0.75), rgba(255,171,145,0.75))" 
+  },
+
+  { 
+    name: "MPB", 
+    icon: "fa fa-music", 
+    image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(156,39,176,0.75), rgba(225,190,231,0.75))" 
+  },
+
+  { 
+    name: "Jazz", 
+    icon: "fa fa-music", 
+    image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=400&h=400&fit=crop&q=80",
+    gradient: "linear-gradient(135deg, rgba(255,193,7,0.75), rgba(255,236,179,0.75))" 
+  }
+],
 
       // Gradients
       genreGradients: [
@@ -605,12 +661,22 @@ export default {
     }
   },
 
-  mounted() {
-    window.addEventListener('player-update', this.handlePlayerUpdate)
-        window.addEventListener('player-state-changed', this.handlePlayerStateChange)
-    this.loadAllApiData()
-    
-  },
+mounted() {
+  window.addEventListener('player-update', this.handlePlayerUpdate)
+  window.addEventListener('player-state-changed', this.handlePlayerStateChange)
+  
+  // Carregar histórico do localStorage
+  const savedRecent = localStorage.getItem('recentlyPlayed')
+  if (savedRecent) {
+    try {
+      this.recentlyPlayed = JSON.parse(savedRecent)
+    } catch (e) {
+      this.recentlyPlayed = []
+    }
+  }
+  
+  this.loadAllApiData()
+},
 
   beforeDestroy() {
         window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
@@ -873,20 +939,48 @@ async loadChartTracks() {
       }
     },
 
-    playHeroSong() {
-         if (this.isPlayerActive) {
-        window.dispatchEvent(new CustomEvent('player-toggle-play'))
-        return
-      }
+playHeroSong() {
+  // Se o player global está ativo, envia comando de toggle (play/pause)
+  if (this.isPlayerActive) {
+    window.dispatchEvent(new CustomEvent('player-toggle-play'))
+    return
+  }
 
-      if (!this.currentRandomSong) return
-     
-      if (this.isCurrentTrack(this.currentRandomSong) && this.isPlaying) {
-        this.pauseTrack()
-      } else {
-        this.playTrack(this.currentRandomSong, 'hero', 0)
-      }
-    },
+  // Se não tem música no hero, não faz nada
+  if (!this.currentRandomSong) return
+  
+  // Se está tocando a música do hero, pausa
+  if (this.isPlaying && this.isCurrentTrack(this.currentRandomSong)) {
+    this.pauseTrack()
+  } else {
+    // Senão, toca a música do hero
+    this.addToRecentlyPlayed(this.currentRandomSong)
+    this.playTrack(this.currentRandomSong, 'hero', 0)
+  }
+},
+
+    prevHeroSong() {
+  if (this.isPlayerActive) {
+    window.dispatchEvent(new CustomEvent('player-prev-track'))
+    return
+  }
+
+  // Volta para a música anterior do histórico
+  if (this.recentlyPlayed.length < 2) {
+    this.showToast('Histórico', 'Nenhuma música anterior no histórico', 'info', 'fa fa-info-circle')
+    return
+  }
+
+  // Pega a segunda música do histórico (a anterior à atual)
+  const prevTrack = this.recentlyPlayed[1]
+  
+  // Remove a atual do topo e coloca a anterior como atual
+  this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== prevTrack.id)
+  
+  // Toca a música anterior
+  this.playTrack(prevTrack, 'recent', 0)
+  this.showToast('Voltando', `Tocando: ${prevTrack.title}`, 'info', 'fa fa-step-backward')
+},
 
     skipHeroSong() {
          if (this.isPlayerActive) {
@@ -939,18 +1033,19 @@ async loadChartTracks() {
 
     // ============ PLAYBACK METHODS ============
 
-    async playTrack(track, context, index) {
-      if (this.isCurrentTrack(track) && this.isPlaying) {
-        this.pauseTrack()
-        return
-      }
+async playTrack(track, context, index) {
+  if (this.isCurrentTrack(track) && this.isPlaying) {
+    this.pauseTrack()
+    return
+  }
 
-      this.currentTrack = track
-      const playerTrack = this.convertTrackForPlayer(track)
-     
-      this.addToRecentlyPlayed(playerTrack)
-     
-      let playlist = []
+  this.currentTrack = track
+  const playerTrack = this.convertTrackForPlayer(track)
+ 
+  // SEMPRE adiciona ao histórico - ESSENCIAL
+  this.addToRecentlyPlayed(playerTrack)
+ 
+  let playlist = []
       if (context === 'chart') {
         playlist = this.chartTracks.map(t => this.convertTrackForPlayer(t))
       } else if (context === 'recommended') {
@@ -1088,11 +1183,17 @@ async loadChartTracks() {
       }
     },
 
-    addToRecentlyPlayed(track) {
-      this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== track.id)
-      this.recentlyPlayed.unshift(track)
-      this.recentlyPlayed = this.recentlyPlayed.slice(0, 10)
-    },
+addToRecentlyPlayed(track) {
+  if (!track || !track.id) return
+  // Remove se já existe
+  this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== track.id)
+  // Adiciona no topo
+  this.recentlyPlayed.unshift(track)
+  // Limita a 10
+  this.recentlyPlayed = this.recentlyPlayed.slice(0, 10)
+  // Salva no localStorage para persistência
+  localStorage.setItem('recentlyPlayed', JSON.stringify(this.recentlyPlayed))
+},
 
     handlePlayerUpdate(e) {
       this.isPlaying = e.detail?.isPlaying || false
@@ -1604,7 +1705,13 @@ async loadChartTracks() {
   padding: 16px;
   border-radius: 50%;
 }
-
+.btn-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  padding: 0;
+  justify-content: center;
+}
 /* Hero Stats */
 .hero-stats {
   display: flex;
@@ -1916,7 +2023,22 @@ async loadChartTracks() {
 .cards-row.expanded {
   grid-template-columns: repeat(6, 1fr);
 }
+.btn-back {
+  opacity: 1;
+  transition: all 0.3s ease;
+}
 
+.btn-back:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-back:not(:disabled):hover {
+  background: rgba(0,0,0,0.5);
+  border-color: #1db954;
+  color: #1db954;
+  transform: scale(1.05);
+}
 @media (max-width: 1200px) {
   .cards-row.expanded {
     grid-template-columns: repeat(4, 1fr);
@@ -2279,12 +2401,27 @@ async loadChartTracks() {
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255,255,255,0.1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.category-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%);
+  z-index: 0;
+  transition: all 0.3s ease;
 }
 
 .category-tile:hover {
   transform: scale(1.03);
-  filter: brightness(1.1);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+.category-tile:hover::before {
+  background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 100%);
 }
 
 .category-content {
@@ -2340,11 +2477,12 @@ async loadChartTracks() {
   opacity: 0.2;
   transform: rotate(15deg);
   transition: all 0.3s ease;
+  z-index: 1;
 }
 
 .category-tile:hover .category-icon {
   transform: rotate(0deg) scale(1.1);
-  opacity: 0.3;
+  opacity: 0.35;
 }
 
 .genre-image {

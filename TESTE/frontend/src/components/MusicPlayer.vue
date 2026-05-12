@@ -234,21 +234,27 @@ export default {
     // Comandos do Dashboard
     window.addEventListener('player-toggle-play', this.handleTogglePlayCommand)
     window.addEventListener('player-next-track', this.handleNextCommand)
+     window.addEventListener('player-prev-track', this.handlePrevCommand)
     
     // Iniciar sincronização contínua com o Dashboard
     this.startSyncInterval()
   },
 
-  beforeDestroy() {
-    window.removeEventListener('play-song', this.handlePlaySong)
-    window.removeEventListener('playlist-playback-started', this.handlePlaylistPlayback)
-    window.removeEventListener('player-toggle-play', this.handleTogglePlayCommand)
-    window.removeEventListener('player-next-track', this.handleNextCommand)
-    
-    this.stopSyncInterval()
-  },
+beforeDestroy() {
+  window.removeEventListener('play-song', this.handlePlaySong)
+  window.removeEventListener('playlist-playback-started', this.handlePlaylistPlayback)
+  window.removeEventListener('player-toggle-play', this.handleTogglePlayCommand)
+  window.removeEventListener('player-next-track', this.handleNextCommand)
+  window.removeEventListener('player-prev-track', this.handlePrevCommand) // NOVO
+  
+  this.stopSyncInterval()
+},
 
   methods: {
+    handlePrevCommand() {
+  console.log('🎮 Comando prev recebido do Dashboard')
+  this.prevTrack()
+},
     // ═══════════════════════════════════════════════════════
     // SINCRONIZAÇÃO COM DASHBOARD (NOVO)
     // ═══════════════════════════════════════════════════════
@@ -319,10 +325,22 @@ export default {
     // HANDLERS DE EVENTOS GLOBAIS
     // ═══════════════════════════════════════════════════════
 
-    handlePlaySong(e) {
-      console.log('📥 Evento play-song recebido:', e.detail)
-      this.loadSongFromEvent(e.detail)
-    },
+handlePlaySong(e) {
+  console.log('📥 Evento play-song recebido:', e.detail)
+  
+  // Notificar o Dashboard para adicionar ao histórico também
+  const detail = e.detail
+  if (detail && detail.song) {
+    window.dispatchEvent(new CustomEvent('player-track-started', {
+      detail: {
+        track: detail.song,
+        timestamp: Date.now()
+      }
+    }))
+  }
+  
+  this.loadSongFromEvent(e.detail)
+},
 
     handlePlaylistPlayback(e) {
       console.log('📥 Evento playlist-playback-started recebido:', e.detail)
