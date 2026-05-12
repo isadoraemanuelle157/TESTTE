@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 
 // ============================================
-// 🔓 OPTIONAL AUTH - Identifica usuário logado mas não bloqueia
+// 🔓 OPTIONAL AUTH — Identifica usuário mas não bloqueia
 // ============================================
 function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization
@@ -18,34 +18,36 @@ function optionalAuth(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, "SEGREDO_SUPER_SECRETO")
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO")
     req.user = decoded
     req.isLogged = true
     next()
   } catch (err) {
-    // Token inválido, mas não bloqueia
+    // Token inválido, continua como deslogado
     next()
   }
 }
 
 // ============================================
-// 🔒 REQUIRE AUTH - Exige login obrigatório
+// 🔒 REQUIRE AUTH — Exige login obrigatório
 // ============================================
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization
 
   if (!authHeader) {
     return res.status(401).json({
-      error: 'Login obrigatório',
+      error: 'LOGIN_REQUIRED_SPOTIFY',
       code: 'AUTH_REQUIRED',
-      message: 'Faça login para acessar este recurso do Spotify'
+      message: 'Faça login para acessar este recurso',
+      showLoginModal: true,
+      redirectTo: '/login'
     })
   }
 
   const token = authHeader.split(' ')[1]
 
   try {
-    const decoded = jwt.verify(token, "SEGREDO_SUPER_SECRETO")
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO")
     req.user = decoded
     req.isLogged = true
     next()
@@ -53,7 +55,8 @@ function requireAuth(req, res, next) {
     return res.status(401).json({
       error: 'Token inválido',
       code: 'INVALID_TOKEN',
-      message: 'Sessão expirada. Faça login novamente.'
+      message: 'Sessão expirada. Faça login novamente.',
+      showLoginModal: true
     })
   }
 }

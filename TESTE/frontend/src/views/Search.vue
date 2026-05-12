@@ -450,14 +450,14 @@
                 </div>
                
                 <!-- Botão de curtir no Top Músicas -->
-                <button
-                  class="btn-like-track"
-                  @click.stop="toggleLikeTrack(track)"
-                  :class="{ liked: isTrackLiked(track.id) }"
-                  :title="isTrackLiked(track.id) ? 'Remover dos curtidos' : 'Adicionar aos curtidos'"
-                >
-                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                </button>
+<button
+  v-if="track.source === 'spotify' && !isLogged"
+  class="btn-like-track"
+  @click.stop="openLoginModal"
+  title="Faça login para curtir"
+>
+  <i class="fa fa-heart-o"></i>
+</button>
                
                 <button class="track-play">
                   <i class="fa fa-play"></i>
@@ -517,13 +517,23 @@
                     <i :class="getSourceIcon(track.source)"></i>
                   </span>
                 </div>
-                <button
-                  class="btn-like-list"
-                  @click.stop="toggleLikeTrack(track)"
-                  :class="{ liked: isTrackLiked(track.id) }"
-                >
-                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                </button>
+               <button
+  v-if="(track.source === 'spotify' && isLogged) || (track.source === 'deezer' && !isLogged) || track.source === 'local'"
+  class="btn-like-list"
+  @click.stop="toggleLikeTrack(track)"
+  :class="{ liked: isTrackLiked(track.id) }"
+>
+  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+</button>
+
+<button
+  v-else-if="track.source === 'spotify' && !isLogged"
+  class="btn-like-list"
+  @click.stop="openLoginModal"
+  title="Faça login para curtir"
+>
+  <i class="fa fa-heart-o"></i>
+</button>
                 <span v-if="track.duration" class="track-list-duration">{{ formatDuration(track.duration) }}</span>
               </div>
             </div>
@@ -546,13 +556,23 @@
                 </div>
                 <span class="artist-card-name">{{ getResultTitle(artist) }}</span>
                 <span class="artist-card-type">Artista</span>
-                <button
-                  class="btn-like-artist"
-                  @click.stop="toggleFavoriteItem(artist)"
-                  :class="{ liked: isArtistFavorited(artist.id) }"
-                >
-                  <i :class="isArtistFavorited(artist.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
-                </button>
+ <button
+  v-if="isLogged"
+  class="btn-like-artist"
+  @click.stop="toggleFavoriteItem(artist)"
+  :class="{ liked: isArtistFavorited(artist.id) }"
+>
+  <i :class="isArtistFavorited(artist.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+</button>
+
+<button
+  v-else
+  class="btn-like-artist"
+  @click.stop="openLoginModal"
+  title="Faça login para favoritar"
+>
+  <i class="fa fa-star-o"></i>
+</button>
               </div>
             </div>
           </div>
@@ -580,13 +600,23 @@
                 </div>
                 <span class="album-card-name">{{ getResultTitle(album) }}</span>
                 <span class="album-card-artist">{{ getResultSubtitle(album) }}</span>
-                <button
-                  class="btn-like-album"
-                  @click.stop="toggleFavoriteItem(album)"
-                  :class="{ liked: isAlbumFavorited(album.id) }"
-                >
-                  <i :class="isAlbumFavorited(album.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
-                </button>
+   <button
+  v-if="isLogged"
+  class="btn-like-album"
+  @click.stop="toggleFavoriteItem(album)"
+  :class="{ liked: isAlbumFavorited(album.id) }"
+>
+  <i :class="isAlbumFavorited(album.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+</button>
+
+<button
+  v-else
+  class="btn-like-album"
+  @click.stop="openLoginModal"
+  title="Faça login para favoritar"
+>
+  <i class="fa fa-star-o"></i>
+</button>
               </div>
             </div>
           </div>
@@ -645,8 +675,10 @@
       <div class="local-result-bg" :style="getLocalGradient(loc.name)">
         <span class="local-result-emoji">📍</span>
       </div>
-      <span class="local-result-name">{{ loc.name }}</span>
-      <span class="local-result-desc">{{ loc.description || 'Música local' }}</span>
+<span class="local-result-name">{{ loc.name }}</span>
+<span class="local-result-desc">
+  {{ loc.resultCount > 0 ? `${loc.resultCount} resultados` : (loc.description || 'Música local') }}
+</span>
     </div>
   </div>
 </div>
@@ -665,6 +697,29 @@
       </div>
     </transition>
 
+    <!-- ADICIONAR AQUI: MODAL DE LOGIN -->
+    <transition name="modal">
+      <div v-if="showLoginModal" class="login-modal-overlay" @click="closeLoginModal">
+        <div class="login-modal" @click.stop>
+          <div class="modal-icon">
+            <i class="fa fa-lock"></i>
+          </div>
+          <h3>Login Necessário</h3>
+          <p>Faça login para acessar recursos do Spotify: curtir músicas, favoritar artistas e álbuns, e ouvir previews exclusivos.</p>
+          
+          <div class="modal-actions">
+            <button class="btn-primary" @click="goToLogin">
+              <i class="fa fa-sign-in"></i>
+              Fazer Login
+            </button>
+            <button class="btn-secondary" @click="closeLoginModal">
+              Continuar Navegando
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
   </div>
 </template>
 <script>
@@ -680,6 +735,8 @@ export default {
       searchQuery: '',
       lastSearch: '',
       isFocused: false,
+         showLoginModal: false,  // ← ADICIONAR
+    isLogged: false, 
       hasSearched: false,
       showSuggestions: false,
       showHistory: false,
@@ -834,6 +891,14 @@ searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Gêner
   },
 
   computed: {
+  showSpotifyContent() {
+    return this.isLogged
+  },
+  
+  showDeezerContent() {
+    return !this.isLogged
+  },
+
       filteredLocalizacoes() {
     if (!this.dropdownSearchQuery) return this.localizacoes
     const q = this.dropdownSearchQuery.toLowerCase()
@@ -1073,6 +1138,7 @@ mounted() {
   this.loadHistory()
   this.loadLocalizacoes()
       this.loadRecentCategories()
+      this.checkLoginStatus()
 },
 
   beforeUnmount() {
@@ -1092,6 +1158,43 @@ watch: {
   }
 },
   methods: {
+      checkLoginStatus() {
+    const token = localStorage.getItem('token')
+    this.isLogged = !!token
+  },
+
+  openLoginModal() {
+    this.showLoginModal = true
+  },
+  
+  closeLoginModal() {
+    this.showLoginModal = false
+  },
+  
+  goToLogin() {
+    this.$router.push('/login')
+  },
+
+  // ===== PLAY TRACK COM VERIFICAÇÃO =====
+  playTrack(track) {
+    // Se é Spotify e não está logado → Modal
+    if (track.source === 'spotify' && !this.isLogged) {
+      this.openLoginModal()
+      return
+    }
+    
+    // Se é Deezer e está logado → Não permite (só Spotify logado)
+    if (track.source === 'deezer' && this.isLogged) {
+      this.showToast('Conteúdo Deezer não disponível com login', 'info')
+      return
+    }
+
+    const playerSong = this.convertToPlayerFormat(track)
+    window.dispatchEvent(new CustomEvent('play-song', {
+      detail: { song: playerSong, playlist: [playerSong], index: 0, context: 'search' }
+    }))
+  },
+
     async loadApiGenres() {
   try {
     const res = await fetch('http://localhost:3002/deezer/genre')
@@ -1143,72 +1246,76 @@ normalizeApiGenre(g) {
 },
 async loadLocalMusicas(localNome) {
   try {
-    this.isLoading = true
+    this.isLoading = true    // ← ADICIONAR
+    this.hasSearched = true  // ← ADICIONAR (garantir)
     
     const res = await fetch(`http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`)
     const data = await res.json()
     
-    if (data.results && Array.isArray(data.results)) {
-      // Converte os resultados para o formato do chartTracks (tracks para o Top Músicas)
-      const tracks = data.results
-        .filter(r => r.type === 'track')
-        .map(t => ({
-          id: t.id,
-          title: t.title,
-          artist: { name: t.artist?.name || 'Artista desconhecido' },
-          album: {
-            cover_medium: t.album?.cover_medium || t.cover || ''
-          },
-          preview: t.preview,
-          duration: t.duration,
-          source: t.source,
-          localContext: t.localContext
-        }))
-      
-      this.chartTracks = tracks
-      
-      // Se não encontrou tracks, mas tem artistas/álbuns, mostra na busca geral
-      if (tracks.length === 0 && data.results.length > 0) {
-        this.searchResults = data.results.map(r => {
-          if (r.type === 'artist') {
-            return {
-              id: r.id,
-              name: r.name,
-              picture: r.picture || r.picture_medium,
-              picture_medium: r.picture_medium,
-              nb_fan: r.nb_fan || 0,
-              type: 'artist',
-              source: r.source
-            }
-          }
-          if (r.type === 'album') {
-            return {
-              id: r.id,
-              title: r.title,
-              artist: r.artist,
-              cover: r.cover || r.cover_medium,
-              cover_medium: r.cover_medium,
-              type: 'album',
-              source: r.source
-            }
-          }
-          return r
-        })
-        this.hasSearched = true
+if (data.results && Array.isArray(data.results)) {
+  // Converte TODOS os resultados para o formato searchResults
+  const allItems = data.results.map(r => {
+    if (r.type === 'track') {
+      return {
+        id: r.id,
+        title: r.title,
+        artist: { name: r.artist?.name || 'Artista desconhecido' },
+        album: {
+          title: r.album?.title || '',
+          cover: r.album?.cover_medium || r.cover || ''
+        },
+        cover: r.cover || r.album?.cover_medium,
+        preview: r.preview,
+        duration: r.duration,
+        type: 'track',
+        source: r.source,
+        localContext: r.localContext || localNome
       }
+    }
+    if (r.type === 'artist') {
+      return {
+        id: r.id,
+        name: r.name,
+        picture: r.picture || r.picture_medium,
+        picture_medium: r.picture_medium,
+        nb_fan: r.nb_fan || 0,
+        type: 'artist',
+        source: r.source,
+        localContext: r.localContext || localNome
+      }
+    }
+    if (r.type === 'album') {
+      return {
+        id: r.id,
+        title: r.title,
+        artist: { name: r.artist?.name || 'Artista' },
+        cover: r.cover || r.cover_medium,
+        cover_medium: r.cover_medium,
+        type: 'album',
+        source: r.source,
+        localContext: r.localContext || localNome
+      }
+    }
+    return r
+  })
+  
+ this.chartTracks = tracks
+      this.searchResults = allItems   // ← ADICIONAR
+      this.hasSearched = true         // ← GARANTIR
       
-      console.log(`✅ ${data.total} resultados carregados para ${localNome}`)
     } else {
-      // Sem resultados
       this.chartTracks = []
+      this.searchResults = []         // ← ADICIONAR
       this.showToast(`Nenhum resultado encontrado para ${localNome}`, 'info')
     }
+    
   } catch (err) {
     console.error('Erro ao carregar músicas do local:', err)
     this.chartTracks = []
+    this.searchResults = []           // ← ADICIONAR
     this.showToast('Erro ao buscar músicas do local', 'error')
   } finally {
-    this.isLoading = false
+    this.isLoading = false            // ← ADICIONAR/MOVER para cá
   }
 },
 
@@ -1524,13 +1631,15 @@ async loadLocalizacoes() {
       return this.favoriteArtists.some(id => String(id) === String(artistId))
     },
 
-    async toggleFavoriteItem(item) {
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          this.showToast("Faça login para favoritar", "info")
-          return
-        }
+async toggleFavoriteItem(item) {
+  // ADICIONAR NO INÍCIO:
+  if (!this.isLogged) {
+    this.openLoginModal()
+    return
+  }
+
+  try {
+    const token = localStorage.getItem("token")
 
         const itemId = item.id
         const isDeezer = item.source === 'deezer'
@@ -1624,10 +1733,10 @@ async loadLocalizacoes() {
     return this.goToUserProfile(result)
   }
   
-  // Se clicar em um local, busca as músicas dele
-  if (result.type === 'local') {
-    return this.searchAndGo(result.name)
-  }
+if (result.type === 'local') {
+  this.searchAndGo(result.name)   // ← USAR searchAndGo em vez de lógica manual
+  return
+}
 },
 
     goToUserProfile(user) {
@@ -1657,68 +1766,64 @@ async loadLocalizacoes() {
       return this.likedTracks.some(id => String(id) === String(trackId))
     },
    
-    async toggleLikeTrack(track) {
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          this.showToast("Faça login para curtir músicas", "info")
-          return
-        }
+   async toggleLikeTrack(track) {
+    if (!this.isLogged) {
+        this.openLoginModal()
+        return
+    }
 
+    try {
         const trackId = track.id
-       
-        const body = {
-          source: track.source || 'local'
-        }
+        const body = { source: track.source || 'local' }
 
         if (track.source === 'deezer' || track.source === 'spotify') {
-          body.dadosMusica = {
-            titulo: track.title || 'Sem título',
-            artista: track.artist?.name || 'Desconhecido',
-            capa: this.getBestImage(track) || '',
-            previewUrl: track.preview || '',
-            duration: track.duration || 30,
-            ano: track.ano || null,
-            album: track.album?.title || ''
-          }
+            body.dadosMusica = {
+                titulo: track.title || 'Sem título',
+                artista: track.artist?.name || 'Desconhecido',
+                capa: this.getBestImage(track) || '',
+                previewUrl: track.preview || '',
+                duration: track.duration || 30,
+                ano: track.ano || null,
+                album: track.album?.title || ''
+            }
         }
 
         const res = await fetch(
-          `http://localhost:3002/curtidas/${trackId}`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-          }
+            `http://localhost:3002/curtidas/${trackId}`,
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,  // ← ADICIONAR
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            }
         )
 
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}))
-          console.error('Erro da API:', errorData)
-          this.showToast(errorData.error || `Erro ${res.status}`, "error")
-          return
+            const errorData = await res.json().catch(() => ({}))
+            console.error('Erro da API:', errorData)
+            this.showToast(errorData.error || `Erro ${res.status}`, "error")
+            return
         }
 
         const data = await res.json()
 
         if (data.liked) {
-          if (!this.likedTracks.includes(String(trackId))) {
-            this.likedTracks.push(String(trackId))
-          }
-          this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+            if (!this.likedTracks.includes(String(trackId))) {
+                this.likedTracks.push(String(trackId))
+            }
+            this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
         } else {
-          this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
-          this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
+            this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
+            this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
         }
 
-      } catch (err) {
+    } catch (err) {
         console.error("Erro ao curtir música:", err)
         this.showToast("Erro ao processar curtida", "error")
-      }
-    },
+    }
+},
    
     formatDuration(seconds) {
       if (!seconds) return "3:00"
@@ -1735,30 +1840,55 @@ async loadLocalizacoes() {
       ])
     },
 
-    async loadTopTracksByCategory(category = 'Brasil') {
-      try {
-        this.currentTopCategory = category || 'Brasil'
+ async loadTopTracksByCategory(category = 'Brasil') {
+  try {
+    this.currentTopCategory = category || 'Brasil'
 
-        const res = await fetch(
-          `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10`
-        ).then(r => r.json())
+    if (this.isLogged) {
+      // COM LOGIN: Spotify
+      const res = await fetch(
+        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      ).then(r => r.json())
 
-        this.chartTracks = res.tracks?.items.map(t => ({
-          id: t.id,
-          title: t.name,
-          artist: { name: t.artists.map(a => a.name).join(', ') },
-          album: {
-            cover_medium: t.album.images?.[0]?.url
-          },
-          preview: t.preview_url,
-          source: 'spotify'
-        })) || []
+      this.chartTracks = res.tracks?.items.map(t => ({
+        id: t.id,
+        title: t.name,
+        artist: { name: t.artists.map(a => a.name).join(', ') },
+        album: {
+          cover_medium: t.album.images?.[0]?.url
+        },
+        preview: t.preview_url,
+        source: 'spotify'
+      })) || []
 
-      } catch (error) {
-        console.error('Erro ao carregar top da categoria:', error)
-        this.chartTracks = []
-      }
-    },
+    } else {
+      // SEM LOGIN: Deezer Chart
+      const res = await fetch(
+        `http://localhost:3002/deezer/chart/0/tracks?limit=10`
+      ).then(r => r.json())
+
+      this.chartTracks = res.data?.map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: { name: t.artist.name },
+        album: {
+          cover_medium: t.album.cover_medium
+        },
+        preview: t.preview,
+        source: 'deezer'
+      })) || []
+    }
+
+  } catch (error) {
+    console.error('Erro ao carregar top da categoria:', error)
+    this.chartTracks = []
+  }
+},
 
     async loadPopularArtists() {
       try {
@@ -1778,288 +1908,111 @@ async loadLocalizacoes() {
       }
     },
    
-    async searchAll(query) {
-      this.isLoading = true
+ async searchAll(query) {
+  this.isLoading = true
 
-      try {
-        const token = localStorage.getItem("token")
-        const authHeaders = token
-          ? { Authorization: `Bearer ${token}` }
-          : {}
-
-        const [
-          localMusicas,
-          localCantores,
-          localAlbuns,
-          localGeneros,
-          localUsuarios
-        ] = await Promise.all([
-          fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-          fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-          fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-          fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-          fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
-            headers: authHeaders
-          })
-            .then(async r => r.ok ? r.json() : [])
-            .catch(() => [])
-        ])
-
-        const spotifyRes = await fetch(
-          `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album`
-        ).then(r => r.json())
-
-        const deezerRes = await fetch(
-          `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
-        ).then(r => r.json())
-
-        const matchedApiGenres = (this.apiGenres || []).filter(g =>
-  g.name?.toLowerCase().includes(query.toLowerCase())
-)
-
-        let results = []
-
-        // USUÁRIOS LOCAIS
-        if (Array.isArray(localUsuarios) && localUsuarios.length > 0) {
-          results.push(...localUsuarios.map(u => ({
-            id: u._id || u.id,
-            name: u.nome || u.name || u.username,
-            username: u.username || u.nome,
-            picture: u.foto || u.avatar || u.picture,
-            avatar: u.avatar || u.foto,
-            bio: u.bio,
-            perfilPrivado: u.perfilPrivado,
-            mostrarAtividade: u.mostrarAtividade,
-            type: 'user',
-            source: 'local'
-          })))
-        }
-
-        // MÚSICAS LOCAIS
-        if (Array.isArray(localMusicas) && localMusicas.length > 0) {
-          results.push(...localMusicas.map(m => ({
-            id: m._id,
-            title: m.nome,
-            artist: {
-              name: m.cantores?.map(c => c.nome).join(', ') || 'Artista desconhecido'
-            },
-            album: {
-              title: m.albuns?.[0]?.nome || '',
-              cover: m.albuns?.[0]?.foto || ''
-            },
-            cover: m.foto || m.albuns?.[0]?.foto || '',
-            preview: m.link,
-            ano: m.ano,
-            decada: m.ano ? this.getDecadeFromYear(m.ano) : null,
-            type: 'track',
-            source: 'local'
-          })))
-        }
-
-        // CANTORES LOCAIS
-        if (Array.isArray(localCantores) && localCantores.length > 0) {
-          results.push(...localCantores.map(c => ({
-            id: c._id,
-            name: c.nome,
-            picture: c.foto,
-            nb_fan: c.totalSeguidores || 0,
-            ano: c.ano,
-            decada: c.ano ? this.getDecadeFromYear(c.ano) : null,
-            type: 'artist',
-            source: 'local'
-          })))
-        }
-
-        // ÁLBUNS LOCAIS
-        if (Array.isArray(localAlbuns) && localAlbuns.length > 0) {
-          results.push(...localAlbuns.map(a => ({
-            id: a._id,
-            title: a.nome,
-            artist: {
-              name: a.cantor?.nome || 'Artista desconhecido'
-            },
-            cover: a.foto,
-            ano: a.ano,
-            decada: a.ano ? this.getDecadeFromYear(a.ano) : null,
-            type: 'album',
-            source: 'local'
-          })))
-        }
-
-        // SPOTIFY TRACKS
-        if (spotifyRes.tracks?.items) {
-          results.push(...spotifyRes.tracks.items.map(t => ({
-            id: t.id,
-            title: t.name,
-            artist: { name: t.artists.map(a => a.name).join(', ') },
-            album: {
-              title: t.album.name,
-              cover: t.album.images?.[0]?.url
-            },
-            cover: t.album.images?.[0]?.url,
-            preview: t.preview_url,
-            duration: Math.floor(t.duration_ms / 1000),
-            type: 'track',
-            source: 'spotify'
-          })))
-        }
-
-        // DEEZER - MÚSICAS
-        if (deezerRes.data) {
-          results.push(...deezerRes.data.map(t => ({
-            id: t.id,
-            title: t.title,
-            artist: { name: t.artist?.name },
-            album: {
-              title: t.album?.title,
-              cover: t.album?.cover_medium
-            },
-            cover: t.album?.cover_medium,
-            preview: t.preview,
-            duration: t.duration,
-            type: 'track',
-            source: 'deezer'
-          })))
-        }
-
-        // DEEZER - ARTISTAS
-        if (deezerRes.data) {
-          const deezerArtists = deezerRes.data
-            .map(t => t.artist)
-            .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
-         
-          results.push(...deezerArtists.map(a => ({
-            id: a.id,
-            name: a.name,
-            picture: a.picture_medium,
-            picture_medium: a.picture_medium,
-            picture_big: a.picture_big,
-            nb_fan: a.nb_fan || 0,
-            type: 'artist',
-            source: 'deezer'
-          })))
-        }
-
-        // DEEZER - ÁLBUNS
-        if (deezerRes.data) {
-          const deezerAlbums = deezerRes.data
-            .map(t => t.album)
-            .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
-         
-          results.push(...deezerAlbums.map(a => ({
-            id: a.id,
-            title: a.title,
-            artist: { name: 'Artista' },
-            cover: a.cover_medium,
-            cover_medium: a.cover_medium,
-            cover_big: a.cover_big,
-            type: 'album',
-            source: 'deezer'
-          })))
-        }  
-        // LOCAIS - busca por localizações que correspondem à query
-const matchedLocal = this.localizacoes.find(loc => 
-  loc.toLowerCase() === query.toLowerCase()
-)
-
-if (matchedLocal) {
   try {
-    const localRes = await fetch(
-      `http://localhost:3002/locais/${encodeURIComponent(matchedLocal)}/musicas`
-    ).then(r => r.json())
-    
-    if (localRes.results && Array.isArray(localRes.results)) {
-      results.push(...localRes.results.map(r => {
-        if (r.type === 'track') {
-          return {
-            id: r.id,
-            title: r.title,
-            artist: { name: r.artist?.name || 'Artista desconhecido' },
-            album: {
-              title: r.album?.title || '',
-              cover: r.album?.cover_medium || r.cover || ''
-            },
-            cover: r.cover || r.album?.cover_medium,
-            preview: r.preview,
-            duration: r.duration,
-            type: 'track',
-            source: r.source,
-            localContext: r.localContext
-          }
-        }
-        if (r.type === 'artist') {
-          return {
-            id: r.id,
-            name: r.name,
-            picture: r.picture || r.picture_medium,
-            picture_medium: r.picture_medium,
-            nb_fan: r.nb_fan || 0,
-            type: 'artist',
-            source: r.source,
-            localContext: r.localContext
-          }
-        }
-        if (r.type === 'album') {
-          return {
-            id: r.id,
-            title: r.title,
-            artist: { name: r.artist?.name || 'Artista' },
-            cover: r.cover || r.cover_medium,
-            cover_medium: r.cover_medium,
-            type: 'album',
-            source: r.source,
-            localContext: r.localContext
-          }
-        }
-        return r
-      }))
+    if (this.isLogged) {
+      // COM LOGIN: Spotify + Banco
+      await this.searchSpotifyAndLocal(query)
+    } else {
+      // SEM LOGIN: Deezer + Banco
+      await this.searchDeezerAndLocal(query)
     }
   } catch (err) {
-    console.warn('Erro ao buscar músicas do local:', err)
+    console.error(err)
+    this.searchResults = []
+  } finally {
+    this.isLoading = false
   }
-}
+},
+async searchDeezerAndLocal(query) {
+  this.isLoading = true
 
-// Cards de local apenas para matches parciais (busca não exata)
-const partialMatchedLocais = this.localizacoes
-  .filter(loc => {
-    const locLower = loc.toLowerCase()
-    const queryLower = query.toLowerCase()
-    return locLower.includes(queryLower) && locLower !== queryLower
-  })
-  .map((loc, index) => ({
-    id: `local-${index}`,
-    name: loc,
-    description: `Música de ${loc}`,
-    type: 'local',
-    source: 'local'
-  }))
+  try {
+    const [
+      localMusicas,
+      localCantores,
+      localAlbuns,
+      localGeneros,
+      localUsuarios
+    ] = await Promise.all([
+      fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`)
+        .then(async r => r.ok ? r.json() : []).catch(() => [])
+    ])
 
-if (partialMatchedLocais.length > 0) {
-  results.push(...partialMatchedLocais)
-}
+    // Busca Deezer (pública)
+    const deezerRes = await fetch(
+      `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
+    ).then(r => r.json())
 
-        // GÊNEROS
-        if (Array.isArray(localGeneros)) {
-          results.push(...localGeneros.map(g => ({
-            id: g._id,
-            name: g.nome,
-            description: g.descricao || 'Gênero musical',
-            type: 'genre',
-            source: 'local'
-          })))
-        }
-        if (matchedApiGenres.length > 0) {
-  const existingGenreNames = new Set(
-    results
-      .filter(item => item.type === 'genre')
-      .map(item => (item.name || '').toLowerCase())
-  )
+    let results = []
 
+    // DEEZER - MÚSICAS
+    if (deezerRes.data) {
+      results.push(...deezerRes.data.map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: { name: t.artist?.name },
+        album: {
+          title: t.album?.title,
+          cover: t.album?.cover_medium
+        },
+        cover: t.album?.cover_medium,
+        preview: t.preview,
+        duration: t.duration,
+        type: 'track',
+        source: 'deezer'
+      })))
+    }
 
-  results.push(
-    ...matchedApiGenres
-      .filter(g => !existingGenreNames.has(g.name.toLowerCase()))
-      .map(g => ({
+    // DEEZER - ARTISTAS
+    if (deezerRes.data) {
+      const deezerArtists = deezerRes.data
+        .map(t => t.artist)
+        .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+      
+      results.push(...deezerArtists.map(a => ({
+        id: a.id,
+        name: a.name,
+        picture: a.picture_medium,
+        picture_medium: a.picture_medium,
+        picture_big: a.picture_big,
+        nb_fan: a.nb_fan || 0,
+        type: 'artist',
+        source: 'deezer'
+      })))
+    }
+
+    // DEEZER - ÁLBUNS
+    if (deezerRes.data) {
+      const deezerAlbums = deezerRes.data
+        .map(t => t.album)
+        .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+      
+      results.push(...deezerAlbums.map(a => ({
+        id: a.id,
+        title: a.title,
+        artist: { name: 'Artista' },
+        cover: a.cover_medium,
+        cover_medium: a.cover_medium,
+        cover_big: a.cover_big,
+        type: 'album',
+        source: 'deezer'
+      })))
+    }
+
+    // GÊNEROS API (Deezer)
+    const matchedApiGenres = (this.apiGenres || []).filter(g =>
+      g.name?.toLowerCase().includes(query.toLowerCase())
+    )
+    
+    if (matchedApiGenres.length > 0) {
+      results.push(...matchedApiGenres.map(g => ({
         id: `deezer-genre-${g.id}`,
         name: g.name,
         description: 'Gênero da API',
@@ -2067,18 +2020,186 @@ if (partialMatchedLocais.length > 0) {
         picture_medium: g.picture_medium || g.picture || g.picture_big || '',
         type: 'genre',
         source: 'deezer'
-      }))
-  )
-}
+      })))
+    }
 
-        this.searchResults = results
+    // LOCAIS - busca por localizações que correspondem à query
+    const matchedLocais = this.localizacoes.filter(loc => 
+      loc.toLowerCase().includes(query.toLowerCase())
+    )
+
+    // Para CADA local encontrado, busca as músicas/artistas/álbuns reais
+    for (const localNome of matchedLocais) {
+      try {
+        const localRes = await fetch(
+          `http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`
+        ).then(r => r.json())
+        
+        if (localRes.results && Array.isArray(localRes.results) && localRes.results.length > 0) {
+          // Adiciona os resultados reais (tracks, artists, albums) com contexto do local
+          results.push(...localRes.results.map(r => {
+            if (r.type === 'track') {
+              return {
+                id: r.id,
+                title: r.title,
+                artist: { name: r.artist?.name || 'Artista desconhecido' },
+                album: {
+                  title: r.album?.title || '',
+                  cover: r.album?.cover_medium || r.cover || ''
+                },
+                cover: r.cover || r.album?.cover_medium,
+                preview: r.preview,
+                duration: r.duration,
+                type: 'track',
+                source: r.source,
+                localContext: r.localContext || localNome
+              }
+            }
+            if (r.type === 'artist') {
+              return {
+                id: r.id,
+                name: r.name,
+                picture: r.picture || r.picture_medium,
+                picture_medium: r.picture_medium,
+                nb_fan: r.nb_fan || 0,
+                type: 'artist',
+                source: r.source,
+                localContext: r.localContext || localNome
+              }
+            }
+            if (r.type === 'album') {
+              return {
+                id: r.id,
+                title: r.title,
+                artist: { name: r.artist?.name || 'Artista' },
+                cover: r.cover || r.cover_medium,
+                cover_medium: r.cover_medium,
+                type: 'album',
+                source: r.source,
+                localContext: r.localContext || localNome
+              }
+            }
+            return r
+          }))
+
+          // Adiciona também um card do próprio local para aparecer na seção "Locais"
+          results.push({
+            id: `local-${localNome}`,
+            name: localNome,
+            description: `Música de ${localNome}`,
+            type: 'local',
+            source: 'local',
+            gradient: this.getLocalGradient(localNome),
+            resultCount: localRes.total || localRes.results.length
+          })
+        } else {
+          // Local encontrado mas sem resultados da API - mostra card do local mesmo assim
+          results.push({
+            id: `local-${localNome}`,
+            name: localNome,
+            description: `Música de ${localNome}`,
+            type: 'local',
+            source: 'local',
+            gradient: this.getLocalGradient(localNome),
+            resultCount: 0
+          })
+        }
       } catch (err) {
-        console.error(err)
-        this.searchResults = []
-      } finally {
-        this.isLoading = false
+        console.warn(`Erro ao buscar músicas de ${localNome}:`, err)
+        // Mesmo com erro, adiciona o card do local
+        results.push({
+          id: `local-${localNome}`,
+          name: localNome,
+          description: `Música de ${localNome}`,
+          type: 'local',
+          source: 'local',
+          gradient: this.getLocalGradient(localNome),
+          resultCount: 0
+        })
       }
-    },
+    }
+
+    // Cards de local apenas para matches parciais (busca não exata)
+    const partialMatchedLocais = this.localizacoes
+      .filter(loc => {
+        const locLower = loc.toLowerCase()
+        const queryLower = query.toLowerCase()
+
+        return (
+          locLower.includes(queryLower) &&
+          locLower !== queryLower
+        )
+      })
+      .map((loc, index) => ({
+        id: `local-${index}`,
+        name: loc,
+        description: `Música de ${loc}`,
+        type: 'local',
+        source: 'local'
+      }))
+
+    if (partialMatchedLocais.length > 0) {
+      results.push(...partialMatchedLocais)
+    }
+
+    // GÊNEROS LOCAIS
+    results.push(
+      ...localGeneros.map(g => ({
+        id: g._id,
+        name: g.nome,
+        description: g.descricao || 'Gênero musical',
+        type: 'genre',
+        source: 'local'
+      }))
+    )
+
+    // GÊNEROS DA API
+    if (matchedApiGenres.length > 0) {
+      const existingGenreNames = new Set(
+        results
+          .filter(item => item.type === 'genre')
+          .map(item => (item.name || '').toLowerCase())
+      )
+
+      results.push(
+        ...matchedApiGenres
+          .filter(g =>
+            !existingGenreNames.has(
+              g.name.toLowerCase()
+            )
+          )
+          .map(g => ({
+            id: `deezer-genre-${g.id}`,
+            name: g.name,
+            description: 'Gênero da API',
+            picture:
+              g.picture_medium ||
+              g.picture ||
+              g.picture_big ||
+              '',
+
+            picture_medium:
+              g.picture_medium ||
+              g.picture ||
+              g.picture_big ||
+              '',
+
+            type: 'genre',
+            source: 'deezer'
+          }))
+      )
+    }
+
+    // ← AQUI ESTAVA O ERRO: this.searchResults = results estava FORA do try
+    this.searchResults = results
+
+  } catch (err) {
+    console.error('Erro na busca Deezer + Local:', err)
+    this.searchResults = []
+  } finally {
+    this.isLoading = false
+  }
+},
 
     searchByDecade(decadeName) {
       const range = this.getDecadeRange(decadeName)
@@ -2503,31 +2624,36 @@ handleClickOutside(event) {
       this.showHistory = false
     },
 
-    async performSearch() {
-      const query = this.searchQuery.trim()
-      if (!query) return
-     
-      if (/^\\d{4}$/.test(query)) {
-        const year = parseInt(query)
-        if (year >= 1900 && year <= 2100) {
-          this.searchByYear(query)
-          await this.saveHistory(query)
-          await this.loadHistory()
-          return
+   async performSearch() {
+    try {
+        const query = this.searchQuery.trim()
+        if (!query) return
+        
+        if (/^\d{4}$/.test(query)) {
+            const year = parseInt(query)
+            if (year >= 1900 && year <= 2100) {
+                this.searchByYear(query)
+                await this.saveHistory(query)
+                await this.loadHistory()
+                return
+            }
         }
-      }
-     
-      this.lastSearch = query
-      this.hasSearched = true
-      this.showSuggestions = false
-      this.showHistory = false
-      this.showCategoriesDropdown = false
-     
-      await this.saveHistory(query)
-      await this.loadHistory()
-     
-      await this.searchAll(query)
-    },
+        
+        this.lastSearch = query
+        this.hasSearched = true
+        this.showSuggestions = false
+        this.showHistory = false
+        this.showCategoriesDropdown = false
+        
+        await this.saveHistory(query)
+        await this.loadHistory()
+        
+        await this.searchAll(query)
+    } catch (err) {
+        console.error("Erro ao realizar busca:", err)
+        this.showToast("Erro ao realizar busca", "error")
+    }
+  },
    
     async saveHistory(termo) {
       try {
@@ -2595,22 +2721,26 @@ handleClickOutside(event) {
 
 
 async searchAndGo(term) {
-  this.currentTopCategory = term || 'Brasil'
-  this.searchQuery = term
-  this.hasSearched = true  // Importante: marca que já fez busca
-  this.showSuggestions = false
-  
-  // Se for um local, busca as músicas do local
-  if (this.localizacoes.includes(term)) {
-    await this.loadLocalMusicas(term)
-  } else {
-    await this.loadTopTracksByCategory(this.currentTopCategory)
-  }
-  
-  // Só chama performSearch se não for local (evita duplicar)
-  if (!this.localizacoes.includes(term)) {
-    await this.performSearch()
-  }
+    try {
+        this.currentTopCategory = term || 'Brasil'
+        this.searchQuery = term
+        this.hasSearched = true
+        this.showSuggestions = false
+        this.isLoading = true
+        
+        if (this.localizacoes.includes(term)) {
+            await this.loadLocalMusicas(term)
+            await this.searchAll(term)
+        } else {
+            await this.loadTopTracksByCategory(this.currentTopCategory)
+            await this.searchAll(term)
+        }
+    } catch (err) {
+        console.error("Erro em searchAndGo:", err)
+        this.showToast("Erro ao carregar resultados", "error")
+    } finally {
+        this.isLoading = false
+    }
 },
 
     searchArtist(artistName, artistId) {
@@ -3535,7 +3665,113 @@ html, body, #app {
 .dropdown-search-box input::placeholder {
   color: #666;
 }
+/* ===== LOGIN MODAL ===== */
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.3s ease;
+}
 
+.login-modal {
+  background: #181818;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.modal-icon i {
+  font-size: 28px;
+  color: #000;
+}
+
+.login-modal h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.login-modal p {
+  font-size: 14px;
+  color: #888;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-primary {
+  padding: 14px 24px;
+  background: #1db954;
+  border: none;
+  border-radius: 500px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover {
+  background: #1ed760;
+  transform: scale(1.02);
+}
+
+.btn-secondary {
+  padding: 14px 24px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 500px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-enter-active { animation: fadeIn 0.3s ease; }
+.modal-leave-active { animation: fadeOut 0.2s ease; }
+@keyframes fadeOut { to { opacity: 0; } }
 .clear-search {
   width: 22px;
   height: 22px;

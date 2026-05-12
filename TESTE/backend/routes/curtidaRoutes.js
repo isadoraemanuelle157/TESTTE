@@ -1,22 +1,22 @@
 const express = require('express')
 const router = express.Router()
 const controller = require('../controllers/curtidaController')
-const authMiddleware = require('../middleware/authMiddleware')
+const { optionalAuth, requireAuth } = require('../middleware/auth') // ← MUDAR: importar ambos
 
-// Toggle curtida (local ou externa) - POST /curtidas/:id
-// Body para externas: { source: "deezer", dadosMusica: {...} }
-// Body para locais: {} ou { source: "local" }
-router.post('/:id', authMiddleware, controller.toggle)
+// ============================================
+// ❤️ CURTIDAS — REQUER LOGIN (Spotify/Banco)
+// ============================================
 
-// Verificar se música está curtida
-// Query para externas: ?source=deezer
-// Query para locais: nada ou ?source=local
-router.get('/:id/is-curtida', authMiddleware, controller.isCurtida)
+// Toggle curtida — SÓ COM LOGIN
+router.post('/:id', requireAuth, controller.toggle)
 
-// Listar minhas curtidas (locais + externas)
-router.get('/', authMiddleware, controller.getMinhasCurtidas)
+// Verificar se está curtida — COM LOGIN (retorna false se deslogado)
+router.get('/:id/is-curtida', optionalAuth, controller.isCurtida)
 
-// Listar curtidas públicas de um usuário
-router.get('/usuario/:id', authMiddleware, controller.listarCurtidasPublicas)
+// Listar minhas curtidas — SÓ COM LOGIN
+router.get('/', requireAuth, controller.getMinhasCurtidas)
+
+// Listar curtidas públicas de um usuário — PÚBLICO (sem auth)
+router.get('/usuario/:id', controller.listarCurtidasPublicas)
 
 module.exports = router

@@ -171,6 +171,8 @@ function safeRequire(path) {
 // ============================================
 // 📦 ROTAS
 // ============================================
+const { requireAuth, optionalAuth } = require('./middleware/auth')
+
 const usuarioRoutes = safeRequire('./routes/usuarioRoutes')
 const musicaRoutes = safeRequire('./routes/musicaRoutes')
 const cantorRoutes = safeRequire('./routes/cantorRoutes')
@@ -187,6 +189,7 @@ const matchRoutes = safeRequire('./routes/matchMusicalRoutes')
 const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
 const deezerRoutes = safeRequire('./routes/deezerRoutes')
 const locaisRoutes = safeRequire('./routes/locaisRoutes')
+const spotifyRoutes = safeRequire('./routes/spotifyRoutes')
 
 // ============================================
 // 📌 ROTAS APP
@@ -197,11 +200,12 @@ app.use('/musicas', musicaRoutes)
 app.use('/cantores', cantorRoutes)
 app.use('/albuns', albumRoutes)
 app.use('/playlists', playlistRoutes)
-app.use('/curtidas', curtidaRoutes)
-app.use('/favoritas', favoritaRoutes)
 app.use('/vibes', vibeRoutes)
 app.use('/follows', followRoutes)
-app.use('/historico', historicoRoutes)
+app.use('/spotify', requireAuth, spotifyRoutes)      // 🔒 Protegido
+app.use('/curtidas', requireAuth, curtidaRoutes)     // 🔒 Protegido
+app.use('/favoritas', requireAuth, favoritaRoutes)   // 🔒 Protegido
+app.use('/historico', requireAuth, historicoRoutes)  // 🔒 Protegido
 app.use('/notificacoes', notificacaoRoutes)                                                                                                                                  
 app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)

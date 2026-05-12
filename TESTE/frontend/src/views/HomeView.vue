@@ -267,45 +267,6 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Artistas Populares -->
-      <section class="section" v-if="popularArtists.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-microphone section-icon artist"></i>
-              Artistas em Alta
-            </h2>
-            <span class="section-subtitle">Tendências do momento</span>
-          </div>
-          <button class="see-all" @click="loadMoreArtists">
-            Ver todos <i class="fa fa-chevron-right"></i>
-          </button>
-        </div>
-        <div class="cards-row artists-row">
-          <div
-            v-for="(artist, index) in popularArtists.slice(0, 5)"
-            :key="'artist-'+artist.id"
-            class="music-card artist-card"
-            @click="playArtistTopTrack(artist)"
-            :class="{ 'active': currentArtist?.id === artist.id }"
-          >
-            <div class="card-image artist-image">
-              <img :src="artist.picture_medium" @error="handleImageError" alt="Artist" />
-              <div class="play-button-overlay artist-play">
-                <i class="fa fa-play-circle"></i>
-              </div>
-              <div class="artist-fans">
-                <i class="fa fa-users"></i> {{ formatFans(artist.nb_fan) }}
-              </div>
-            </div>
-            <div class="card-info">
-              <h3 class="card-title">{{ artist.name }}</h3>
-              <p class="card-artist">Artista</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- SEÇÃO: Gêneros Populares -->
       <section class="section" v-if="genres.length > 0">
         <div class="section-header">
@@ -520,6 +481,10 @@
           </div>
         </div>
       </section>
+            <!-- artistas import: -->
+<artistas />
+
+
 
       <!-- LOADING STATE -->
       <div v-if="!chartTracks.length" class="skeleton"></div>
@@ -546,13 +511,19 @@
 </template>
 
 <script>
+import Artistas from '@/components/Artistas.vue';
+
 export default {
   name: "Home",
+    components: {
+    Artistas  // ← Artistas(componente)
+  },
 
   data() {
     return {
       // API Configuration
       DEEZER_API: 'https://api.allorigins.win/raw?url=https://api.deezer.com',
+     
      
       // Player State
       isPlaying: false,
