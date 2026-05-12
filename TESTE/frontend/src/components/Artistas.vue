@@ -1,49 +1,49 @@
 <template>
-  <section class="artists-section">
+  <section class="section artists-section" v-if="artists.length > 0">
     <div class="section-header">
-      <div class="header-content">
-        <h2 class="section-title">Artistas em Alta</h2>
-        <p class="section-subtitle">{{ subtitle }}</p>
+      <div class="section-title-wrapper">
+        <h2 class="section-title">
+          <i class="fa fa-users section-icon artist"></i>
+          Artistas em Alta
+        </h2>
+        <span class="section-subtitle">{{ subtitle }}</span>
       </div>
-      <button @click="openAllArtists" class="view-all-btn">
-        Ver todos
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
+      <button class="see-all" @click="openAllArtists">
+        Ver todos <i class="fa fa-chevron-right"></i>
       </button>
     </div>
 
     <!-- Error State -->
-<div v-if="error" class="error-state">
+    <div v-if="error" class="error-state">
       <p>{{ error }}</p>
       <button @click="loadArtists" class="retry-btn">Tentar novamente</button>
     </div>
 
     <!-- Toast Notification -->
-    <Transition name="toast">
+    <transition name="toast">
       <div v-if="toast.show" class="toast-notification" :class="toast.type">
-        <div class="toast-icon">
-          <svg v-if="toast.type === 'success'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M20 6L9 17l-5-5"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M18 6L6 18M6 6l12 12"/>
-          </svg>
+        <div class="toast-icon-wrapper">
+          <i :class="toastIcon"></i>
         </div>
-        <span class="toast-message">{{ toast.message }}</span>
+        <div class="toast-content">
+          <span class="toast-title">{{ toast.title }}</span>
+          <span class="toast-message">{{ toast.message }}</span>
+        </div>
+        <button class="toast-close" @click="hideToast">
+          <i class="fa fa-times"></i>
+        </button>
+        <div class="toast-progress" :style="{ width: toast.progress + '%' }"></div>
       </div>
-    </Transition>
+    </transition>
 
-   <div v-if="artists.length && !error" class="carousel-container">
+    <div v-if="artists.length && !error" class="carousel-container">
       <button
         v-if="showLeft"
         class="nav-btn prev"
         @click="scroll(-320)"
         aria-label="Anterior"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M15 18l-6-6 6-6"/>
-        </svg>
+        <i class="fa fa-chevron-left"></i>
       </button>
 
       <div class="artists-track" ref="scrollContainer" @scroll="checkArrows">
@@ -55,52 +55,42 @@
         >
           <div class="image-wrapper">
             <div class="image-container">
-              <img 
-                :src="artist.picture_big || artist.picture_medium || artist.picture" 
+              <img
+                :src="artist.picture_big || artist.picture_medium || artist.picture"
                 :alt="artist.name"
                 loading="lazy"
                 @error="handleImageError"
               />
             </div>
             <div class="source-badge" :class="artist.source">
-  <span v-if="artist.source === 'db'">DB</span>
-  <span v-else-if="artist.source === 'deezer'">DZ</span>
-  <span v-else-if="artist.source === 'spotify'">SP</span>
-</div>
-            <button 
+              <span v-if="artist.source === 'db'">DB</span>
+              <span v-else-if="artist.source === 'deezer'">DZ</span>
+              <span v-else-if="artist.source === 'spotify'">SP</span>
+            </div>
+            <button
               class="follow-btn-float"
               :class="{ 'following': isFollowing(artist.id) }"
               @click.stop="toggleFollow(artist)"
             >
-              <svg v-if="!isFollowing(artist.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M20 6L9 17l-5-5"/>
-              </svg>
+              <i class="fa" :class="isFollowing(artist.id) ? 'fa-check' : 'fa-plus'"></i>
             </button>
           </div>
-          
+
           <div class="artist-info">
             <h3 class="artist-name">{{ artist.name }}</h3>
             <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
-          <div class="monthly-listeners">
- <span class="listeners-count">{{ formatListeners(artist.nb_fan || artist.followers?.total || artist.fans || 0) }}</span>
-  <span class="listeners-label">fãs</span>
-</div>
-            <button 
+            <div class="monthly-listeners">
+              <span class="listeners-count">{{ formatListeners(artist.nb_fan || artist.followers?.total || artist.fans || 0) }}</span>
+              <span class="listeners-label">fãs</span>
+            </div>
+            <button
               class="follow-btn"
               :class="{ 'following': isFollowing(artist.id) }"
               @click.stop="toggleFollow(artist)"
             >
               <span class="btn-text">{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
               <span class="btn-icon">
-                <svg v-if="!isFollowing(artist.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M20 6L9 17l-5-5"/>
-                </svg>
+                <i class="fa" :class="isFollowing(artist.id) ? 'fa-check' : 'fa-plus'"></i>
               </span>
             </button>
           </div>
@@ -113,60 +103,137 @@
         @click="scroll(320)"
         aria-label="Próximo"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M9 18l6-6-6-6"/>
-        </svg>
+        <i class="fa fa-chevron-right"></i>
       </button>
     </div>
 
-    <!-- Modal Todos os Artistas -->
-    <Transition name="modal">
+    <!-- ===== MODAL TODOS OS ARTISTAS - DESIGN PREMIUM ===== -->
+    <transition name="modal">
       <div v-if="showAllModal" class="modal-overlay" @click.self="closeAllModal">
         <div class="modal-content">
+          <!-- Header Premium -->
           <div class="modal-header">
-            <h3>Todos os Artistas</h3>
-            <button @click="closeAllModal" class="close-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-            </button>
+            <div class="modal-header-bg"></div>
+            <div class="modal-header-content">
+              <div class="modal-title-section">
+                <div class="modal-icon-wrapper">
+                  <i class="fa fa-users"></i>
+                </div>
+                <div class="modal-title-text">
+                  <h3>Todos os Artistas</h3>
+                  <p>{{ artists.length }} artistas disponíveis</p>
+                </div>
+              </div>
+              <button @click="closeAllModal" class="close-btn">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
           </div>
-          
+
+          <!-- Search & Filter Bar -->
+          <div class="modal-toolbar">
+            <div class="search-box">
+              <i class="fa fa-search"></i>
+              <input
+                type="text"
+                v-model="searchQuery"
+                placeholder="Buscar artista..."
+                @input="filterArtists"
+              />
+              <button v-if="searchQuery" @click="searchQuery = ''; filterArtists()" class="clear-search">
+                <i class="fa fa-times-circle"></i>
+              </button>
+            </div>
+            <div class="filter-tabs">
+              <button
+                v-for="tab in filterTabs"
+                :key="tab.value"
+                :class="{ active: activeFilter === tab.value }"
+                @click="activeFilter = tab.value; filterArtists()"
+              >
+                <i :class="tab.icon"></i>
+                {{ tab.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Artists Grid -->
           <div class="modal-body">
-            <div class="artists-list">
-<div 
-  v-for="artist in artists" 
-  :key="artist.id" 
-  class="artist-card"
-  @click="goToArtist(artist)"
->
-                <div class="list-image">
-                  <img :src="artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError">
+            <div v-if="filteredArtists.length === 0" class="empty-state">
+              <div class="empty-icon">
+                <i class="fa fa-search"></i>
+              </div>
+              <h4>Nenhum artista encontrado</h4>
+              <p>Tente buscar com outro termo</p>
+            </div>
+
+            <div v-else class="artists-grid">
+              <div
+                v-for="(artist, index) in filteredArtists"
+                :key="artist.id"
+                class="grid-item"
+                @click="goToArtist(artist)"
+                :style="{ animationDelay: index * 0.05 + 's' }"
+              >
+                <div class="grid-image-wrapper">
+                  <div class="grid-image">
+                    <img :src="artist.picture_big || artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError">
+                  </div>
+                  <div class="grid-source-badge" :class="artist.source">
+                    <i v-if="artist.source === 'db'" class="fa fa-database"></i>
+                    <i v-else-if="artist.source === 'deezer'" class="fa fa-headphones"></i>
+                    <i v-else-if="artist.source === 'spotify'" class="fa fa-spotify"></i>
+                  </div>
+                  <div class="grid-overlay">
+                    <button class="grid-play-btn">
+                      <i class="fa fa-play"></i>
+                    </button>
+                  </div>
                 </div>
-                <div class="list-info">
-                  <h4>{{ artist.name }}</h4>
-<p>{{ getArtistGenre(artist) }} • {{ formatListeners(artist.nb_fan || artist.fans) }} fãs</p>
+                <div class="grid-info">
+                  <h4 class="grid-name">{{ artist.name }}</h4>
+                  <p class="grid-genre">{{ getArtistGenre(artist) }}</p>
+                  <div class="grid-stats">
+                    <span class="grid-fans">
+                      <i class="fa fa-heart"></i>
+                      {{ formatListeners(artist.nb_fan || artist.fans || 0) }}
+                    </span>
+                  </div>
                 </div>
-                <button 
-                  class="list-follow-btn"
+                <button
+                  class="grid-follow-btn"
                   :class="{ 'following': isFollowing(artist.id) }"
                   @click.stop="toggleFollow(artist)"
                 >
+                  <i :class="isFollowing(artist.id) ? 'fa fa-check' : 'fa fa-plus'"></i>
                   <span>{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
                 </button>
               </div>
             </div>
           </div>
+
+          <!-- Modal Footer -->
+          <div class="modal-footer">
+            <div class="footer-stats">
+              <span><i class="fa fa-music"></i> {{ artists.length }} artistas</span>
+              <span v-if="followedArtists.length > 0">
+                <i class="fa fa-heart"></i> {{ followedArtists.length }} seguindo
+              </span>
+            </div>
+            <button class="footer-close" @click="closeAllModal">
+              <i class="fa fa-times"></i> Fechar
+            </button>
+          </div>
         </div>
       </div>
-    </Transition>
+    </transition>
   </section>
 </template>
 
 <script>
 export default {
-  name: "TopArtists",
-  
+  name: "Artistas",
+
   data() {
     return {
       showLeft: false,
@@ -177,30 +244,50 @@ export default {
       subtitle: 'Os maiores nomes da música global',
       toast: {
         show: false,
+        title: '',
         message: '',
         type: 'success',
+        icon: 'fa fa-check-circle',
+        progress: 100,
         timeout: null
       },
       artists: [],
       followedArtists: [],
+      // Modal filter
+      searchQuery: '',
+      activeFilter: 'all',
+      filteredArtists: [],
+      filterTabs: [
+        { value: 'all', label: 'Todos', icon: 'fa fa-th-large' },
+        { value: 'db', label: 'Local', icon: 'fa fa-database' },
+        { value: 'deezer', label: 'Deezer', icon: 'fa fa-headphones' },
+        { value: 'spotify', label: 'Spotify', icon: 'fa fa-spotify' }
+      ],
       // API Configuration
       DEEZER_API: 'https://api.deezer.com',
       CORS_PROXY: 'https://corsproxy.io/?'
     };
   },
 
-async mounted() {
-const cached = localStorage.getItem('artists_cache')
+  computed: {
+    toastIcon() {
+      if (this.toast.type === 'success') return 'fa fa-check-circle';
+      if (this.toast.type === 'error') return 'fa fa-exclamation-circle';
+      return 'fa fa-info-circle';
+    }
+  },
 
-  if (cached) {
-    this.artists = JSON.parse(cached)
-  }
+  async mounted() {
+    const cached = localStorage.getItem('artists_cache');
+    if (cached) {
+      this.artists = JSON.parse(cached);
+    }
 
-  await this.loadFollowedArtists()
-  this.loadArtists() // não precisa await
+    await this.loadFollowedArtists();
+    this.loadArtists();
 
-  window.addEventListener('resize', this.checkArrows)
-},
+    window.addEventListener('resize', this.checkArrows);
+  },
 
   beforeUnmount() {
     window.removeEventListener('resize', this.checkArrows);
@@ -210,288 +297,216 @@ const cached = localStorage.getItem('artists_cache')
   },
 
   methods: {
-    abrirPaginaCantor(id) {
-  this.$router.push({ name: 'DetalheCantor', params: { id } })
-},
-    // ============ API DEEZER ============
-async loadCantoresFromDB() {
-  try {
-    const response = await fetch('http://localhost:3002/cantores')
-    const data = await response.json()
-
-    return data.map(cantor => ({
-      id: cantor._id,
-      name: cantor.nome,
-      picture: cantor.foto || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
-      picture_medium: cantor.foto,
-      picture_big: cantor.foto,
-      nb_fan: cantor.totalSeguidores || 0,   // ← seguidoresBase + seguidores.length
-      source: 'db',
-      generos: cantor.generos || []
-    }))
-
-  } catch (error) {
-    console.error('Erro ao buscar cantores do banco:', error)
-    return []
-  }
-},
-
-setFollowingState(artistId, shouldFollow) {
-  const id = String(artistId)
-
-  if (shouldFollow) {
-    if (!this.followedArtists.includes(id)) {
-      this.followedArtists = [...this.followedArtists, id]
-    }
-  } else {
-    this.followedArtists = this.followedArtists.filter(item => String(item) !== id)
-  }
-},
-
-updateArtistInList(artistId, newData = {}) {
-  const id = String(artistId)
-  this.artists = this.artists.map(artist =>
-    String(artist.id) === id
-      ? { ...artist, ...newData }
-      : artist
-  )
-},
-
-updateFollowersCount(artist, isNowFollowing) {
-  const current = parseInt(artist.nb_fan) || 0
-
-  if (isNowFollowing) {
-    artist.nb_fan = current + 1
-  } else {
-    artist.nb_fan = Math.max(0, current - 1)
-  }
-},
-
-async getFollowersCount(artist) {
-  try {
-    const res = await fetch(
-      `http://localhost:3002/follows/seguidores/${artist.id}?tipo=cantor`
-    )
-
-    const data = await res.json()
-    artist.nb_fan = data.length
-
-  } catch (error) {
-    console.error(error)
-  }
-},
- async loadArtists() {
-  this.error = null
-
-  try {
-    // =========================
-    // 🔥 DEEZER (via backend proxy)
-    // =========================
-    const deezerResponse = await fetch(
-      'http://localhost:3002/deezer/chart/0/artists?limit=10'
-    )
-    const deezerData = await deezerResponse.json()
-
-    let deezerArtists = []
-
-    if (deezerData.data) {
-      // Busca detalhes reais de cada artista
-      const detailed = await Promise.all(
-        deezerData.data.map(async (a) => {
-          try {
-            const res = await fetch(
-              `http://localhost:3002/deezer/artist/${a.id}`
-            )
-            const details = await res.json()
-
-            return {
-              id: a.id,
-              name: a.name,
-              picture: details.picture_medium,
-              picture_medium: details.picture_medium,
-              picture_big: details.picture_big,
-              nb_fan: details.nb_fan || 0,
-              source: 'deezer'
-            }
-          } catch {
-            return {
-              id: a.id,
-              name: a.name,
-              picture: a.picture_medium,
-              picture_medium: a.picture_medium,
-              picture_big: a.picture_big,
-              nb_fan: a.nb_fan || 0,
-              source: 'deezer'
-            }
-          }
-        })
-      )
-
-      deezerArtists = detailed
-    }
-
-    // =========================
-    // 🔥 SPOTIFY (via backend)
-    // =========================
-    const spotifyResponse = await fetch(
-      'http://localhost:3002/spotify/artists/popular?limit=10'
-    )
-    
-    // Verifica se a resposta é JSON válido
-    const contentType = spotifyResponse.headers.get('content-type')
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Resposta do Spotify não é JSON')
-    }
-
-    const spotifyData = await spotifyResponse.json()
-
-    let spotifyArtists = []
-
-    if (spotifyData.artists?.items) {
-      const detailedSpotify = await Promise.all(
-        spotifyData.artists.items.map(async (a) => {
-          try {
-            const res = await fetch(
-              `http://localhost:3002/spotify/artist/${a.id}`
-            )
-            const details = await res.json()
-
-            return {
-              id: a.id,
-              name: a.name,
-              picture: details.images?.[2]?.url || details.images?.[0]?.url,
-              picture_medium: details.images?.[1]?.url || details.images?.[0]?.url,
-              picture_big: details.images?.[0]?.url,
-              nb_fan: details.followers?.total || 0,
-              source: 'spotify'
-            }
-          } catch {
-            return {
-              id: a.id,
-              name: a.name,
-              picture: a.images?.[2]?.url || a.images?.[0]?.url,
-              picture_medium: a.images?.[1]?.url || a.images?.[0]?.url,
-              picture_big: a.images?.[0]?.url,
-              nb_fan: a.followers?.total || 0,
-              source: 'spotify'
-            }
-          }
-        })
-      )
-
-      spotifyArtists = detailedSpotify
-    }
-
-    // =========================
-    // 🔥 BANCO
-    // =========================
-    const dbArtists = await this.loadCantoresFromDB()
-
-    // =========================
-    // 🔥 JUNÇÃO + REMOVER DUPLICADOS
-    // =========================
-    const all = [...dbArtists, ...deezerArtists, ...spotifyArtists]
-
-    const seen = new Set()
-    this.artists = all.filter(a => {
-      const key = a.name?.toLowerCase().trim()
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    localStorage.setItem('artists_cache', JSON.stringify(this.artists))
-
-    this.$nextTick(() => this.checkArrows())
-
-  } catch (error) {
-    console.error('Erro ao carregar artistas:', error)
-    this.error = 'Erro ao carregar artistas. Verifique se o servidor está rodando.'
-  } finally {
-    this.isLoading = false
-  }
-},
-
-normalizeMongoId(value) {
-  if (!value) return null
-
-  if (typeof value === 'string') return value
-
-  if (typeof value === 'object') {
-    return value._id ? String(value._id) : String(value)
-  }
-
-  return String(value)
-},
-    
-    async loadGenreArtists() {
-      // Fallback: buscar artistas de gêneros populares
-      try {
-        const genres = [132, 116, 152, 113]; // Pop, Rap/Hip Hop, Rock, Dance
-        const randomGenre = genres[Math.floor(Math.random() * genres.length)];
-        
-        const data = await response.json();
-        
-        if (data.data && data.data.length > 0) {
-          this.artists = data.data;
-          this.subtitle = 'Artistas populares do momento';
-          this.error = null;
-        }
-      } catch (fallbackError) {
-        console.error('Fallback também falhou:', fallbackError);
+    // ============ FILTER METHODS ============
+    filterArtists() {
+      let result = [...this.artists];
+     
+      // Filter by source
+      if (this.activeFilter !== 'all') {
+        result = result.filter(a => a.source === this.activeFilter);
       }
-    },
-    
-    async enrichArtistsData(artists) {
-      // Buscar informações detalhadas de cada artista (opcional, pode ser otimizado)
-      const enriched = [];
-      
-      for (const artist of artists.slice(0, 12)) { // Limitar a 12 para não sobrecarregar
-        try {
-          // Buscar detalhes do artista
-          const detailsResponse = await fetch(`${this.CORS_PROXY}${this.DEEZER_API}/artist/${artist.id}`);
-          const details = await detailsResponse.json();
-          
-          enriched.push({
-            ...artist,
-            nb_fan: details.nb_fan || artist.nb_fan,
-            picture_big: details.picture_big || artist.picture_big,
-            picture_medium: details.picture_medium || artist.picture_medium
-          });
-        } catch (e) {
-          // Se falhar, usar dados básicos
-          enriched.push(artist);
-        }
-      }
-      
-      return enriched;
-    },
-    
-    async searchArtists(query) {
-      // Método para buscar artistas específicos
-      if (!query || query.length < 2) return;
-      
-      this.isLoading = true;
-      
-      try {
-        const response = await fetch(
-          `${this.CORS_PROXY}${this.DEEZER_API}/search/artist?q=${encodeURIComponent(query)}&limit=10`
+     
+      // Filter by search query
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase().trim();
+        result = result.filter(a =>
+          a.name?.toLowerCase().includes(query) ||
+          this.getArtistGenre(a)?.toLowerCase().includes(query)
         );
+      }
+     
+      this.filteredArtists = result;
+    },
+
+    // ============ API DEEZER ============
+    async loadCantoresFromDB() {
+      try {
+        const response = await fetch('http://localhost:3002/cantores');
         const data = await response.json();
-        
-        if (data.data) {
-          this.artists = data.data;
-          this.subtitle = `Resultados para "${query}"`;
-        }
+
+        return data.map(cantor => ({
+          id: cantor._id,
+          name: cantor.nome,
+          picture: cantor.foto || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
+          picture_medium: cantor.foto,
+          picture_big: cantor.foto,
+          nb_fan: cantor.totalSeguidores || 0,
+          source: 'db',
+          generos: cantor.generos || []
+        }));
       } catch (error) {
-        console.error('Erro na busca:', error);
+        console.error('Erro ao buscar cantores do banco:', error);
+        return [];
+      }
+    },
+
+    setFollowingState(artistId, shouldFollow) {
+      const id = String(artistId);
+      if (shouldFollow) {
+        if (!this.followedArtists.includes(id)) {
+          this.followedArtists = [...this.followedArtists, id];
+        }
+      } else {
+        this.followedArtists = this.followedArtists.filter(item => String(item) !== id);
+      }
+    },
+
+    updateArtistInList(artistId, newData = {}) {
+      const id = String(artistId);
+      this.artists = this.artists.map(artist =>
+        String(artist.id) === id
+          ? { ...artist, ...newData }
+          : artist
+      );
+    },
+
+    updateFollowersCount(artist, isNowFollowing) {
+      const current = parseInt(artist.nb_fan) || 0;
+      if (isNowFollowing) {
+        artist.nb_fan = current + 1;
+      } else {
+        artist.nb_fan = Math.max(0, current - 1);
+      }
+    },
+
+    async getFollowersCount(artist) {
+      try {
+        const res = await fetch(
+          `http://localhost:3002/follows/seguidores/${artist.id}?tipo=cantor`
+        );
+        const data = await res.json();
+        artist.nb_fan = data.length;
+      } catch (error) {
+        console.error(error);
+      }
+    },
+
+    async loadArtists() {
+      this.error = null;
+      this.isLoading = true;
+
+      try {
+        // DEEZER (via backend proxy)
+        const deezerResponse = await fetch(
+          'http://localhost:3002/deezer/chart/0/artists?limit=10'
+        );
+        const deezerData = await deezerResponse.json();
+
+        let deezerArtists = [];
+        if (deezerData.data) {
+          const detailed = await Promise.all(
+            deezerData.data.map(async (a) => {
+              try {
+                const res = await fetch(
+                  `http://localhost:3002/deezer/artist/${a.id}`
+                );
+                const details = await res.json();
+                return {
+                  id: a.id,
+                  name: a.name,
+                  picture: details.picture_medium,
+                  picture_medium: details.picture_medium,
+                  picture_big: details.picture_big,
+                  nb_fan: details.nb_fan || 0,
+                  source: 'deezer'
+                };
+              } catch {
+                return {
+                  id: a.id,
+                  name: a.name,
+                  picture: a.picture_medium,
+                  picture_medium: a.picture_medium,
+                  picture_big: a.picture_big,
+                  nb_fan: a.nb_fan || 0,
+                  source: 'deezer'
+                };
+              }
+            })
+          );
+          deezerArtists = detailed;
+        }
+
+        // SPOTIFY (via backend)
+        let spotifyArtists = [];
+        try {
+          const spotifyResponse = await fetch(
+            'http://localhost:3002/spotify/artists/popular?limit=10'
+          );
+          const contentType = spotifyResponse.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const spotifyData = await spotifyResponse.json();
+            if (spotifyData.artists?.items) {
+              const detailedSpotify = await Promise.all(
+                spotifyData.artists.items.map(async (a) => {
+                  try {
+                    const res = await fetch(
+                      `http://localhost:3002/spotify/artist/${a.id}`
+                    );
+                    const details = await res.json();
+                    return {
+                      id: a.id,
+                      name: a.name,
+                      picture: details.images?.[2]?.url || details.images?.[0]?.url,
+                      picture_medium: details.images?.[1]?.url || details.images?.[0]?.url,
+                      picture_big: details.images?.[0]?.url,
+                      nb_fan: details.followers?.total || 0,
+                      source: 'spotify'
+                    };
+                  } catch {
+                    return {
+                      id: a.id,
+                      name: a.name,
+                      picture: a.images?.[2]?.url || a.images?.[0]?.url,
+                      picture_medium: a.images?.[1]?.url || a.images?.[0]?.url,
+                      picture_big: a.images?.[0]?.url,
+                      nb_fan: a.followers?.total || 0,
+                      source: 'spotify'
+                    };
+                  }
+                })
+              );
+              spotifyArtists = detailedSpotify;
+            }
+          }
+        } catch (spotifyError) {
+          console.warn('Spotify API indisponível:', spotifyError);
+        }
+
+        // BANCO
+        const dbArtists = await this.loadCantoresFromDB();
+
+        // JUNÇÃO + REMOVER DUPLICADOS
+        const all = [...dbArtists, ...deezerArtists, ...spotifyArtists];
+        const seen = new Set();
+        this.artists = all.filter(a => {
+          const key = a.name?.toLowerCase().trim();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        this.filteredArtists = [...this.artists];
+        localStorage.setItem('artists_cache', JSON.stringify(this.artists));
+        this.$nextTick(() => this.checkArrows());
+
+      } catch (error) {
+        console.error('Erro ao carregar artistas:', error);
+        this.error = 'Erro ao carregar artistas. Verifique se o servidor está rodando.';
       } finally {
         this.isLoading = false;
       }
     },
 
+    normalizeMongoId(value) {
+      if (!value) return null;
+      if (typeof value === 'string') return value;
+      if (typeof value === 'object') {
+        return value._id ? String(value._id) : String(value);
+      }
+      return String(value);
+    },
+
     // ============ UI METHODS ============
-    
     scroll(amount) {
       const container = this.$refs.scrollContainer;
       container.scrollBy({ left: amount, behavior: "smooth" });
@@ -501,11 +516,9 @@ normalizeMongoId(value) {
     checkArrows() {
       const container = this.$refs.scrollContainer;
       if (!container) return;
-      
       const tolerance = 5;
       this.showLeft = container.scrollLeft > tolerance;
-      this.showRight = 
-        container.scrollLeft + container.clientWidth < container.scrollWidth - tolerance;
+      this.showRight = container.scrollLeft + container.clientWidth < container.scrollWidth - tolerance;
     },
 
     formatListeners(num) {
@@ -518,154 +531,154 @@ normalizeMongoId(value) {
       }
       return num.toString();
     },
-    
+
     getArtistGenre(artist) {
-  // 🔥 se vier do banco
-  if (artist.source === 'db') {
-    return artist.generos?.map(g => g.nome).join(', ') || 'Artista Local'
-  }
-
-  // Deezer (fallback atual)
-  if (artist.genres && artist.genres.length > 0) {
-    return artist.genres[0].name;
-  }
-
-  return 'Música';
-},
+      if (artist.source === 'db') {
+        return artist.generos?.map(g => g.nome).join(', ') || 'Artista Local';
+      }
+      if (artist.genres && artist.genres.length > 0) {
+        return artist.genres[0].name;
+      }
+      return 'Música';
+    },
 
     // ============ FOLLOW SYSTEM ============
-    
- async toggleFollow(artist) {
-  try {
-    const token = localStorage.getItem("token")
+    async toggleFollow(artist) {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.showToast('Faça login para seguir artistas', 'error');
+          return;
+        }
 
-    if (!token) {
-      this.showToast('Faça login para seguir artistas', 'error')
-      return
-    }
+        if (artist.source !== 'db') {
+          this.showToast('Só é possível seguir artistas do sistema', 'info');
+          return;
+        }
 
-    if (artist.source !== 'db') {
-      this.showToast('Só é possível seguir artistas do sistema', 'info')
-      return
-    }
+        const artistId = String(artist.id);
+        const currentlyFollowing = this.isFollowing(artistId);
 
-    const artistId = String(artist.id)
-    const currentlyFollowing = this.isFollowing(artistId)
+        const url = currentlyFollowing
+          ? 'http://localhost:3002/follows/desseguir'
+          : 'http://localhost:3002/follows/seguir';
 
-    const url = currentlyFollowing
-      ? 'http://localhost:3002/follows/desseguir'
-      : 'http://localhost:3002/follows/seguir'
+        const method = currentlyFollowing ? 'DELETE' : 'POST';
 
-    const method = currentlyFollowing ? 'DELETE' : 'POST'
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            seguindo_id: artistId,
+            tipo: 'cantor'
+          })
+        });
 
-    const res = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        seguindo_id: artistId,
-        tipo: 'cantor'
-      })
-    })
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao seguir');
+        }
 
-    const data = await res.json()
+        this.setFollowingState(artistId, !currentlyFollowing);
+        this.updateFollowersCount(artist, !currentlyFollowing);
 
-    if (!res.ok) {
-      throw new Error(data.error || 'Erro ao seguir')
-    }
+        this.showToast(
+          currentlyFollowing
+            ? `Você deixou de seguir ${artist.name}`
+            : `Agora você segue ${artist.name}`,
+          currentlyFollowing ? 'info' : 'success'
+        );
 
-    // 🔥 ATUALIZA FRONT NA HORA (IMPORTANTE)
-    this.setFollowingState(artistId, !currentlyFollowing)
+      } catch (error) {
+        console.error(error);
+        this.showToast(error.message, 'error');
+      }
+    },
 
-    // 🔥 atualiza contador visual (opcional)
-    this.updateFollowersCount(artist, !currentlyFollowing)
-
-    this.showToast(
-      currentlyFollowing
-        ? `Você deixou de seguir ${artist.name}`
-        : `Agora você segue ${artist.name}`,
-      currentlyFollowing ? 'info' : 'success'
-    )
-
-  } catch (error) {
-    console.error(error)
-    this.showToast(error.message, 'error')
-  }
-},
-
-isFollowing(artistId) {
-  return this.followedArtists.some(id => String(id) === String(artistId))
-},
+    isFollowing(artistId) {
+      return this.followedArtists.some(id => String(id) === String(artistId));
+    },
 
     showToast(message, type = 'success') {
       if (this.toast.timeout) {
         clearTimeout(this.toast.timeout);
       }
-      
+
       this.toast.message = message;
       this.toast.type = type;
+      this.toast.title = type === 'success' ? 'Sucesso' : type === 'error' ? 'Erro' : 'Info';
       this.toast.show = true;
-      
-      this.toast.timeout = setTimeout(() => {
-        this.toast.show = false;
-      }, 3000);
+      this.toast.progress = 100;
+
+      const duration = 3000;
+      const interval = 30;
+      const step = 100 / (duration / interval);
+
+      this.toast.timeout = setInterval(() => {
+        this.toast.progress -= step;
+        if (this.toast.progress <= 0) {
+          this.hideToast();
+        }
+      }, interval);
     },
 
- saveFollowedArtists() {
-  localStorage.setItem('followedArtists', JSON.stringify(this.followedArtists))
-},
-
-async loadFollowedArtists() {
-  try {
-    const token = localStorage.getItem("token")
-
-    if (!token) {
-      this.followedArtists = []
-      return
-    }
-
-    const res = await fetch(
-      'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+    hideToast() {
+      if (this.toast.timeout) {
+        clearInterval(this.toast.timeout);
+        this.toast.timeout = null;
       }
-    )
+      this.toast.show = false;
+    },
 
-    const data = await res.json()
+    saveFollowedArtists() {
+      localStorage.setItem('followedArtists', JSON.stringify(this.followedArtists));
+    },
 
-    // 🔥 agora vem da tabela Follow
-    this.followedArtists = data.map(f => 
-      String(f.seguindo_id?._id || f.seguindo_id)
-    )
+    async loadFollowedArtists() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.followedArtists = [];
+          return;
+        }
 
-  } catch (error) {
-    console.error('Erro ao carregar seguindo:', error)
-    this.followedArtists = []
-  }
-},
+        const res = await fetch(
+          'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const data = await res.json();
+        this.followedArtists = data.map(f =>
+          String(f.seguindo_id?._id || f.seguindo_id)
+        );
+      } catch (error) {
+        console.error('Erro ao carregar seguindo:', error);
+        this.followedArtists = [];
+      }
+    },
+
     // ============ NAVIGATION ============
-    
-goToArtist(artist) {
-  this.$router.push({
-    name: 'DetalheCantor',
-    params: { id: artist.id },
-    query: { source: artist.source }
-  })
-},
-
-    goToArtistFromModal(artist) {
+    goToArtist(artist) {
       this.closeAllModal();
-      setTimeout(() => {
-        this.goToArtist(artist);
-      }, 300);
+      this.$router.push({
+        name: 'DetalheCantor',
+        params: { id: artist.id },
+        query: { source: artist.source }
+      });
     },
 
     openAllArtists() {
       this.showAllModal = true;
+      this.searchQuery = '';
+      this.activeFilter = 'all';
+      this.filteredArtists = [...this.artists];
       document.body.style.overflow = 'hidden';
     },
 
@@ -675,208 +688,59 @@ goToArtist(artist) {
     },
 
     handleImageError(e) {
-      e.target.src = 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg';
+      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNTAwIiBoZWlnaHQ9IjUwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjI1MCIgeT0iMjUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiM2NjYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJpzwvdGV4dD48L3N2Zz4=';
     }
   }
 };
 </script>
 
 <style scoped>
+/* ========== SECTION INTEGRATION ========== */
 .artists-section {
-  padding: 40px 0;
-  background: linear-gradient(180deg, #0a0a0a 0%, #121212 100%);
-  position: relative;
-  overflow: hidden;
+  margin-bottom: 48px;
+  animation: slideIn 0.6s ease-out;
 }
 
-.artists-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-}
-
-/* Loading & Error States */
-.loading-state,
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  gap: 16px;
-  color: #888;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(29, 185, 84, 0.3);
-  border-top-color: #1DB954;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.retry-btn {
-  padding: 10px 20px;
-  background: #1DB954;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.retry-btn:hover {
-  background: #1ed760;
-}
-
-.section-header {
-  max-width: 1400px;
-  margin: 0 auto 32px;
-  padding: 0 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.header-content {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.section-title {
-  font-size: 32px;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.5px;
-  margin: 0;
-  background: linear-gradient(135deg, #fff 0%, #b3b3b3 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.section-subtitle {
-  font-size: 16px;
-  color: #a7a7a7;
-  margin: 0;
-  font-weight: 500;
-}
-
-.view-all-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #b3b3b3;
+/* ========== SEE ALL BUTTON ========== */
+.see-all {
   background: transparent;
-  border: none;
-  font-size: 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #b3b3b3;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
+  cursor: pointer;
   transition: all 0.3s ease;
   padding: 8px 16px;
   border-radius: 20px;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-family: inherit;
+  margin-left: auto;
 }
 
-.view-all-btn:hover {
+.see-all:hover {
   color: #fff;
+  border-color: #fff;
   background: rgba(255,255,255,0.1);
-  transform: translateX(4px);
 }
 
-.view-all-btn svg {
-  width: 16px;
-  height: 16px;
+.see-all i {
+  font-size: 10px;
   transition: transform 0.3s ease;
 }
 
-.view-all-btn:hover svg {
-  transform: translateX(4px);
+.see-all:hover i {
+  transform: translateX(3px);
 }
 
-/* Toast Notification */
-.toast-notification {
-  position: fixed;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-  backdrop-filter: blur(20px);
-  min-width: 280px;
-  justify-content: center;
-}
-
-.toast-notification.success {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  color: #fff;
-}
-
-.toast-notification.info {
-  background: linear-gradient(135deg, #535353 0%, #6a6a6a 100%);
-  color: #fff;
-}
-
-.toast-icon {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.2);
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.toast-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.toast-message {
-  white-space: nowrap;
-}
-
-/* Toast Transition */
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-.toast-enter-from {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-30px) scale(0.9);
-}
-
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-20px) scale(0.95);
-}
-
-/* Carousel Container */
+/* ========== CAROUSEL ========== */
 .carousel-container {
   position: relative;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 0 32px;
 }
 
 .artists-track {
@@ -902,17 +766,25 @@ goToArtist(artist) {
   border-radius: 2px;
 }
 
-/* Artist Card */
+/* ========== ARTIST CARD ========== */
 .artist-card {
   flex: 0 0 auto;
   width: 200px;
   scroll-snap-align: start;
   cursor: pointer;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(24, 24, 24, 0.6);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
 }
 
 .artist-card:hover {
   transform: translateY(-8px);
+  background: rgba(40, 40, 40, 0.8);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
 }
 
 .image-wrapper {
@@ -922,8 +794,8 @@ goToArtist(artist) {
 
 .image-container {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
@@ -946,7 +818,25 @@ goToArtist(artist) {
   transform: scale(1.08);
 }
 
-/* Follow Button Float (imagem) */
+/* Source Badge */
+.source-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.source-badge.db { background: #6366f1; }
+.source-badge.deezer { background: #ff6600; }
+.source-badge.spotify { background: #1db954; }
+
+/* Follow Button Float */
 .follow-btn-float {
   position: absolute;
   bottom: 8px;
@@ -966,6 +856,7 @@ goToArtist(artist) {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(29, 185, 84, 0.4);
   z-index: 5;
+  font-size: 18px;
 }
 
 .follow-btn-float.following {
@@ -991,17 +882,13 @@ goToArtist(artist) {
   box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
 
-.follow-btn-float svg {
-  width: 20px;
-  height: 20px;
-}
-
+/* Artist Info */
 .artist-info {
   text-align: center;
 }
 
 .artist-name {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   color: #fff;
   margin: 0 0 6px 0;
@@ -1017,10 +904,13 @@ goToArtist(artist) {
 }
 
 .artist-genre {
-  font-size: 14px;
-  color: #a7a7a7;
+  font-size: 13px;
+  color: #b3b3b3;
   margin: 0 0 10px 0;
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .monthly-listeners {
@@ -1039,7 +929,7 @@ goToArtist(artist) {
 
 .listeners-label {
   font-size: 12px;
-  color: #6a6a6a;
+  color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1080,7 +970,6 @@ goToArtist(artist) {
 .follow-btn.following:hover {
   background: #ff6b6b;
   border-color: #ff6b6b;
-  color: #fff;
 }
 
 .follow-btn:active {
@@ -1098,11 +987,7 @@ goToArtist(artist) {
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-}
-
-.btn-icon svg {
-  width: 100%;
-  height: 100%;
+  font-size: 14px;
 }
 
 /* Navigation Buttons */
@@ -1124,6 +1009,7 @@ goToArtist(artist) {
   backdrop-filter: blur(10px);
   opacity: 0;
   transform: scale(0.8);
+  font-size: 20px;
 }
 
 .carousel-container:hover .nav-btn {
@@ -1142,47 +1028,229 @@ goToArtist(artist) {
 }
 
 .nav-btn.prev {
-  left: 8px;
+  left: -24px;
 }
 
 .nav-btn.next {
-  right: 8px;
+  right: -24px;
 }
 
-.nav-btn svg {
-  width: 24px;
-  height: 24px;
+/* Error State */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: #888;
 }
 
-/* Modal Styles */
+.retry-btn {
+  padding: 10px 20px;
+  background: #1DB954;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #1ed760;
+  transform: scale(1.05);
+}
+
+/* ========== TOAST NOTIFICATION ========== */
+.toast-notification {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  background: rgba(24, 24, 24, 0.95);
+  color: #fff;
+  padding: 16px 20px;
+  border-radius: 16px;
+  font-weight: 600;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+  min-width: 320px;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.toast-notification.success {
+  border-left: 4px solid #1db954;
+}
+
+.toast-notification.error {
+  border-left: 4px solid #ff4757;
+}
+
+.toast-notification.info {
+  border-left: 4px solid #3498db;
+}
+
+.toast-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-notification.success .toast-icon-wrapper {
+  background: rgba(29,185,84,0.2);
+  color: #1db954;
+}
+
+.toast-notification.error .toast-icon-wrapper {
+  background: rgba(255,71,87,0.2);
+  color: #ff4757;
+}
+
+.toast-notification.info .toast-icon-wrapper {
+  background: rgba(52,152,219,0.2);
+  color: #3498db;
+}
+
+.toast-icon-wrapper i {
+  font-size: 20px;
+}
+
+.toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.toast-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toast-message {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.toast-close:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1db954, #1ed760);
+  transition: width 0.1s linear;
+}
+
+.toast-notification.error .toast-progress {
+  background: linear-gradient(90deg, #ff4757, #ff6b7a);
+}
+
+.toast-notification.info .toast-progress {
+  background: linear-gradient(90deg, #3498db, #5dade2);
+}
+
+/* Toast Transitions */
+.toast-enter-active {
+  animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast-leave-active {
+  animation: toastSlideOut 0.3s ease;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) scale(0.9);
+  }
+}
+
+/* ========== MODAL PREMIUM ========== */
 .modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal-content {
-  background: #181818;
-  border-radius: 16px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 24px;
   width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
+  max-width: 900px;
+  max-height: 85vh;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8);
-  animation: modalSlide 0.3s ease;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 25px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
+  animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
 }
 
-@keyframes modalSlide {
+@keyframes modalSlideUp {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(40px) scale(0.95);
   }
   to {
     opacity: 1;
@@ -1190,50 +1258,205 @@ goToArtist(artist) {
   }
 }
 
+/* Modal Header Premium */
 .modal-header {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.modal-header-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  opacity: 0.15;
+  filter: blur(40px);
+}
+
+.modal-header-content {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  background: linear-gradient(180deg, #1f1f1f 0%, #181818 100%);
+  padding: 28px 32px;
+  z-index: 1;
 }
 
-.modal-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+.modal-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.modal-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
   color: #fff;
+  box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
+}
+
+.modal-title-text h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.modal-title-text p {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
 }
 
 .close-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(255,255,255,0.1);
-  border: none;
+  border: 1px solid rgba(255,255,255,0.1);
   color: #b3b3b3;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 18px;
+  backdrop-filter: blur(10px);
+}
+
+.close-btn:hover {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  transform: rotate(90deg) scale(1.1);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* Modal Toolbar */
+.modal-toolbar {
+  padding: 0 32px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box i.fa-search {
+  position: absolute;
+  left: 16px;
+  color: rgba(255,255,255,0.5);
+  font-size: 16px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 14px 44px 14px 44px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.search-box input::placeholder {
+  color: rgba(255,255,255,0.4);
+}
+
+.search-box input:focus {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(29, 185, 84, 0.5);
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
 }
 
-.close-btn:hover {
-  background: rgba(255,255,255,0.2);
+.clear-search:hover {
   color: #fff;
-  transform: rotate(90deg);
+  background: rgba(255,255,255,0.1);
 }
 
-.close-btn svg {
-  width: 20px;
-  height: 20px;
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
+.filter-tabs::-webkit-scrollbar {
+  height: 0;
+}
+
+.filter-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.filter-tabs button:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.filter-tabs button.active {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  border-color: transparent;
+  color: #000;
+  box-shadow: 0 4px 16px rgba(29, 185, 84, 0.3);
+}
+
+.filter-tabs button i {
+  font-size: 14px;
+}
+
+/* Modal Body */
 .modal-body {
   overflow-y: auto;
-  max-height: calc(80vh - 80px);
+  padding: 0 32px 20px;
+  flex: 1;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -1245,125 +1468,297 @@ goToArtist(artist) {
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.15);
   border-radius: 4px;
 }
 
-.artists-list {
-  padding: 8px;
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
 }
 
-.list-item {
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.05);
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px;
-  border-radius: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+  font-size: 32px;
+  color: rgba(255,255,255,0.3);
+}
+
+.empty-state h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Artists Grid */
+.artists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.grid-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 16px;
+  padding: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: 4px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255,255,255,0.05);
+  animation: gridItemIn 0.4s ease backwards;
 }
 
-.list-item:hover {
-  background: rgba(255,255,255,0.05);
+@keyframes gridItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-.list-item:active {
-  transform: scale(0.98);
+.grid-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.3);
 }
 
-.list-image {
-  width: 56px;
-  height: 56px;
+.grid-image-wrapper {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.grid-image {
+  width: 100%;
+  aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
 }
 
-.list-image img {
+.grid-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
 }
 
-.list-info {
-  flex: 1;
-  min-width: 0;
+.grid-item:hover .grid-image img {
+  transform: scale(1.08);
 }
 
-.list-info h4 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-info p {
-  margin: 0;
-  font-size: 13px;
-  color: #a7a7a7;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* List Follow Button */
-.list-follow-btn {
-  padding: 8px 16px;
-  border-radius: 20px;
+.grid-source-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  cursor: pointer;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.grid-source-badge.db { background: #6366f1; }
+.grid-source-badge.deezer { background: #ff6600; }
+.grid-source-badge.spotify { background: #1db954; }
+
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
   transition: all 0.3s ease;
-  border: 2px solid rgba(255,255,255,0.3);
+}
+
+.grid-item:hover .grid-overlay {
+  opacity: 1;
+}
+
+.grid-play-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #1db954;
+  border: none;
+  color: #000;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(29, 185, 84, 0.4);
+  transform: scale(0.8);
+}
+
+.grid-item:hover .grid-play-btn {
+  transform: scale(1);
+}
+
+.grid-play-btn:hover {
+  transform: scale(1.1) !important;
+  background: #1ed760;
+}
+
+/* Grid Info */
+.grid-info {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.grid-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-genre {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 8px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.grid-fans {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.grid-fans i {
+  color: #ff6b6b;
+  font-size: 10px;
+}
+
+/* Grid Follow Button */
+.grid-follow-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,0.15);
   background: transparent;
   color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
   font-family: inherit;
-  white-space: nowrap;
+}
+
+.grid-follow-btn:hover {
+  border-color: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.05);
+}
+
+.grid-follow-btn.following {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  border-color: transparent;
+  color: #000;
+}
+
+.grid-follow-btn.following:hover {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+  color: #fff;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 32px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.2);
   flex-shrink: 0;
 }
 
-.list-follow-btn:hover {
-  border-color: #fff;
+.footer-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.footer-stats span {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer-stats i {
+  color: #1db954;
+}
+
+.footer-close {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.8);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.footer-close:hover {
   background: rgba(255,255,255,0.1);
-}
-.source-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: bold;
+  border-color: rgba(255,255,255,0.25);
   color: #fff;
-}
-
-.source-badge.db {
-  background: #6366f1;
-}
-
-.source-badge.deezer {
-  background: #ff6600;
-}
-
-.source-badge.spotify {
-  background: #1db954;
-}
-.list-follow-btn.following {
-  background: #1db954;
-  border-color: #1db954;
-  color: #fff;
-}
-
-.list-follow-btn.following:hover {
-  background: #ff6b6b;
-  border-color: #ff6b6b;
 }
 
 /* Modal Transition */
@@ -1379,56 +1774,38 @@ goToArtist(artist) {
 
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
-  transform: translateY(20px) scale(0.95);
+  transform: translateY(40px) scale(0.95);
   opacity: 0;
 }
 
-/* Responsive */
+/* ========== RESPONSIVE ========== */
 @media (max-width: 1200px) {
   .carousel-container {
-    padding: 0 24px;
+    padding: 0 16px;
   }
-  
-  .section-header {
-    padding: 0 24px;
+
+  .nav-btn.prev {
+    left: 0;
+  }
+
+  .nav-btn.next {
+    right: 0;
   }
 }
 
 @media (max-width: 768px) {
-  .section-title {
-    font-size: 24px;
-  }
-  
-  .section-subtitle {
-    font-size: 14px;
-  }
-  
   .artist-card {
     width: 160px;
+    padding: 12px;
   }
-  
-  .image-container {
-    width: 160px;
-    height: 160px;
-  }
-  
+
   .nav-btn {
     display: none;
   }
-  
+
   .artists-track {
     gap: 16px;
     padding: 16px 0 32px;
-  }
-  
-  .view-all-btn {
-    font-size: 12px;
-    padding: 6px 12px;
-  }
-
-  .modal-content {
-    max-height: 90vh;
-    margin: 20px;
   }
 
   .follow-btn {
@@ -1438,30 +1815,83 @@ goToArtist(artist) {
   }
 
   .toast-notification {
-    padding: 12px 20px;
+    left: 16px;
+    right: 16px;
+    bottom: 80px;
+    min-width: auto;
+    padding: 12px 16px;
+  }
+
+  .toast-icon-wrapper {
+    width: 36px;
+    height: 36px;
+  }
+
+  .toast-title {
     font-size: 13px;
-    min-width: 240px;
+  }
+
+  .toast-message {
+    font-size: 12px;
+  }
+
+  /* Modal Mobile */
+  .modal-content {
+    max-height: 95vh;
+    border-radius: 20px 20px 0 0;
+    margin: auto 0 0 0;
+  }
+
+  .modal-header-content {
+    padding: 20px 20px;
+  }
+
+  .modal-title-text h3 {
+    font-size: 20px;
+  }
+
+  .modal-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .modal-toolbar {
+    padding: 0 20px 16px;
+  }
+
+  .modal-body {
+    padding: 0 20px 16px;
+  }
+
+  .artists-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .modal-footer {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .footer-stats {
+    gap: 16px;
+  }
+
+  .footer-close {
+    width: 100%;
+    justify-content: center;
   }
 }
 
 @media (max-width: 480px) {
-  .section-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  
   .artist-card {
     width: 140px;
   }
-  
-  .image-container {
-    width: 140px;
-    height: 140px;
-  }
 
   .modal-content {
-    border-radius: 12px;
+    border-radius: 16px 16px 0 0;
   }
 
   .follow-btn-float {
@@ -1469,11 +1899,23 @@ goToArtist(artist) {
     height: 36px;
     bottom: 4px;
     right: 4px;
+    font-size: 14px;
   }
 
-  .follow-btn-float svg {
-    width: 16px;
-    height: 16px;
+  .artists-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .grid-item {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .grid-play-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
   }
 }
 </style>

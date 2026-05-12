@@ -620,7 +620,7 @@ export default {
   methods: {
     // ============ NAVIGATION ============
    
-    navigateToSearch(query) {
+navigateToSearch(query) {
       // Navega para a rota de busca com o parâmetro de query
       if (this.$router) {
         this.$router.push({
@@ -632,6 +632,27 @@ export default {
         window.location.href = `http://localhost:5173/search?q=${encodeURIComponent(query)}`
       }
       this.showToast('Busca', `Pesquisando por: ${query}`, 'info', 'fa fa-search')
+    },
+         navigateToSearch(query) {
+      // Navega para a rota de busca com o parâmetro de query
+      if (this.$router) {
+        this.$router.push({
+          path: '/search',
+          query: { q: query }
+        })
+      } else {
+        // Fallback para navegação direta se router não estiver disponível
+        window.location.href = `http://localhost:5173/search?q=${encodeURIComponent(query)}`
+      }
+      this.showToast('Busca', `Pesquisando por: ${query}`, 'info', 'fa fa-search')
+    },
+
+    goToLogin() {
+      if (this.$router) {
+        this.$router.push('/login')
+      } else {
+        window.location.href = '/login'
+      }
     },
 
     // ============ API LOADING ============
