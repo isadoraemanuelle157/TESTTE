@@ -426,6 +426,7 @@ export default {
       showDeleteModal: false,
       playlistToDelete: null,
       isDeleting: false,
+        isLogged: false, 
 
       showRemoveSongModal: false,
       songToRemove: null,
@@ -515,6 +516,7 @@ export default {
   },
 
   async mounted() {
+      this.checkLoginStatus()
     await this.loadPlaylists()
     await this.loadFavoritas()
 
@@ -529,6 +531,11 @@ export default {
   },
 
   methods: {
+    checkLoginStatus() {
+  const token = localStorage.getItem('token')
+  this.isLogged = !!token
+},
+
     // ===== IMAGEM / CAPA =====
     normalizePlaylistImage(image) {
       if (!image || typeof image !== 'string') return null
@@ -992,48 +999,65 @@ export default {
       return icons[source] || 'fa fa-music'
     },
 
-    async searchMusicas() {
-      if (!this.searchQuery || this.searchQuery.trim().length < 1) {
-        this.searchResults = []
-        return
-      }
+   async searchMusicas() {
+  if (!this.searchQuery || this.searchQuery.trim().length < 1) {
+    this.searchResults = []
+    return
+  }
 
-      this.isSearching = true
-      this.searchError = null
-      this.searchResults = []
+  this.isSearching = true
+  this.searchError = null
+  this.searchResults = []
 
+  try {
+    const token = localStorage.getItem("token")
+
+    // ============================================
+    // BUSCA LOCAL (sempre, independente de login)
+    // ============================================
+    const resLocal = await fetch(
+      `http://localhost:3002/musicas/search?q=${encodeURIComponent(this.searchQuery)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    const dbMusicas = await resLocal.json()
+    const safeArray = Array.isArray(dbMusicas) ? dbMusicas : []
+
+    const formattedDb = safeArray.map(m => ({
+      id: m._id,
+      title: m.nome,
+      artist: m.cantores?.map(c => c.nome).join(', ') || 'Desconhecido',
+      album: m.albuns?.[0]?.nome || 'Sem álbum',
+      duration: this.formatDuration(m.duracao),
+      cover: m.foto,
+      preview: m.link,
+      source: 'local',
+      isFromDB: true
+    }))
+
+    // ============================================
+    // COM LOGIN: Busca SPOTIFY
+    // ============================================
+    if (this.isLogged) {
       try {
-        const token = localStorage.getItem("token")
-
-        const resLocal = await fetch(
-          `http://localhost:3002/musicas/search?q=${encodeURIComponent(this.searchQuery)}`,
-          { headers: { Authorization: `Bearer ${token}` } }
+        const resSpotify = await fetch(
+          `${this.SPOTIFY_PROXY}/search?q=${encodeURIComponent(this.searchQuery)}&type=track&limit=10&market=BR`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
         )
 
-        const dbMusicas = await resLocal.json()
-        const safeArray = Array.isArray(dbMusicas) ? dbMusicas : []
-
-        const formattedDb = safeArray.map(m => ({
-          id: m._id,
-          title: m.nome,
-          artist: m.cantores?.map(c => c.nome).join(', ') || 'Desconhecido',
-          album: m.albuns?.[0]?.nome || 'Sem álbum',
-          duration: this.formatDuration(m.duracao),
-          cover: m.foto,
-          preview: m.link,
-          source: 'local',
-          isFromDB: true
-        }))
-
-        let spotifyResults = []
-        try {
-          const resSpotify = await fetch(
-            `${this.SPOTIFY_PROXY}/search?q=${encodeURIComponent(this.searchQuery)}&type=track&limit=5&market=BR`
-          )
+        // Se token expirou, trata como não logado
+        if (resSpotify.status === 401) {
+          console.log('⚠️ Token expirado na busca de playlist, usando Deezer')
+          this.isLogged = false
+          // Continua para o fallback Deezer abaixo
+        } else {
           const spotifyData = await resSpotify.json()
 
           if (spotifyData?.tracks?.items) {
-            spotifyResults = spotifyData.tracks.items.map(track => ({
+            const spotifyResults = spotifyData.tracks.items.map(track => ({
               id: track.id,
               title: track.name,
               artist: track.artists?.map(a => a.name).join(', ') || 'Desconhecido',
@@ -1044,42 +1068,53 @@ export default {
               source: 'spotify',
               isFromDB: false
             }))
+
+            this.searchResults = [...formattedDb, ...spotifyResults]
+            this.isSearching = false
+            return  // Sai aqui se Spotify deu certo
           }
-        } catch (e) {
-          console.warn('Spotify error:', e.message)
         }
-
-        let deezerResults = []
-        try {
-          const resDeezer = await fetch(
-            `${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=5`
-          )
-          const deezerData = await resDeezer.json()
-
-          if (deezerData?.data) {
-            deezerResults = deezerData.data.map(track => ({
-              id: track.id,
-              title: track.title,
-              artist: track.artist?.name || 'Desconhecido',
-              album: track.album?.title || 'Sem álbum',
-              duration: this.formatDuration(track.duration),
-              cover: track.album?.cover_small || '',
-              preview: track.preview || '',
-              source: 'deezer',
-              isFromDB: false
-            }))
-          }
-        } catch (e) {
-          console.warn('Deezer error:', e.message)
-        }
-
-        this.searchResults = [...formattedDb, ...spotifyResults, ...deezerResults]
-      } catch (err) {
-        this.searchError = 'Erro ao buscar músicas'
-      } finally {
-        this.isSearching = false
+      } catch (e) {
+        console.warn('Spotify error:', e.message)
+        // Continua para fallback Deezer
       }
-    },
+    }
+
+    // ============================================
+    // SEM LOGIN ou fallback: Busca DEEZER
+    // ============================================
+    let deezerResults = []
+    try {
+      const resDeezer = await fetch(
+        `${this.DEEZER_API}/search/track?q=${encodeURIComponent(this.searchQuery)}&limit=10`
+      )
+      const deezerData = await resDeezer.json()
+
+      if (deezerData?.data) {
+        deezerResults = deezerData.data.map(track => ({
+          id: track.id,
+          title: track.title,
+          artist: track.artist?.name || 'Desconhecido',
+          album: track.album?.title || 'Sem álbum',
+          duration: this.formatDuration(track.duration),
+          cover: track.album?.cover_small || '',
+          preview: track.preview || '',
+          source: 'deezer',
+          isFromDB: false
+        }))
+      }
+    } catch (e) {
+      console.warn('Deezer error:', e.message)
+    }
+
+    this.searchResults = [...formattedDb, ...deezerResults]
+
+  } catch (err) {
+    this.searchError = 'Erro ao buscar músicas'
+  } finally {
+    this.isSearching = false
+  }
+},
 
     formatDuration(seconds) {
       if (!seconds) return '0:00'
@@ -1170,12 +1205,17 @@ export default {
 
     // ===== ADICIONAR MÚSICA =====
     async addSong(song) {
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          this.showToast({ message: 'Faça login para adicionar', type: 'info' })
-          return
-        }
+    try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast({ message: 'Faça login para adicionar músicas', type: 'info' })
+      return
+    }
+
+       if (!this.isLogged && song.source === 'spotify') {
+      this.showToast({ message: 'Faça login para adicionar músicas do Spotify', type: 'info' })
+      return
+    }
 
         const body = {
           source: song.source && song.source !== 'local' ? song.source : 'local'
