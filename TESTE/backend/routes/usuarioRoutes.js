@@ -2,30 +2,30 @@ const express = require('express')
 const router = express.Router()
 
 const userController = require('../controllers/usuarioController')
-const authMiddleware = require('../middleware/authMiddleware')
+const { requireAuth } = require('../middleware/auth')  // ← ÚNICA importação de auth
 
-// AUTH
+// AUTH (público — sem auth)
 router.post('/registrar', userController.create)
 router.post('/login', userController.login)
 
-// 🔥 RECUPERAR SENHA
+// 🔥 RECUPERAR SENHA (público — sem auth)
 router.put('/recuperar-senha', userController.recuperarSenha)
 
 // SEARCH
-router.get('/search', authMiddleware, userController.search)
+router.get('/search', requireAuth, userController.search)
 
 // 🎯 FEITO PARA VOCÊ - Mixes Personalizados
-router.get('/:id/mixes', authMiddleware, userController.getMixes)
+router.get('/:id/mixes', requireAuth, userController.getMixes)
 
 // DADOS PÚBLICOS / CONTROLADOS
-router.get('/:id/playlists/publicas', authMiddleware, userController.getPublicPlaylists)
-router.get('/:id/curtidas/publicas', authMiddleware, userController.getPublicCurtidas)
-router.get('/:id/estatisticas', authMiddleware, userController.getEstatisticas)
+router.get('/:id/playlists/publicas', requireAuth, userController.getPublicPlaylists)
+router.get('/:id/curtidas/publicas', requireAuth, userController.getPublicCurtidas)
+router.get('/:id/estatisticas', requireAuth, userController.getEstatisticas)
 
 // CRUD
-router.get('/', authMiddleware, userController.list)
-router.get('/:id', authMiddleware, userController.getById)
-router.put('/:id', authMiddleware, userController.update)
-router.delete('/:id', authMiddleware, userController.remove)
+router.get('/', requireAuth, userController.list)
+router.get('/:id', requireAuth, userController.getById)
+router.put('/:id', requireAuth, userController.update)
+router.delete('/:id', requireAuth, userController.remove)
 
-module.exports = router 
+module.exports = router

@@ -1,7 +1,6 @@
 const express = require('express')
 
-
-export function safeRequire(path: string) {
+function safeRequire(path) {
   try {
     return require(path)
   } catch (err) {
@@ -9,3 +8,5 @@ export function safeRequire(path: string) {
     return express.Router()
   }
 }
+
+module.exports = { safeRequire }

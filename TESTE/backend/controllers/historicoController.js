@@ -11,10 +11,16 @@ const getHistorico = async (req, res) => {
 }
 
 // POST
+// POST
 const addHistorico = async (req, res) => {
   try {
-    const { termo } = req.body
+    // 🔥 VERIFICA SE TEM USUÁRIO (optionalAuth pode não ter user)
+    if (!req.user || !req.user.id) {
+      // Silenciosamente ignora se deslogado (não quebra o frontend)
+      return res.status(200).json({ message: 'Histórico não salvo (usuário não logado)' })
+    }
 
+    const { termo } = req.body
     const data = await historicoService.addHistorico(req.user.id, termo)
     res.status(201).json(data)
   } catch (err) {

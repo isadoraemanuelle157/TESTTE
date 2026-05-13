@@ -1,8 +1,10 @@
 const axios = require('axios')
 
-const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token'
-const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
+const {
+  SPOTIFY_AUTH_URL,
+  SPOTIFY_CLIENT_ID,
+  SPOTIFY_CLIENT_SECRET
+} = require('../config/spotify')
 
 let spotifyToken = null
 let tokenExpiresAt = 0

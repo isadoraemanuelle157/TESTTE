@@ -162,9 +162,13 @@
             </h2>
             <span class="section-count">{{ recentlyPlayed.length }} músicas</span>
           </div>
-          <button class="see-all" @click="showAllRecent">
-            Ver tudo <i class="fa fa-chevron-right"></i>
-          </button>
+<button class="see-all" @click="showAllRecent">
+  {{ showAllRecentTracks ? 'Ver menos' : 'Ver tudo' }}
+  <i 
+    class="fa" 
+    :class="showAllRecentTracks ? 'fa-chevron-up' : 'fa-chevron-right'"
+  ></i>
+</button>
         </div>
         <div class="cards-row" :class="{ 'expanded': showAllRecentTracks }">
           <div
@@ -587,13 +591,11 @@ export default {
       },
 
       // Categories with Font Awesome icons only
-// SUBSTITUIR o array categories atual por este:
-// SUBSTITUIR o array categories atual por este:
 categories: [
   { 
     name: "Pop", 
     icon: "fa fa-star", 
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&h=400&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=400&fit=crop&q=80",
     gradient: "linear-gradient(135deg, rgba(240,147,251,0.75), rgba(245,87,108,0.75))" 
   },
 
@@ -607,14 +609,14 @@ categories: [
   { 
     name: "Hip Hop", 
     icon: "fa fa-fire", 
-    image: "https://images.unsplash.com/photo-1521334884684-d80222895322?w=400&h=400&fit=crop&q=80",
+    image: "https://www.sabra.org.br/site/wp-content/uploads/2020/11/conheca-mais-sobre-o-surgimento-do-hip-hop-20200904142853.jpg.jpg",
     gradient: "linear-gradient(135deg, rgba(255,8,68,0.75), rgba(255,177,153,0.75))" 
   },
 
   { 
     name: "Eletrônica", 
     icon: "fa fa-headphones", 
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop&q=80",
+    image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop&q=80",
     gradient: "linear-gradient(135deg, rgba(79,172,254,0.75), rgba(0,242,254,0.75))" 
   },
 
@@ -1045,16 +1047,18 @@ async playTrack(track, context, index) {
   // SEMPRE adiciona ao histórico - ESSENCIAL
   this.addToRecentlyPlayed(playerTrack)
  
-  let playlist = []
-      if (context === 'chart') {
-        playlist = this.chartTracks.map(t => this.convertTrackForPlayer(t))
-      } else if (context === 'recommended') {
-        playlist = this.recommendedTracks.map(t => this.convertTrackForPlayer(t))
-      } else if (context === 'recent') {
-        playlist = this.recentlyPlayed
-      } else {
-        playlist = [playerTrack]
-      }
+let playlist = []
+if (context === 'chart') {
+  playlist = this.chartTracks.map(t => this.convertTrackForPlayer(t))
+} else if (context === 'recommended') {
+  playlist = this.recommendedTracks.map(t => this.convertTrackForPlayer(t))
+} else if (context === 'recent') {
+  playlist = this.recentlyPlayed
+} else if (context === 'top10') {        // ← ADICIONAR ESTE BLOCO
+  playlist = this.chartTracks.slice(0, 10).map(t => this.convertTrackForPlayer(t))
+} else {
+  playlist = [playerTrack]
+}
      
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {

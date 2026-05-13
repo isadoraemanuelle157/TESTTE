@@ -113,11 +113,14 @@ const getMinhasFavoritas = async (req, res) => {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(usuarioId)) {
-      return res.status(400).json({ error: 'ID de usuário inválido' })
-    }
+    // 🔥 CONVERTE PARA OBJECTID (igual no toggle)
+    const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId)
+      ? new mongoose.Types.ObjectId(usuarioId)
+      : usuarioId
 
-    const favoritas = await favoritaService.getFavoritasByUser(usuarioId)
+    // Se o service espera string, passe userObjectId.toString()
+    // Se o service espera ObjectId, passe userObjectId direto
+    const favoritas = await favoritaService.getFavoritasByUser(userObjectId)
     res.json(favoritas)
 
   } catch (err) {

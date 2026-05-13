@@ -5,11 +5,11 @@ const create = async (req, res) => {
   try {
     const user = await userService.createUser(req.body)
 
-    const token = jwt.sign(
-      { id: user.id },
-      "SEGREDO_SUPER_SECRETO",
-      { expiresIn: '365d' }
-    )
+const token = jwt.sign(
+  { id: user.id },
+  process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
+  { expiresIn: '365d' }
+)
 
     res.status(201).json({
       message: 'Usuário criado',
@@ -27,11 +27,11 @@ const login = async (req, res) => {
 
     const user = await userService.loginUser(email, senha)
 
-    const token = jwt.sign(
-      { id: user.id },
-      "SEGREDO_SUPER_SECRETO",
-      { expiresIn: '7d' }
-    )
+const token = jwt.sign(
+  { id: user.id },
+  process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
+  { expiresIn: '365d' }
+)
 
     res.json({
       message: 'Login realizado',

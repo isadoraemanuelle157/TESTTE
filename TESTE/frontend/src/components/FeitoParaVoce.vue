@@ -784,7 +784,7 @@ console.log("🎧 vibes API:", data)
     const token = localStorage.getItem("token")
 
     if (!userId) {
-      throw new Error("Usuario nao encontrado")
+      throw new Error("Usuario nao encontrado") 
     }
 
     // Formatar dados no formato que o backend espera (arrays simples)

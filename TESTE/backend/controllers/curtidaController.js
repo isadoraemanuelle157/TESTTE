@@ -108,36 +108,42 @@ const toggleCurtida = async (req, res) => {
 }
 
 // ========== VERIFICAR SE MÚSICA ESTÁ CURTIDA ==========
+// ========== VERIFICAR SE MÚSICA ESTÁ CURTIDA ==========
 const isCurtida = async (req, res) => {
   try {
     const userId = req.user.id
     const musicaId = req.params.id
     const { source } = req.query
 
+    // 🔥 CONVERTE userId PARA OBJECTID (igual no toggle)
+    const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId
+
     let isLiked = false
 
     if (source && source !== 'local') {
       // Verifica em externas
       const externa = await CurtidaExterna.findOne({
-        usuario: userId,
+        usuario: userObjectId,  // ← MUDAR: usar userObjectId em vez de userId
         musicaId: String(musicaId),
         source: source
       })
       isLiked = !!externa
     } else {
-      // Verifica em locais (se for ObjectId válido)
+      // Verifica em locais
       if (mongoose.Types.ObjectId.isValid(musicaId)) {
         const local = await Curtida.findOne({
-          usuario: userId,
+          usuario: userObjectId,  // ← MUDAR: usar userObjectId em vez de userId
           musica: musicaId
         })
         isLiked = !!local
       }
       
-      // Se não achou local, verifica em externas (fallback sem source)
+      // Fallback para externas sem source
       if (!isLiked) {
         const externa = await CurtidaExterna.findOne({
-          usuario: userId,
+          usuario: userObjectId,  // ← MUDAR: usar userObjectId em vez de userId
           musicaId: String(musicaId)
         })
         isLiked = !!externa
@@ -145,7 +151,6 @@ const isCurtida = async (req, res) => {
     }
 
     res.json({ liked: isLiked })
-
   } catch (err) {
     console.error('Erro ao verificar curtida:', err)
     res.status(500).json({ error: 'Erro ao verificar curtida' })

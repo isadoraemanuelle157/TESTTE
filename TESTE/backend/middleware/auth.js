@@ -1,64 +1,76 @@
 const jwt = require('jsonwebtoken')
 
+const JWT_SECRET = process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO"
+
 // ============================================
-// 🔓 OPTIONAL AUTH — Identifica usuário mas não bloqueia
+// 🔓 OPTIONAL AUTH
 // ============================================
 function optionalAuth(req, res, next) {
   const authHeader = req.headers.authorization
+
   req.isLogged = false
   req.user = null
+  req.isAuthenticated = false
 
-  if (!authHeader) {
-    return next()
-  }
+  if (!authHeader) return next()
 
   const token = authHeader.split(' ')[1]
-  if (!token) {
-    return next()
-  }
+
+  if (!token) return next()
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO")
+    const decoded = jwt.verify(token, JWT_SECRET)
+
     req.user = decoded
     req.isLogged = true
+    req.isAuthenticated = true
+
     next()
   } catch (err) {
-    // Token inválido, continua como deslogado
+    req.tokenExpired = err.name === 'TokenExpiredError'
     next()
   }
 }
 
 // ============================================
-// 🔒 REQUIRE AUTH — Exige login obrigatório
+// 🔒 REQUIRE AUTH
 // ============================================
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization
 
   if (!authHeader) {
     return res.status(401).json({
-      error: 'LOGIN_REQUIRED_SPOTIFY',
-      code: 'AUTH_REQUIRED',
-      message: 'Faça login para acessar este recurso',
-      showLoginModal: true,
-      redirectTo: '/login'
+      error: 'LOGIN_REQUIRED',
+      message: 'Faça login para continuar'
     })
   }
 
   const token = authHeader.split(' ')[1]
 
+  if (!token) {
+    return res.status(401).json({
+      error: 'TOKEN_REQUIRED'
+    })
+  }
+
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO")
+    const decoded = jwt.verify(token, JWT_SECRET)
+
     req.user = decoded
     req.isLogged = true
+    req.isAuthenticated = true
+
     next()
   } catch (err) {
     return res.status(401).json({
-      error: 'Token inválido',
-      code: 'INVALID_TOKEN',
-      message: 'Sessão expirada. Faça login novamente.',
-      showLoginModal: true
+      error: err.name === 'TokenExpiredError'
+        ? 'TOKEN_EXPIRED'
+        : 'INVALID_TOKEN'
     })
   }
 }
 
-module.exports = { optionalAuth, requireAuth }
+module.exports = {
+  optionalAuth,
+  requireAuth
+}

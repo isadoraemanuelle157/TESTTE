@@ -8,16 +8,17 @@
     </div>
 
     <!-- Estado Vazio -->
-    <div v-if="musicas.length === 0 && !isLoading" class="empty-state">
-      <div class="empty-icon">
-        <i class="fa fa-heart-o"></i>
-      </div>
-      <h3>Nenhuma música curtida ainda</h3>
-      <p>As músicas que você curtir na busca aparecerão aqui</p>
-      <button class="btn-explore" @click="goToSearch">
-        <i class="fa fa-search"></i> Buscar músicas
-      </button>
-    </div>
+<!-- No template, ajustar mensagem do estado vazio -->
+<div v-if="musicas.length === 0 && !isLoading" class="empty-state">
+  <div class="empty-icon">
+    <i class="fa fa-heart-o"></i>
+  </div>
+  <h3>Nenhuma música curtida do Spotify</h3>
+  <p>As músicas do Spotify que você curtir aparecerão aqui</p>
+  <button class="btn-explore" @click="goToSearch">
+    <i class="fa fa-search"></i> Buscar no Spotify
+  </button>
+</div>
 
     <!-- Loading -->
     <div v-if="isLoading" class="loading-state">
@@ -350,50 +351,52 @@ parseDuration(durationStr) {
   return 30
 },
 
-    async carregarCurtidas() {
-      this.isLoading = true
-      try {
-        const token = localStorage.getItem("token")
-        if (!token) {
-          this.musicas = []
-          return
-        }
+async carregarCurtidas() {
+  this.isLoading = true
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.musicas = []
+      return
+    }
 
-        const res = await fetch(`http://localhost:3002/curtidas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        if (!res.ok) {
-          const text = await res.text()
-          console.error("Erro API:", text)
-          this.musicas = []
-          return
-        }
-
-        const data = await res.json()
-
-        // A API agora retorna array unificado com { id, nome, artist, cover, url, source, ... }
-        this.musicas = data.map(c => ({
-          id: c.id,
-          title: c.nome,
-          artist: c.artist || 'Artista desconhecido',
-          album: c.album || '',
-          cover: c.cover,
-          url: c.url,
-          source: c.source || 'local',
-          duration: c.duration || 180,
-          ano: c.ano || null
-        }))
-
-      } catch (err) {
-        console.error("Erro ao carregar curtidas:", err)
-        this.musicas = []
-      } finally {
-        this.isLoading = false
+    const res = await fetch(`http://localhost:3002/curtidas`, {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    },
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      console.error("Erro API:", text)
+      this.musicas = []
+      return
+    }
+
+    const data = await res.json()
+
+    // 🔥 FILTRAR APENAS SPOTIFY (e local se quiser manter)
+    this.musicas = data
+      .filter(c => c.source === 'spotify' || c.source === 'local')  // ← ADICIONAR FILTRO
+      .map(c => ({
+        id: c.id,
+        title: c.nome,
+        artist: c.artist || 'Artista desconhecido',
+        album: c.album || '',
+        cover: c.cover,
+        url: c.url,
+        source: c.source || 'local',
+        duration: c.duration || 180,
+        ano: c.ano || null
+      }))
+
+  } catch (err) {
+    console.error("Erro ao carregar curtidas:", err)
+    this.musicas = []
+  } finally {
+    this.isLoading = false
+  }
+},
 
 toggleMenu(index, event) {
   event.stopPropagation()

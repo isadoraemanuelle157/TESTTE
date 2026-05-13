@@ -365,23 +365,32 @@ export default {
 
       try {
         // Atualizar usuário no backend com dados completos
-        const token = localStorage.getItem("token")
+const token = localStorage.getItem("token")
 
-        const response = await axios.put(
-          `http://localhost:3002/usuarios/${this.userId}`,
-          {
-            username: this.form.username,
-            bio: this.form.bio,
-            localizacao: this.form.localizacao,
-            avatar: this.form.avatar,
-            cover: this.form.cover
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        )
+if (!token) {
+  this.erro = "Sessão expirada. Faça login novamente."
+  this.loading = false
+  setTimeout(() => {
+    this.$router.push('/login')
+  }, 2000)
+  return
+}
+
+const response = await axios.put(
+  `http://localhost:3002/usuarios/${this.userId}`,
+  {
+    username: this.form.username,
+    bio: this.form.bio,
+    localizacao: this.form.localizacao,
+    avatar: this.form.avatar,
+    cover: this.form.cover
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+)
 
         const userDataCompleto = response.data.user
         
