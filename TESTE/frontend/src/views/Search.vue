@@ -537,14 +537,30 @@
                 </div>
                
                 <!-- Botão de curtir no Top Músicas -->
-<button
-  v-if="!isLogged"
-  class="btn-like-track"
-  @click.stop="openLoginModal"
-  title="Faça login para curtir"
->
-  <i class="fa fa-heart-o"></i>
-</button>
+  <button
+                  v-if="!isLogged"
+                  class="btn-like-track"
+                  @click.stop="openLoginModal"
+                  title="Faça login para curtir"
+                >
+                  <i class="fa fa-heart-o"></i>
+                </button>
+                <button
+                  v-else-if="track.source === 'deezer'"
+                  class="btn-like-track disabled"
+                  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
+                  title="Deezer: login necessário"
+                >
+                  <i class="fa fa-heart-o"></i>
+                </button>
+                <button
+                  v-else
+                  class="btn-like-track"
+                  @click.stop="toggleLikeTrack(track)"
+                  :class="{ liked: isTrackLiked(track.id) }"
+                >
+                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                </button>
                
                 <button class="track-play">
                   <i class="fa fa-play"></i>
@@ -604,32 +620,31 @@
                     <i :class="getSourceIcon(track.source)"></i>
                   </span>
                 </div>
-<button
-  v-if="isLogged"
-  class="btn-like-list"
-  @click.stop="toggleLikeTrack(track)"
-  :class="{ liked: isTrackLiked(track.id) }"
->
-  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-</button>
 
-<button
-  v-else-if="track.source === 'spotify'"
-  class="btn-like-list"
-  @click.stop="openLoginModal"
-  title="Faça login para curtir"
->
-  <i class="fa fa-heart-o"></i>
-</button>
-
-<button
-  v-else
-  class="btn-like-list"
-  @click.stop="toggleLikeTrack(track)"
-  :class="{ liked: isTrackLiked(track.id) }"
->
-  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-</button>
+  <button
+                  v-if="!isLogged"
+                  class="btn-like-list"
+                  @click.stop="openLoginModal"
+                  title="Faça login para curtir"
+                >
+                  <i class="fa fa-heart-o"></i>
+                </button>
+                <button
+                  v-else-if="track.source === 'deezer'"
+                  class="btn-like-list disabled"
+                  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
+                  title="Deezer: login necessário"
+                >
+                  <i class="fa fa-heart-o"></i>
+                </button>
+                <button
+                  v-else
+                  class="btn-like-list"
+                  @click.stop="toggleLikeTrack(track)"
+                  :class="{ liked: isTrackLiked(track.id) }"
+                >
+                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                </button>
                 <span v-if="track.duration" class="track-list-duration">{{ formatDuration(track.duration) }}</span>
               </div>
             </div>
@@ -652,23 +667,30 @@
                 </div>
                 <span class="artist-card-name">{{ getResultTitle(artist) }}</span>
                 <span class="artist-card-type">Artista</span>
- <button
-  v-if="isLogged"
-  class="btn-like-artist"
-  @click.stop="toggleFavoriteItem(artist)"
-  :class="{ liked: isArtistFavorited(artist.id) }"
->
-  <i :class="isArtistFavorited(artist.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
-</button>
-
 <button
-  v-else
-  class="btn-like-artist"
-  @click.stop="openLoginModal"
-  title="Faça login para favoritar"
->
-  <i class="fa fa-star-o"></i>
-</button>
+                  v-if="!isLogged"
+                  class="btn-like-artist"
+                  @click.stop="openLoginModal"
+                  title="Faça login para favoritar"
+                >
+                  <i class="fa fa-star-o"></i>
+                </button>
+                <button
+                  v-else-if="artist.source === 'deezer'"
+                  class="btn-like-artist disabled"
+                  @click.stop="showToast('Faça login com Spotify para favoritar', 'info')"
+                  title="Deezer: login necessário"
+                >
+                  <i class="fa fa-star-o"></i>
+                </button>
+                <button
+                  v-else
+                  class="btn-like-artist"
+                  @click.stop="toggleFavoriteItem(artist)"
+                  :class="{ liked: isArtistFavorited(artist.id) }"
+                >
+                  <i :class="isArtistFavorited(artist.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -697,22 +719,29 @@
                 <span class="album-card-name">{{ getResultTitle(album) }}</span>
                 <span class="album-card-artist">{{ getResultSubtitle(album) }}</span>
    <button
-  v-if="isLogged"
-  class="btn-like-album"
-  @click.stop="toggleFavoriteItem(album)"
-  :class="{ liked: isAlbumFavorited(album.id) }"
->
-  <i :class="isAlbumFavorited(album.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
-</button>
-
-<button
-  v-else
-  class="btn-like-album"
-  @click.stop="openLoginModal"
-  title="Faça login para favoritar"
->
-  <i class="fa fa-star-o"></i>
-</button>
+                  v-if="!isLogged"
+                  class="btn-like-album"
+                  @click.stop="openLoginModal"
+                  title="Faça login para favoritar"
+                >
+                  <i class="fa fa-star-o"></i>
+                </button>
+                <button
+                  v-else-if="album.source === 'deezer'"
+                  class="btn-like-album disabled"
+                  @click.stop="showToast('Faça login com Spotify para favoritar', 'info')"
+                  title="Deezer: login necessário"
+                >
+                  <i class="fa fa-star-o"></i>
+                </button>
+                <button
+                  v-else
+                  class="btn-like-album"
+                  @click.stop="toggleFavoriteItem(album)"
+                  :class="{ liked: isAlbumFavorited(album.id) }"
+                >
+                  <i :class="isAlbumFavorited(album.id) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -1209,6 +1238,7 @@ mounted() {
     this.loadInitialData(initialCategory)
   }
 
+        this.checkLoginStatus()
   this.loadLikedTracks()
   this.loadFavoritas()
   this.loadVibes()
@@ -1217,7 +1247,6 @@ mounted() {
   this.loadHistory()
   this.loadLocalizacoes()
       this.loadRecentCategories()
-      this.checkLoginStatus()
 },
 
   beforeUnmount() {
@@ -1756,8 +1785,10 @@ async loadLocalizacoes() {
       return this.favoriteArtists.some(id => String(id) === String(artistId))
     },
 
+// ========== MÉTODO: toggleFavoriteItem ==========
+// SUBSTITUA o método completo (aprox. linha 850) por:
+
 async toggleFavoriteItem(item) {
-  // ADICIONAR NO INÍCIO:
   if (!this.isLogged) {
     this.openLoginModal()
     return
@@ -1765,81 +1796,98 @@ async toggleFavoriteItem(item) {
 
   try {
     const token = localStorage.getItem("token")
+    const itemId = item.id
 
-        const itemId = item.id
-        const isDeezer = item.source === 'deezer'
-        const isLocal = item.source === 'local'
+    // Determina o tipo baseado no item.type
+    let tipo = ''
+    if (item.type === 'album') tipo = 'album'
+    else if (item.type === 'artist') tipo = 'cantor'
+    else {
+      this.showToast("Tipo de item não suportado", "error")
+      return
+    }
 
-        let tipo = ''
-        if (item.type === 'album') tipo = 'album'
-        else if (item.type === 'artist') tipo = 'cantor'
-        else {
-          this.showToast("Tipo de item não suportado", "error")
-          return
-        }
+    // Determina se é externo (Spotify) ou local
+    const source = item.source || 'local'
+    const isExternal = source !== 'local'
 
-        const body = {
-          tipo,
-          source: item.source || 'local'
-        }
+    // Monta o body base
+    const body = {
+      tipo: tipo,
+      source: source,
+      tipoItem: tipo
+    }
 
-        if (isDeezer) {
-          body.source = 'deezer'
-          body.dadosItem = {
-            titulo: item.title || item.name || 'Sem título',
-            artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
-            capa: this.getBestImage(item) || '',
-            previewUrl: item.preview || '',
-            duration: item.duration || 0,
-            ano: item.ano || null,
-            album: item.album?.title || ''
-          }
-        } else if (isLocal) {
-          body.source = 'local'
-        }
-
-        const res = await fetch(`http://localhost:3002/favoritas/${String(itemId)}/favoritar`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        })
-
-        const data = await res.json()
-
-        if (item.type === 'album') {
-          if (data.favorited) {
-            if (!this.favoriteAlbums.includes(String(itemId))) {
-              this.favoriteAlbums.push(String(itemId))
-            }
-            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-          } else {
-            this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
-            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
-          }
-        }
-
-        if (item.type === 'artist') {
-          if (data.favorited) {
-            if (!this.favoriteArtists.includes(String(itemId))) {
-              this.favoriteArtists.push(String(itemId))
-            }
-            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-          } else {
-            this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
-            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
-          }
-        }
-
-        window.dispatchEvent(new Event('favoritas-updated'))
-
-      } catch (err) {
-        console.error("Erro ao favoritar item:", err)
-        this.showToast("Erro ao favoritar item", "error")
+    // Se for externo (Spotify), adiciona os dados do item
+    if (isExternal) {
+      body.dadosItem = {
+        titulo: item.title || item.name || 'Sem título',
+        artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
+        capa: this.getBestImage(item) || '',
+        previewUrl: item.preview || '',
+        duration: item.duration || 0,
+        ano: item.ano || null,
+        album: item.album?.title || ''
       }
-    },
+    }
+
+    const url = `http://localhost:3002/favoritas/${String(itemId)}/favoritar`
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+
+    const contentType = res.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await res.text()
+      console.error('Resposta não-JSON do servidor:', text.substring(0, 200))
+      throw new Error(`Erro ${res.status}: ${res.statusText}`)
+    }
+
+    const data = await res.json()
+
+    // Verifica se houve erro do backend (ex: Deezer bloqueado)
+    if (data.error) {
+      this.showToast(data.message || data.error, "error")
+      return
+    }
+
+    if (item.type === 'album') {
+      if (data.favorited) {
+        if (!this.favoriteAlbums.includes(String(itemId))) {
+          this.favoriteAlbums.push(String(itemId))
+        }
+        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+      } else {
+        this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
+        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+      }
+    }
+
+    if (item.type === 'artist') {
+      if (data.favorited) {
+        if (!this.favoriteArtists.includes(String(itemId))) {
+          this.favoriteArtists.push(String(itemId))
+        }
+        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+      } else {
+        this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
+        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+      }
+    }
+
+    window.dispatchEvent(new Event('favoritas-updated'))
+
+  } catch (err) {
+    console.error("Erro ao favoritar item:", err)
+    this.showToast("Erro ao favoritar item", "error")
+  }
+},
 
  handleResultClick(result) {
   if (result.type === 'track') {
@@ -1891,63 +1939,75 @@ if (result.type === 'local') {
       return this.likedTracks.some(id => String(id) === String(trackId))
     },
    
-   async toggleLikeTrack(track) {
-    if (!this.isLogged) {
-        this.openLoginModal()
-        return
+async toggleLikeTrack(track) {
+  if (!this.isLogged) {
+    this.openLoginModal()
+    return
+  }
+
+  // Bloqueia curtir músicas do Deezer
+  if (track.source === 'deezer') {
+    this.showToast('Faça login com Spotify para curtir', 'info')
+    return
+  }
+
+  try {
+    const trackId = track.id
+    const source = track.source || 'local'
+    const isExternal = source !== 'local'
+
+    const body = {
+      source: source
     }
 
-    try {
-        const trackId = track.id
-        const body = { source: track.source || 'local' }
-
-        if (track.source === 'deezer' || track.source === 'spotify') {
-            body.dadosMusica = {
-                titulo: track.title || 'Sem título',
-                artista: track.artist?.name || 'Desconhecido',
-                capa: this.getBestImage(track) || '',
-                previewUrl: track.preview || '',
-                duration: track.duration || 30,
-                ano: track.ano || null,
-                album: track.album?.title || ''
-            }
-        }
-
-        const res = await fetch(
-            `http://localhost:3002/curtidas/${trackId}`,
-            {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,  // ← ADICIONAR
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(body)
-            }
-        )
-
-        if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}))
-            console.error('Erro da API:', errorData)
-            this.showToast(errorData.error || `Erro ${res.status}`, "error")
-            return
-        }
-
-        const data = await res.json()
-
-        if (data.liked) {
-            if (!this.likedTracks.includes(String(trackId))) {
-                this.likedTracks.push(String(trackId))
-            }
-            this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
-        } else {
-            this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
-            this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
-        }
-
-    } catch (err) {
-        console.error("Erro ao curtir música:", err)
-        this.showToast("Erro ao processar curtida", "error")
+    // Se for externo (Spotify), adiciona os dados da música
+    if (isExternal) {
+      body.dadosMusica = {
+        titulo: track.title || 'Sem título',
+        artista: track.artist?.name || 'Desconhecido',
+        capa: this.getBestImage(track) || '',
+        previewUrl: track.preview || '',
+        duration: track.duration || 30,
+        ano: track.ano || null,
+        album: track.album?.title || ''
+      }
     }
+
+    const res = await fetch(
+      `http://localhost:3002/curtidas/${trackId}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      }
+    )
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}))
+      console.error('Erro da API:', errorData)
+      this.showToast(errorData.error || errorData.message || `Erro ${res.status}`, "error")
+      return
+    }
+
+    const data = await res.json()
+
+    if (data.liked) {
+      if (!this.likedTracks.includes(String(trackId))) {
+        this.likedTracks.push(String(trackId))
+      }
+      this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+    } else {
+      this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
+      this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
+    }
+
+  } catch (err) {
+    console.error("Erro ao curtir música:", err)
+    this.showToast("Erro ao processar curtida", "error")
+  }
 },
    
     formatDuration(seconds) {
@@ -4166,7 +4226,23 @@ html, body, #app {
   color: #555;
   font-weight: 400;
 }
+.btn-like-artist.disabled,
+.btn-like-album.disabled,
+.btn-like-list.disabled,
+.btn-like-track.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
 
+.btn-like-artist.disabled:hover,
+.btn-like-album.disabled:hover,
+.btn-like-list.disabled:hover,
+.btn-like-track.disabled:hover {
+  transform: none;
+  background: rgba(0,0,0,0.7);
+  color: #888;
+}
 .clear-search {
   width: 22px;
   height: 22px;

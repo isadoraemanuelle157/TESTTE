@@ -1,8 +1,67 @@
+// ============================================
+// favoritaService.js — AJUSTADO E COMPLETO
+// ============================================
+
 const Favorita = require('../models/Favorita')
 const FavoritaExterna = require('../models/FavoritaExterna')
 const mongoose = require('mongoose')
 
-// ========== FAVORITAS LOCAIS ==========
+// ============================================
+// 🔍 HELPERS DE BUSCA
+// ============================================
+
+/**
+ * Busca favorita externa (Spotify) pelo ID + source + tipo
+ */
+const findFavoritaExterna = async (usuarioId, itemId, source, tipoItem) => {
+  const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId)
+    ? new mongoose.Types.ObjectId(usuarioId)
+    : usuarioId
+
+  // Busca exata primeiro (com tipoItem)
+  let existing = await FavoritaExterna.findOne({
+    usuario: userObjectId,
+    itemId: String(itemId),
+    source: String(source).toLowerCase(),
+    tipoItem: String(tipoItem).toLowerCase()
+  })
+
+  // Fallback: documentos antigos sem tipoItem (só se não achou com tipoItem)
+  if (!existing) {
+    existing = await FavoritaExterna.findOne({
+      usuario: userObjectId,
+      itemId: String(itemId),
+      source: String(source).toLowerCase(),
+      tipoItem: { $exists: false }
+    })
+  }
+
+  return existing
+}
+
+/**
+ * Busca favorita local pelo ID + tipo
+ */
+const findFavoritaLocal = async (usuarioId, itemId, tipo) => {
+  const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId)
+    ? new mongoose.Types.ObjectId(usuarioId)
+    : usuarioId
+
+  const query = { usuario: userObjectId }
+
+  if (tipo === 'musica') query.musica = itemId
+  else if (tipo === 'album') query.album = itemId
+  else if (tipo === 'cantor') query.cantor = itemId
+  else if (tipo === 'playlist') query.playlist = itemId
+  else return null
+
+  return await Favorita.findOne(query)
+}
+
+// ============================================
+// 🏠 FAVORITAS LOCAIS (MongoDB)
+// ============================================
+
 const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantorId }) => {
   const hasValidId = musicaId || playlistId || albumId || cantorId
   
@@ -39,7 +98,10 @@ const toggleFavorita = async (usuarioId, { musicaId, playlistId, albumId, cantor
   return { favorited: true }
 }
 
-// ========== FAVORITAS EXTERNAS ==========
+// ============================================
+// 🌐 FAVORITAS EXTERNAS (Spotify)
+// ============================================
+
 const toggleFavoritaExterna = async (usuarioId, itemId, source, tipoItem, dadosItem, options = {}) => {
   try {
     const acao = options.acao || 'toggle'
@@ -58,36 +120,28 @@ const toggleFavoritaExterna = async (usuarioId, itemId, source, tipoItem, dadosI
     console.log('source:', sourceNormalizado)
     console.log('tipoItem:', tipoNormalizado)
     console.log('acao:', acao)
+    console.log('dadosItem:', dadosItem ? 'presente' : 'ausente')
 
-    // busca exata
-    let existing = await FavoritaExterna.findOne({
-      usuario: userObjectId,
-      itemId: idExterno,
-      source: sourceNormalizado,
-      tipoItem: tipoNormalizado
-    })
+    // Busca existente (usando helper)
+    let existing = await findFavoritaExterna(
+      userObjectId,
+      idExterno,
+      sourceNormalizado,
+      tipoNormalizado
+    )
 
-    // fallback para documentos legados sem tipoItem
-    if (!existing) {
-      existing = await FavoritaExterna.findOne({
-        usuario: userObjectId,
-        itemId: idExterno,
-        source: sourceNormalizado,
-        $or: [
-          { tipoItem: tipoNormalizado },
-          { tipoItem: { $exists: false } },
-          { tipoItem: null }
-        ]
-      })
-    }
-
+    // Se existe → remove (toggle off)
     if (existing) {
       await existing.deleteOne()
       console.log('✅ FavoritaExterna REMOVIDA:', existing._id)
-      return { favorited: false, source: sourceNormalizado, tipoItem: tipoNormalizado }
+      return { 
+        favorited: false, 
+        source: sourceNormalizado, 
+        tipoItem: tipoNormalizado 
+      }
     }
 
-    // se a intenção era remover, nunca cria
+    // Se a intenção era remover e não achou → retorna não favoritado
     if (acao === 'remover') {
       console.log('⚠️ Item externo não encontrado para remover')
       return {
@@ -98,11 +152,12 @@ const toggleFavoritaExterna = async (usuarioId, itemId, source, tipoItem, dadosI
       }
     }
 
-    // criação só acontece se realmente for favoritar/toggle
+    // Criação: precisa de dados do item
     if (!dadosItem || (!dadosItem.titulo && !dadosItem.nome)) {
-      throw new Error('Dados do item são obrigatórios para criar nova favorita externa')
+      throw new Error('Dados do item são obrigatórios para criar nova favorita externa. Envie: titulo/nome, artista, capa')
     }
 
+    // Normaliza dados do item
     const dadosPadrao = {
       titulo: dadosItem.titulo || dadosItem.nome || 'Sem título',
       artista: dadosItem.artista || dadosItem.artistaNome || 'Artista Desconhecido',
@@ -121,15 +176,23 @@ const toggleFavoritaExterna = async (usuarioId, itemId, source, tipoItem, dadosI
       dadosItem: dadosPadrao
     })
 
-    console.log('✅ FavoritaExterna criada:', novoDoc._id)
+    console.log('✅ FavoritaExterna CRIADA:', novoDoc._id)
 
-    return { favorited: true, source: sourceNormalizado, tipoItem: tipoNormalizado }
+    return { 
+      favorited: true, 
+      source: sourceNormalizado, 
+      tipoItem: tipoNormalizado 
+    }
+
   } catch (err) {
-    console.error('Erro em toggleFavoritaExterna:', err)
+    console.error('❌ Erro em toggleFavoritaExterna:', err)
     throw err
   }
 }
 
+// ============================================
+// 📋 LISTAR FAVORITAS DO USUÁRIO
+// ============================================
 
 const getFavoritasByUser = async (usuarioId) => {
   const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId) 
@@ -137,6 +200,7 @@ const getFavoritasByUser = async (usuarioId) => {
     : usuarioId
 
   const [locais, externas] = await Promise.all([
+    // Favoritas locais com populate
     Favorita.find({ usuario: userObjectId })
       .populate({
         path: 'musica',
@@ -150,20 +214,30 @@ const getFavoritasByUser = async (usuarioId) => {
       .populate('cantor')
       .sort({ createdAt: -1 }),
     
+    // Favoritas externas (Spotify)
     FavoritaExterna.find({ usuario: userObjectId })
       .sort({ createdAt: -1 })
   ])
 
-  const externasFormatadas = externas.map(f => {
+  // Filtra apenas Spotify (ignora Deezer se houver legado)
+  const externasSpotify = externas.filter(f => {
+    const s = String(f.source || '').toLowerCase()
+    return s === 'spotify'
+  })
+    
+  // Formata externas para o mesmo formato das locais
+  const externasFormatadas = externasSpotify.map(f => {
     const tipo = f.tipoItem || 'musica'
     
     return {
       _id: f._id,
       usuario: f.usuario,
+      // Campos locais (null para externos)
       musica: null,
       playlist: null,
       album: null,
       cantor: null,
+      // Campos externos
       musicaExterna: tipo === 'musica' ? {
         id: f.itemId,
         source: f.source,
@@ -195,14 +269,26 @@ const getFavoritasByUser = async (usuarioId) => {
     }
   })
 
+  // Junta tudo e ordena por data
   const todas = [...locais, ...externasFormatadas]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
   return todas
 }
 
+// ============================================
+// 📤 EXPORTS
+// ============================================
+
 module.exports = {
+  // Favoritas locais
   toggleFavorita,
+  findFavoritaLocal,
+  
+  // Favoritas externas (Spotify)
   toggleFavoritaExterna,
+  findFavoritaExterna,
+  
+  // Listagem
   getFavoritasByUser
 }

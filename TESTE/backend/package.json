@@ -11,6 +11,7 @@
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "genius-lyrics-api": "^3.2.1",
     "jsonwebtoken": "^9.0.3",
     "moongose": "^1.0.0",
     "vue": "^3.0.0"

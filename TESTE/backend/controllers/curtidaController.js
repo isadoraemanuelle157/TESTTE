@@ -7,10 +7,9 @@ const mongoose = require('mongoose')
 const getMinhasCurtidas = async (req, res) => {
   try {
     const userId = req.user.id
-     const userObjectId = new mongoose.Types.ObjectId(userId)
+    const userObjectId = new mongoose.Types.ObjectId(userId)
 
-    const { locais, externas } = await curtidaService.getTodasCurtidas(userId)
-
+    const { locais, externas } = await curtidaService.getTodasCurtidas(userObjectId)
     // Formata curtidas locais
     const musicasLocais = locais.map(c => ({
       id: String(c.musica?._id || c.musica?.id),
@@ -162,15 +161,20 @@ const listarCurtidasPublicas = async (req, res) => {
   try {
     const { id } = req.params
     
+    // 🔥 CONVERTE id PARA OBJECTID
+    const userOid = mongoose.Types.ObjectId.isValid(id)
+      ? new mongoose.Types.ObjectId(id)
+      : id
+    
     const [locais, externas] = await Promise.all([
-      Curtida.find({ usuario: id })
+      Curtida.find({ usuario: userOid })       // ✅ ObjectId
         .populate({
           path: 'musica',
           populate: { path: 'cantores', select: 'nome' }
         })
         .sort({ createdAt: -1 })
         .limit(50),
-      CurtidaExterna.find({ usuario: id })
+       CurtidaExterna.find({ usuario: userOid }) // ✅ ObjectId
         .sort({ createdAt: -1 })
         .limit(50)
     ])

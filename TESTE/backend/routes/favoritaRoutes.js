@@ -1,19 +1,30 @@
+// ============================================
+// favoritaRoutes.js — AJUSTADO E COMPLETO
+// ============================================
+
 const express = require('express')
 const router = express.Router()
-const { requireAuth, optionalAuth } = require('../middleware/auth') // ← MUDAR
+const { requireAuth, optionalAuth } = require('../middleware/auth')
 const favoritaController = require('../controllers/favoritaController')
 
 // ============================================
-// ⭐ FAVORITAS — REQUER LOGIN (Spotify/Banco)
+// ⭐ ROTAS PROTEGIDAS (requer login)
 // ============================================
 
-// Toggle favoritar — SÓ COM LOGIN
+// Toggle favoritar/descurtir — SÓ COM LOGIN
+// POST /favoritas/:id/favoritar
 router.post('/:id/favoritar', requireAuth, favoritaController.toggle)
 
 // Listar minhas favoritas — SÓ COM LOGIN
+// GET /favoritas/
 router.get('/', requireAuth, favoritaController.getMinhasFavoritas)
 
-// Verificar se item está favoritado — COM LOGIN (retorna false se deslogado)
-router.get('/:id/is-favorita', optionalAuth, favoritaController.isFavorita) // ← ADICIONAR
+// ============================================
+// 🔍 ROTA PÚBLICA (opcional, para verificar estado)
+// ============================================
+
+// Verificar se item está favoritado — funciona logado ou não
+// GET /favoritas/:id/is-favorita?tipo=musica&source=spotify
+router.get('/:id/is-favorita', optionalAuth, favoritaController.isFavorita)
 
 module.exports = router

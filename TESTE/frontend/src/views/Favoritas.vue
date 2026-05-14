@@ -464,14 +464,17 @@ async carregarFavoritas() {
     const data = await res.json()
 
           this.favoritas = data
-      .filter(f => {
-        // Verifica se é Spotify ou Local (ignora Deezer)
-        const source = f.musicaExterna?.source || 
-                      f.albumExterno?.source || 
-                      f.cantorExterno?.source || 
-                      'local'
-        return source === 'spotify' || source === 'local'
-      })
+.filter(f => {
+  // Determina a source correta
+  let source = 'local'
+  if (f.musicaExterna?.source) source = f.musicaExterna.source
+  else if (f.albumExterno?.source) source = f.albumExterno.source
+  else if (f.cantorExterno?.source) source = f.cantorExterno.source
+  
+  // Só exibe Spotify e Local (não Deezer)
+  const sourceLower = String(source).toLowerCase()
+  return sourceLower === 'spotify' || sourceLower === 'local'
+})
 .map(f => {
           // ========== MÚSICA EXTERNA ==========
           if (f.musicaExterna) {

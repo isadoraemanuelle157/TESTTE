@@ -35,11 +35,15 @@ const countCurtidas = async (playlistId) => {
 
 // ========== CURTIDAS EXTERNAS (Spotify/Deezer) ==========
 const toggleCurtidaExterna = async (usuarioId, musicaId, source, dadosMusica) => {
-  // Garante que musicaId seja string
+  // 🔥 CONVERTE usuarioId PARA OBJECTID
+  const userOid = mongoose.Types.ObjectId.isValid(usuarioId)
+    ? new mongoose.Types.ObjectId(usuarioId)
+    : usuarioId
+
   const idExterno = String(musicaId)
 
   const existing = await CurtidaExterna.findOne({
-    usuario: usuarioId,
+    usuario: userOid,          // ✅ ObjectId consistente
     musicaId: idExterno,
     source: source
   })
@@ -50,8 +54,8 @@ const toggleCurtidaExterna = async (usuarioId, musicaId, source, dadosMusica) =>
   }
 
   await CurtidaExterna.create({
-    usuario: usuarioId,
-    musicaId: idExterno,  // <-- Sempre string
+    usuario: userOid,          // ✅ ObjectId consistente
+    musicaId: idExterno,
     source: source,
     dadosMusica: {
       titulo: dadosMusica.titulo,
@@ -73,14 +77,14 @@ const getTodasCurtidas = async (usuarioId) => {
     ? new mongoose.Types.ObjectId(usuarioId) 
     : usuarioId
     
-  const [locais, externas] = await Promise.all([
-    Curtida.find({ usuario: usuarioId })
+ const [locais, externas] = await Promise.all([
+    Curtida.find({ usuario: userOid })              // ✅ usa userOid (ObjectId)
       .populate({
         path: 'musica',
         populate: { path: 'cantores', select: 'nome' }
       })
       .sort({ createdAt: -1 }),
-    CurtidaExterna.find({ usuario: usuarioId }).sort({ createdAt: -1 })
+  CurtidaExterna.find({ usuario: userOid })       // ✅ usa userOid (ObjectId)
   ])
 
   return { locais, externas }

@@ -58,6 +58,7 @@ function safeRequire(path) {
 const { requireAuth, optionalAuth } = require('./middleware/auth')
 const { spotifyRequest, isTokenValid } = require('./utils/spotifyRequest')
 const cache = require('./utils/cache')
+const { checkChatLimit } = require('./middleware/chatLimit')
 
 const usuarioRoutes = safeRequire('./routes/usuarioRoutes')
 const musicaRoutes = safeRequire('./routes/musicaRoutes')
