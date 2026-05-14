@@ -76,6 +76,7 @@ const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
 const deezerRoutes = safeRequire('./routes/deezerRoutes')
 const locaisRoutes = safeRequire('./routes/locaisRoutes')
 const spotifyRoutes = safeRequire('./routes/spotifyRoutes')
+const geniusRoutes = require('./routes/geniusRoutes')
 
 // ============================================
 // 📌 ROTAS APP
@@ -97,6 +98,59 @@ app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)
 app.use('/deezer', deezerRoutes)
 app.use('/locais', locaisRoutes)
+app.use('/genius', geniusRoutes)
+
+app.post('/chat/message', checkChatLimit, async (req, res) => {
+  try {
+    const { message, context } = req.body
+    
+    // Aqui integraria com OpenAI/Claude/etc
+    // Por enquanto, simula resposta inteligente
+    
+    const isLyricSearch = detectLyricSearch(message)
+    let response
+    
+    if (isLyricSearch) {
+      // Buscar no Genius
+      const geniusResults = await searchGenius(message)
+      response = {
+        type: 'lyric_search',
+        content: `Encontrei essas músicas com trechos similares:`,
+        songs: geniusResults
+      }
+    } else {
+      response = {
+        type: 'general',
+        content: generateAIResponse(message, context)
+      }
+    }
+
+    res.json({
+      ...response,
+      chatInfo: req.chatInfo // Informações do limite
+    })
+
+  } catch (error) {
+    res.status(500).json({ error: 'Erro no chat' })
+  }
+})
+
+// Rota para verificar limite atual
+app.get('/chat/limit', (req, res) => {
+  const { getChatCount, CHAT_LIMIT } = require('./middleware/chatLimit')
+  const clientIp = req.ip || req.connection.remoteAddress || 'unknown'
+  
+  const used = getChatCount(clientIp)
+  const isAuthenticated = !!(req.user && req.user.id)
+  
+  res.json({
+    limit: CHAT_LIMIT,
+    used: isAuthenticated ? 0 : used,
+    remaining: isAuthenticated ? 'unlimited' : Math.max(0, CHAT_LIMIT - used),
+    isAuthenticated,
+    blocked: !isAuthenticated && used >= CHAT_LIMIT
+  })
+})
 
 // ============================================
 // 🎵 DEEZER SEARCH

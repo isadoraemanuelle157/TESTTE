@@ -7,33 +7,96 @@
       <div class="blob blob-3"></div>
     </div>
 
+    <!-- Overlay de Login Obrigatório -->
+    <Transition name="fade">
+      <div v-if="showLoginOverlay" class="login-overlay" @click.self="showLoginOverlay = false">
+        <div class="login-modal">
+          <div class="login-icon">🔒</div>
+          <h2>Limite Atingido</h2>
+          <p>Você usou {{ chatLimit.used }} de {{ chatLimit.limit }} mensagens gratuitas.</p>
+          <p class="login-sub">Faça login para continuar usando o chat ilimitado!</p>
+          <div class="login-actions">
+            <button class="btn-login" @click="redirectToLogin">
+              Fazer Login
+            </button>
+            <button class="btn-register" @click="redirectToRegister">
+              Criar Conta
+            </button>
+          </div>
+          <button class="btn-close" @click="showLoginOverlay = false">✕</button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Modal do Player Expandido -->
+    <Transition name="fade">
+      <div v-if="showFullPlayer" class="full-player-overlay" @click.self="showFullPlayer = false">
+        <div class="full-player">
+          <button class="close-full-player" @click="showFullPlayer = false">✕</button>
+          <div class="full-player-content">
+            <div class="full-cover" :style="{ background: currentTrack?.color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
+              <span class="full-cover-emoji">{{ currentTrack?.emoji || '🎵' }}</span>
+              <img v-if="currentTrack?.cover" :src="currentTrack.cover" :alt="currentTrack.title" class="full-cover-img" @error="handleImgError">
+            </div>
+            <div class="full-track-info">
+              <h2>{{ currentTrack?.title || 'Selecione uma música' }}</h2>
+              <p>{{ currentTrack?.artist || 'Assistente Musical' }}</p>
+            </div>
+            <div class="full-progress">
+              <span class="time-current">{{ formatDuration(currentTime) }}</span>
+              <div class="progress-bar" @click="seekTo($event)">
+                <div class="progress-fill" :style="{ width: (duration ? (currentTime / duration * 100) : 0) + '%' }"></div>
+                <div class="progress-handle" :style="{ left: (duration ? (currentTime / duration * 100) : 0) + '%' }"></div>
+              </div>
+              <span class="time-duration">{{ formatDuration(duration) }}</span>
+            </div>
+            <div class="full-controls">
+              <button @click="prevTrack" :disabled="!canPrev">⏮</button>
+              <button class="main-control" @click="togglePlay">
+                {{ isPlaying ? '⏸' : '▶️' }}
+              </button>
+              <button @click="nextTrack" :disabled="!canNext">⏭</button>
+            </div>
+            <div class="full-volume">
+              <span>🔊</span>
+              <input type="range" min="0" max="1" step="0.01" v-model="volume" @input="updateVolume">
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Layout Principal -->
     <div class="main-layout">
       <!-- Sidebar -->
-      <aside class="sidebar">
+      <aside class="sidebar" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
         <div class="logo">
           <div class="logo-icon">🎵</div>
           <h1>MusicAI</h1>
+          <button class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
+            {{ sidebarCollapsed ? '→' : '←' }}
+          </button>
         </div>
 
         <nav class="nav-menu">
-          <div 
-            v-for="item in navItems" 
+          <div
+            v-for="item in navItems"
             :key="item.id"
             class="nav-item"
             :class="{ active: activeNav === item.id }"
-            @click="activeNav = item.id"
+            @click="handleNavClick(item)"
           >
             <span class="nav-icon">{{ item.icon }}</span>
-            <span>{{ item.label }}</span>
+            <span class="nav-label">{{ item.label }}</span>
+            <span v-if="item.id === 'favorites' && favorites.size > 0" class="nav-badge">{{ favorites.size }}</span>
           </div>
         </nav>
 
         <div class="genre-section">
           <h3>Gêneros Populares</h3>
           <div class="genre-tags">
-            <span 
-              v-for="genre in availableGenres" 
+            <span
+              v-for="genre in availableGenres"
               :key="genre"
               class="genre-tag"
               :class="{ active: selectedGenre === genre }"
@@ -44,26 +107,77 @@
           </div>
         </div>
 
-        <div class="now-playing" v-if="currentTrack">
+        <!-- Widget de Limite -->
+        <div v-if="!isAuthenticated" class="limit-widget">
+          <div class="limit-header">
+            <span class="limit-label">Mensagens Grátis</span>
+            <span class="limit-badge" :class="{ warning: chatLimit.remaining <= 2, danger: chatLimit.remaining === 0 }">
+              {{ chatLimit.remaining }}/{{ chatLimit.limit }}
+            </span>
+          </div>
+          <div class="limit-bar">
+            <div class="limit-progress" :style="{ width: (chatLimit.used / chatLimit.limit * 100) + '%' }"></div>
+          </div>
+          <p v-if="chatLimit.remaining === 0" class="limit-text danger">
+            Faça login para continuar!
+          </p>
+        </div>
+
+        <!-- Playlist Atual -->
+        <div v-if="currentPlaylist.length > 0" class="playlist-widget">
+          <div class="playlist-header">
+            <span class="playlist-label">Fila de Reprodução</span>
+            <span class="playlist-count">{{ currentPlaylist.length }} músicas</span>
+          </div>
+          <div class="playlist-tracks">
+            <div
+              v-for="(track, index) in currentPlaylist.slice(0, 5)"
+              :key="track.id"
+              class="playlist-track"
+              :class="{ active: currentTrack?.id === track.id }"
+              @click="playTrackAtIndex(index)"
+            >
+              <span class="pl-number">{{ index + 1 }}</span>
+              <span class="pl-title">{{ track.title }}</span>
+              <span class="pl-artist">{{ track.artist }}</span>
+            </div>
+            <div v-if="currentPlaylist.length > 5" class="playlist-more">
+              +{{ currentPlaylist.length - 5 }} mais...
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini Now Playing -->
+        <div class="now-playing" v-if="currentTrack" @click="showFullPlayer = true">
           <div class="np-header">
             <span class="np-label">Tocando Agora</span>
-            <div class="np-wave">
+            <div class="np-wave" v-if="isPlaying">
               <span v-for="i in 4" :key="i" class="wave-bar"></span>
             </div>
           </div>
           <div class="np-track">
-            <div class="np-cover">🎵</div>
+            <div class="np-cover">
+              <img v-if="currentTrack.cover" :src="currentTrack.cover" :alt="currentTrack.title" @error="handleImgError">
+              <div v-else class="cover-placeholder-mini" :style="{ background: currentTrack.color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
+                <span>{{ currentTrack.emoji || currentTrack.title?.charAt(0) || '🎵' }}</span>
+              </div>
+            </div>
             <div class="np-info">
               <h4>{{ currentTrack.title }}</h4>
               <p>{{ currentTrack.artist }}</p>
             </div>
           </div>
           <div class="np-controls">
-            <button @click="prevTrack">⏮</button>
-            <button class="play-pause" @click="togglePlay">
+            <button @click.stop="prevTrack">⏮</button>
+            <button class="play-pause" @click.stop="togglePlay">
               {{ isPlaying ? '⏸' : '▶️' }}
             </button>
-            <button @click="nextTrack">⏭</button>
+            <button @click.stop="nextTrack">⏭</button>
+          </div>
+          <div class="np-progress-mini">
+            <div class="np-progress-bar">
+              <div class="np-progress-fill" :style="{ width: (duration ? (currentTime / duration * 100) : 0) + '%' }"></div>
+            </div>
           </div>
         </div>
       </aside>
@@ -75,24 +189,48 @@
           <div class="header-info">
             <div class="ai-avatar">
               <span>🤖</span>
-              <div class="status-indicator"></div>
+              <div class="status-indicator" :class="{ offline: !isOnline }"></div>
             </div>
             <div class="header-text">
               <h2>Assistente Musical</h2>
-              <p>{{ isTyping ? 'Digitando...' : 'Online • Pronto para ajudar' }}</p>
+              <p>{{ isTyping ? 'Digitando...' : isOnline ? (isAuthenticated ? 'Online • Pronto para ajudar' : `Online • ${chatLimit.remaining} mensagens restantes`) : 'Offline' }}</p>
             </div>
           </div>
           <div class="header-actions">
             <button class="icon-btn" @click="clearChat" title="Limpar conversa">🗑️</button>
-            <button class="icon-btn" title="Configurações">⚙️</button>
+            <button class="icon-btn" @click="showSettings = !showSettings" title="Configurações">⚙️</button>
+            <button v-if="!isAuthenticated" class="icon-btn login-btn" @click="redirectToLogin" title="Login">👤</button>
+            <button v-else class="icon-btn logout-btn" @click="logout" title="Sair">🚪</button>
           </div>
         </header>
+
+        <!-- Settings Panel -->
+        <Transition name="slide-down">
+          <div v-if="showSettings" class="settings-panel">
+            <div class="setting-item">
+              <span>Modo Escuro</span>
+              <button class="toggle-btn active">🌙</button>
+            </div>
+            <div class="setting-item">
+              <span>Notificações</span>
+              <button class="toggle-btn active">🔔</button>
+            </div>
+            <div class="setting-item">
+              <span>Qualidade do Áudio</span>
+              <select v-model="audioQuality">
+                <option value="low">Econômica</option>
+                <option value="medium">Padrão</option>
+                <option value="high">Alta</option>
+              </select>
+            </div>
+          </div>
+        </Transition>
 
         <!-- Mensagens -->
         <div class="chat-container" ref="chatContainer">
           <TransitionGroup name="message">
-            <div 
-              v-for="message in messages" 
+            <div
+              v-for="message in messages"
               :key="message.id"
               class="message-wrapper"
               :class="message.type"
@@ -101,10 +239,45 @@
                 <div class="message-avatar" v-if="message.type === 'ai'">
                   <span>🎵</span>
                 </div>
-                
+                <div v-else class="message-avatar user-avatar">
+                  <span>{{ userInitials }}</span>
+                </div>
+               
                 <div class="message-content">
-                  <p class="message-text">{{ message.content }}</p>
-                  
+                  <p class="message-text" v-html="formatMessage(message.content)"></p>
+                 
+                  <!-- Card de Resultados de Letra -->
+                  <div v-if="message.lyricResults && message.lyricResults.length > 0" class="lyric-results-card">
+                    <div class="lyric-header">
+                      <span class="lyric-badge">🔍 Resultados da busca</span>
+                      <span class="lyric-query">"{{ message.lyricQuery }}"</span>
+                    </div>
+                    <div class="lyric-songs">
+                      <div
+                        v-for="(song, index) in message.lyricResults"
+                        :key="song.id"
+                        class="lyric-song-item"
+                        @click="playTrackFromLyrics(song)"
+                      >
+                        <div class="lyric-number">{{ index + 1 }}</div>
+                        <div class="lyric-cover">
+                          <img v-if="song.albumArt" :src="song.albumArt" :alt="song.title" @error="handleImgError">
+                          <div v-else class="cover-placeholder" :style="{ background: getRandomGradient(index) }">
+                            <span>{{ song.title?.charAt(0) || '🎵' }}</span>
+                          </div>
+                        </div>
+                        <div class="lyric-meta">
+                          <h4>{{ song.title }}</h4>
+                          <p>{{ song.artist }}</p>
+                          <div v-if="song.lyrics" class="lyric-preview">
+                            "{{ song.lyrics.substring(0, 80) }}..."
+                          </div>
+                        </div>
+                        <button class="lyric-play-btn" @click.stop="playTrackFromLyrics(song)">▶️</button>
+                      </div>
+                    </div>
+                  </div>
+                 
                   <!-- Card de Recomendações -->
                   <div v-if="message.recommendations" class="recommendations-card">
                     <div class="rec-header">
@@ -112,17 +285,17 @@
                         <span class="rec-genre">{{ message.recommendations.genre }}</span>
                         <span class="rec-badge">{{ message.recommendations.tracks.length }} músicas</span>
                       </div>
-                      <button 
+                      <button
                         class="play-all-btn"
                         @click="playAll(message.recommendations.tracks)"
                       >
                         ▶️ Tocar todas
                       </button>
                     </div>
-                    
+                   
                     <div class="tracks-list">
-                      <div 
-                        v-for="(track, index) in message.recommendations.tracks" 
+                      <div
+                        v-for="(track, index) in message.recommendations.tracks"
                         :key="track.id"
                         class="track-item"
                         :class="{ playing: currentTrack?.id === track.id && isPlaying }"
@@ -133,7 +306,8 @@
                           <span v-else>{{ index + 1 }}</span>
                         </div>
                         <div class="track-cover">
-                          <div class="cover-art" :style="{ background: track.color }">
+                          <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
+                          <div v-else class="cover-art" :style="{ background: track.color }">
                             <span>{{ track.emoji }}</span>
                           </div>
                           <div class="play-overlay">
@@ -142,11 +316,11 @@
                         </div>
                         <div class="track-meta">
                           <h4>{{ track.title }}</h4>
-                          <p>{{ track.artist }} • {{ track.album }}</p>
+                          <p>{{ track.artist }} <span v-if="track.album">• {{ track.album }}</span></p>
                         </div>
                         <div class="track-actions">
                           <span class="duration">{{ track.duration }}</span>
-                          <button 
+                          <button
                             class="action-btn"
                             @click.stop="toggleFavorite(track)"
                             :class="{ active: isFavorite(track) }"
@@ -159,12 +333,12 @@
                         </div>
                       </div>
                     </div>
-                    
-                    <div class="artists-section" v-if="message.recommendations.artists.length">
+                   
+                    <div class="artists-section" v-if="message.recommendations.artists && message.recommendations.artists.length">
                       <p class="section-title">Artistas relacionados</p>
                       <div class="artists-chips">
-                        <span 
-                          v-for="artist in message.recommendations.artists" 
+                        <span
+                          v-for="artist in message.recommendations.artists"
                           :key="artist"
                           class="artist-chip"
                           @click="askAboutArtist(artist)"
@@ -174,11 +348,11 @@
                       </div>
                     </div>
 
-                    <div class="albums-section" v-if="message.recommendations.albums?.length">
+                    <div class="albums-section" v-if="message.recommendations.albums && message.recommendations.albums.length">
                       <p class="section-title">Álbuns recomendados</p>
                       <div class="albums-grid">
-                        <div 
-                          v-for="album in message.recommendations.albums" 
+                        <div
+                          v-for="album in message.recommendations.albums"
                           :key="album.name"
                           class="album-card"
                           @click="askAboutAlbum(album)"
@@ -194,7 +368,7 @@
                       </div>
                     </div>
                   </div>
-                  
+                 
                   <span class="message-time">{{ formatTime(message.timestamp) }}</span>
                 </div>
               </div>
@@ -215,8 +389,8 @@
         <div class="quick-questions" v-if="showQuickQuestions">
           <p class="quick-label">Comece por aqui:</p>
           <div class="quick-chips">
-            <button 
-              v-for="question in quickQuestions" 
+            <button
+              v-for="question in quickQuestions"
               :key="question.text"
               class="quick-chip"
               @click="handleQuickQuestion(question)"
@@ -229,39 +403,44 @@
 
         <!-- Área de Input -->
         <div class="input-wrapper">
-          <div class="input-container">
-            <button class="input-action" title="Anexar">📎</button>
-            <input 
+          <div v-if="!isAuthenticated && chatLimit.remaining === 0" class="input-blocked">
+            <p>🔒 Limite de mensagens atingido. <button @click="redirectToLogin">Faça login</button> para continuar.</p>
+          </div>
+          <div v-else class="input-container">
+            <button class="input-action" title="Anexar" @click="showAttachMenu = !showAttachMenu">📎</button>
+            <input
               v-model="inputMessage"
               @keyup.enter="sendMessage"
-              type="text" 
-              placeholder="Digite um gênero, artista, álbum ou como você está se sentindo..."
+              type="text"
+              :placeholder="getPlaceholder()"
               class="message-input"
               ref="inputRef"
+              :disabled="isTyping || (!isAuthenticated && chatLimit.remaining === 0)"
             />
-            <button 
+            <button
               v-if="inputMessage"
               class="input-action clear"
               @click="inputMessage = ''"
               title="Limpar"
             >✕</button>
-            <button 
-              class="send-btn" 
+            <button
+              class="send-btn"
               :class="{ active: canSend, loading: isTyping }"
               @click="sendMessage"
-              :disabled="!canSend || isTyping"
+              :disabled="!canSend || isTyping || (!isAuthenticated && chatLimit.remaining === 0)"
             >
               <span v-if="!isTyping">➤</span>
               <span v-else class="spinner">⟳</span>
             </button>
           </div>
           <p class="input-hint">
-            <span class="hint-tag">Pop</span>
-            <span class="hint-tag">Rock</span>
-            <span class="hint-tag">Jazz</span>
-            <span class="hint-tag">Para treinar</span>
-            <span class="hint-tag">Relaxar</span>
-            <span class="hint-tag">Anos 80</span>
+            <span class="hint-tag" @click="inputMessage = 'quem canta '" title="Buscar artista">🎤 Artista</span>
+            <span class="hint-tag" @click="inputMessage = 'letra de '" title="Buscar letra">📝 Letra</span>
+            <span class="hint-tag" @click="inputMessage = 'álbum '" title="Buscar álbum">💿 Álbum</span>
+            <span class="hint-tag" @click="inputMessage = 'quando lançou '" title="Data de lançamento">📅 Lançamento</span>
+            <span class="hint-tag" @click="inputMessage = 'curiosidade '" title="Curiosidades">💡 Curiosidade</span>
+            <span class="hint-tag" @click="inputMessage = 'pop'">Pop</span>
+            <span class="hint-tag" @click="inputMessage = 'rock'">Rock</span>
           </p>
         </div>
       </main>
@@ -273,21 +452,34 @@
         <span>{{ toast.message }}</span>
       </div>
     </Transition>
+
+    <!-- Audio Element -->
+    <audio
+      ref="audioPlayer"
+      :src="currentTrack?.url"
+      @timeupdate="onTimeUpdate"
+      @ended="onTrackEnded"
+      @loadedmetadata="onLoadedMetadata"
+      @error="onAudioError"
+    ></audio>
   </div>
 </template>
-
-
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
 // ============ ESTADO REATIVO ============
 const messages = ref([
   {
     id: Date.now(),
     type: 'ai',
-    content: 'Olá! 🎵 Sou seu assistente musical pessoal. Posso te ajudar a descobrir novas músicas, artistas e álbuns baseado no seu gosto ou humor. Como posso te ajudar hoje?',
+    content: `Olá! 🎵 Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música! 🎧`,
     timestamp: new Date(),
-    recommendations: null
+    recommendations: null,
+    lyricResults: null
   }
 ])
 const inputMessage = ref('')
@@ -296,10 +488,30 @@ const chatContainer = ref(null)
 const inputRef = ref(null)
 const activeNav = ref('chat')
 const selectedGenre = ref(null)
+const toast = ref({ show: false, message: '', type: 'info' })
+const isAuthenticated = ref(false)
+const chatLimit = ref({ limit: 5, used: 0, remaining: 5 })
+const showLoginOverlay = ref(false)
+const showFullPlayer = ref(false)
+const showSettings = ref(false)
+const sidebarCollapsed = ref(false)
+const isOnline = ref(true)
+const audioQuality = ref('medium')
+const showAttachMenu = ref(false)
+
+// Player State
+const audioPlayer = ref(null)
 const currentTrack = ref(null)
 const isPlaying = ref(false)
+const currentTime = ref(0)
+const duration = ref(0)
+const volume = ref(0.8)
+const currentPlaylist = ref([])
+const currentTrackIndex = ref(-1)
 const favorites = ref(new Set())
-const toast = ref({ show: false, message: '', type: 'info' })
+
+// User
+const userName = ref('')
 
 // ============ DADOS ============
 const navItems = [
@@ -313,147 +525,681 @@ const navItems = [
 const availableGenres = ['Pop', 'Rock', 'Jazz', 'Hip Hop', 'Eletrônica', 'Indie', 'R&B', 'Clássica']
 
 const quickQuestions = [
-  { icon: '🎸', text: 'Rock clássico dos anos 80', genre: 'rock', mood: 'nostalgic' },
-  { icon: '🎤', text: 'Pop atual para festa', genre: 'pop', mood: 'happy' },
-  { icon: '🎹', text: 'Eletrônica para treinar', genre: 'electronic', mood: 'workout' },
-  { icon: '🎺', text: 'Jazz suave para relaxar', genre: 'jazz', mood: 'relax' },
-  { icon: '🎧', text: 'Hip-hop moderno', genre: 'hiphop', mood: 'focus' },
-  { icon: '🌙', text: 'Indie para estudar', genre: 'indie', mood: 'study' },
-  { icon: '❤️', text: 'Músicas românticas', genre: 'rnb', mood: 'romantic' },
-  { icon: '🎻', text: 'Clássica tranquila', genre: 'classical', mood: 'calm' }
+  { icon: '🎸', text: 'Rock clássico dos anos 80', genre: 'rock', mood: 'nostalgic', type: 'genre' },
+  { icon: '🎤', text: 'Pop atual para festa', genre: 'pop', mood: 'happy', type: 'genre' },
+  { icon: '🎹', text: 'Eletrônica para treinar', genre: 'electronic', mood: 'workout', type: 'genre' },
+  { icon: '🎺', text: 'Jazz suave para relaxar', genre: 'jazz', mood: 'relax', type: 'genre' },
+  { icon: '🎧', text: 'Hip-hop moderno', genre: 'hiphop', mood: 'focus', type: 'genre' },
+  { icon: '🌙', text: 'Indie para estudar', genre: 'indie', mood: 'study', type: 'genre' },
+  { icon: '❤️', text: 'Músicas românticas', genre: 'rnb', mood: 'romantic', type: 'genre' },
+  { icon: '🎻', text: 'Clássica tranquila', genre: 'classical', mood: 'calm', type: 'genre' }
 ]
 
-// Base de dados de músicas
-const musicDatabase = {
-  rock: {
-    tracks: [
-      { id: 1, title: 'Bohemian Rhapsody', artist: 'Queen', album: 'A Night at the Opera', duration: '5:55', emoji: '👑', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 2, title: 'Hotel California', artist: 'Eagles', album: 'Hotel California', duration: '6:30', emoji: '🦅', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 3, title: 'Stairway to Heaven', artist: 'Led Zeppelin', album: 'Led Zeppelin IV', duration: '8:02', emoji: '🪜', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 4, title: 'Sweet Child O\' Mine', artist: 'Guns N\' Roses', album: 'Appetite for Destruction', duration: '5:03', emoji: '🌹', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['Queen', 'Led Zeppelin', 'Pink Floyd', 'The Beatles', 'Nirvana', 'Guns N\' Roses'],
-    albums: [
-      { name: 'Dark Side of the Moon', artist: 'Pink Floyd', emoji: '🌈', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Abbey Road', artist: 'The Beatles', emoji: '🚶', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'Clássicos do rock que definiram gerações e continuam inspirando músicos até hoje.'
-  },
-  pop: {
-    tracks: [
-      { id: 5, title: 'Blinding Lights', artist: 'The Weeknd', album: 'After Hours', duration: '3:20', emoji: '💡', color: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
-      { id: 6, title: 'Levitating', artist: 'Dua Lipa', album: 'Future Nostalgia', duration: '3:23', emoji: '🚀', color: 'linear-gradient(135deg, #ff8a80 0%, #ea6100 100%)' },
-      { id: 7, title: 'As It Was', artist: 'Harry Styles', album: "Harry's House", duration: '2:47', emoji: '🏠', color: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)' },
-      { id: 8, title: 'Anti-Hero', artist: 'Taylor Swift', album: 'Midnights', duration: '3:20', emoji: '🌙', color: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }
-    ],
-    artists: ['The Weeknd', 'Dua Lipa', 'Harry Styles', 'Taylor Swift', 'Ed Sheeran', 'Ariana Grande'],
-    albums: [
-      { name: 'Future Nostalgia', artist: 'Dua Lipa', emoji: '🕺', color: 'linear-gradient(135deg, #ff8a80 0%, #ea6100 100%)' },
-      { name: 'Midnights', artist: 'Taylor Swift', emoji: '🌌', color: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }
-    ],
-    description: 'Hits populares que estão dominando as paradas e fazendo todo mundo dançar.'
-  },
-  jazz: {
-    tracks: [
-      { id: 9, title: 'Take Five', artist: 'Dave Brubeck', album: 'Time Out', duration: '5:24', emoji: '🎷', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 10, title: 'So What', artist: 'Miles Davis', album: 'Kind of Blue', duration: '9:22', emoji: '🎺', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 11, title: 'Autumn Leaves', artist: 'Chet Baker', album: 'Chet Baker Sings', duration: '5:42', emoji: '🍂', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 12, title: 'Fly Me to the Moon', artist: 'Frank Sinatra', album: 'It Might as Well Be Swing', duration: '2:27', emoji: '🌙', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['Miles Davis', 'John Coltrane', 'Chet Baker', 'Billie Holiday', 'Duke Ellington', 'Frank Sinatra'],
-    albums: [
-      { name: 'Kind of Blue', artist: 'Miles Davis', emoji: '🔵', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Time Out', artist: 'Dave Brubeck', emoji: '⏰', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'Jazz clássico para relaxar, contemplar e apreciar a arte da improvisação.'
-  },
-  electronic: {
-    tracks: [
-      { id: 13, title: 'Get Lucky', artist: 'Daft Punk', album: 'Random Access Memories', duration: '6:09', emoji: '🍀', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 14, title: 'Titanium', artist: 'David Guetta ft. Sia', album: 'Nothing but the Beat', duration: '4:05', emoji: '🔩', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 15, title: 'Clarity', artist: 'Zedd', album: 'Clarity', duration: '4:31', emoji: '💎', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 16, title: 'Levels', artist: 'Avicii', album: 'True', duration: '3:18', emoji: '📶', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['Daft Punk', 'Calvin Harris', 'Avicii', 'Zedd', 'Deadmau5', 'David Guetta'],
-    albums: [
-      { name: 'Random Access Memories', artist: 'Daft Punk', emoji: '🤖', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'True', artist: 'Avicii', emoji: '✅', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'Batidas eletrônicas energéticas perfeitas para treinar ou animar a festa.'
-  },
-  hiphop: {
-    tracks: [
-      { id: 17, title: 'Sicko Mode', artist: 'Travis Scott', album: 'Astroworld', duration: '5:12', emoji: '🚀', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 18, title: 'God\'s Plan', artist: 'Drake', album: 'Scorpion', duration: '3:18', emoji: '🙏', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 19, title: 'HUMBLE.', artist: 'Kendrick Lamar', album: 'DAMN.', duration: '2:57', emoji: '🙇', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 20, title: 'N95', artist: 'Kendrick Lamar', album: 'Mr. Morale', duration: '3:15', emoji: '😷', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['Kendrick Lamar', 'Drake', 'Travis Scott', 'J. Cole', 'Tyler, The Creator', 'Kanye West'],
-    albums: [
-      { name: 'DAMN.', artist: 'Kendrick Lamar', emoji: '🔴', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Astroworld', artist: 'Travis Scott', emoji: '🎢', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'Hip-hop contemporâneo com flow afiado, letras profundas e batidas poderosas.'
-  },
-  indie: {
-    tracks: [
-      { id: 21, title: 'Mr. Brightside', artist: 'The Killers', album: 'Hot Fuss', duration: '3:43', emoji: '🔪', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 22, title: 'Do I Wanna Know?', artist: 'Arctic Monkeys', album: 'AM', duration: '4:32', emoji: '🐒', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 23, title: 'Take Me Out', artist: 'Franz Ferdinand', album: 'Franz Ferdinand', duration: '3:57', emoji: '🎯', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 24, title: 'Last Nite', artist: 'The Strokes', album: 'Is This It', duration: '3:13', emoji: '🌃', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['Arctic Monkeys', 'Tame Impala', 'The Strokes', 'Bon Iver', 'Phoebe Bridgers', 'The Killers'],
-    albums: [
-      { name: 'AM', artist: 'Arctic Monkeys', emoji: '🌙', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Currents', artist: 'Tame Impala', emoji: '🔮', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'Indie rock alternativo com identidade única e sons autênticos.'
-  },
-  rnb: {
-    tracks: [
-      { id: 25, title: 'Blinding Lights', artist: 'The Weeknd', album: 'After Hours', duration: '3:20', emoji: '✨', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 26, title: 'Adorn', artist: 'Miguel', album: 'Kaleidoscope Dream', duration: '3:13', emoji: '💎', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 27, title: 'Thinkin Bout You', artist: 'Frank Ocean', album: 'Channel Orange', duration: '3:21', emoji: '🍊', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 28, title: 'Exchange', artist: 'Bryson Tiller', album: 'Trapsoul', duration: '3:14', emoji: '💱', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['The Weeknd', 'Frank Ocean', 'Bryson Tiller', 'Miguel', 'SZA', 'Daniel Caesar'],
-    albums: [
-      { name: 'Channel Orange', artist: 'Frank Ocean', emoji: '🍊', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Trapsoul', artist: 'Bryson Tiller', emoji: '🎤', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'R&B suave e sensual, perfeito para momentos românticos.'
-  },
-  classical: {
-    tracks: [
-      { id: 29, title: 'Clair de Lune', artist: 'Claude Debussy', album: 'Suite Bergamasque', duration: '5:09', emoji: '🌙', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { id: 30, title: 'Four Seasons', artist: 'Vivaldi', album: 'The Four Seasons', duration: '3:15', emoji: '🍃', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-      { id: 31, title: 'Moonlight Sonata', artist: 'Beethoven', album: 'Piano Sonata No. 14', duration: '6:00', emoji: '🌙', color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-      { id: 32, title: 'Canon in D', artist: 'Pachelbel', album: 'Canon and Gigue', duration: '5:00', emoji: '🎻', color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }
-    ],
-    artists: ['Beethoven', 'Mozart', 'Bach', 'Vivaldi', 'Debussy', 'Chopin'],
-    albums: [
-      { name: 'The Four Seasons', artist: 'Vivaldi', emoji: '🍂', color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-      { name: 'Greatest Hits', artist: 'Mozart', emoji: '🎼', color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }
-    ],
-    description: 'Música clássica atemporal que traz paz e sofisticação.'
-  }
+// Mapeamento de gêneros para busca na API
+const genreSearchMap = {
+  'rock': 'rock',
+  'pop': 'pop',
+  'jazz': 'jazz',
+  'hip hop': 'hip hop',
+  'hiphop': 'hip hop',
+  'rap': 'hip hop',
+  'eletrônica': 'electronic',
+  'eletronica': 'electronic',
+  'electronic': 'electronic',
+  'indie': 'indie',
+  'r&b': 'rnb',
+  'rnb': 'rnb',
+  'clássica': 'classical',
+  'classica': 'classical',
+  'classical': 'classical'
 }
 
-// Mapeamento de moods para gêneros
-const moodMap = {
-  'feliz': 'pop', 'animado': 'pop', 'alegre': 'pop', 'festa': 'pop', 'dançar': 'pop',
-  'triste': 'indie', 'melancolico': 'indie', 'nostalgico': 'rock', 'saudade': 'indie',
-  'relaxar': 'jazz', 'calmo': 'jazz', 'tranquilo': 'classical', 'meditar': 'classical',
-  'treinar': 'electronic', 'academia': 'electronic', 'corrida': 'electronic', 'energia': 'electronic',
-  'focar': 'classical', 'estudar': 'jazz', 'concentrar': 'classical',
-  'romantico': 'rnb', 'namorar': 'rnb', 'amor': 'rnb', 'paixao': 'rnb',
-  'dirigir': 'rock', 'viagem': 'rock', 'estrada': 'rock',
-  'cansado': 'indie', 'descansar': 'jazz', 'dormir': 'classical'
+// ============ INTENÇÕES DO USUÁRIO ============
+const intentPatterns = {
+  // Dúvidas sobre artista
+  artistInfo: [
+    'quem canta', 'quem é', 'quem fez', 'quem compôs', 'quem produziu',
+    'artista', 'cantor', 'cantora', 'banda', 'grupo musical',
+    'biografia', 'história de', 'sobre o artista', 'sobre a banda',
+    'quem é o vocalista', 'quem toca', 'membros da banda',
+    'quando começou', 'carreira de', 'discografia de'
+  ],
+  // Dúvidas sobre letra
+  lyricsInfo: [
+    'letra de', 'letra da', 'letras de', 'letras da',
+    'trecho de', 'parte de', 'verso de', 'refrão de',
+    'significado da letra', 'significado da música',
+    'o que significa', 'qual o significado',
+    'traduzir', 'tradução de', 'tradução da'
+  ],
+  // Dúvidas sobre álbum
+  albumInfo: [
+    'álbum de', 'album de', 'álbum da', 'album da',
+    'disco de', 'disco da', 'lp de', 'ep de',
+    'discografia', 'discografia completa',
+    'quando lançou o álbum', 'data de lançamento',
+    'primeiro álbum', 'último álbum', 'novo álbum'
+  ],
+  // Dúvidas sobre lançamento/data
+  releaseInfo: [
+    'quando lançou', 'quando foi lançado', 'data de lançamento',
+    'ano de', 'em que ano', 'quando surgiu',
+    'quando estreou', 'quando começou', 'quando foi gravado',
+    'lançamento de', 'estreia de'
+  ],
+  // Curiosidades
+  trivia: [
+    'curiosidade', 'curiosidades', 'sabia que', 'você sabia',
+    'fato sobre', 'fatos sobre', 'história por trás',
+    'inspiração de', 'inspiração para', 'por que escreveu',
+    'como surgiu', 'origem de', 'como nasceu',
+    'backstage', 'making of', 'processo criativo'
+  ],
+  // Similaridades / recomendações baseadas em artista/música
+  similar: [
+    'parecido com', 'similar a', 'igual a', 'mesmo estilo',
+    'quem soa como', 'artistas parecidos', 'bandas parecidas',
+    'músicas parecidas', 'se gosto de', 'se curto',
+    'recomendação baseada em', 'mais como', 'outros como'
+  ],
+  // Busca por gênero/humor (mantido)
+  genre: [
+    'gênero', 'genero', 'estilo', 'tipo de música',
+    'pop', 'rock', 'jazz', 'hip hop', 'eletrônica', 'indie', 'r&b', 'clássica',
+    'sertanejo', 'funk', 'samba', 'pagode', 'mpb', 'gospel',
+    'para festa', 'para treinar', 'para relaxar', 'para estudar',
+    'para dormir', 'para namorar', 'para dirigir', 'para chorar',
+    'animado', 'triste', 'calmo', 'romântico', 'energético'
+  ],
+  // Busca por nome de música específica
+  trackSearch: [
+    'música', 'musica', 'som', 'song', 'track',
+    'tocar', 'ouvir', 'quero ouvir', 'queria ouvir',
+    'me toca', 'me põe', 'me poe', 'coloca'
+  ]
 }
 
 // ============ COMPUTED ============
 const canSend = computed(() => inputMessage.value.trim().length > 0)
 const showQuickQuestions = computed(() => messages.value.length < 3)
+const userInitials = computed(() => {
+  if (userName.value) return userName.value.charAt(0).toUpperCase()
+  return 'U'
+})
+const canPrev = computed(() => currentTrackIndex.value > 0)
+const canNext = computed(() => currentTrackIndex.value < currentPlaylist.value.length - 1)
+
+// ============ API - BUSCA REAL DEEZER/SPOTIFY ============
+
+async function searchRealMusic(query, type = 'track', limit = 6) {
+  try {
+    const token = localStorage.getItem('token')
+    const isLogged = !!token
+
+    if (isLogged) {
+      return await searchSpotify(query, type, limit)
+    } else {
+      return await searchDeezer(query, type, limit)
+    }
+  } catch (error) {
+    console.error('Erro na busca de músicas:', error)
+    return []
+  }
+}
+
+async function searchDeezer(query, type = 'track', limit = 6) {
+  try {
+    const response = await fetch(
+      `${API_URL}/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`
+    )
+   
+    if (!response.ok) throw new Error(`Deezer error: ${response.status}`)
+   
+    const data = await response.json()
+   
+    if (!data.data || !Array.isArray(data.data)) return []
+   
+    return data.data.map((item, index) => convertDeezerToTrack(item, index))
+  } catch (error) {
+    console.warn('Deezer search failed:', error.message)
+    return []
+  }
+}
+
+async function searchSpotify(query, type = 'track', limit = 6) {
+  try {
+    const token = localStorage.getItem('token')
+   
+    const response = await fetch(
+      `${API_URL}/spotify/search?q=${encodeURIComponent(query)}&type=${type}&limit=${limit}&market=BR`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    )
+   
+    if (!response.ok) {
+      if (response.status === 401) {
+        return await searchDeezer(query, type, limit)
+      }
+      throw new Error(`Spotify error: ${response.status}`)
+    }
+   
+    const data = await response.json()
+   
+    let items = []
+    if (type.includes('track') && data.tracks?.items) {
+      items = data.tracks.items
+    } else if (type === 'artist' && data.artists?.items) {
+      items = data.artists.items
+    } else if (type === 'album' && data.albums?.items) {
+      items = data.albums.items
+    }
+   
+    return items.map((item, index) => convertSpotifyToTrack(item, index))
+  } catch (error) {
+    console.warn('Spotify search failed, fallback to Deezer:', error.message)
+    return await searchDeezer(query, type, limit)
+  }
+}
+
+function convertDeezerToTrack(item, index = 0) {
+  const gradients = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+    'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
+  ]
+ 
+  return {
+    id: `deezer_${item.id}`,
+    title: item.title || 'Música Desconhecida',
+    artist: item.artist?.name || 'Artista Desconhecido',
+    album: item.album?.title || '',
+    duration: formatDurationFromSeconds(item.duration),
+    emoji: getEmojiForGenre(item.artist?.name) || '🎵',
+    color: gradients[index % gradients.length],
+    cover: item.album?.cover_medium || item.album?.cover || '',
+    url: item.preview || '',
+    source: 'deezer',
+    externalId: item.id,
+    releaseDate: item.release_date || '',
+    rank: item.rank || 0
+  }
+}
+
+function convertSpotifyToTrack(item, index = 0) {
+  const gradients = [
+    'linear-gradient(135deg, #1db954 0%, #1ed760 100%)',
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
+  ]
+ 
+  const durationMs = item.duration_ms || 0
+  const mins = Math.floor(durationMs / 60000)
+  const secs = Math.floor((durationMs % 60000) / 1000)
+  const durationStr = `${mins}:${secs.toString().padStart(2, '0')}`
+ 
+  return {
+    id: `spotify_${item.id}`,
+    title: item.name || 'Música Desconhecida',
+    artist: item.artists?.map(a => a.name).join(', ') || 'Artista Desconhecido',
+    album: item.album?.name || '',
+    duration: durationStr,
+    emoji: getEmojiForGenre(item.artists?.[0]?.name) || '🎵',
+    color: gradients[index % gradients.length],
+    cover: item.album?.images?.[0]?.url || '',
+    url: item.preview_url || '',
+    source: 'spotify',
+    externalId: item.id,
+    releaseDate: item.album?.release_date || '',
+    popularity: item.popularity || 0
+  }
+}
+
+async function searchRelatedArtists(query, limit = 6) {
+  try {
+    const tracks = await searchRealMusic(query, 'track', limit)
+    const artistsMap = new Map()
+    tracks.forEach(track => {
+      if (!artistsMap.has(track.artist)) {
+        artistsMap.set(track.artist, { name: track.artist, cover: track.cover })
+      }
+    })
+    return Array.from(artistsMap.values()).slice(0, 6)
+  } catch (error) {
+    return []
+  }
+}
+
+async function searchRelatedAlbums(query, limit = 3) {
+  try {
+    const albums = await searchRealMusic(query, 'album', limit)
+    return albums.map(album => ({
+      name: album.title || album.album,
+      artist: album.artist,
+      emoji: '💿',
+      color: album.color
+    }))
+  } catch (error) {
+    return []
+  }
+}
+
+// ============ DETECÇÃO DE INTENÇÃO INTELIGENTE ============
+
+function detectIntent(text) {
+  const lower = text.toLowerCase()
+ 
+  // Verifica cada categoria de intenção
+  for (const [intent, keywords] of Object.entries(intentPatterns)) {
+    for (const keyword of keywords) {
+      if (lower.includes(keyword.toLowerCase())) {
+        return { intent, keyword, originalText: text }
+      }
+    }
+  }
+ 
+  // Se não encontrou intenção específica, verifica se é busca por gênero
+  const genre = detectGenre(text)
+  if (genre) {
+    return { intent: 'genre', genre, originalText: text }
+  }
+ 
+  // Se não encontrou nada, assume busca geral por música
+  return { intent: 'general', originalText: text }
+}
+
+function detectGenre(text) {
+  const lowerText = text.toLowerCase()
+ 
+  for (const [genreKey, searchTerm] of Object.entries(genreSearchMap)) {
+    if (lowerText.includes(genreKey) || lowerText.includes(searchTerm)) return searchTerm
+  }
+ 
+  const moodMap = {
+    'feliz': 'pop', 'animado': 'pop', 'alegre': 'pop', 'festa': 'pop', 'dançar': 'pop', 'balada': 'pop',
+    'triste': 'indie', 'melancolico': 'indie', 'nostalgico': 'rock', 'saudade': 'indie', 'depressivo': 'indie',
+    'relaxar': 'jazz', 'calmo': 'jazz', 'tranquilo': 'classical', 'meditar': 'classical', 'dormir': 'classical',
+    'treinar': 'electronic', 'academia': 'electronic', 'corrida': 'electronic', 'energia': 'electronic', 'malhar': 'electronic',
+    'focar': 'classical', 'estudar': 'jazz', 'concentrar': 'classical', 'trabalhar': 'electronic',
+    'romantico': 'rnb', 'namorar': 'rnb', 'amor': 'rnb', 'paixao': 'rnb', 'casamento': 'classical',
+    'dirigir': 'rock', 'viagem': 'rock', 'estrada': 'rock', 'carro': 'rock',
+    'cansado': 'indie', 'descansar': 'jazz', 'domingo': 'jazz', 'chuva': 'indie'
+  }
+ 
+  for (const [mood, genre] of Object.entries(moodMap)) {
+    if (lowerText.includes(mood)) return genre
+  }
+ 
+  return null
+}
+
+function isLyricSearch(text) {
+  const lower = text.toLowerCase()
+  const lyricKeywords = ['letra', 'lyrics', 'trecho', 'diz que', 'fala que', 'música que', 'song that', 'lyrics that', 'canta que', 'versos']
+  return lyricKeywords.some(kw => lower.includes(kw))
+}
+
+function extractSearchQuery(text, intent) {
+  // Remove palavras-chave de intenção para extrair o termo de busca real
+  let query = text
+ 
+  const removePatterns = {
+    artistInfo: ['quem canta', 'quem é', 'quem fez', 'quem compôs', 'quem produziu', 'artista', 'cantor', 'cantora', 'banda', 'grupo musical', 'biografia', 'história de', 'sobre o artista', 'sobre a banda', 'quem é o vocalista', 'quem toca', 'membros da banda', 'quando começou', 'carreira de', 'discografia de'],
+    lyricsInfo: ['letra de', 'letra da', 'letras de', 'letras da', 'trecho de', 'parte de', 'verso de', 'refrão de', 'significado da letra', 'significado da música', 'o que significa', 'qual o significado', 'traduzir', 'tradução de', 'tradução da'],
+    albumInfo: ['álbum de', 'album de', 'álbum da', 'album da', 'disco de', 'disco da', 'lp de', 'ep de', 'discografia', 'discografia completa', 'quando lançou o álbum', 'data de lançamento', 'primeiro álbum', 'último álbum', 'novo álbum'],
+    releaseInfo: ['quando lançou', 'quando foi lançado', 'data de lançamento', 'ano de', 'em que ano', 'quando surgiu', 'quando estreou', 'quando começou', 'quando foi gravado', 'lançamento de', 'estreia de'],
+    trivia: ['curiosidade', 'curiosidades', 'sabia que', 'você sabia', 'fato sobre', 'fatos sobre', 'história por trás', 'inspiração de', 'inspiração para', 'por que escreveu', 'como surgiu', 'origem de', 'como nasceu', 'backstage', 'making of', 'processo criativo'],
+    similar: ['parecido com', 'similar a', 'igual a', 'mesmo estilo', 'quem soa como', 'artistas parecidos', 'bandas parecidas', 'músicas parecidas', 'se gosto de', 'se curto', 'recomendação baseada em', 'mais como', 'outros como'],
+    trackSearch: ['música', 'musica', 'som', 'song', 'track', 'tocar', 'ouvir', 'quero ouvir', 'queria ouvir', 'me toca', 'me põe', 'me poe', 'coloca']
+  }
+ 
+  const patterns = removePatterns[intent] || []
+  for (const pattern of patterns) {
+    query = query.replace(new RegExp(pattern, 'gi'), '')
+  }
+ 
+  return query.trim() || text
+}
+
+// ============ RESPOSTAS INTELIGENTES ============
+
+async function generateSmartResponse(userText, intentData) {
+  const { intent, originalText } = intentData
+  const searchQuery = extractSearchQuery(originalText, intent)
+ 
+  switch (intent) {
+    case 'artistInfo':
+      return await generateArtistResponse(searchQuery)
+   
+    case 'lyricsInfo':
+      return await generateLyricsResponse(searchQuery)
+   
+    case 'albumInfo':
+      return await generateAlbumResponse(searchQuery)
+   
+    case 'releaseInfo':
+      return await generateReleaseResponse(searchQuery)
+   
+    case 'trivia':
+      return await generateTriviaResponse(searchQuery)
+   
+    case 'similar':
+      return await generateSimilarResponse(searchQuery)
+   
+    case 'genre':
+      return await generateGenreResponse(searchQuery, intentData.genre)
+   
+    case 'trackSearch':
+      return await generateTrackSearchResponse(searchQuery)
+   
+    default:
+      return await generateGeneralResponse(searchQuery)
+  }
+}
+
+async function generateArtistResponse(query) {
+  // Busca o artista
+  const tracks = await searchRealMusic(query, 'track', 5)
+  const artistTracks = tracks.filter(t =>
+    t.artist.toLowerCase().includes(query.toLowerCase()) ||
+    query.toLowerCase().includes(t.artist.toLowerCase())
+  )
+ 
+  if (artistTracks.length > 0) {
+    const artist = artistTracks[0].artist
+    const allTracks = await searchRealMusic(artist, 'track', 8)
+    const albums = await searchRelatedAlbums(artist, 4)
+   
+    // Gera resposta contextual sobre o artista
+    const responses = [
+      `**${artist}** é um artista incrível! 🎤 Aqui estão algumas informações e músicas dele(a):`,
+      `Descobrindo **${artist}**! 🌟 Veja o que encontrei sobre esse talento:`,
+      `**${artist}** tem uma discografia fantástica! 🎵 Confira:`
+    ]
+   
+    return {
+      content: responses[Math.floor(Math.random() * responses.length)],
+      recommendations: {
+        genre: artist,
+        tracks: allTracks.slice(0, 6),
+        artists: [],
+        albums: albums,
+        description: `Músicas e informações sobre ${artist}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  // Fallback: busca por termo geral
+  const generalTracks = await searchRealMusic(query, 'track', 6)
+  if (generalTracks.length > 0) {
+    return {
+      content: `Encontrei artistas relacionados a **"${query}"**. Aqui estão as principais músicas: 🎧`,
+      recommendations: {
+        genre: 'Resultados da busca',
+        tracks: generalTracks,
+        artists: generalTracks.map(t => t.artist).filter((v, i, a) => a.indexOf(v) === i).slice(0, 5),
+        albums: [],
+        description: `Resultados para: ${query}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei informações específicas sobre **"${query}"**. Tente me perguntar de outra forma, como:\n\n• "Quem canta [nome da música]"\n• "Músicas de [nome do artista]"\n• "Álbuns de [artista]"\n• Ou simplesmente diga um gênero que gosta! 🎵`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateLyricsResponse(query) {
+  const tracks = await searchRealMusic(query, 'track', 6)
+ 
+  if (tracks.length > 0) {
+    return {
+      content: `Aqui estão músicas relacionadas a **"${query}"**! 📝 Se você está procurando a letra completa, posso te ajudar a encontrar a música certa para ouvir:`,
+      recommendations: {
+        genre: 'Letras e Músicas',
+        tracks: tracks,
+        artists: tracks.map(t => t.artist).filter((v, i, a) => a.indexOf(v) === i).slice(0, 4),
+        albums: [],
+        description: `Músicas relacionadas a: ${query}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei músicas com **"${query}"** no título. Tente:\n\n• Digitar trechos mais longos da letra\n• Buscar pelo nome do artista\n• Ou perguntar por gênero musical 🎵`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateAlbumResponse(query) {
+  const tracks = await searchRealMusic(query, 'track', 8)
+  const albums = await searchRelatedAlbums(query, 6)
+ 
+  if (tracks.length > 0 || albums.length > 0) {
+    const artistName = tracks[0]?.artist || query
+   
+    return {
+      content: `**${artistName}** tem uma discografia incrível! 💿 Aqui estão álbuns e músicas encontrados:`,
+      recommendations: {
+        genre: `Discografia: ${artistName}`,
+        tracks: tracks.slice(0, 6),
+        artists: [artistName],
+        albums: albums.length > 0 ? albums : tracks.slice(0, 4).map(t => ({
+          name: t.album || 'Álbum Desconhecido',
+          artist: t.artist,
+          emoji: '💿',
+          color: t.color
+        })),
+        description: `Álbuns e músicas de ${artistName}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei álbuns de **"${query}"**. Tente:\n\n• "Álbuns de [nome do artista]"\n• "Discografia de [artista]"\n• Ou busque pelo artista diretamente 🎵`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateReleaseResponse(query) {
+  const tracks = await searchRealMusic(query, 'track', 5)
+ 
+  if (tracks.length > 0) {
+    const track = tracks[0]
+    const releaseYear = track.releaseDate ? track.releaseDate.split('-')[0] : 'ano desconhecido'
+   
+    return {
+      content: `**${track.title}** de **${track.artist}** foi lançada em **${releaseYear}**! 📅\n\nAqui estão mais informações e músicas relacionadas:`,
+      recommendations: {
+        genre: `Lançamentos: ${track.artist}`,
+        tracks: tracks.slice(0, 6),
+        artists: [track.artist],
+        albums: [],
+        description: `Músicas de ${track.artist} incluindo ${track.title}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei informações de lançamento para **"${query}"**. Tente me perguntar sobre o artista ou música específica! 🎵`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateTriviaResponse(query) {
+  const tracks = await searchRealMusic(query, 'track', 6)
+ 
+  if (tracks.length > 0) {
+    const track = tracks[0]
+    const trivias = [
+      `**${track.title}** de **${track.artist}** é um clássico! 💡 Aqui estão mais músicas desse artista para você explorar:`,
+      `**${track.artist}** é conhecido por hits incríveis como **${track.title}**! 🌟 Confira mais:`,
+      `A música **${track.title}** faz parte do repertório de **${track.artist}**! 🎵 Veja mais curiosidades musicais:`
+    ]
+   
+    return {
+      content: trivias[Math.floor(Math.random() * trivias.length)],
+      recommendations: {
+        genre: `Curiosidades: ${track.artist}`,
+        tracks: tracks,
+        artists: [track.artist],
+        albums: [],
+        description: `Músicas e fatos sobre ${track.artist}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei curiosidades sobre **"${query}"**. Tente perguntar sobre um artista ou música específica! 💡`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateSimilarResponse(query) {
+  const tracks = await searchRealMusic(query, 'track', 6)
+ 
+  if (tracks.length > 0) {
+    const baseArtist = tracks[0].artist
+    // Busca por gênero do artista base para encontrar similares
+    const genre = detectGenre(baseArtist) || 'pop'
+    const similarTracks = await searchRealMusic(genre, 'track', 6)
+   
+    // Filtra para não repetir o mesmo artista
+    const filteredSimilar = similarTracks.filter(t =>
+      !t.artist.toLowerCase().includes(baseArtist.toLowerCase())
+    )
+   
+    const allResults = [...tracks.slice(0, 3), ...filteredSimilar.slice(0, 3)]
+   
+    return {
+      content: `Se você gosta de **${baseArtist}**, vai adorar essas recomendações! 🎧 Artistas e músicas no mesmo estilo:`,
+      recommendations: {
+        genre: `Similares a: ${baseArtist}`,
+        tracks: allResults,
+        artists: allResults.map(t => t.artist).filter((v, i, a) => a.indexOf(v) === i).slice(0, 5),
+        albums: [],
+        description: `Músicas similares a ${baseArtist}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei artistas similares a **"${query}"**. Tente me dizer um artista ou música que você gosta! 🎵`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateGenreResponse(searchQuery, genre) {
+  const tracks = await searchRealMusic(genre || searchQuery, 'track', 6)
+  const artists = await searchRelatedArtists(genre || searchQuery, 6)
+  const albums = await searchRelatedAlbums(genre || searchQuery, 3)
+ 
+  let finalTracks = tracks
+  if (finalTracks.length === 0) {
+    finalTracks = await searchRealMusic(searchQuery, 'track', 6)
+  }
+ 
+  if (finalTracks.length === 0) {
+    return {
+      content: `Não consegui encontrar músicas de **${genre || searchQuery}** no momento. O serviço de música pode estar indisponível. Tente novamente mais tarde ou me diga outro gênero/artista! 🎵`,
+      recommendations: null,
+      lyricResults: null
+    }
+  }
+ 
+  const responses = [
+    `Baseado no seu pedido, encontrei essas músicas de **${genre || searchQuery}**! 🎶`,
+    `Aqui está uma seleção especial de **${genre || searchQuery}** para você:`,
+    `Encontrei essas gems de **${genre || searchQuery}** que combinam com você!`,
+    `Perfeito! Essas tracks de **${genre || searchQuery}** vão te surpreender:`,
+    `Selecionei os melhores hits de **${genre || searchQuery}** para você aproveitar:`
+  ]
+ 
+  return {
+    content: responses[Math.floor(Math.random() * responses.length)],
+    recommendations: {
+      genre: (genre || searchQuery).charAt(0).toUpperCase() + (genre || searchQuery).slice(1),
+      tracks: finalTracks,
+      artists: artists.map(a => a.name).filter(Boolean),
+      albums: albums,
+      description: `Músicas reais de ${genre || searchQuery} do catálogo mundial`
+    },
+    lyricResults: null
+  }
+}
+
+async function generateTrackSearchResponse(query) {
+  const tracks = await searchRealMusic(query, 'track', 6)
+ 
+  if (tracks.length > 0) {
+    return {
+      content: `Encontrei essas músicas para **"${query}"**! 🎵 Clique para ouvir:`,
+      recommendations: {
+        genre: `Busca: ${query}`,
+        tracks: tracks,
+        artists: tracks.map(t => t.artist).filter((v, i, a) => a.indexOf(v) === i).slice(0, 5),
+        albums: [],
+        description: `Resultados para: ${query}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Não encontrei músicas para **"${query}"**. Tente:\n\n• Digitar o nome exato da música\n• Buscar pelo artista\n• Ou perguntar por gênero musical 🎧`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
+
+async function generateGeneralResponse(query) {
+  // Tenta buscar como artista primeiro
+  const artistTracks = await searchRealMusic(query, 'track', 4)
+ 
+  if (artistTracks.length > 0) {
+    const artists = [...new Set(artistTracks.map(t => t.artist))]
+   
+    return {
+      content: `Encontrei resultados para **"${query}"**! 🎵 Aqui estão músicas e artistas relacionados:`,
+      recommendations: {
+        genre: `Resultados: ${query}`,
+        tracks: artistTracks,
+        artists: artists.slice(0, 5),
+        albums: [],
+        description: `Resultados da busca por ${query}`
+      },
+      lyricResults: null
+    }
+  }
+ 
+  return {
+    content: `Posso te ajudar de várias formas! 🎧\n\n• **Dúvidas**: "Quem canta [música]?", "Quando lançou [álbum]?"\n• **Letras**: "Letra de [música]"\n• **Artistas**: "Biografia de [artista]"\n• **Curiosidades**: "Curiosidade sobre [música]"\n• **Similares**: "Músicas parecidas com [artista]"\n• **Gêneros**: pop, rock, jazz, hip-hop, indie, etc.\n\nO que você gostaria de saber? 💡`,
+    recommendations: null,
+    lyricResults: null
+  }
+}
 
 // ============ MÉTODOS ============
 const scrollToBottom = async () => {
@@ -463,97 +1209,180 @@ const scrollToBottom = async () => {
   }
 }
 
-const showToast = (message, type = 'info') => {
+const showToastFn = (message, type = 'info') => {
   toast.value = { show: true, message, type }
   setTimeout(() => {
     toast.value.show = false
   }, 3000)
 }
 
-const detectGenre = (text) => {
-  const lowerText = text.toLowerCase()
-  
-  // Verificar gêneros diretos
-  for (const [genre, data] of Object.entries(musicDatabase)) {
-    if (lowerText.includes(genre) || lowerText.includes(genre.replace(' ', ''))) return genre
+const checkAuth = () => {
+  const token = localStorage.getItem('token')
+  const user = localStorage.getItem('user')
+  isAuthenticated.value = !!token
+  if (user) {
+    try {
+      const userData = JSON.parse(user)
+      userName.value = userData.name || userData.email?.split('@')[0] || ''
+    } catch (e) {
+      userName.value = ''
+    }
   }
-  
-  // Verificar moods
-  for (const [mood, genre] of Object.entries(moodMap)) {
-    if (lowerText.includes(mood)) return genre
-  }
-  
-  return null
 }
 
-const generateAIResponse = (userText, genre) => {
-  if (!genre) {
-    const suggestions = ['rock', 'pop', 'jazz', 'eletrônica', 'hip-hop', 'indie']
-    return {
-      content: `Posso te ajudar a encontrar música por gênero (${suggestions.join(', ')}) ou humor (feliz, relaxar, treinar, romântico, etc). Qual seu gênero favorito ou como você está se sentindo hoje? 🎵`,
-      recommendations: null
+const fetchChatLimit = async () => {
+  try {
+    const stored = localStorage.getItem('chatLimit')
+    if (stored) {
+      chatLimit.value = JSON.parse(stored)
+    } else {
+      chatLimit.value = { limit: 5, used: 0, remaining: 5 }
     }
+  } catch (error) {
+    chatLimit.value = { limit: 5, used: 0, remaining: 5 }
   }
-  
-  const data = musicDatabase[genre]
-  const responses = [
-    `Baseado no seu pedido, preparei uma seleção especial de ${genre}! ${data.description}`,
-    `Encontrei essas gems de ${genre} que combinam perfeitamente com você! 🎶`,
-    `Aqui está uma playlist curada de ${genre} especialmente para você:`,
-    `Perfeito! Essas tracks de ${genre} vão te surpreender:`,
-    `Selecionei os melhores hits de ${genre} para você aproveitar:`
-  ]
-  
-  return {
-    content: responses[Math.floor(Math.random() * responses.length)],
-    recommendations: {
-      genre: genre.charAt(0).toUpperCase() + genre.slice(1),
-      tracks: data.tracks,
-      artists: data.artists.slice(0, 6),
-      albums: data.albums || [],
-      description: data.description
+}
+
+const saveChatLimit = () => {
+  localStorage.setItem('chatLimit', JSON.stringify(chatLimit.value))
+}
+
+const searchByLyrics = async (query) => {
+  try {
+    const tracks = await searchRealMusic(query, 'track', 5)
+   
+    const results = tracks
+      .filter(t => t.url && t.url.length > 0)
+      .map((track, index) => ({
+        id: track.externalId || index,
+        title: track.title,
+        artist: track.artist,
+        lyrics: `Trecho encontrado em "${track.title}"`,
+        albumArt: track.cover,
+        url: track.url
+      }))
+   
+    if (results.length === 0) {
+      const broaderTracks = await searchRealMusic(query.split(' ').slice(0, 3).join(' '), 'track', 5)
+      return broaderTracks.map((track, index) => ({
+        id: track.externalId || index,
+        title: track.title,
+        artist: track.artist,
+        lyrics: `Resultado relacionado à busca`,
+        albumArt: track.cover,
+        url: track.url
+      }))
     }
+   
+    return results
+  } catch (error) {
+    return []
   }
+}
+
+const getEmojiForGenre = (genreOrArtist) => {
+  const text = (genreOrArtist || '').toLowerCase()
+  const emojiMap = {
+    'rock': '🎸', 'pop': '🎤', 'jazz': '🎺', 'hip hop': '🎧', 'rap': '🎤',
+    'eletrônica': '🎹', 'electronic': '🎹', 'indie': '🌙', 'r&b': '❤️',
+    'rnb': '❤️', 'clássica': '🎻', 'classical': '🎻', 'sertanejo': '🤠',
+    'funk': '🔥', 'samba': '🥁', 'pagode': '🪕', 'mpb': '🎵', 'gospel': '✝️'
+  }
+ 
+  for (const [key, emoji] of Object.entries(emojiMap)) {
+    if (text.includes(key)) return emoji
+  }
+ 
+  return '🎵'
+}
+
+const formatDurationFromSeconds = (seconds) => {
+  if (!seconds) return '3:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 const sendMessage = async () => {
   if (!canSend.value || isTyping.value) return
-  
+ 
+  if (!isAuthenticated.value && chatLimit.value.remaining <= 0) {
+    showLoginOverlay.value = true
+    return
+  }
+
   const userText = inputMessage.value.trim()
   inputMessage.value = ''
-  
-  // Adicionar mensagem do usuário
+ 
   messages.value.push({
     id: Date.now(),
     type: 'user',
     content: userText,
     timestamp: new Date(),
-    recommendations: null
+    recommendations: null,
+    lyricResults: null
   })
-  
+ 
   await scrollToBottom()
-  
-  // Simular digitação da IA
+ 
+  if (!isAuthenticated.value) {
+    chatLimit.value.used++
+    chatLimit.value.remaining = Math.max(0, chatLimit.value.limit - chatLimit.value.used)
+    saveChatLimit()
+  }
+ 
   isTyping.value = true
   await scrollToBottom()
-  
-  // Detectar intenção e gerar resposta
-  const genre = detectGenre(userText)
-  
+ 
+  // NOVO: Detecta intenção inteligente
+  const intentData = detectIntent(userText)
+  const isLyricQuery = isLyricSearch(userText)
+ 
   setTimeout(async () => {
     isTyping.value = false
-    const response = generateAIResponse(userText, genre)
-    
+   
+    let response
+   
+    if (isLyricQuery) {
+      const lyricResults = await searchByLyrics(userText)
+     
+      if (lyricResults.length > 0) {
+        response = {
+          content: `Encontrei **${lyricResults.length}** música(s) com trechos relacionados à sua busca:`,
+          recommendations: null,
+          lyricResults: lyricResults,
+          lyricQuery: userText
+        }
+      } else {
+        response = {
+          content: `Não encontrei músicas com esse trecho exato. Tente digitar palavras-chave diferentes ou me diga o **artista/gênero** que lembra. 🎵\n\nVocê pode tentar buscar por:\n• Nome do artista\n• Gênero musical\n• Humor (feliz, triste, relaxante)`,
+          recommendations: null,
+          lyricResults: null
+        }
+      }
+    } else {
+      // NOVO: Usa resposta inteligente baseada na intenção
+      response = await generateSmartResponse(userText, intentData)
+    }
+   
     messages.value.push({
       id: Date.now() + 1,
       type: 'ai',
       content: response.content,
       timestamp: new Date(),
-      recommendations: response.recommendations
+      recommendations: response.recommendations,
+      lyricResults: response.lyricResults,
+      lyricQuery: response.lyricQuery
     })
-    
+   
+    if (!isAuthenticated.value && chatLimit.value.remaining === 0) {
+      setTimeout(() => {
+        showLoginOverlay.value = true
+      }, 2000)
+    }
+   
     await scrollToBottom()
-  }, 1500 + Math.random() * 1000) // Variação natural no tempo de resposta
+  }, 1500 + Math.random() * 1000)
 }
 
 const handleQuickQuestion = (question) => {
@@ -568,52 +1397,306 @@ const selectGenre = (genre) => {
   sendMessage()
 }
 
-const playTrack = (track) => {
-  if (currentTrack.value?.id === track.id) {
-    isPlaying.value = !isPlaying.value
-  } else {
-    currentTrack.value = track
-    isPlaying.value = true
+const handleNavClick = (item) => {
+  activeNav.value = item.id
+  if (item.id === 'favorites') {
+    showFavorites()
+  } else if (item.id === 'library') {
+    showLibrary()
+  } else if (item.id === 'history') {
+    showHistory()
+  } else if (item.id === 'playlists') {
+    showPlaylists()
   }
-  showToast(`Tocando: ${track.title} - ${track.artist}`, 'success')
+}
+
+const showFavorites = async () => {
+  const savedFavs = JSON.parse(localStorage.getItem('favorites_data') || '[]')
+  const favTracks = Array.from(favorites.value).map(id => {
+    return savedFavs.find(f => f.id === id)
+  }).filter(Boolean)
+ 
+  if (favTracks.length > 0) {
+    messages.value.push({
+      id: Date.now(),
+      type: 'ai',
+      content: `Aqui estão suas **${favTracks.length}** músicas favoritas: ❤️`,
+      timestamp: new Date(),
+      recommendations: {
+        genre: 'Favoritos',
+        tracks: favTracks,
+        artists: [],
+        albums: []
+      }
+    })
+  } else {
+    messages.value.push({
+      id: Date.now(),
+      type: 'ai',
+      content: 'Você ainda não tem músicas favoritas. Clique no coração ❤️ nas músicas para adicioná-las aqui!',
+      timestamp: new Date(),
+      recommendations: null
+    })
+  }
+  scrollToBottom()
+}
+
+const showLibrary = async () => {
+  const allTracks = await searchRealMusic('popular', 'track', 8)
+ 
+  messages.value.push({
+    id: Date.now(),
+    type: 'ai',
+    content: `Sua biblioteca contém **${allTracks.length}** músicas populares do catálogo:`,
+    timestamp: new Date(),
+    recommendations: {
+      genre: 'Biblioteca',
+      tracks: allTracks,
+      artists: [],
+      albums: []
+    }
+  })
+  scrollToBottom()
+}
+
+const showHistory = () => {
+  messages.value.push({
+    id: Date.now(),
+    type: 'ai',
+    content: '🕐 **Histórico de reprodução**\n\nAqui você verá todas as músicas que já tocou. Continue explorando para preencher seu histórico!',
+    timestamp: new Date(),
+    recommendations: null
+  })
+  scrollToBottom()
+}
+
+const showPlaylists = () => {
+  messages.value.push({
+    id: Date.now(),
+    type: 'ai',
+    content: '🎧 **Suas Playlists**\n\nVocê pode criar playlists personalizadas adicionando músicas pelo botão ➕. Comece a explorar músicas para criar sua primeira playlist!',
+    timestamp: new Date(),
+    recommendations: null
+  })
+  scrollToBottom()
+}
+
+// ═══════════════════════════════════════════════════════
+// PLAYER DE MÚSICA FUNCIONAL
+// ═══════════════════════════════════════════════════════
+
+const playTrack = (track) => {
+  if (!track || !track.url) {
+    showToastFn('Música não disponível no momento', 'error')
+    return
+  }
+ 
+  if (currentTrack.value?.id === track.id) {
+    togglePlay()
+    return
+  }
+ 
+  currentTrack.value = track
+ 
+  const existingIndex = currentPlaylist.value.findIndex(t => t.id === track.id)
+  if (existingIndex === -1) {
+    currentPlaylist.value.push(track)
+    currentTrackIndex.value = currentPlaylist.value.length - 1
+  } else {
+    currentTrackIndex.value = existingIndex
+  }
+ 
+  nextTick(() => {
+    if (audioPlayer.value) {
+      audioPlayer.value.src = track.url
+      audioPlayer.value.volume = volume.value
+      audioPlayer.value.play()
+        .then(() => {
+          isPlaying.value = true
+          showToastFn(`Tocando: ${track.title} - ${track.artist}`, 'success')
+        })
+        .catch(err => {
+          console.error('Erro ao tocar:', err)
+          showToastFn('Erro ao reproduzir música', 'error')
+        })
+    }
+  })
+}
+
+const playTrackAtIndex = (index) => {
+  if (index >= 0 && index < currentPlaylist.value.length) {
+    currentTrackIndex.value = index
+    playTrack(currentPlaylist.value[index])
+  }
+}
+
+const playTrackFromLyrics = (song) => {
+  const track = {
+    id: `lyric_${song.id}`,
+    title: song.title,
+    artist: song.artist,
+    cover: song.albumArt || '',
+    duration: '3:30',
+    emoji: '🎵',
+    color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    url: song.url || '',
+    source: 'deezer'
+  }
+  playTrack(track)
 }
 
 const playAll = (tracks) => {
-  if (tracks.length > 0) {
-    currentTrack.value = tracks[0]
-    isPlaying.value = true
-    showToast(`Playlist iniciada com ${tracks.length} músicas`, 'success')
-  }
+  if (!tracks || tracks.length === 0) return
+ 
+  currentPlaylist.value = [...tracks]
+  currentTrackIndex.value = 0
+  playTrack(tracks[0])
+ 
+  showToastFn(`Playlist iniciada com ${tracks.length} músicas`, 'success')
 }
 
 const togglePlay = () => {
-  if (currentTrack.value) {
-    isPlaying.value = !isPlaying.value
+  if (!audioPlayer.value || !currentTrack.value) {
+    showToastFn('Selecione uma música primeiro', 'info')
+    return
+  }
+ 
+  if (isPlaying.value) {
+    audioPlayer.value.pause()
+    isPlaying.value = false
+  } else {
+    audioPlayer.value.play()
+      .then(() => {
+        isPlaying.value = true
+      })
+      .catch(err => {
+        console.error('Erro ao tocar:', err)
+        showToastFn('Erro ao reproduzir', 'error')
+      })
   }
 }
 
 const prevTrack = () => {
-  showToast('⏮️ Música anterior', 'info')
-}
-
-const nextTrack = () => {
-  showToast('⏭️ Próxima música', 'info')
-}
-
-const toggleFavorite = (track) => {
-  if (favorites.value.has(track.id)) {
-    favorites.value.delete(track.id)
-    showToast('Removido dos favoritos', 'info')
+  if (currentTrackIndex.value > 0) {
+    currentTrackIndex.value--
+    playTrack(currentPlaylist.value[currentTrackIndex.value])
   } else {
-    favorites.value.add(track.id)
-    showToast('Adicionado aos favoritos ❤️', 'success')
+    if (currentPlaylist.value.length > 0) {
+      currentTrackIndex.value = currentPlaylist.value.length - 1
+      playTrack(currentPlaylist.value[currentTrackIndex.value])
+    }
   }
 }
 
-const isFavorite = (track) => favorites.value.has(track.id)
+const nextTrack = () => {
+  if (currentTrackIndex.value < currentPlaylist.value.length - 1) {
+    currentTrackIndex.value++
+    playTrack(currentPlaylist.value[currentTrackIndex.value])
+  } else {
+    if (currentPlaylist.value.length > 0) {
+      currentTrackIndex.value = 0
+      playTrack(currentPlaylist.value[0])
+    }
+  }
+}
+
+const onTimeUpdate = () => {
+  if (audioPlayer.value) {
+    currentTime.value = audioPlayer.value.currentTime
+  }
+}
+
+const onLoadedMetadata = () => {
+  if (audioPlayer.value) {
+    duration.value = audioPlayer.value.duration || 0
+  }
+}
+
+const onTrackEnded = () => {
+  isPlaying.value = false
+  nextTrack()
+}
+
+const onAudioError = (e) => {
+  console.error('Erro de áudio:', e)
+  showToastFn('Erro ao carregar áudio. Tente outra música.', 'error')
+  isPlaying.value = false
+}
+
+const seekTo = (event) => {
+  if (!audioPlayer.value || !duration.value) return
+ 
+  const rect = event.currentTarget.getBoundingClientRect()
+  const percent = (event.clientX - rect.left) / rect.width
+  const newTime = percent * duration.value
+ 
+  audioPlayer.value.currentTime = newTime
+  currentTime.value = newTime
+}
+
+const updateVolume = () => {
+  if (audioPlayer.value) {
+    audioPlayer.value.volume = volume.value
+  }
+}
+
+const formatDuration = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const openFullPlayer = () => {
+  if (currentTrack.value) {
+    showFullPlayer.value = true
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILITÁRIOS E FAVORITOS
+// ═══════════════════════════════════════════════════════
+
+const toggleFavorite = (track) => {
+  if (!track || !track.id) return
+
+  if (favorites.value.has(track.id)) {
+    favorites.value.delete(track.id)
+    showToastFn('Removido dos favoritos', 'info')
+  } else {
+    favorites.value.add(track.id)
+    showToastFn('Adicionado aos favoritos ❤️', 'success')
+  }
+
+  const savedFavs = JSON.parse(localStorage.getItem('favorites_data') || '[]')
+  const existingIndex = savedFavs.findIndex(f => f.id === track.id)
+ 
+  if (favorites.value.has(track.id)) {
+    if (existingIndex === -1) {
+      savedFavs.push(track)
+    }
+  } else {
+    if (existingIndex > -1) {
+      savedFavs.splice(existingIndex, 1)
+    }
+  }
+ 
+  localStorage.setItem('favorites_data', JSON.stringify(savedFavs))
+  localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.value)))
+}
+
+const isFavorite = (track) => {
+  if (!track || !track.id) return false
+  return favorites.value.has(track.id)
+}
 
 const addToPlaylist = (track) => {
-  showToast(`"${track.title}" adicionada à playlist`, 'success')
+  if (!currentPlaylist.value.find(t => t.id === track.id)) {
+    currentPlaylist.value.push(track)
+    showToastFn(`"${track.title}" adicionada à fila`, 'success')
+  } else {
+    showToastFn(`"${track.title}" já está na fila`, 'info')
+  }
 }
 
 const askAboutArtist = (artist) => {
@@ -633,27 +1716,117 @@ const clearChat = () => {
       type: 'ai',
       content: 'Conversa limpa! 🎵 Como posso te ajudar agora?',
       timestamp: new Date(),
-      recommendations: null
+      recommendations: null,
+      lyricResults: null
     }]
-    showToast('Chat limpo com sucesso', 'success')
+    showToastFn('Chat limpo com sucesso', 'success')
   }
+}
+
+const formatMessage = (text) => {
+  if (!text) return ''
+  let formatted = text
+    // Negrito: **texto** (só formata se tiver espaço/quebra antes e depois)
+    .replace(/(^|\s)\*\*(.+?)\*\*(?=\s|$)/g, '$1<strong>$2</strong>')
+    // Itálico: *texto* (mesma lógica)
+    .replace(/(^|\s)\*(.+?)\*(?=\s|$)/g, '$1<em>$2</em>')
+  return formatted.split(String.fromCharCode(10)).join('<br>')
 }
 
 const formatTime = (date) => {
   return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
+const getPlaceholder = () => {
+  if (!isAuthenticated.value && chatLimit.value.remaining === 0) {
+    return '🔒 Faça login para continuar...'
+  }
+  return 'Pergunte sobre artistas, músicas, álbuns, letras, curiosidades...'
+}
+
+const getRandomGradient = (index) => {
+  const gradients = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
+  ]
+  return gradients[index % gradients.length]
+}
+
+const handleImgError = (e) => {
+  e.target.style.display = 'none'
+  if (e.target.parentElement) {
+    e.target.parentElement.classList.add('img-error')
+  }
+}
+
+const redirectToLogin = () => {
+  showLoginOverlay.value = false
+  router.push('/login')
+}
+
+const redirectToRegister = () => {
+  showLoginOverlay.value = false
+  router.push('/register')
+}
+
+const logout = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  isAuthenticated.value = false
+  userName.value = ''
+  showToastFn('Logout realizado com sucesso', 'success')
+  setTimeout(() => {
+    window.location.reload()
+  }, 1000)
+}
+
 // ============ LIFECYCLE ============
 onMounted(() => {
+  checkAuth()
+  fetchChatLimit()
   scrollToBottom()
   inputRef.value?.focus()
+ 
+  const savedFavorites = localStorage.getItem('favorites')
+  if (savedFavorites) {
+    try {
+      favorites.value = new Set(JSON.parse(savedFavorites))
+    } catch (e) {
+      console.warn('Erro ao carregar favoritos:', e)
+    }
+  }
+ 
+  isOnline.value = navigator.onLine
+  window.addEventListener('online', () => { isOnline.value = true })
+  window.addEventListener('offline', () => { isOnline.value = false })
+ 
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      e.preventDefault()
+      togglePlay()
+    }
+    if (e.code === 'ArrowRight' && e.ctrlKey) {
+      nextTrack()
+    }
+    if (e.code === 'ArrowLeft' && e.ctrlKey) {
+      prevTrack()
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  if (audioPlayer.value) {
+    audioPlayer.value.pause()
+  }
 })
 
 watch(messages, () => {
   scrollToBottom()
 }, { deep: true })
 </script>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -697,6 +1870,347 @@ body {
   height: 100vh;
   position: relative;
   overflow: hidden;
+}
+
+/* Login Overlay */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-modal {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 48px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.login-modal h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.login-modal p {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.login-sub {
+  color: var(--primary-light);
+  font-weight: 500;
+}
+
+.login-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  justify-content: center;
+}
+
+.btn-login, .btn-register {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  font-size: 15px;
+}
+
+.btn-login {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-register {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-register:hover {
+  background: var(--bg-glass-hover);
+}
+
+.btn-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.btn-close:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+/* Full Player Overlay */
+.full-player-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(20px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.full-player {
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 48px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  backdrop-filter: blur(20px);
+}
+
+.close-full-player {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 24px;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.close-full-player:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.full-player-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.full-cover {
+  width: 280px;
+  height: 280px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 100px;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.full-cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.full-cover-emoji {
+  position: relative;
+  z-index: 1;
+}
+
+.full-track-info {
+  text-align: center;
+}
+
+.full-track-info h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.full-track-info p {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.full-progress {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time-current, .time-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.progress-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.progress-bar:hover .progress-handle {
+  opacity: 1;
+}
+
+.full-controls {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.full-controls button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 28px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 8px;
+}
+
+.full-controls button:hover:not(:disabled) {
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.full-controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.full-controls .main-control {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 50%;
+  color: white;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+}
+
+.full-controls .main-control:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 30px rgba(99, 102, 241, 0.6);
+}
+
+.full-volume {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.full-volume span {
+  font-size: 20px;
+}
+
+.full-volume input[type="range"] {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-card);
+  border-radius: 3px;
+  outline: none;
+}
+
+.full-volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Fade Transition */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+/* Slide Down Transition */
+.slide-down-enter-active, .slide-down-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-down-enter-from, .slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 /* Background Animado */
@@ -771,6 +2285,25 @@ body {
   flex-direction: column;
   backdrop-filter: blur(20px);
   overflow-y: auto;
+  transition: width 0.3s ease;
+}
+
+.sidebar-collapsed {
+  width: 80px;
+}
+
+.sidebar-collapsed .nav-label,
+.sidebar-collapsed .genre-section,
+.sidebar-collapsed .limit-widget,
+.sidebar-collapsed .playlist-widget,
+.sidebar-collapsed .now-playing .np-info,
+.sidebar-collapsed .now-playing .np-controls,
+.sidebar-collapsed .now-playing .np-progress-mini {
+  display: none;
+}
+
+.sidebar-collapsed .logo h1 {
+  display: none;
 }
 
 .logo {
@@ -778,6 +2311,7 @@ body {
   align-items: center;
   gap: 12px;
   margin-bottom: 32px;
+  position: relative;
 }
 
 .logo-icon {
@@ -806,6 +2340,28 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
+.sidebar-toggle {
+  position: absolute;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.sidebar-toggle:hover {
+  background: var(--primary);
+  color: white;
+}
+
 .nav-menu {
   display: flex;
   flex-direction: column;
@@ -823,6 +2379,7 @@ body {
   transition: all 0.3s ease;
   color: var(--text-secondary);
   font-weight: 500;
+  position: relative;
 }
 
 .nav-item:hover {
@@ -839,6 +2396,16 @@ body {
 
 .nav-icon {
   font-size: 20px;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--secondary);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 .genre-section h3 {
@@ -875,6 +2442,159 @@ body {
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
 }
 
+/* Limit Widget */
+.limit-widget {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.limit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.limit-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.limit-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--bg-glass);
+  color: var(--success);
+  transition: all 0.3s ease;
+}
+
+.limit-badge.warning {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.limit-badge.danger {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.limit-bar {
+  height: 6px;
+  background: var(--bg-glass);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.limit-progress {
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.limit-text {
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.limit-text.danger {
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* Playlist Widget */
+.playlist-widget {
+  margin-top: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.playlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.playlist-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.playlist-count {
+  font-size: 11px;
+  color: var(--primary-light);
+  font-weight: 600;
+}
+
+.playlist-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.playlist-track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 13px;
+}
+
+.playlist-track:hover {
+  background: var(--bg-glass-hover);
+}
+
+.playlist-track.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2));
+}
+
+.pl-number {
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 20px;
+}
+
+.pl-title {
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.pl-artist {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-more {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 8px;
+}
+
 /* Now Playing Widget */
 .now-playing {
   margin-top: auto;
@@ -882,6 +2602,13 @@ body {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.now-playing:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
 }
 
 .np-header {
@@ -939,6 +2666,23 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 24px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.np-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-placeholder-mini {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
 }
 
 .np-info h4 {
@@ -954,6 +2698,10 @@ body {
 .np-info p {
   font-size: 12px;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
 }
 
 .np-controls {
@@ -987,6 +2735,24 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 16px;
+}
+
+.np-progress-mini {
+  margin-top: 12px;
+}
+
+.np-progress-bar {
+  height: 4px;
+  background: var(--bg-glass);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.np-progress-fill {
+  height: 100%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
 /* Chat Wrapper */
@@ -1042,6 +2808,11 @@ body {
   animation: pulse 2s infinite;
 }
 
+.status-indicator.offline {
+  background: var(--error);
+  animation: none;
+}
+
 .header-text h2 {
   font-size: 18px;
   font-weight: 700;
@@ -1078,6 +2849,72 @@ body {
   border-color: var(--primary);
   color: white;
   transform: scale(1.1);
+}
+
+.icon-btn.login-btn:hover {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.icon-btn.logout-btn:hover {
+  background: var(--error);
+  border-color: var(--error);
+}
+
+/* Settings Panel */
+.settings-panel {
+  position: absolute;
+  top: 80px;
+  right: 32px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 280px;
+  backdrop-filter: blur(20px);
+  z-index: 100;
+  box-shadow: var(--shadow-lg);
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-item span {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.toggle-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.setting-item select {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
 }
 
 /* Chat Container */
@@ -1136,6 +2973,13 @@ body {
   flex-shrink: 0;
 }
 
+.message-avatar.user-avatar {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+}
+
 .message-content {
   background: var(--bg-glass);
   border: 1px solid var(--border);
@@ -1155,6 +2999,14 @@ body {
   font-size: 15px;
   line-height: 1.6;
   color: var(--text-primary);
+}
+
+.message-text :deep(strong) {
+  color: var(--primary-light);
+}
+
+.message-wrapper.user .message-text :deep(strong) {
+  color: white;
 }
 
 .message-time {
@@ -1177,7 +3029,149 @@ body {
 .message-enter-from,
 .message-leave-to {
   opacity: 0;
-  transform: translateY(20px) scale(0.95);
+  transform: translateY(20px);
+}
+
+/* Lyric Results Card */
+.lyric-results-card {
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+
+.lyric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lyric-badge {
+  font-size: 12px;
+  color: var(--primary-light);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.lyric-query {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.lyric-songs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lyric-song-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.lyric-song-item:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--primary);
+  transform: translateX(8px);
+}
+
+.lyric-number {
+  width: 32px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.lyric-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.lyric-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+.lyric-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.lyric-meta h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lyric-meta p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lyric-preview {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.lyric-play-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.lyric-play-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
 }
 
 /* Recommendations Card */
@@ -1289,6 +3283,12 @@ body {
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+}
+
+.cover-art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .cover-art {
@@ -1566,6 +3566,32 @@ body {
   flex-shrink: 0;
 }
 
+.input-blocked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  border-radius: 16px;
+  color: var(--error);
+  font-weight: 500;
+}
+
+.input-blocked button {
+  background: none;
+  border: none;
+  color: var(--primary-light);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-left: 4px;
+}
+
+.input-blocked button:hover {
+  color: var(--primary);
+}
+
 .input-container {
   display: flex;
   align-items: center;
@@ -1626,6 +3652,11 @@ body {
   color: var(--text-muted);
 }
 
+.message-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .send-btn {
   width: 48px;
   height: 48px;
@@ -1656,6 +3687,11 @@ body {
   cursor: not-allowed;
 }
 
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .spinner {
   animation: spin 1s linear infinite;
   display: inline-block;
@@ -1681,6 +3717,14 @@ body {
   padding: 4px 12px;
   border-radius: 16px;
   border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hint-tag:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 
 /* Toast Notification */
@@ -1756,7 +3800,7 @@ body {
   .sidebar {
     width: 260px;
   }
-  
+ 
   .albums-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
@@ -1766,41 +3810,89 @@ body {
   .sidebar {
     display: none;
   }
-  
+ 
   .message-bubble {
     max-width: 90%;
   }
-  
+ 
   .chat-container {
     padding: 20px;
   }
-  
+ 
   .quick-chip {
     font-size: 13px;
     padding: 10px 16px;
   }
-  
+ 
   .albums-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+ 
+  .lyric-song-item {
+    gap: 12px;
+  }
+ 
+  .lyric-cover {
+    width: 48px;
+    height: 48px;
+  }
+ 
+  .settings-panel {
+    right: 16px;
+    left: 16px;
+  }
+ 
+  .full-player {
+    padding: 32px 24px;
+  }
+ 
+  .full-cover {
+    width: 200px;
+    height: 200px;
+  }
 }
-
 
 @media (max-width: 480px) {
   .chat-header {
     padding: 0 16px;
   }
-  
+ 
   .input-wrapper {
     padding: 16px;
   }
-  
+ 
   .quick-questions {
     padding: 0 16px 16px;
   }
-  
+ 
   .message-bubble {
     max-width: 95%;
+  }
+ 
+  .login-modal {
+    padding: 32px 24px;
+  }
+ 
+  .login-actions {
+    flex-direction: column;
+  }
+ 
+  .btn-login, .btn-register {
+    width: 100%;
+  }
+ 
+  .full-track-info h2 {
+    font-size: 18px;
+  }
+ 
+  .full-controls button {
+    font-size: 22px;
+  }
+ 
+  .full-controls .main-control {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
   }
 }
 </style>

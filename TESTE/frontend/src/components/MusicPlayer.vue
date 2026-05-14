@@ -188,13 +188,11 @@ export default {
       hasTrack: false,
       playPromise: null,
       
-      // ═══════════════════════════════════════════════════════
-      // NOVO: Controle de histórico
-      // ═══════════════════════════════════════════════════════
-      _trackStartTime: null,      // Quando a música começou a tocar
-      _totalListenedTime: 0,      // Tempo total ouvido (acumulado)
-      _lastSyncTime: 0,           // Último sync enviado
-      _syncInterval: null         // Referência do intervalo
+      // Controle de histórico
+      _trackStartTime: null,
+      _totalListenedTime: 0,
+      _lastSyncTime: 0,
+      _syncInterval: null
     }
   },
 
@@ -231,36 +229,37 @@ export default {
     window.addEventListener('play-song', this.handlePlaySong)
     window.addEventListener('playlist-playback-started', this.handlePlaylistPlayback)
     
-    // Comandos do Dashboard
+    // Comandos do Dashboard/Chat
     window.addEventListener('player-toggle-play', this.handleTogglePlayCommand)
     window.addEventListener('player-next-track', this.handleNextCommand)
-     window.addEventListener('player-prev-track', this.handlePrevCommand)
+    window.addEventListener('player-prev-track', this.handlePrevCommand)
     
-    // Iniciar sincronização contínua com o Dashboard
+    // Iniciar sincronização contínua com o Dashboard/Chat
     this.startSyncInterval()
   },
 
-beforeDestroy() {
-  window.removeEventListener('play-song', this.handlePlaySong)
-  window.removeEventListener('playlist-playback-started', this.handlePlaylistPlayback)
-  window.removeEventListener('player-toggle-play', this.handleTogglePlayCommand)
-  window.removeEventListener('player-next-track', this.handleNextCommand)
-  window.removeEventListener('player-prev-track', this.handlePrevCommand) // NOVO
-  
-  this.stopSyncInterval()
-},
+  beforeDestroy() {
+    window.removeEventListener('play-song', this.handlePlaySong)
+    window.removeEventListener('playlist-playback-started', this.handlePlaylistPlayback)
+    window.removeEventListener('player-toggle-play', this.handleTogglePlayCommand)
+    window.removeEventListener('player-next-track', this.handleNextCommand)
+    window.removeEventListener('player-prev-track', this.handlePrevCommand)
+    
+    this.stopSyncInterval()
+  },
 
   methods: {
     handlePrevCommand() {
-  console.log('🎮 Comando prev recebido do Dashboard')
-  this.prevTrack()
-},
+      console.log('🎮 Comando prev recebido')
+      this.prevTrack()
+    },
+    
     // ═══════════════════════════════════════════════════════
-    // SINCRONIZAÇÃO COM DASHBOARD (NOVO)
+    // SINCRONIZAÇÃO COM DASHBOARD/CHAT
     // ═══════════════════════════════════════════════════════
 
     startSyncInterval() {
-      // Envia estado a cada 300ms para o Dashboard
+      // Envia estado a cada 300ms para sincronizar UI
       this._syncInterval = setInterval(() => {
         this.syncStateToDashboard()
       }, 300)
@@ -293,7 +292,9 @@ beforeDestroy() {
             artist: this.currentTrack.artist,
             cover: this.currentTrack.cover,
             url: this.currentTrack.url,
-            duration: this.currentTrack.duration
+            duration: this.currentTrack.duration,
+            emoji: this.currentTrack.emoji,
+            color: this.currentTrack.color
           },
           isPlaying: this.isPlaying,
           currentTime: this.currentTime,
@@ -308,16 +309,16 @@ beforeDestroy() {
     },
 
     // ═══════════════════════════════════════════════════════
-    // COMANDOS DO DASHBOARD
+    // COMANDOS EXTERNOS
     // ═══════════════════════════════════════════════════════
 
     handleTogglePlayCommand() {
-      console.log('🎮 Comando toggle-play recebido do Dashboard')
+      console.log('🎮 Comando toggle-play recebido')
       this.togglePlay()
     },
 
     handleNextCommand() {
-      console.log('⏭️ Comando next recebido do Dashboard')
+      console.log('⏭️ Comando next recebido')
       this.nextTrack()
     },
 
@@ -325,22 +326,22 @@ beforeDestroy() {
     // HANDLERS DE EVENTOS GLOBAIS
     // ═══════════════════════════════════════════════════════
 
-handlePlaySong(e) {
-  console.log('📥 Evento play-song recebido:', e.detail)
-  
-  // Notificar o Dashboard para adicionar ao histórico também
-  const detail = e.detail
-  if (detail && detail.song) {
-    window.dispatchEvent(new CustomEvent('player-track-started', {
-      detail: {
-        track: detail.song,
-        timestamp: Date.now()
+    handlePlaySong(e) {
+      console.log('📥 Evento play-song recebido:', e.detail)
+      
+      // Notificar que track começou
+      const detail = e.detail
+      if (detail && detail.song) {
+        window.dispatchEvent(new CustomEvent('player-track-started', {
+          detail: {
+            track: detail.song,
+            timestamp: Date.now()
+          }
+        }))
       }
-    }))
-  }
-  
-  this.loadSongFromEvent(e.detail)
-},
+      
+      this.loadSongFromEvent(e.detail)
+    },
 
     handlePlaylistPlayback(e) {
       console.log('📥 Evento playlist-playback-started recebido:', e.detail)
@@ -354,7 +355,7 @@ handlePlaySong(e) {
     loadSongFromEvent({ song, playlist, index, context }) {
       // Se já tinha uma música tocando, registra ela no histórico ANTES de trocar
       if (this.currentTrack && this._trackStartTime) {
-        this.notifyTrackEnded(false) // false = não terminou naturalmente, mas trocou
+        this.notifyTrackEnded(false)
       }
 
       // Atualizar playlist
@@ -502,7 +503,7 @@ handlePlaySong(e) {
         if (this._trackStartTime) {
           const sessionTime = Date.now() - this._trackStartTime
           this._totalListenedTime += sessionTime
-          this._trackStartTime = null // Pausa o contador
+          this._trackStartTime = null
         }
         
       } else {
@@ -534,7 +535,7 @@ handlePlaySong(e) {
     },
 
     // ═══════════════════════════════════════════════════════
-    // EVENTOS DO ÁUDIO (SINCRONIZAÇÃO DE ESTADO)
+    // EVENTOS DO ÁUDIO
     // ═══════════════════════════════════════════════════════
 
     onAudioPlay() {
@@ -562,16 +563,12 @@ handlePlaySong(e) {
       }
     },
 
-    // ═══════════════════════════════════════════════════════
-    // EVENTO CRÍTICO: MÚSICA TERMINOU
-    // ═══════════════════════════════════════════════════════
-
     onAudioEnded() {
       console.log('⏹️ Evento: ended - Música terminou!')
       this.isPlaying = false
       
-      // Notificar Dashboard que a música terminou naturalmente
-      this.notifyTrackEnded(true) // true = terminou naturalmente
+      // Notificar que a música terminou naturalmente
+      this.notifyTrackEnded(true)
       
       if (this.repeatMode) {
         const audio = this.$refs.audioPlayer
@@ -584,10 +581,6 @@ handlePlaySong(e) {
       }
     },
 
-    /**
-     * Notifica o Dashboard que uma música acabou de ser ouvida
-     * @param {boolean} naturallyEnded - true se terminou sozinha, false se foi trocada
-     */
     notifyTrackEnded(naturallyEnded = true) {
       if (!this.currentTrack) return
       
@@ -599,10 +592,8 @@ handlePlaySong(e) {
         listenedDuration += (Date.now() - this._trackStartTime)
       }
       
-      console.log(`📊 Música finalizada. Tempo ouvido: ${Math.round(listenedDuration/1000)}s (naturallyEnded: ${naturallyEnded})`)
+      console.log(`📊 Música finalizada. Tempo ouvido: ${Math.round(listenedDuration/1000)}s`)
       
-      // SEMPRE notificar, independente do tempo ouvido
-      // O Dashboard decide se adiciona ou não ao histórico
       window.dispatchEvent(new CustomEvent('player-track-ended', {
         detail: {
           track: {
@@ -615,7 +606,7 @@ handlePlaySong(e) {
             source: this.currentTrack.source || 'unknown'
           },
           listenedDuration: listenedDuration,
-          totalDuration: this.duration * 1000, // duração total em ms
+          totalDuration: this.duration * 1000,
           context: this.currentTrack.source || 'unknown',
           naturallyEnded: naturallyEnded,
           timestamp: Date.now()
@@ -649,7 +640,7 @@ handlePlaySong(e) {
     },
 
     // ═══════════════════════════════════════════════════════
-    // NAVEGAÇÃO (MODIFICADA PARA REGISTRAR HISTÓRICO)
+    // NAVEGAÇÃO
     // ═══════════════════════════════════════════════════════
 
     prevTrack() {
@@ -836,9 +827,11 @@ handlePlaySong(e) {
   opacity: 1;
   transform: translateY(0);
 }
+
 .music-player {
   position: fixed;
   bottom: 0;
+  left: 0;
   right: 0;
   height: 90px;
   background: linear-gradient(180deg, #0a0a1a 0%, #050508 100%);
@@ -850,44 +843,6 @@ handlePlaySong(e) {
   z-index: 999;
   font-family: 'Segoe UI', system-ui, sans-serif;
   animation: slideUp 0.3s ease;
-}
-
-.music-player-empty {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  height: 70px;
-  background: linear-gradient(180deg, #0a0a1a 0%, #050508 100%);
-  border-top: 1px solid rgba(37, 99, 235, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-}
-
-.music-player,
-.music-player-empty {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 90px;
-  transition: left 0.3s ease;
-}
-
-.empty-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #64748b;
-  font-size: 14px;
-}
-
-.empty-content i {
-  font-size: 20px;
-  color: #2563eb;
-  opacity: 0.5;
 }
 
 @keyframes slideUp {
@@ -1226,24 +1181,15 @@ handlePlaySong(e) {
   margin: 0;
 }
 
-/* Quando sidebar estiver aberto */
-.app.sidebar-open .music-player,
-.app.sidebar-open .music-player-empty {
-  left: 260px;
-}
-
 /* Responsivo */
 @media (max-width: 1024px) {
-  .music-player,
-  .music-player-empty {
-    left: 220px;
+  .music-player {
+    padding: 0 20px;
   }
 }
 
 @media (max-width: 768px) {
-  .music-player,
-  .music-player-empty {
-    left: 0;
+  .music-player {
     padding: 0 16px;
   }
   
@@ -1280,10 +1226,6 @@ handlePlaySong(e) {
   .time {
     font-size: 10px;
     min-width: 30px;
-  }
-  
-  .empty-content span {
-    display: none;
   }
 }
 </style>
