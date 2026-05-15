@@ -130,7 +130,7 @@
       @click="toggleArtist(artist)"
     >
       <div class="artist-image">
-     <img :src="artist.photo" :alt="artist.name" @error="handleImageError($event)">
+ <img :src="artist.photo" :alt="artist.name" @error="handleImageError($event)" loading="lazy">
         <div class="artist-gradient"></div>
         <div class="selection-indicator">
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -391,6 +391,8 @@ export default {
       splashProgress: 0,
       splashCurrentStep: 0,
       isExpanding: false,
+      dataLoaded: false,
+    isLoading: false,
       splashSteps: [
         'Salvando preferências',
         'Sincronizando biblioteca',
@@ -400,10 +402,15 @@ export default {
       splashCircumference: 2 * Math.PI * 52
     }
   },
+  created() {
+  console.log('COMPONENT CREATED')
+},
 
-  async mounted() {
+async mounted() {
+  if (!this.dataLoaded && !this.isLoading) {
     await this.loadInitialData()
-  },
+  }
+},
 
   computed: {
         splashStrokeOffset() {
@@ -460,68 +467,6 @@ async scrollToTop() {
   const contentArea = document.querySelector('.content-area')  // ✅ busca no documento
   if (contentArea) {
     contentArea.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-},
-
-    async loadSpotifyData() {
-  try {
-    const data = await this.fetchJson(
-      "http://localhost:3002/spotify/artists/popular",
-      "Spotify data"
-    )
-
-    // ========================
-    // GÊNEROS
-    // ========================
-    const generosUnicos = new Map()
-
-    ;(data.groups || []).forEach((group, i) => {
-      if (group.genre) {
-        generosUnicos.set(this.normalizeText(group.genre), {
-          id: "spotify_" + this.normalizeText(group.genre),
-          name: group.genre.replace('brazilian ', ''),
-          emoji: this.getEmoji(group.genre),
-          color: this.getColor(i),
-          gradient: this.getGradient(i),
-          source: "spotify"
-        })
-      }
-    })
-
-    const genres = Array.from(generosUnicos.values())
-
-    // ========================
-    // ARTISTAS
-    // ========================
-    const artists = (data.groups || []).flatMap((group, groupIndex) =>
-      (group.artists || []).slice(0, 3).map((artist, index) => ({
-        id: artist.id,
-        name: artist.name,
-        photo:
-          artist.images?.[0]?.url ||
-          this.getPlaceholderImage(groupIndex * 3 + index),
-
-        genre: group.genre,
-        genreGroup: group.genre,
-        popularity:
-          artist.popularity ||
-          Math.floor(Math.random() * 20) + 70,
-
-        source: "spotify"
-      }))
-    )
-
-    this.genres = this.limitGenres(
-      this.mergeUniqueByName(this.genres, genres)
-    )
-
-    this.artists = this.limitArtistsByGenre(
-      this.mergeUniqueByName(this.artists, artists)
-    )
-
-    console.log("✅ Spotify data carregado")
-  } catch (e) {
-    console.error("Erro Spotify data:", e)
   }
 },
         // ==================== SPLASH SCREEN ====================
@@ -663,23 +608,146 @@ async fetchJson(url, label = "requisicao") {
     },
 
 async loadInitialData() {
-await Promise.allSettled([
-  this.loadSpotifyData(), // NOVO
-  this.loadSpotifyVibes(),
-  this.loadGeneros(),
-  this.loadCantores(),
-  this.loadVibes()
-])
+  if (this.isLoading) return
+  this.isLoading = true
+  
+  try {
+    const [spotifyData, localData] = await Promise.allSettled([
+      this.loadAllSpotifyData(),   // ← UMA requisição só
+      this.loadAllLocalData()      // ← 3 requisições locais paralelas
+    ])
+    // ... processa resultados
+    this.dataLoaded = true
+  } finally {
+    this.isLoading = false
+  }
+},
+// ✅ NOVO: Uma única requisição que busca tudo do Spotify
+async loadAllSpotifyData() {
+  try {
+    const data = await this.fetchJson(
+      "http://localhost:3002/spotify/artists/popular",
+      "Spotify artists popular"
+    )
 
-  // ✅ Agora sim, os dados já carregaram (de ambas as fontes)
-  this.genres = this.limitGenres(this.genres)
-  this.artists = this.limitArtistsByGenre(this.artists)
-  this.vibes = this.limitVibes(this.vibes)
+    const generosUnicos = new Map()
+    const artists = []
 
-  console.log("📦 loadInitialData finalizado")
-  console.log("genres:", this.genres.length, this.genres.map(g => g.name))
-  console.log("artists:", this.artists.length, this.artists.map(a => a.name))
-  console.log("vibes:", this.vibes.length, this.vibes.map(v => v.name))
+    // Extrai gêneros e artistas da mesma resposta
+    ;(data.groups || []).forEach((group, i) => {
+      if (group.genre) {
+        const nomeFormatado = group.genre
+          .replace('brazilian ', '')
+          .replace(/^./, str => str.toUpperCase())
+        
+        const genreKey = this.normalizeText(group.genre)
+        if (!generosUnicos.has(genreKey)) {
+          generosUnicos.set(genreKey, {
+            id: "spotify_" + genreKey,
+            name: nomeFormatado,
+            emoji: this.getEmoji(group.genre),
+            color: this.getColor(i),
+            gradient: this.getGradient(i),
+            source: "spotify"
+          })
+        }
+      }
+
+      ;(group.artists || []).slice(0, 3).forEach((artist, index) => {
+        artists.push({
+          id: artist.id,
+          name: artist.name,
+          photo: artist.images?.[0]?.url || this.getPlaceholderImage(i * 3 + index),
+          genre: group.genre,
+          genreGroup: group.genre,
+          popularity: artist.popularity || Math.floor(Math.random() * 20) + 70,
+          source: "spotify"
+        })
+      })
+    })
+
+    // Busca vibes em paralelo (endpoint separado mas rápido)
+    let vibes = []
+    try {
+      const vibesData = await this.fetchJson("http://localhost:3002/spotify/vibes", "Spotify vibes")
+      vibes = (Array.isArray(vibesData) ? vibesData : []).slice(0, 18).map((v, index) => ({
+        id: v.id || `api_vibe_${index}`,
+        name: v.name,
+        emoji: v.emoji || "✨",
+        gradient: v.gradient || this.getGradient(index),
+        description: v.description || "Vibe vinda da API",
+        tags: v.tags || [],
+        source: v.source || "spotify"
+      }))
+    } catch (e) {
+      console.warn("⚠️ Vibes Spotify falhou, usando padrão")
+    }
+
+    return { 
+      genres: Array.from(generosUnicos.values()), 
+      artists, 
+      vibes 
+    }
+  } catch (e) {
+    console.error("❌ Erro Spotify data:", e)
+    return { genres: [], artists: [], vibes: [] }
+  }
+},
+// ✅ NOVO: Carrega dados locais em paralelo (3 requests simultâneas)
+async loadAllLocalData() {
+  const [generosRes, cantoresRes, vibesRes] = await Promise.allSettled([
+    fetch("http://localhost:3002/generos"),
+    fetch("http://localhost:3002/cantores"),
+    fetch("http://localhost:3002/vibes")
+  ])
+
+  let genres = [], artists = [], vibes = []
+
+  if (generosRes.status === 'fulfilled' && generosRes.value.ok) {
+    try {
+      const data = await generosRes.value.json()
+      const generosArray = Object.values(data).flat()
+      genres = generosArray.map((g, index) => ({
+        id: g._id,
+        name: g.nome,
+        emoji: g.icon || this.getEmoji(g.nome),
+        color: g.color || this.getColor(index),
+        gradient: g.gradient || this.getGradient(index),
+        source: "local"
+      }))
+    } catch (e) { console.error("Erro generos:", e) }
+  }
+
+  if (cantoresRes.status === 'fulfilled' && cantoresRes.value.ok) {
+    try {
+      const data = await cantoresRes.value.json()
+      artists = data.map((c, index) => ({
+        id: c._id,
+        name: c.nome,
+        photo: c.foto || this.getPlaceholderImage(index + 10),
+        genre: c.generos?.length ? c.generos.map(g => g.nome).join(", ") : "Sem genero",
+        popularity: Math.floor(Math.random() * 20) + 80,
+        source: "local"
+      }))
+    } catch (e) { console.error("Erro cantores:", e) }
+  }
+
+  if (vibesRes.status === 'fulfilled' && vibesRes.value.ok) {
+    try {
+      const data = await vibesRes.value.json()
+      vibes = data.map((v, index) => ({
+        id: v._id,
+        name: v.nome,
+        emoji: v.emoji || "🎵",
+        gradient: v.gradient || this.getGradient(index),
+        description: v.descricao || "Vibe musical",
+        tags: v.tags || [],
+        source: "local"
+      }))
+    } catch (e) { console.error("Erro vibes:", e) }
+  }
+
+  return { genres, artists, vibes }
 },
 
     normalizeText(value) {
@@ -775,79 +843,6 @@ await Promise.allSettled([
         console.error("Erro vibes:", e)
       }
     },
-
-    // ==================== ARTISTAS SPOTIFY (45 artistas = 15 generos x 3) ====================
-   async loadSpotifyArtists() {
-  try {
-    const data = await this.fetchJson(
-      "http://localhost:3002/spotify/artists/popular",
-      "Spotify artistas"
-    )
-
-    const spotifyArtists = (data.groups || []).flatMap((group, groupIndex) =>
-      (group.artists || []).slice(0, 3).map((artist, index) => ({
-        id: artist.id,
-        name: artist.name,
-        photo: artist.images?.[0]?.url || this.getPlaceholderImage(groupIndex * 3 + index + 50),
-        genre: group.genre,
-        genreGroup: group.genre,
-        genresArray: artist.genres || [group.genre],
-        popularity: artist.popularity || Math.floor(Math.random() * 20) + 70,
-        followers: artist.followers?.total || 0,
-        source: "spotify"
-      }))
-    )
-
-    this.artists = this.limitArtistsByGenre(
-      this.mergeUniqueByName(this.artists, spotifyArtists)
-    )
-
-    console.log("🎤 artistas carregados:", this.artists.length)
-  } catch (e) {
-    console.error("Erro Spotify artistas:", e)
-  }
-},
-
-    // ==================== GENEROS SPOTIFY ====================
-// ==================== GENEROS SPOTIFY ====================
-async loadSpotifyGeneros() {
-  try {
-    const data = await this.fetchJson(
-      "http://localhost:3002/spotify/artists/popular",
-      "Spotify generos"
-    )
-
-    // Extrai gêneros únicos dos grupos de artistas
-    const generosUnicos = new Map()
-    
-    ;(data.groups || []).forEach((group, i) => {
-      if (group.genre) {
-        const nomeFormatado = group.genre
-          .replace('brazilian ', '')
-          .replace(/^./, str => str.toUpperCase())
-        
-        generosUnicos.set(this.normalizeText(group.genre), {
-          id: "spotify_" + this.normalizeText(group.genre),
-          name: nomeFormatado,
-          emoji: this.getEmoji(group.genre),
-          color: this.getColor(i),
-          gradient: this.getGradient(i),
-          source: "spotify"
-        })
-      }
-    })
-
-    const generosSpotify = Array.from(generosUnicos.values()).slice(0, 15)
-
-    this.genres = this.limitGenres(
-      this.mergeUniqueByName(this.genres, generosSpotify)
-    )
-
-    console.log("🎸 gêneros Spotify carregados:", this.genres.length, this.genres.map(g => g.name))
-  } catch (e) {
-    console.error("Erro gêneros Spotify:", e)
-  }
-},
 
     // ==================== VIBES API (12 vibes) ====================
  async loadSpotifyVibes() {

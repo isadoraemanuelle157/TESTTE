@@ -2,6 +2,107 @@ const { spotifyRequest } = require('../utils/spotifyRequest')
 const { SPOTIFY_API_URL } = require('../config/spotify')
 const { getCache, setCache } = require('../utils/cache')
 
+// ================= CACHE CONFIG =================
+const CACHE_TTL = {
+  search: 1000 * 60 * 15,        // 15 min
+  artist: 1000 * 60 * 60,        // 1 hora
+  album: 1000 * 60 * 60,         // 1 hora
+  playlist: 1000 * 60 * 30,      // 30 min
+popular: 1000 * 60 * 60 * 24,
+  vibes: 1000 * 60 * 60 * 6      // 6 horas
+}
+
+// ================= FALLBACK DATA (dados estáticos) =================
+// Quando o Spotify bloqueia (429), usamos esses dados reais
+const FALLBACK_ARTISTS = [
+  { genre: 'brazilian funk', artists: [
+    { id: 'fb1', name: 'Anitta', images: [{url:null}], popularity: 95, followers: {total: 15000000}, genres: ['funk'] },
+    { id: 'fb2', name: 'Ludmilla', images: [{url:null}], popularity: 90, followers: {total: 8000000}, genres: ['funk'] },
+    { id: 'fb3', name: 'MC Kevin o Chris', images: [{url:null}], popularity: 85, followers: {total: 5000000}, genres: ['funk'] }
+  ]},
+  { genre: 'sertanejo', artists: [
+    { id: 'fb4', name: 'Gusttavo Lima', images: [{url:null}], popularity: 92, followers: {total: 12000000}, genres: ['sertanejo'] },
+    { id: 'fb5', name: 'Jorge & Mateus', images: [{url:null}], popularity: 88, followers: {total: 10000000}, genres: ['sertanejo'] },
+    { id: 'fb6', name: 'Henrique & Juliano', images: [{url:null}], popularity: 86, followers: {total: 9000000}, genres: ['sertanejo'] }
+  ]},
+  { genre: 'pagode', artists: [
+    { id: 'fb7', name: 'Grupo Revelação', images: [{url:null}], popularity: 85, followers: {total: 4000000}, genres: ['pagode'] },
+    { id: 'fb8', name: 'Sorriso Maroto', images: [{url:null}], popularity: 87, followers: {total: 6000000}, genres: ['pagode'] },
+    { id: 'fb9', name: 'Péricles', images: [{url:null}], popularity: 84, followers: {total: 3500000}, genres: ['pagode'] }
+  ]},
+  { genre: 'samba', artists: [
+    { id: 'fb10', name: 'Zeca Pagodinho', images: [{url:null}], popularity: 88, followers: {total: 7000000}, genres: ['samba'] },
+    { id: 'fb11', name: 'Martinho da Vila', images: [{url:null}], popularity: 82, followers: {total: 3000000}, genres: ['samba'] },
+    { id: 'fb12', name: 'Beth Carvalho', images: [{url:null}], popularity: 80, followers: {total: 2500000}, genres: ['samba'] }
+  ]},
+  { genre: 'mpb', artists: [
+    { id: 'fb13', name: 'Caetano Veloso', images: [{url:null}], popularity: 85, followers: {total: 5000000}, genres: ['mpb'] },
+    { id: 'fb14', name: 'Gilberto Gil', images: [{url:null}], popularity: 84, followers: {total: 4500000}, genres: ['mpb'] },
+    { id: 'fb15', name: 'Marisa Monte', images: [{url:null}], popularity: 83, followers: {total: 4000000}, genres: ['mpb'] }
+  ]},
+  { genre: 'brazilian rock', artists: [
+    { id: 'fb16', name: 'Legião Urbana', images: [{url:null}], popularity: 90, followers: {total: 8000000}, genres: ['rock'] },
+    { id: 'fb17', name: 'Paralamas do Sucesso', images: [{url:null}], popularity: 86, followers: {total: 5500000}, genres: ['rock'] },
+    { id: 'fb18', name: 'Titãs', images: [{url:null}], popularity: 85, followers: {total: 5000000}, genres: ['rock'] }
+  ]},
+  { genre: 'pop', artists: [
+    { id: 'fb19', name: 'Taylor Swift', images: [{url:null}], popularity: 98, followers: {total: 80000000}, genres: ['pop'] },
+    { id: 'fb20', name: 'The Weeknd', images: [{url:null}], popularity: 96, followers: {total: 60000000}, genres: ['pop'] },
+    { id: 'fb21', name: 'Dua Lipa', images: [{url:null}], popularity: 94, followers: {total: 45000000}, genres: ['pop'] }
+  ]},
+  { genre: 'hip hop', artists: [
+    { id: 'fb22', name: 'Kendrick Lamar', images: [{url:null}], popularity: 95, followers: {total: 35000000}, genres: ['hip hop'] },
+    { id: 'fb23', name: 'Drake', images: [{url:null}], popularity: 97, followers: {total: 70000000}, genres: ['hip hop'] },
+    { id: 'fb24', name: 'Travis Scott', images: [{url:null}], popularity: 93, followers: {total: 30000000}, genres: ['hip hop'] }
+  ]},
+  { genre: 'rap', artists: [
+    { id: 'fb25', name: 'Eminem', images: [{url:null}], popularity: 96, followers: {total: 60000000}, genres: ['rap'] },
+    { id: 'fb26', name: 'Jay-Z', images: [{url:null}], popularity: 90, followers: {total: 40000000}, genres: ['rap'] },
+    { id: 'fb27', name: 'Post Malone', images: [{url:null}], popularity: 94, followers: {total: 35000000}, genres: ['rap'] }
+  ]},
+  { genre: 'eletronica', artists: [
+    { id: 'fb28', name: 'David Guetta', images: [{url:null}], popularity: 92, followers: {total: 30000000}, genres: ['eletronica'] },
+    { id: 'fb29', name: 'Calvin Harris', images: [{url:null}], popularity: 91, followers: {total: 35000000}, genres: ['eletronica'] },
+    { id: 'fb30', name: 'Skrillex', images: [{url:null}], popularity: 88, followers: {total: 20000000}, genres: ['eletronica'] }
+  ]},
+  { genre: 'gospel', artists: [
+    { id: 'fb31', name: 'Aline Barros', images: [{url:null}], popularity: 85, followers: {total: 5000000}, genres: ['gospel'] },
+    { id: 'fb32', name: 'Fernandinho', images: [{url:null}], popularity: 84, followers: {total: 4500000}, genres: ['gospel'] },
+    { id: 'fb33', name: 'Cassiane', images: [{url:null}], popularity: 82, followers: {total: 3000000}, genres: ['gospel'] }
+  ]},
+  { genre: 'reggae', artists: [
+    { id: 'fb34', name: 'Bob Marley', images: [{url:null}], popularity: 95, followers: {total: 25000000}, genres: ['reggae'] },
+    { id: 'fb35', name: 'Natiruts', images: [{url:null}], popularity: 86, followers: {total: 6000000}, genres: ['reggae'] },
+    { id: 'fb36', name: 'SOJA', images: [{url:null}], popularity: 80, followers: {total: 3500000}, genres: ['reggae'] }
+  ]},
+  { genre: 'indie', artists: [
+    { id: 'fb37', name: 'Arctic Monkeys', images: [{url:null}], popularity: 93, followers: {total: 25000000}, genres: ['indie'] },
+    { id: 'fb38', name: 'Tame Impala', images: [{url:null}], popularity: 91, followers: {total: 15000000}, genres: ['indie'] },
+    { id: 'fb39', name: 'The Strokes', images: [{url:null}], popularity: 89, followers: {total: 12000000}, genres: ['indie'] }
+  ]},
+  { genre: 'metal', artists: [
+    { id: 'fb40', name: 'Metallica', images: [{url:null}], popularity: 94, followers: {total: 35000000}, genres: ['metal'] },
+    { id: 'fb41', name: 'Iron Maiden', images: [{url:null}], popularity: 92, followers: {total: 20000000}, genres: ['metal'] },
+    { id: 'fb42', name: 'Sepultura', images: [{url:null}], popularity: 85, followers: {total: 6000000}, genres: ['metal'] }
+  ]},
+  { genre: 'jazz', artists: [
+    { id: 'fb43', name: 'Miles Davis', images: [{url:null}], popularity: 82, followers: {total: 5000000}, genres: ['jazz'] },
+    { id: 'fb44', name: 'John Coltrane', images: [{url:null}], popularity: 80, followers: {total: 4000000}, genres: ['jazz'] },
+    { id: 'fb45', name: 'Norah Jones', images: [{url:null}], popularity: 85, followers: {total: 7000000}, genres: ['jazz'] }
+  ]}
+]
+
+const FALLBACK_VIBES = [
+  { id: 'spotify_festa', name: 'Festa', emoji: '🎉', description: 'Energia alta pra curtir com os amigos', gradient: 'linear-gradient(135deg,#ff512f,#dd2476)', tags: ['dança', 'noite', 'funkeira'] },
+  { id: 'spotify_chill', name: 'Chill', emoji: '🌈', description: 'Relaxar e desacelerar', gradient: 'linear-gradient(135deg,#667eea,#764ba2)', tags: ['relax', 'acústico', 'tarde'] },
+  { id: 'spotify_treino', name: 'Treino', emoji: '💪', description: 'Energia pra academia', gradient: 'linear-gradient(135deg,#11998e,#38ef7d)', tags: ['academia', 'foco', 'energia'] },
+  { id: 'spotify_focus', name: 'Focus', emoji: '🧠', description: 'Concentração total', gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)', tags: ['estudo', 'trabalho', 'lo-fi'] },
+  { id: 'spotify_sertanejo', name: 'Modão', emoji: '🤠', description: 'Raiz e sofrência', gradient: 'linear-gradient(135deg,#8B4513,#D2691E)', tags: ['sertanejo', 'modão', 'universitário'] },
+  { id: 'spotify_pagode', name: 'Pagode', emoji: '🪘', description: 'Roda de samba e resenha', gradient: 'linear-gradient(135deg,#FF6B35,#F7931E)', tags: ['samba', 'pagode', 'resenha'] },
+  { id: 'spotify_funk', name: 'Funk', emoji: '🔥', description: 'Batida brasileira', gradient: 'linear-gradient(135deg,#E91E63,#9C27B0)', tags: ['funk', 'baile', 'ritmo'] },
+  { id: 'spotify_gospel', name: 'Gospel', emoji: '🙏', description: 'Fé e inspiração', gradient: 'linear-gradient(135deg,#FFD700,#FF8C00)', tags: ['gospel', 'louvor', 'fé'] }
+]
+
 // ================= SEARCH =================
 exports.search = async (req, res) => {
   try {
@@ -126,31 +227,52 @@ exports.getAlbum = async (req, res) => {
 }
 
 // ================= POPULAR ARTISTS =================
-exports.getPopularArtists = async (req, res) => {
-  try {
-    const { limit = 45, market = 'BR' } = req.query
-    
-    // Gêneros brasileiros/populares para buscar
-    const generos = [
-      'brazilian funk', 'sertanejo', 'pagode', 'samba', 'mpb', 
-      'brazilian rock', 'pop', 'hip hop', 'rap', 'eletronica', 
-      'gospel', 'reggae', 'indie', 'metal', 'jazz'
-    ]
 
-    // Buscar artistas por gênero (3 por gênero)
-    const groups = []
+// ================= POPULAR ARTISTS =================
+exports.getPopularArtists = async (req, res) => {
+  const { limit = 45, market = 'BR' } = req.query
+
+  const cacheKey = `spotify_popular_artists_${market}_${limit}`
+
+  let spotifyFailed = false
+  let groups = []
+
+  try {
+
+    // 1. VERIFICA CACHE PRIMEIRO
+    const cached = getCache(cacheKey)
+
+    if (cached) {
+      console.log('📦 Cache hit')
+      return res.json(cached)
+    }
+
     
-    for (const genero of generos.slice(0, 15)) {
+    // ✅ CORREÇÃO: Gêneros que existem no FALLBACK_ARTISTS
+   const generos = [
+      'brazilian funk', 'sertanejo', 'pagode', 'samba', 'mpb',
+      'brazilian rock', 'pop', 'hip hop', 'rap',
+      'gospel'
+    ]
+    
+    let rateLimitDetected = false
+
+    for (const genero of generos) {
+      // ✅ CORREÇÃO: Se já deu rate limit, usa fallback para TODOS os gêneros restantes
+      if (rateLimitDetected) {
+        const fallback = FALLBACK_ARTISTS.find(f => f.genre === genero)
+        if (fallback) {
+          groups.push(fallback)
+          console.log(`📦 Fallback aplicado para: ${genero}`)
+        }
+        continue
+      }
+      
       try {
         const response = await spotifyRequest({
           method: 'GET',
           url: `${SPOTIFY_API_URL}/search`,
-          params: { 
-            q: `genre:"${genero}"`, 
-            type: 'artist', 
-            limit: 3, 
-            market 
-          }
+          params: { q: `genre:"${genero}"`, type: 'artist', limit: 1, market }
         })
 
         const artists = response.data?.artists?.items || []
@@ -169,28 +291,82 @@ exports.getPopularArtists = async (req, res) => {
           })
         }
       } catch (err) {
-        console.warn(`⚠️ Gênero ${genero} falhou:`, err.message)
-        continue // ignora e vai pro próximo
+        if (err.isRateLimit || err.response?.status === 429) {
+          console.error(`🚫 Rate limit no gênero (${genero})! Usando fallback.`)
+          rateLimitDetected = true
+          spotifyFailed = true
+          
+          // ✅ CORREÇÃO: Adiciona fallback do gênero atual imediatamente
+          const fallback = FALLBACK_ARTISTS.find(f => f.genre === genero)
+          if (fallback) {
+            groups.push(fallback)
+          }
+        } else {
+          // ✅ CORREÇÃO: Para erros NÃO-429, também adiciona fallback e continua
+          console.warn(`⚠️ Erro no gênero ${genero}: ${err.message}. Usando fallback.`)
+          const fallback = FALLBACK_ARTISTS.find(f => f.genre === genero)
+          if (fallback) {
+            groups.push(fallback)
+          }
+        }
+        // ✅ REMOVIDO: Não dá continue aqui, o loop já vai para o próximo gênero
       }
     }
 
-    res.json({
-      groups: groups,        // ← formato que o frontend espera
-      totalGroups: groups.length,
-      totalArtists: groups.reduce((sum, g) => sum + g.artists.length, 0)
-    })
+    // ✅ CORREÇÃO: Se nenhum grupo foi carregado, usa fallback completo
+    const finalGroups = groups.length === 0 ? FALLBACK_ARTISTS : groups
+    
+    const result = {
+      groups: finalGroups,
+      totalGroups: finalGroups.length,
+      totalArtists: finalGroups.reduce((sum, g) => sum + g.artists.length, 0),
+      fromCache: false,
+      usedFallback: groups.length === 0 || spotifyFailed
+    }
+
+    // Salva no cache por 2 horas (mesmo que seja fallback!)
+setCache(cacheKey, result, CACHE_TTL.popular)
+    
+    console.log(`✅ Popular artists: ${result.totalArtists} artistas (${spotifyFailed ? 'com fallback' : 'Spotify'})`)
+    res.json(result)
 
   } catch (error) {
     console.error('❌ Popular artists error:', error.message)
-    // Retorna array vazio em vez de erro 500
-    res.status(200).json({ 
-      groups: [],
-      totalGroups: 0,
-      totalArtists: 0
-    })
+    // ÚLTIMO RECURSO: retorna fallback mesmo em erro total
+    const fallbackResult = {
+      groups: FALLBACK_ARTISTS,
+      totalGroups: FALLBACK_ARTISTS.length,
+      totalArtists: FALLBACK_ARTISTS.reduce((sum, g) => sum + g.artists.length, 0),
+      fromCache: false,
+      usedFallback: true
+    }
+    res.status(200).json(fallbackResult)
   }
 }
 
+// ================= VIBES (CACHE + FALLBACK ESTÁTICO) =================
+exports.getVibes = async (req, res) => {
+  const cacheKey = 'spotify_vibes'
+  
+  try {
+    const cached = getCache(cacheKey)
+    if (cached) {
+      console.log('📦 Cache hit: vibes')
+      return res.json(cached)
+    }
+
+    // ✅ Usa dados estáticos (não consome rate limit do Spotify)
+    const vibes = FALLBACK_VIBES
+
+    setCache(cacheKey, vibes, CACHE_TTL.vibes)
+    
+    console.log('✅ Vibes carregadas (estáticas + cache)')
+    res.json(vibes)
+  } catch (error) {
+    console.error('❌ Vibes error:', error.message)
+    res.status(200).json(FALLBACK_VIBES)
+  }
+}
 // ================= PLAYLIST =================
 exports.getPlaylist = async (req, res) => {
   try {
@@ -203,82 +379,5 @@ exports.getPlaylist = async (req, res) => {
   } catch (error) {
     console.error('❌ Playlist error:', error.message)
     res.status(500).json({ error: 'Erro playlist', details: error.message })
-  }
-}
-
-exports.getVibes = async (req, res) => {
-  try {
-    // Vibes baseadas em playlists/features do Spotify ou estáticas
-    const vibes = [
-      {
-        id: 'spotify_festa',
-        name: 'Festa',
-        emoji: '🎉',
-        description: 'Energia alta pra curtir com os amigos',
-        gradient: 'linear-gradient(135deg,#ff512f,#dd2476)',
-        tags: ['dança', 'noite', 'funkeira']
-      },
-      {
-        id: 'spotify_chill',
-        name: 'Chill',
-        emoji: '🌈',
-        description: 'Relaxar e desacelerar',
-        gradient: 'linear-gradient(135deg,#667eea,#764ba2)',
-        tags: ['relax', 'acústico', 'tarde']
-      },
-      {
-        id: 'spotify_treino',
-        name: 'Treino',
-        emoji: '💪',
-        description: 'Energia pra academia',
-        gradient: 'linear-gradient(135deg,#11998e,#38ef7d)',
-        tags: ['academia', 'foco', 'energia']
-      },
-      {
-        id: 'spotify_focus',
-        name: 'Focus',
-        emoji: '🧠',
-        description: 'Concentração total',
-        gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)',
-        tags: ['estudo', 'trabalho', 'lo-fi']
-      },
-      {
-        id: 'spotify_sertanejo',
-        name: 'Modão',
-        emoji: '🤠',
-        description: 'Raiz e sofrência',
-        gradient: 'linear-gradient(135deg,#8B4513,#D2691E)',
-        tags: ['sertanejo', 'modão', 'universitário']
-      },
-      {
-        id: 'spotify_pagode',
-        name: 'Pagode',
-        emoji: '🪘',
-        description: 'Roda de samba e resenha',
-        gradient: 'linear-gradient(135deg,#FF6B35,#F7931E)',
-        tags: ['samba', 'pagode', 'resenha']
-      },
-      {
-        id: 'spotify_funk',
-        name: 'Funk',
-        emoji: '🔥',
-        description: 'Batida brasileira',
-        gradient: 'linear-gradient(135deg,#E91E63,#9C27B0)',
-        tags: ['funk', 'baile', 'ritmo']
-      },
-      {
-        id: 'spotify_gospel',
-        name: 'Gospel',
-        emoji: '🙏',
-        description: 'Fé e inspiração',
-        gradient: 'linear-gradient(135deg,#FFD700,#FF8C00)',
-        tags: ['gospel', 'louvor', 'fé']
-      }
-    ]
-
-    res.json(vibes)
-  } catch (error) {
-    console.error('❌ Vibes error:', error.message)
-    res.status(200).json([]) // retorna vazio em vez de erro
   }
 }
