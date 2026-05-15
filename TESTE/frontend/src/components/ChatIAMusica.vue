@@ -1,4 +1,37 @@
 <template>
+  <!-- Modal de Confirmação de Exclusão -->
+<<Transition name="modal-scale">
+  <div v-if="showDeleteModal" class="delete-modal-overlay" @click.self="cancelDelete">
+    <div class="delete-modal">
+      <div class="delete-modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </div>
+      <h3 class="delete-modal-title">Excluir Conversa</h3>
+      <p class="delete-modal-text">
+        Tem certeza que deseja excluir <strong>"{{ deleteTargetTitle }}"</strong>?
+      </p>
+      <p class="delete-modal-warning">Esta ação não pode ser desfeita.</p>
+      <div class="delete-modal-actions">
+        <button class="btn-cancel" @click="cancelDelete">
+          <span>Cancelar</span>
+        </button>
+        <button class="btn-confirm-delete" @click="confirmDelete">
+          <span v-if="!isDeleting">Excluir</span>
+          <span v-else class="delete-spinner">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+            </svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</Transition>
   <div class="app-container">
     <!-- Background Animado -->
     <div class="gradient-bg">
@@ -78,6 +111,12 @@
           </button>
         </div>
 
+        <!-- Botão Novo Chat -->
+        <button v-if="isAuthenticated" class="new-chat-btn" @click="createNewChat">
+          <span>➕</span>
+          <span class="new-chat-label">Novo Chat</span>
+        </button>
+
         <nav class="nav-menu">
           <div
             v-for="item in navItems"
@@ -91,6 +130,27 @@
             <span v-if="item.id === 'favorites' && favorites.size > 0" class="nav-badge">{{ favorites.size }}</span>
           </div>
         </nav>
+
+        <!-- Seção de Chats Salvos -->
+        <div v-if="isAuthenticated && savedChats.length > 0" class="chats-section">
+          <h3>Conversas</h3>
+          <div class="chats-list">
+            <div
+              v-for="chat in savedChats"
+              :key="chat.id"
+              class="chat-item"
+              :class="{ active: currentChatId === chat.id }"
+              @click="loadChat(chat.id)"
+            >
+              <span class="chat-icon">💬</span>
+              <div class="chat-info">
+                <span class="chat-title">{{ chat.title }}</span>
+                <span class="chat-date">{{ formatDate(chat.updatedAt) }}</span>
+              </div>
+              <button class="chat-delete" @click.stop="openDeleteModal(chat.id)" title="Excluir conversa">🗑️</button>
+            </div>
+          </div>
+        </div>
 
         <div class="genre-section">
           <h3>Gêneros Populares</h3>
@@ -498,6 +558,14 @@ const sidebarCollapsed = ref(false)
 const isOnline = ref(true)
 const audioQuality = ref('medium')
 const showAttachMenu = ref(false)
+const showDeleteModal = ref(false)
+const deleteTargetId = ref(null)
+const deleteTargetTitle = ref('')
+const isDeleting = ref(false)
+
+// Chat History
+const savedChats = ref([])
+const currentChatId = ref(null)
 
 // Player State
 const audioPlayer = ref(null)
@@ -535,28 +603,15 @@ const quickQuestions = [
   { icon: '🎻', text: 'Clássica tranquila', genre: 'classical', mood: 'calm', type: 'genre' }
 ]
 
-// Mapeamento de gêneros para busca na API
 const genreSearchMap = {
-  'rock': 'rock',
-  'pop': 'pop',
-  'jazz': 'jazz',
-  'hip hop': 'hip hop',
-  'hiphop': 'hip hop',
-  'rap': 'hip hop',
-  'eletrônica': 'electronic',
-  'eletronica': 'electronic',
-  'electronic': 'electronic',
-  'indie': 'indie',
-  'r&b': 'rnb',
-  'rnb': 'rnb',
-  'clássica': 'classical',
-  'classica': 'classical',
+  'rock': 'rock', 'pop': 'pop', 'jazz': 'jazz', 'hip hop': 'hip hop',
+  'hiphop': 'hip hop', 'rap': 'hip hop', 'eletrônica': 'electronic',
+  'eletronica': 'electronic', 'electronic': 'electronic', 'indie': 'indie',
+  'r&b': 'rnb', 'rnb': 'rnb', 'clássica': 'classical', 'classica': 'classical',
   'classical': 'classical'
 }
 
-// ============ INTENÇÕES DO USUÁRIO ============
 const intentPatterns = {
-  // Dúvidas sobre artista
   artistInfo: [
     'quem canta', 'quem é', 'quem fez', 'quem compôs', 'quem produziu',
     'artista', 'cantor', 'cantora', 'banda', 'grupo musical',
@@ -564,7 +619,6 @@ const intentPatterns = {
     'quem é o vocalista', 'quem toca', 'membros da banda',
     'quando começou', 'carreira de', 'discografia de'
   ],
-  // Dúvidas sobre letra
   lyricsInfo: [
     'letra de', 'letra da', 'letras de', 'letras da',
     'trecho de', 'parte de', 'verso de', 'refrão de',
@@ -572,7 +626,6 @@ const intentPatterns = {
     'o que significa', 'qual o significado',
     'traduzir', 'tradução de', 'tradução da'
   ],
-  // Dúvidas sobre álbum
   albumInfo: [
     'álbum de', 'album de', 'álbum da', 'album da',
     'disco de', 'disco da', 'lp de', 'ep de',
@@ -580,14 +633,12 @@ const intentPatterns = {
     'quando lançou o álbum', 'data de lançamento',
     'primeiro álbum', 'último álbum', 'novo álbum'
   ],
-  // Dúvidas sobre lançamento/data
   releaseInfo: [
     'quando lançou', 'quando foi lançado', 'data de lançamento',
     'ano de', 'em que ano', 'quando surgiu',
     'quando estreou', 'quando começou', 'quando foi gravado',
     'lançamento de', 'estreia de'
   ],
-  // Curiosidades
   trivia: [
     'curiosidade', 'curiosidades', 'sabia que', 'você sabia',
     'fato sobre', 'fatos sobre', 'história por trás',
@@ -595,14 +646,12 @@ const intentPatterns = {
     'como surgiu', 'origem de', 'como nasceu',
     'backstage', 'making of', 'processo criativo'
   ],
-  // Similaridades / recomendações baseadas em artista/música
   similar: [
     'parecido com', 'similar a', 'igual a', 'mesmo estilo',
     'quem soa como', 'artistas parecidos', 'bandas parecidas',
     'músicas parecidas', 'se gosto de', 'se curto',
     'recomendação baseada em', 'mais como', 'outros como'
   ],
-  // Busca por gênero/humor (mantido)
   genre: [
     'gênero', 'genero', 'estilo', 'tipo de música',
     'pop', 'rock', 'jazz', 'hip hop', 'eletrônica', 'indie', 'r&b', 'clássica',
@@ -611,7 +660,6 @@ const intentPatterns = {
     'para dormir', 'para namorar', 'para dirigir', 'para chorar',
     'animado', 'triste', 'calmo', 'romântico', 'energético'
   ],
-  // Busca por nome de música específica
   trackSearch: [
     'música', 'musica', 'som', 'song', 'track',
     'tocar', 'ouvir', 'quero ouvir', 'queria ouvir',
@@ -629,13 +677,131 @@ const userInitials = computed(() => {
 const canPrev = computed(() => currentTrackIndex.value > 0)
 const canNext = computed(() => currentTrackIndex.value < currentPlaylist.value.length - 1)
 
-// ============ API - BUSCA REAL DEEZER/SPOTIFY ============
+// ============ CHAT HISTORY ============
+function loadSavedChats() {
+  if (!isAuthenticated.value) {
+    savedChats.value = []
+    return
+  }
+  const stored = localStorage.getItem('musicai_chats')
+  if (stored) {
+    try {
+      savedChats.value = JSON.parse(stored)
+    } catch (e) {
+      savedChats.value = []
+    }
+  }
+}
 
+function saveChats() {
+  if (!isAuthenticated.value) return
+  localStorage.setItem('musicai_chats', JSON.stringify(savedChats.value))
+}
+
+function createNewChat() {
+  if (isAuthenticated.value && messages.value.length > 1) {
+    saveCurrentChat()
+  }
+  currentChatId.value = null
+  messages.value = [{
+    id: Date.now(),
+    type: 'ai',
+    content: `Olá! 🎵 Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música! 🎧`,
+    timestamp: new Date(),
+    recommendations: null,
+    lyricResults: null
+  }]
+  showToastFn('Novo chat iniciado!', 'success')
+  nextTick(() => inputRef.value?.focus())
+}
+
+function saveCurrentChat() {
+  if (!isAuthenticated.value || messages.value.length <= 1) return
+  const title = messages.value.find(m => m.type === 'user')?.content?.substring(0, 30) + '...' || 'Nova conversa'
+  if (currentChatId.value) {
+    const index = savedChats.value.findIndex(c => c.id === currentChatId.value)
+    if (index > -1) {
+      savedChats.value[index] = {
+        ...savedChats.value[index],
+        messages: [...messages.value],
+        title,
+        updatedAt: new Date().toISOString()
+      }
+    }
+  } else {
+    const newChat = {
+      id: Date.now().toString(),
+      title,
+      messages: [...messages.value],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+    savedChats.value.unshift(newChat)
+    currentChatId.value = newChat.id
+  }
+  saveChats()
+}
+
+function loadChat(chatId) {
+  const chat = savedChats.value.find(c => c.id === chatId)
+  if (!chat) return
+  if (currentChatId.value && currentChatId.value !== chatId) {
+    saveCurrentChat()
+  }
+  currentChatId.value = chatId
+  messages.value = [...chat.messages]
+  showToastFn('Conversa carregada', 'success')
+  nextTick(() => scrollToBottom())
+}
+
+const openDeleteModal = (chatId) => {
+  const chat = savedChats.value.find(c => c.id === chatId)
+  if (!chat) return
+  deleteTargetId.value = chatId
+  deleteTargetTitle.value = chat.title || 'Nova conversa'
+  showDeleteModal.value = true
+}
+
+const cancelDelete = () => {
+  showDeleteModal.value = false
+  deleteTargetId.value = null
+  deleteTargetTitle.value = ''
+  isDeleting.value = false
+}
+
+const confirmDelete = async () => {
+  if (!deleteTargetId.value || isDeleting.value) return
+
+  isDeleting.value = true
+  await new Promise(resolve => setTimeout(resolve, 400))
+
+  savedChats.value = savedChats.value.filter(c => c.id !== deleteTargetId.value)
+  saveChats()
+
+  if (currentChatId.value === deleteTargetId.value) {
+    currentChatId.value = null
+    createNewChat()
+  }
+
+  showToastFn('Conversa excluída', 'info')
+  cancelDelete()
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now - date
+  if (diff < 60000) return 'Agora'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m atrás`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h atrás`
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+}
+
+// ============ API - BUSCA REAL DEEZER/SPOTIFY ============
 async function searchRealMusic(query, type = 'track', limit = 6) {
   try {
     const token = localStorage.getItem('token')
     const isLogged = !!token
-
     if (isLogged) {
       return await searchSpotify(query, type, limit)
     } else {
@@ -652,13 +818,9 @@ async function searchDeezer(query, type = 'track', limit = 6) {
     const response = await fetch(
       `${API_URL}/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`
     )
-   
     if (!response.ok) throw new Error(`Deezer error: ${response.status}`)
-   
     const data = await response.json()
-   
     if (!data.data || !Array.isArray(data.data)) return []
-   
     return data.data.map((item, index) => convertDeezerToTrack(item, index))
   } catch (error) {
     console.warn('Deezer search failed:', error.message)
@@ -669,25 +831,17 @@ async function searchDeezer(query, type = 'track', limit = 6) {
 async function searchSpotify(query, type = 'track', limit = 6) {
   try {
     const token = localStorage.getItem('token')
-   
     const response = await fetch(
       `${API_URL}/spotify/search?q=${encodeURIComponent(query)}&type=${type}&limit=${limit}&market=BR`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      { headers: { 'Authorization': `Bearer ${token}` } }
     )
-   
     if (!response.ok) {
       if (response.status === 401) {
         return await searchDeezer(query, type, limit)
       }
       throw new Error(`Spotify error: ${response.status}`)
     }
-   
     const data = await response.json()
-   
     let items = []
     if (type.includes('track') && data.tracks?.items) {
       items = data.tracks.items
@@ -696,7 +850,6 @@ async function searchSpotify(query, type = 'track', limit = 6) {
     } else if (type === 'album' && data.albums?.items) {
       items = data.albums.items
     }
-   
     return items.map((item, index) => convertSpotifyToTrack(item, index))
   } catch (error) {
     console.warn('Spotify search failed, fallback to Deezer:', error.message)
@@ -713,7 +866,6 @@ function convertDeezerToTrack(item, index = 0) {
     'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
     'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
   ]
- 
   return {
     id: `deezer_${item.id}`,
     title: item.title || 'Música Desconhecida',
@@ -740,12 +892,10 @@ function convertSpotifyToTrack(item, index = 0) {
     'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
     'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
   ]
- 
   const durationMs = item.duration_ms || 0
   const mins = Math.floor(durationMs / 60000)
   const secs = Math.floor((durationMs % 60000) / 1000)
   const durationStr = `${mins}:${secs.toString().padStart(2, '0')}`
- 
   return {
     id: `spotify_${item.id}`,
     title: item.name || 'Música Desconhecida',
@@ -792,12 +942,9 @@ async function searchRelatedAlbums(query, limit = 3) {
   }
 }
 
-// ============ DETECÇÃO DE INTENÇÃO INTELIGENTE ============
-
+// ============ DETECÇÃO DE INTENÇÃO ============
 function detectIntent(text) {
   const lower = text.toLowerCase()
- 
-  // Verifica cada categoria de intenção
   for (const [intent, keywords] of Object.entries(intentPatterns)) {
     for (const keyword of keywords) {
       if (lower.includes(keyword.toLowerCase())) {
@@ -805,24 +952,18 @@ function detectIntent(text) {
       }
     }
   }
- 
-  // Se não encontrou intenção específica, verifica se é busca por gênero
   const genre = detectGenre(text)
   if (genre) {
     return { intent: 'genre', genre, originalText: text }
   }
- 
-  // Se não encontrou nada, assume busca geral por música
   return { intent: 'general', originalText: text }
 }
 
 function detectGenre(text) {
   const lowerText = text.toLowerCase()
- 
   for (const [genreKey, searchTerm] of Object.entries(genreSearchMap)) {
     if (lowerText.includes(genreKey) || lowerText.includes(searchTerm)) return searchTerm
   }
- 
   const moodMap = {
     'feliz': 'pop', 'animado': 'pop', 'alegre': 'pop', 'festa': 'pop', 'dançar': 'pop', 'balada': 'pop',
     'triste': 'indie', 'melancolico': 'indie', 'nostalgico': 'rock', 'saudade': 'indie', 'depressivo': 'indie',
@@ -833,11 +974,9 @@ function detectGenre(text) {
     'dirigir': 'rock', 'viagem': 'rock', 'estrada': 'rock', 'carro': 'rock',
     'cansado': 'indie', 'descansar': 'jazz', 'domingo': 'jazz', 'chuva': 'indie'
   }
- 
   for (const [mood, genre] of Object.entries(moodMap)) {
     if (lowerText.includes(mood)) return genre
   }
- 
   return null
 }
 
@@ -848,9 +987,7 @@ function isLyricSearch(text) {
 }
 
 function extractSearchQuery(text, intent) {
-  // Remove palavras-chave de intenção para extrair o termo de busca real
   let query = text
- 
   const removePatterns = {
     artistInfo: ['quem canta', 'quem é', 'quem fez', 'quem compôs', 'quem produziu', 'artista', 'cantor', 'cantora', 'banda', 'grupo musical', 'biografia', 'história de', 'sobre o artista', 'sobre a banda', 'quem é o vocalista', 'quem toca', 'membros da banda', 'quando começou', 'carreira de', 'discografia de'],
     lyricsInfo: ['letra de', 'letra da', 'letras de', 'letras da', 'trecho de', 'parte de', 'verso de', 'refrão de', 'significado da letra', 'significado da música', 'o que significa', 'qual o significado', 'traduzir', 'tradução de', 'tradução da'],
@@ -860,71 +997,45 @@ function extractSearchQuery(text, intent) {
     similar: ['parecido com', 'similar a', 'igual a', 'mesmo estilo', 'quem soa como', 'artistas parecidos', 'bandas parecidas', 'músicas parecidas', 'se gosto de', 'se curto', 'recomendação baseada em', 'mais como', 'outros como'],
     trackSearch: ['música', 'musica', 'som', 'song', 'track', 'tocar', 'ouvir', 'quero ouvir', 'queria ouvir', 'me toca', 'me põe', 'me poe', 'coloca']
   }
- 
   const patterns = removePatterns[intent] || []
   for (const pattern of patterns) {
     query = query.replace(new RegExp(pattern, 'gi'), '')
   }
- 
   return query.trim() || text
 }
 
 // ============ RESPOSTAS INTELIGENTES ============
-
 async function generateSmartResponse(userText, intentData) {
   const { intent, originalText } = intentData
   const searchQuery = extractSearchQuery(originalText, intent)
- 
   switch (intent) {
-    case 'artistInfo':
-      return await generateArtistResponse(searchQuery)
-   
-    case 'lyricsInfo':
-      return await generateLyricsResponse(searchQuery)
-   
-    case 'albumInfo':
-      return await generateAlbumResponse(searchQuery)
-   
-    case 'releaseInfo':
-      return await generateReleaseResponse(searchQuery)
-   
-    case 'trivia':
-      return await generateTriviaResponse(searchQuery)
-   
-    case 'similar':
-      return await generateSimilarResponse(searchQuery)
-   
-    case 'genre':
-      return await generateGenreResponse(searchQuery, intentData.genre)
-   
-    case 'trackSearch':
-      return await generateTrackSearchResponse(searchQuery)
-   
-    default:
-      return await generateGeneralResponse(searchQuery)
+    case 'artistInfo': return await generateArtistResponse(searchQuery)
+    case 'lyricsInfo': return await generateLyricsResponse(searchQuery)
+    case 'albumInfo': return await generateAlbumResponse(searchQuery)
+    case 'releaseInfo': return await generateReleaseResponse(searchQuery)
+    case 'trivia': return await generateTriviaResponse(searchQuery)
+    case 'similar': return await generateSimilarResponse(searchQuery)
+    case 'genre': return await generateGenreResponse(searchQuery, intentData.genre)
+    case 'trackSearch': return await generateTrackSearchResponse(searchQuery)
+    default: return await generateGeneralResponse(searchQuery)
   }
 }
 
 async function generateArtistResponse(query) {
-  // Busca o artista
   const tracks = await searchRealMusic(query, 'track', 5)
   const artistTracks = tracks.filter(t =>
     t.artist.toLowerCase().includes(query.toLowerCase()) ||
     query.toLowerCase().includes(t.artist.toLowerCase())
   )
- 
   if (artistTracks.length > 0) {
     const artist = artistTracks[0].artist
     const allTracks = await searchRealMusic(artist, 'track', 8)
     const albums = await searchRelatedAlbums(artist, 4)
-   
-    // Gera resposta contextual sobre o artista
     const responses = [
       `**${artist}** é um artista incrível! 🎤 Aqui estão algumas informações e músicas dele(a):`,
       `Descobrindo **${artist}**! 🌟 Veja o que encontrei sobre esse talento:`,
       `**${artist}** tem uma discografia fantástica! 🎵 Confira:`
     ]
-   
     return {
       content: responses[Math.floor(Math.random() * responses.length)],
       recommendations: {
@@ -937,8 +1048,6 @@ async function generateArtistResponse(query) {
       lyricResults: null
     }
   }
- 
-  // Fallback: busca por termo geral
   const generalTracks = await searchRealMusic(query, 'track', 6)
   if (generalTracks.length > 0) {
     return {
@@ -953,7 +1062,6 @@ async function generateArtistResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei informações específicas sobre **"${query}"**. Tente me perguntar de outra forma, como:\n\n• "Quem canta [nome da música]"\n• "Músicas de [nome do artista]"\n• "Álbuns de [artista]"\n• Ou simplesmente diga um gênero que gosta! 🎵`,
     recommendations: null,
@@ -963,7 +1071,6 @@ async function generateArtistResponse(query) {
 
 async function generateLyricsResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 6)
- 
   if (tracks.length > 0) {
     return {
       content: `Aqui estão músicas relacionadas a **"${query}"**! 📝 Se você está procurando a letra completa, posso te ajudar a encontrar a música certa para ouvir:`,
@@ -977,7 +1084,6 @@ async function generateLyricsResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei músicas com **"${query}"** no título. Tente:\n\n• Digitar trechos mais longos da letra\n• Buscar pelo nome do artista\n• Ou perguntar por gênero musical 🎵`,
     recommendations: null,
@@ -988,10 +1094,8 @@ async function generateLyricsResponse(query) {
 async function generateAlbumResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 8)
   const albums = await searchRelatedAlbums(query, 6)
- 
   if (tracks.length > 0 || albums.length > 0) {
     const artistName = tracks[0]?.artist || query
-   
     return {
       content: `**${artistName}** tem uma discografia incrível! 💿 Aqui estão álbuns e músicas encontrados:`,
       recommendations: {
@@ -1009,7 +1113,6 @@ async function generateAlbumResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei álbuns de **"${query}"**. Tente:\n\n• "Álbuns de [nome do artista]"\n• "Discografia de [artista]"\n• Ou busque pelo artista diretamente 🎵`,
     recommendations: null,
@@ -1019,11 +1122,9 @@ async function generateAlbumResponse(query) {
 
 async function generateReleaseResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 5)
- 
   if (tracks.length > 0) {
     const track = tracks[0]
     const releaseYear = track.releaseDate ? track.releaseDate.split('-')[0] : 'ano desconhecido'
-   
     return {
       content: `**${track.title}** de **${track.artist}** foi lançada em **${releaseYear}**! 📅\n\nAqui estão mais informações e músicas relacionadas:`,
       recommendations: {
@@ -1036,7 +1137,6 @@ async function generateReleaseResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei informações de lançamento para **"${query}"**. Tente me perguntar sobre o artista ou música específica! 🎵`,
     recommendations: null,
@@ -1046,7 +1146,6 @@ async function generateReleaseResponse(query) {
 
 async function generateTriviaResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 6)
- 
   if (tracks.length > 0) {
     const track = tracks[0]
     const trivias = [
@@ -1054,7 +1153,6 @@ async function generateTriviaResponse(query) {
       `**${track.artist}** é conhecido por hits incríveis como **${track.title}**! 🌟 Confira mais:`,
       `A música **${track.title}** faz parte do repertório de **${track.artist}**! 🎵 Veja mais curiosidades musicais:`
     ]
-   
     return {
       content: trivias[Math.floor(Math.random() * trivias.length)],
       recommendations: {
@@ -1067,7 +1165,6 @@ async function generateTriviaResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei curiosidades sobre **"${query}"**. Tente perguntar sobre um artista ou música específica! 💡`,
     recommendations: null,
@@ -1077,20 +1174,14 @@ async function generateTriviaResponse(query) {
 
 async function generateSimilarResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 6)
- 
   if (tracks.length > 0) {
     const baseArtist = tracks[0].artist
-    // Busca por gênero do artista base para encontrar similares
     const genre = detectGenre(baseArtist) || 'pop'
     const similarTracks = await searchRealMusic(genre, 'track', 6)
-   
-    // Filtra para não repetir o mesmo artista
     const filteredSimilar = similarTracks.filter(t =>
       !t.artist.toLowerCase().includes(baseArtist.toLowerCase())
     )
-   
     const allResults = [...tracks.slice(0, 3), ...filteredSimilar.slice(0, 3)]
-   
     return {
       content: `Se você gosta de **${baseArtist}**, vai adorar essas recomendações! 🎧 Artistas e músicas no mesmo estilo:`,
       recommendations: {
@@ -1103,7 +1194,6 @@ async function generateSimilarResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei artistas similares a **"${query}"**. Tente me dizer um artista ou música que você gosta! 🎵`,
     recommendations: null,
@@ -1115,12 +1205,10 @@ async function generateGenreResponse(searchQuery, genre) {
   const tracks = await searchRealMusic(genre || searchQuery, 'track', 6)
   const artists = await searchRelatedArtists(genre || searchQuery, 6)
   const albums = await searchRelatedAlbums(genre || searchQuery, 3)
- 
   let finalTracks = tracks
   if (finalTracks.length === 0) {
     finalTracks = await searchRealMusic(searchQuery, 'track', 6)
   }
- 
   if (finalTracks.length === 0) {
     return {
       content: `Não consegui encontrar músicas de **${genre || searchQuery}** no momento. O serviço de música pode estar indisponível. Tente novamente mais tarde ou me diga outro gênero/artista! 🎵`,
@@ -1128,7 +1216,6 @@ async function generateGenreResponse(searchQuery, genre) {
       lyricResults: null
     }
   }
- 
   const responses = [
     `Baseado no seu pedido, encontrei essas músicas de **${genre || searchQuery}**! 🎶`,
     `Aqui está uma seleção especial de **${genre || searchQuery}** para você:`,
@@ -1136,7 +1223,6 @@ async function generateGenreResponse(searchQuery, genre) {
     `Perfeito! Essas tracks de **${genre || searchQuery}** vão te surpreender:`,
     `Selecionei os melhores hits de **${genre || searchQuery}** para você aproveitar:`
   ]
- 
   return {
     content: responses[Math.floor(Math.random() * responses.length)],
     recommendations: {
@@ -1152,7 +1238,6 @@ async function generateGenreResponse(searchQuery, genre) {
 
 async function generateTrackSearchResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 6)
- 
   if (tracks.length > 0) {
     return {
       content: `Encontrei essas músicas para **"${query}"**! 🎵 Clique para ouvir:`,
@@ -1166,7 +1251,6 @@ async function generateTrackSearchResponse(query) {
       lyricResults: null
     }
   }
- 
   return {
     content: `Não encontrei músicas para **"${query}"**. Tente:\n\n• Digitar o nome exato da música\n• Buscar pelo artista\n• Ou perguntar por gênero musical 🎧`,
     recommendations: null,
@@ -1175,12 +1259,9 @@ async function generateTrackSearchResponse(query) {
 }
 
 async function generateGeneralResponse(query) {
-  // Tenta buscar como artista primeiro
   const artistTracks = await searchRealMusic(query, 'track', 4)
- 
   if (artistTracks.length > 0) {
     const artists = [...new Set(artistTracks.map(t => t.artist))]
-   
     return {
       content: `Encontrei resultados para **"${query}"**! 🎵 Aqui estão músicas e artistas relacionados:`,
       recommendations: {
@@ -1193,9 +1274,8 @@ async function generateGeneralResponse(query) {
       lyricResults: null
     }
   }
- 
-  return {
-    content: `Posso te ajudar de várias formas! 🎧\n\n• **Dúvidas**: "Quem canta [música]?", "Quando lançou [álbum]?"\n• **Letras**: "Letra de [música]"\n• **Artistas**: "Biografia de [artista]"\n• **Curiosidades**: "Curiosidade sobre [música]"\n• **Similares**: "Músicas parecidas com [artista]"\n• **Gêneros**: pop, rock, jazz, hip-hop, indie, etc.\n\nO que você gostaria de saber? 💡`,
+    return {
+    content: `Posso te ajudar de várias formas! 🎧\n\n• **Dúvidas**: "Quem canta [música]?", "Quando lançou [álbum]?"\n• **Letras**: "Letra de [música]"\n• **Artistas**: "Biografia de [artista]"\n• **Curiosidades**: "Curiosidade sobre [música]"\n• **Gêneros**: "Quero ouvir [gênero]"\n\nComo posso te ajudar? 🎵`,
     recommendations: null,
     lyricResults: null
   }
@@ -1228,6 +1308,7 @@ const checkAuth = () => {
       userName.value = ''
     }
   }
+  loadSavedChats()
 }
 
 const fetchChatLimit = async () => {
@@ -1250,7 +1331,6 @@ const saveChatLimit = () => {
 const searchByLyrics = async (query) => {
   try {
     const tracks = await searchRealMusic(query, 'track', 5)
-   
     const results = tracks
       .filter(t => t.url && t.url.length > 0)
       .map((track, index) => ({
@@ -1261,7 +1341,6 @@ const searchByLyrics = async (query) => {
         albumArt: track.cover,
         url: track.url
       }))
-   
     if (results.length === 0) {
       const broaderTracks = await searchRealMusic(query.split(' ').slice(0, 3).join(' '), 'track', 5)
       return broaderTracks.map((track, index) => ({
@@ -1273,7 +1352,6 @@ const searchByLyrics = async (query) => {
         url: track.url
       }))
     }
-   
     return results
   } catch (error) {
     return []
@@ -1288,11 +1366,9 @@ const getEmojiForGenre = (genreOrArtist) => {
     'rnb': '❤️', 'clássica': '🎻', 'classical': '🎻', 'sertanejo': '🤠',
     'funk': '🔥', 'samba': '🥁', 'pagode': '🪕', 'mpb': '🎵', 'gospel': '✝️'
   }
- 
   for (const [key, emoji] of Object.entries(emojiMap)) {
     if (text.includes(key)) return emoji
   }
- 
   return '🎵'
 }
 
@@ -1305,15 +1381,12 @@ const formatDurationFromSeconds = (seconds) => {
 
 const sendMessage = async () => {
   if (!canSend.value || isTyping.value) return
- 
   if (!isAuthenticated.value && chatLimit.value.remaining <= 0) {
     showLoginOverlay.value = true
     return
   }
-
   const userText = inputMessage.value.trim()
   inputMessage.value = ''
- 
   messages.value.push({
     id: Date.now(),
     type: 'user',
@@ -1322,30 +1395,21 @@ const sendMessage = async () => {
     recommendations: null,
     lyricResults: null
   })
- 
   await scrollToBottom()
- 
   if (!isAuthenticated.value) {
     chatLimit.value.used++
     chatLimit.value.remaining = Math.max(0, chatLimit.value.limit - chatLimit.value.used)
     saveChatLimit()
   }
- 
   isTyping.value = true
   await scrollToBottom()
- 
-  // NOVO: Detecta intenção inteligente
   const intentData = detectIntent(userText)
   const isLyricQuery = isLyricSearch(userText)
- 
   setTimeout(async () => {
     isTyping.value = false
-   
     let response
-   
     if (isLyricQuery) {
       const lyricResults = await searchByLyrics(userText)
-     
       if (lyricResults.length > 0) {
         response = {
           content: `Encontrei **${lyricResults.length}** música(s) com trechos relacionados à sua busca:`,
@@ -1361,10 +1425,8 @@ const sendMessage = async () => {
         }
       }
     } else {
-      // NOVO: Usa resposta inteligente baseada na intenção
       response = await generateSmartResponse(userText, intentData)
     }
-   
     messages.value.push({
       id: Date.now() + 1,
       type: 'ai',
@@ -1374,13 +1436,15 @@ const sendMessage = async () => {
       lyricResults: response.lyricResults,
       lyricQuery: response.lyricQuery
     })
-   
     if (!isAuthenticated.value && chatLimit.value.remaining === 0) {
       setTimeout(() => {
         showLoginOverlay.value = true
       }, 2000)
     }
-   
+    // Auto-save chat after each message for logged users
+    if (isAuthenticated.value) {
+      saveCurrentChat()
+    }
     await scrollToBottom()
   }, 1500 + Math.random() * 1000)
 }
@@ -1415,7 +1479,6 @@ const showFavorites = async () => {
   const favTracks = Array.from(favorites.value).map(id => {
     return savedFavs.find(f => f.id === id)
   }).filter(Boolean)
- 
   if (favTracks.length > 0) {
     messages.value.push({
       id: Date.now(),
@@ -1443,7 +1506,6 @@ const showFavorites = async () => {
 
 const showLibrary = async () => {
   const allTracks = await searchRealMusic('popular', 'track', 8)
- 
   messages.value.push({
     id: Date.now(),
     type: 'ai',
@@ -1484,20 +1546,16 @@ const showPlaylists = () => {
 // ═══════════════════════════════════════════════════════
 // PLAYER DE MÚSICA FUNCIONAL
 // ═══════════════════════════════════════════════════════
-
 const playTrack = (track) => {
   if (!track || !track.url) {
     showToastFn('Música não disponível no momento', 'error')
     return
   }
- 
   if (currentTrack.value?.id === track.id) {
     togglePlay()
     return
   }
- 
   currentTrack.value = track
- 
   const existingIndex = currentPlaylist.value.findIndex(t => t.id === track.id)
   if (existingIndex === -1) {
     currentPlaylist.value.push(track)
@@ -1505,7 +1563,6 @@ const playTrack = (track) => {
   } else {
     currentTrackIndex.value = existingIndex
   }
- 
   nextTick(() => {
     if (audioPlayer.value) {
       audioPlayer.value.src = track.url
@@ -1547,11 +1604,9 @@ const playTrackFromLyrics = (song) => {
 
 const playAll = (tracks) => {
   if (!tracks || tracks.length === 0) return
- 
   currentPlaylist.value = [...tracks]
   currentTrackIndex.value = 0
   playTrack(tracks[0])
- 
   showToastFn(`Playlist iniciada com ${tracks.length} músicas`, 'success')
 }
 
@@ -1560,7 +1615,6 @@ const togglePlay = () => {
     showToastFn('Selecione uma música primeiro', 'info')
     return
   }
- 
   if (isPlaying.value) {
     audioPlayer.value.pause()
     isPlaying.value = false
@@ -1625,11 +1679,9 @@ const onAudioError = (e) => {
 
 const seekTo = (event) => {
   if (!audioPlayer.value || !duration.value) return
- 
   const rect = event.currentTarget.getBoundingClientRect()
   const percent = (event.clientX - rect.left) / rect.width
   const newTime = percent * duration.value
- 
   audioPlayer.value.currentTime = newTime
   currentTime.value = newTime
 }
@@ -1656,10 +1708,8 @@ const openFullPlayer = () => {
 // ═══════════════════════════════════════════════════════
 // UTILITÁRIOS E FAVORITOS
 // ═══════════════════════════════════════════════════════
-
 const toggleFavorite = (track) => {
   if (!track || !track.id) return
-
   if (favorites.value.has(track.id)) {
     favorites.value.delete(track.id)
     showToastFn('Removido dos favoritos', 'info')
@@ -1667,10 +1717,8 @@ const toggleFavorite = (track) => {
     favorites.value.add(track.id)
     showToastFn('Adicionado aos favoritos ❤️', 'success')
   }
-
   const savedFavs = JSON.parse(localStorage.getItem('favorites_data') || '[]')
   const existingIndex = savedFavs.findIndex(f => f.id === track.id)
- 
   if (favorites.value.has(track.id)) {
     if (existingIndex === -1) {
       savedFavs.push(track)
@@ -1680,7 +1728,6 @@ const toggleFavorite = (track) => {
       savedFavs.splice(existingIndex, 1)
     }
   }
- 
   localStorage.setItem('favorites_data', JSON.stringify(savedFavs))
   localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.value)))
 }
@@ -1719,6 +1766,7 @@ const clearChat = () => {
       recommendations: null,
       lyricResults: null
     }]
+    currentChatId.value = null
     showToastFn('Chat limpo com sucesso', 'success')
   }
 }
@@ -1726,9 +1774,7 @@ const clearChat = () => {
 const formatMessage = (text) => {
   if (!text) return ''
   let formatted = text
-    // Negrito: **texto** (só formata se tiver espaço/quebra antes e depois)
     .replace(/(^|\s)\*\*(.+?)\*\*(?=\s|$)/g, '$1<strong>$2</strong>')
-    // Itálico: *texto* (mesma lógica)
     .replace(/(^|\s)\*(.+?)\*(?=\s|$)/g, '$1<em>$2</em>')
   return formatted.split(String.fromCharCode(10)).join('<br>')
 }
@@ -1773,10 +1819,16 @@ const redirectToRegister = () => {
 }
 
 const logout = () => {
+  // Save current chat before logout
+  if (isAuthenticated.value && messages.value.length > 1) {
+    saveCurrentChat()
+  }
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   isAuthenticated.value = false
   userName.value = ''
+  savedChats.value = []
+  currentChatId.value = null
   showToastFn('Logout realizado com sucesso', 'success')
   setTimeout(() => {
     window.location.reload()
@@ -1789,7 +1841,6 @@ onMounted(() => {
   fetchChatLimit()
   scrollToBottom()
   inputRef.value?.focus()
- 
   const savedFavorites = localStorage.getItem('favorites')
   if (savedFavorites) {
     try {
@@ -1798,11 +1849,9 @@ onMounted(() => {
       console.warn('Erro ao carregar favoritos:', e)
     }
   }
- 
   isOnline.value = navigator.onLine
   window.addEventListener('online', () => { isOnline.value = true })
   window.addEventListener('offline', () => { isOnline.value = false })
- 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
       e.preventDefault()
@@ -1815,11 +1864,21 @@ onMounted(() => {
       prevTrack()
     }
   })
+  // Auto-save chat periodically
+  setInterval(() => {
+    if (isAuthenticated.value && messages.value.length > 1) {
+      saveCurrentChat()
+    }
+  }, 30000)
 })
 
 onBeforeUnmount(() => {
   if (audioPlayer.value) {
     audioPlayer.value.pause()
+  }
+  // Save chat before unmount
+  if (isAuthenticated.value && messages.value.length > 1) {
+    saveCurrentChat()
   }
 })
 
@@ -2194,20 +2253,17 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Fade Transition */
+/* Transitions */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s ease;
 }
-
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
 
-/* Slide Down Transition */
 .slide-down-enter-active, .slide-down-leave-active {
   transition: all 0.3s ease;
 }
-
 .slide-down-enter-from, .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-10px);
@@ -2298,7 +2354,9 @@ body {
 .sidebar-collapsed .playlist-widget,
 .sidebar-collapsed .now-playing .np-info,
 .sidebar-collapsed .now-playing .np-controls,
-.sidebar-collapsed .now-playing .np-progress-mini {
+.sidebar-collapsed .now-playing .np-progress-mini,
+.sidebar-collapsed .chats-section,
+.sidebar-collapsed .new-chat-label {
   display: none;
 }
 
@@ -2306,11 +2364,21 @@ body {
   display: none;
 }
 
+.sidebar-collapsed .new-chat-btn {
+  padding: 12px;
+  justify-content: center;
+}
+
+.sidebar-collapsed .chat-item .chat-info,
+.sidebar-collapsed .chat-item .chat-delete {
+  display: none;
+}
+
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   position: relative;
 }
 
@@ -2362,11 +2430,39 @@ body {
   color: white;
 }
 
+/* Novo Chat Button */
+.new-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+.new-chat-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5);
+}
+
+.new-chat-btn span:first-child {
+  font-size: 18px;
+}
+
+/* Nav Menu */
 .nav-menu {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .nav-item {
@@ -2408,6 +2504,98 @@ body {
   border-radius: 10px;
 }
 
+/* Chats Section */
+.chats-section {
+  margin-bottom: 24px;
+}
+
+.chats-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.chats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--bg-card);
+  border: 1px solid transparent;
+  position: relative;
+}
+
+.chat-item:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--border);
+}
+
+.chat-item.active {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2));
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.chat-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.chat-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.chat-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.chat-item:hover .chat-delete {
+  opacity: 1;
+}
+
+.chat-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+}
+
+/* Genre Section */
 .genre-section h3 {
   font-size: 11px;
   text-transform: uppercase;
@@ -3800,7 +3988,6 @@ body {
   .sidebar {
     width: 260px;
   }
- 
   .albums-grid {
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   }
@@ -3810,42 +3997,33 @@ body {
   .sidebar {
     display: none;
   }
- 
   .message-bubble {
     max-width: 90%;
   }
- 
   .chat-container {
     padding: 20px;
   }
- 
   .quick-chip {
     font-size: 13px;
     padding: 10px 16px;
   }
- 
   .albums-grid {
     grid-template-columns: repeat(2, 1fr);
   }
- 
   .lyric-song-item {
     gap: 12px;
   }
- 
   .lyric-cover {
     width: 48px;
     height: 48px;
   }
- 
   .settings-panel {
     right: 16px;
     left: 16px;
   }
- 
   .full-player {
     padding: 32px 24px;
   }
- 
   .full-cover {
     width: 200px;
     height: 200px;
@@ -3856,43 +4034,1474 @@ body {
   .chat-header {
     padding: 0 16px;
   }
- 
   .input-wrapper {
     padding: 16px;
   }
- 
   .quick-questions {
     padding: 0 16px 16px;
   }
- 
   .message-bubble {
     max-width: 95%;
   }
- 
   .login-modal {
     padding: 32px 24px;
   }
- 
   .login-actions {
     flex-direction: column;
   }
- 
   .btn-login, .btn-register {
     width: 100%;
   }
- 
   .full-track-info h2 {
     font-size: 18px;
   }
- 
   .full-controls button {
     font-size: 22px;
   }
- 
   .full-controls .main-control {
     width: 56px;
     height: 56px;
     font-size: 24px;
+  }
+}
+/* ═══════════════════════════════════════════════════════
+   MODAL DE EXCLUSÃO DE CONVERSA
+   ═══════════════════════════════════════════════════════ */
+
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.delete-modal {
+  background: linear-gradient(145deg, #1a1a2e, #0f0f1a);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 24px;
+  padding: 40px 36px 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(239, 68, 68, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.delete-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--error), #f43f5e, var(--error));
+  opacity: 0.6;
+}
+
+.delete-modal-icon {
+  width: 72px;
+  height: 72px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  animation: modalIconPulse 2s ease-in-out infinite;
+}
+
+.delete-modal-icon svg {
+  width: 32px;
+  height: 32px;
+  color: var(--error);
+}
+
+@keyframes modalIconPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+}
+
+.delete-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.delete-modal-text {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.delete-modal-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.delete-modal-warning {
+  font-size: 13px;
+  color: var(--error);
+  font-weight: 500;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.delete-modal-warning::before {
+  content: '⚠️';
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.btn-cancel:hover {
+  background: var(--bg-glass-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  transform: translateY(-1px);
+}
+
+.btn-confirm-delete {
+  flex: 1;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #dc2626, var(--error));
+  border: none;
+  border-radius: 14px;
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+}
+
+.btn-confirm-delete:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+}
+
+.btn-confirm-delete:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-confirm-delete:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.delete-spinner {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+.delete-spinner svg {
+  width: 20px;
+  height: 20px;
+}
+
+.modal-scale-enter-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-scale-leave-active {
+  transition: all 0.25s ease;
+}
+
+.modal-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.85) translateY(20px);
+}
+
+.modal-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+@media (max-width: 480px) {
+  .delete-modal {
+    padding: 32px 24px 24px;
+    border-radius: 20px;
+  }
+  .delete-modal-icon {
+    width: 60px;
+    height: 60px;
+  }
+  .delete-modal-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+  .delete-modal-title {
+    font-size: 20px;
+  }
+  .delete-modal-actions {
+    flex-direction: column;
+  }
+  .btn-cancel,
+  .btn-confirm-delete {
+    width: 100%;
+  }
+}
+</style>
+<template>
+  <div class="music-player" v-if="currentTrack">
+    <!-- Lado esquerdo: Info da música -->
+    <div class="player-left">
+      <div class="cover-container">
+        <img
+          :src="currentTrack.cover"
+          class="player-cover"
+          :class="{ 'spinning': isPlaying }"
+          @error="handleImageError"
+        />
+        <div class="playing-indicator" v-show="isPlaying">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="track-info">
+        <span class="track-title">{{ currentTrack.title }}</span>
+        <span class="track-artist">{{ currentTrack.artist }}</span>
+      </div>
+
+      <button
+        @click="toggleLike"
+        class="like-btn"
+        :class="{ liked: isLiked }"
+        title="Curtir"
+      >
+        <i :class="isLiked ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+      </button>
+    </div>
+
+    <!-- Centro: Controles principais -->
+    <div class="player-center">
+      <div class="controls">
+        <button
+          @click="prevTrack"
+          class="control-btn"
+          :disabled="currentIndex <= 0"
+          title="Anterior"
+        >
+          <i class="fa fa-step-backward"></i>
+        </button>
+
+        <button
+          class="play-btn main-play-btn"
+          @click="togglePlay"
+          :class="{ 'playing': isPlaying }"
+          :title="isPlaying ? 'Pausar' : 'Tocar'"
+        >
+          <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
+        </button>
+
+        <button
+          @click="nextTrack"
+          class="control-btn"
+          title="Próxima"
+        >
+          <i class="fa fa-step-forward"></i>
+        </button>
+
+        <button
+          @click="toggleRepeat"
+          :class="{ active: repeatMode }"
+          class="control-btn repeat-btn"
+          title="Repetir"
+        >
+          <i :class="repeatMode ? 'fa fa-repeat' : 'fa fa-long-arrow-right'"></i>
+        </button>
+      </div>
+
+      <div class="progress-container">
+        <span class="time current">{{ formatTime(currentTime) }}</span>
+
+        <div
+          class="progress-bar-wrapper"
+          @click="seekTo"
+          ref="progressBar"
+        >
+          <div class="progress-bg"></div>
+          <div
+            class="progress-fill"
+            :style="{ width: progressPercent + '%' }"
+          ></div>
+          <div
+            class="progress-handle"
+            :style="{ left: progressPercent + '%' }"
+          ></div>
+          <input
+            type="range"
+            min="0"
+            :max="duration || 100"
+            :value="currentTime"
+            @input="onSeekInput"
+            @change="onSeekChange"
+            class="progress-input"
+          />
+        </div>
+
+        <span class="time total">{{ formatTime(duration) }}</span>
+      </div>
+    </div>
+
+    <!-- Direita: Volume -->
+    <div class="player-right">
+      <button
+        @click="toggleMute"
+        class="mute-btn"
+        title="Volume"
+      >
+        <i :class="volumeIcon"></i>
+      </button>
+
+      <div class="volume-section">
+        <div
+          class="volume-bar-wrapper"
+          @click="setVolume"
+          ref="volumeBar"
+        >
+          <div class="volume-bg"></div>
+          <div
+            class="volume-fill"
+            :style="{ width: (isMuted ? 0 : volume) * 100 + '%' }"
+          ></div>
+          <div
+            class="volume-handle"
+            :style="{ left: (isMuted ? 0 : volume) * 100 + '%' }"
+          ></div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            :value="volume"
+            @input="onVolumeInput"
+            class="volume-input"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- ÁUDIO - ELEMENTO CRÍTICO -->
+    <audio
+      ref="audioPlayer"
+      :src="currentTrack.url"
+      @play="onAudioPlay"
+      @pause="onAudioPause"
+      @ended="onAudioEnded"
+      @timeupdate="onTimeUpdate"
+      @loadedmetadata="onLoadedMetadata"
+      @canplay="onCanPlay"
+      @error="onAudioError"
+      preload="auto"
+      crossorigin="anonymous"
+    ></audio>
+  </div>
+ 
+</template>
+
+<script>
+export default {
+  name: 'MusicPlayer',
+
+  data() {
+    return {
+      queue: [],
+      currentIndex: 0,
+     
+      // Estado do player
+      isPlaying: false,
+      isLiked: false,
+      isMuted: false,
+      isDragging: false,
+      isLoading: false,
+     
+      // Progresso
+      currentTime: 0,
+      duration: 0,
+      canPlay: false,
+     
+      // Volume
+      volume: 0.7,
+      previousVolume: 0.7,
+     
+      // Configurações
+      repeatMode: false,
+     
+      // Controle
+      hasTrack: false,
+      playPromise: null,
+     
+      // Controle de histórico
+      _trackStartTime: null,
+      _totalListenedTime: 0,
+      _lastSyncTime: 0,
+      _syncInterval: null
+    }
+  },
+
+  computed: {
+    currentTrack() {
+      if (!this.hasTrack || this.queue.length === 0) return null
+      return this.queue[this.currentIndex] || null
+    },
+   
+    progressPercent() {
+      if (!this.duration || this.duration === 0) return 0
+      return (this.currentTime / this.duration) * 100
+    },
+   
+    volumeIcon() {
+      if (this.isMuted || this.volume === 0) return 'fa fa-volume-off'
+      if (this.volume < 0.3) return 'fa fa-volume-down'
+      return 'fa fa-volume-up'
+    }
+  },
+
+  mounted() {
+    console.log('🎵 MusicPlayer montado - Aguardando música...')
+   
+    // Configurar volume inicial
+    this.$nextTick(() => {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.volume = this.volume
+      }
+    })
+   
+    // Eventos globais
+    window.addEventListener('play-song', this.handlePlaySong)
+    window.addEventListener('playlist-playback-started', this.handlePlaylistPlayback)
+   
+    // Comandos do Dashboard/Chat
+    window.addEventListener('player-toggle-play', this.handleTogglePlayCommand)
+    window.addEventListener('player-next-track', this.handleNextCommand)
+    window.addEventListener('player-prev-track', this.handlePrevCommand)
+   
+    // Iniciar sincronização contínua com o Dashboard/Chat
+    this.startSyncInterval()
+  },
+
+  beforeDestroy() {
+    window.removeEventListener('play-song', this.handlePlaySong)
+    window.removeEventListener('playlist-playback-started', this.handlePlaylistPlayback)
+    window.removeEventListener('player-toggle-play', this.handleTogglePlayCommand)
+    window.removeEventListener('player-next-track', this.handleNextCommand)
+    window.removeEventListener('player-prev-track', this.handlePrevCommand)
+   
+    this.stopSyncInterval()
+  },
+
+  methods: {
+    handlePrevCommand() {
+      console.log('🎮 Comando prev recebido')
+      this.prevTrack()
+    },
+   
+    // ═══════════════════════════════════════════════════════
+    // SINCRONIZAÇÃO COM DASHBOARD/CHAT
+    // ═══════════════════════════════════════════════════════
+
+    startSyncInterval() {
+      // Envia estado a cada 300ms para sincronizar UI
+      this._syncInterval = setInterval(() => {
+        this.syncStateToDashboard()
+      }, 300)
+    },
+
+    stopSyncInterval() {
+      if (this._syncInterval) {
+        clearInterval(this._syncInterval)
+        this._syncInterval = null
+      }
+    },
+
+    syncStateToDashboard() {
+      if (!this.currentTrack) return
+     
+      const audio = this.$refs.audioPlayer
+      if (!audio) return
+     
+      // Evita enviar se nada mudou significativamente
+      const now = Date.now()
+      if (now - this._lastSyncTime < 250) return
+     
+      const progress = this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0
+     
+      window.dispatchEvent(new CustomEvent('player-state-changed', {
+        detail: {
+          track: {
+            id: this.currentTrack.id,
+            title: this.currentTrack.title,
+            artist: this.currentTrack.artist,
+            cover: this.currentTrack.cover,
+            url: this.currentTrack.url,
+            duration: this.currentTrack.duration,
+            emoji: this.currentTrack.emoji,
+            color: this.currentTrack.color
+          },
+          isPlaying: this.isPlaying,
+          currentTime: this.currentTime,
+          duration: this.duration,
+          progress: progress,
+          context: this.currentTrack.source || 'unknown',
+          timestamp: now
+        }
+      }))
+     
+      this._lastSyncTime = now
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // COMANDOS EXTERNOS
+    // ═══════════════════════════════════════════════════════
+
+    handleTogglePlayCommand() {
+      console.log('🎮 Comando toggle-play recebido')
+      this.togglePlay()
+    },
+
+    handleNextCommand() {
+      console.log('⏭️ Comando next recebido')
+      this.nextTrack()
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // HANDLERS DE EVENTOS GLOBAIS
+    // ═══════════════════════════════════════════════════════
+
+    handlePlaySong(e) {
+      console.log('📥 Evento play-song recebido:', e.detail)
+     
+      // Notificar que track começou
+      const detail = e.detail
+      if (detail && detail.song) {
+        window.dispatchEvent(new CustomEvent('player-track-started', {
+          detail: {
+            track: detail.song,
+            timestamp: Date.now()
+          }
+        }))
+      }
+     
+      this.loadSongFromEvent(e.detail)
+    },
+
+    handlePlaylistPlayback(e) {
+      console.log('📥 Evento playlist-playback-started recebido:', e.detail)
+      this.loadSongFromEvent(e.detail)
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // CARREGAR MÚSICA DO EVENTO
+    // ═══════════════════════════════════════════════════════
+
+    loadSongFromEvent({ song, playlist, index, context }) {
+      // Se já tinha uma música tocando, registra ela no histórico ANTES de trocar
+      if (this.currentTrack && this._trackStartTime) {
+        this.notifyTrackEnded(false)
+      }
+
+      // Atualizar playlist
+      if (playlist && Array.isArray(playlist) && playlist.length > 0) {
+        this.queue = [...playlist]
+      } else if (song) {
+        this.queue = [song]
+      }
+     
+      // Definir índice
+      this.currentIndex = (index !== undefined) ? index : 0
+     
+      // Marcar que tem música
+      this.hasTrack = true
+     
+      // Resetar contadores de histórico
+      this._trackStartTime = Date.now()
+      this._totalListenedTime = 0
+     
+      console.log('🎵 Carregando música:', this.queue[this.currentIndex]?.title)
+     
+      // Resetar estado
+      this.isPlaying = false
+      this.canPlay = false
+      this.currentTime = 0
+      this.duration = 0
+     
+      // Carregar e tocar
+      this.$nextTick(() => {
+        this.loadAndPlay()
+      })
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // CARREGAR E TOCAR
+    // ═══════════════════════════════════════════════════════
+
+    async loadAndPlay() {
+      const audio = this.$refs.audioPlayer
+      if (!audio) {
+        console.error('❌ Elemento de áudio não encontrado!')
+        return
+      }
+     
+      console.log('🔄 Carregando áudio:', this.currentTrack.url)
+     
+      // Se houver uma promise pendente, aguardar
+      if (this.playPromise) {
+        try {
+          await this.playPromise
+        } catch (e) {
+          // Ignorar erros de abort
+        }
+      }
+     
+      // Pausar primeiro
+      audio.pause()
+      this.isPlaying = false
+     
+      // Forçar recarregamento do src
+      audio.load()
+     
+      // Tentar tocar após pequeno delay para garantir carregamento
+      setTimeout(() => {
+        this.attemptPlay()
+      }, 100)
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // TENTAR TOCAR COM TRATAMENTO ROBUSTO
+    // ═══════════════════════════════════════════════════════
+
+    async attemptPlay() {
+      const audio = this.$refs.audioPlayer
+      if (!audio) return
+     
+      console.log('▶️ Tentando tocar... Estado:', audio.readyState)
+     
+      // Verificar se pode tocar
+      if (audio.readyState < 2) {
+        console.log('⏳ Áudio não pronto, aguardando canplay...')
+        return
+      }
+     
+      try {
+        this.isLoading = true
+       
+        // GUARDAR A PROMISE - ISSO É CRÍTICO
+        this.playPromise = audio.play()
+       
+        await this.playPromise
+       
+        // Só atualizar estado se a promise resolver com sucesso
+        console.log('✅ Tocando com sucesso!')
+        this.isPlaying = true
+        this.isLoading = false
+       
+        // Resetar contador quando começa a tocar de verdade
+        if (!this._trackStartTime) {
+          this._trackStartTime = Date.now()
+        }
+       
+      } catch (err) {
+        console.error('❌ Erro ao tocar:', err.name, err.message)
+        this.isPlaying = false
+        this.isLoading = false
+       
+        if (err.name === 'NotAllowedError') {
+          console.log('⚠️ Autoplay bloqueado - interação do usuário necessária')
+        } else if (err.name === 'NotSupportedError') {
+          console.error('❌ Formato de áudio não suportado')
+        }
+      } finally {
+        this.playPromise = null
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // TOGGLE PLAY/PAUSE
+    // ═══════════════════════════════════════════════════════
+
+    async togglePlay() {
+      const audio = this.$refs.audioPlayer
+      if (!audio || !this.currentTrack) return
+     
+      console.log('🎮 Toggle play. Estado atual:', this.isPlaying, 'Paused:', audio.paused)
+     
+      // Se há uma promise pendente, aguardar
+      if (this.playPromise) {
+        console.log('⏳ Aguardando promise pendente...')
+        try {
+          await this.playPromise
+        } catch (e) {
+          // Ignorar
+        }
+      }
+     
+      if (this.isPlaying) {
+        // PAUSAR
+        console.log('⏸️ Pausando...')
+        audio.pause()
+        this.isPlaying = false
+       
+        // Acumular tempo ouvido
+        if (this._trackStartTime) {
+          const sessionTime = Date.now() - this._trackStartTime
+          this._totalListenedTime += sessionTime
+          this._trackStartTime = null
+        }
+       
+      } else {
+        // TOCAR
+        console.log('▶️ Iniciando reprodução...')
+       
+        if (audio.ended) {
+          audio.currentTime = 0
+        }
+       
+        try {
+          this.playPromise = audio.play()
+          await this.playPromise
+          this.isPlaying = true
+         
+          // Retomar contador
+          if (!this._trackStartTime) {
+            this._trackStartTime = Date.now()
+          }
+         
+          console.log('✅ Reprodução iniciada!')
+        } catch (err) {
+          console.error('❌ Erro ao tocar:', err)
+          this.isPlaying = false
+        } finally {
+          this.playPromise = null
+        }
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // EVENTOS DO ÁUDIO
+    // ═══════════════════════════════════════════════════════
+
+    onAudioPlay() {
+      console.log('🔊 Evento: play disparado')
+      if (!this.playPromise) {
+        this.isPlaying = true
+      }
+    },
+
+    onAudioPause() {
+      console.log('🔇 Evento: pause disparado')
+      if (!this.playPromise) {
+        this.isPlaying = false
+      }
+    },
+
+    onCanPlay() {
+      console.log('✅ Evento: canplay - áudio pronto')
+      this.canPlay = true
+     
+      const audio = this.$refs.audioPlayer
+      if (audio && audio.paused && this.hasTrack) {
+        console.log('🔄 Auto-play após canplay')
+        this.attemptPlay()
+      }
+    },
+
+    onAudioEnded() {
+      console.log('⏹️ Evento: ended - Música terminou!')
+      this.isPlaying = false
+     
+      // Notificar que a música terminou naturalmente
+      this.notifyTrackEnded(true)
+     
+      if (this.repeatMode) {
+        const audio = this.$refs.audioPlayer
+        audio.currentTime = 0
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
+        this.attemptPlay()
+      } else {
+        this.nextTrack()
+      }
+    },
+
+    notifyTrackEnded(naturallyEnded = true) {
+      if (!this.currentTrack) return
+     
+      // Calcular tempo total ouvido
+      let listenedDuration = this._totalListenedTime
+     
+      // Se ainda estava tocando quando terminou, adiciona o tempo da sessão atual
+      if (this._trackStartTime) {
+        listenedDuration += (Date.now() - this._trackStartTime)
+      }
+     
+      console.log(`📊 Música finalizada. Tempo ouvido: ${Math.round(listenedDuration/1000)}s`)
+     
+      window.dispatchEvent(new CustomEvent('player-track-ended', {
+        detail: {
+          track: {
+            id: this.currentTrack.id,
+            title: this.currentTrack.title,
+            artist: this.currentTrack.artist,
+            cover: this.currentTrack.cover,
+            url: this.currentTrack.url,
+            duration: this.currentTrack.duration,
+            source: this.currentTrack.source || 'unknown'
+          },
+          listenedDuration: listenedDuration,
+          totalDuration: this.duration * 1000,
+          context: this.currentTrack.source || 'unknown',
+          naturallyEnded: naturallyEnded,
+          timestamp: Date.now()
+        }
+      }))
+     
+      // Resetar contadores
+      this._trackStartTime = null
+      this._totalListenedTime = 0
+    },
+
+    onAudioError(e) {
+      console.error('❌ Erro no áudio:', e)
+      this.isPlaying = false
+      this.isLoading = false
+    },
+
+    onTimeUpdate() {
+      const audio = this.$refs.audioPlayer
+      if (audio && !this.isDragging) {
+        this.currentTime = audio.currentTime
+      }
+    },
+
+    onLoadedMetadata() {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        this.duration = audio.duration || this.currentTrack?.duration || 0
+        console.log('📊 Duração carregada:', this.duration)
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // NAVEGAÇÃO
+    // ═══════════════════════════════════════════════════════
+
+    prevTrack() {
+      const audio = this.$refs.audioPlayer
+     
+      if (this.currentTime > 3) {
+        audio.currentTime = 0
+        this.currentTime = 0
+        return
+      }
+     
+      // Registrar música atual antes de trocar
+      if (this.currentTrack) {
+        this.notifyTrackEnded(false)
+      }
+     
+      if (this.currentIndex > 0) {
+        this.currentIndex--
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
+        this.loadAndPlay()
+      }
+    },
+
+    nextTrack() {
+      // Registrar música atual antes de trocar
+      if (this.currentTrack) {
+        this.notifyTrackEnded(false)
+      }
+     
+      if (this.currentIndex < this.queue.length - 1) {
+        this.currentIndex++
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
+        this.loadAndPlay()
+      } else if (this.repeatMode) {
+        this.currentIndex = 0
+        this._trackStartTime = Date.now()
+        this._totalListenedTime = 0
+        this.loadAndPlay()
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // CONTROLES
+    // ═══════════════════════════════════════════════════════
+
+    toggleLike() {
+      this.isLiked = !this.isLiked
+    },
+
+    toggleRepeat() {
+      this.repeatMode = !this.repeatMode
+    },
+
+    toggleMute() {
+      const audio = this.$refs.audioPlayer
+     
+      if (this.isMuted) {
+        this.volume = this.previousVolume || 0.7
+        this.isMuted = false
+        if (audio) audio.volume = this.volume
+      } else {
+        this.previousVolume = this.volume
+        this.volume = 0
+        this.isMuted = true
+        if (audio) audio.volume = 0
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // SEEK
+    // ═══════════════════════════════════════════════════════
+
+    onSeekInput(e) {
+      this.isDragging = true
+      this.currentTime = parseFloat(e.target.value)
+    },
+
+    onSeekChange(e) {
+      this.isDragging = false
+      const time = parseFloat(e.target.value)
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.currentTime = time
+        this.currentTime = time
+      }
+    },
+
+    seekTo(e) {
+      const rect = this.$refs.progressBar.getBoundingClientRect()
+      const percent = (e.clientX - rect.left) / rect.width
+      const time = percent * this.duration
+     
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.currentTime = time
+        this.currentTime = time
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // VOLUME
+    // ═══════════════════════════════════════════════════════
+
+    onVolumeInput(e) {
+      const vol = parseFloat(e.target.value)
+      this.volume = vol
+      this.isMuted = (vol === 0)
+     
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.volume = vol
+      }
+    },
+
+    setVolume(e) {
+      const rect = this.$refs.volumeBar.getBoundingClientRect()
+      const percent = (e.clientX - rect.left) / rect.width
+      const vol = Math.max(0, Math.min(1, percent))
+     
+      this.volume = vol
+      this.isMuted = (vol === 0)
+     
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.volume = vol
+      }
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // UTILIDADES
+    // ═══════════════════════════════════════════════════════
+
+    formatTime(seconds) {
+      if (!seconds || isNaN(seconds)) return "0:00"
+      const m = Math.floor(seconds / 60)
+      const s = Math.floor(seconds % 60)
+      return `${m}:${s.toString().padStart(2, '0')}`
+    },
+
+    handleImageError(e) {
+      e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMTgxODE4Ii8+PHRleHQgeD0iMzAiIHk9IjM1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4='
+    },
+
+    stop() {
+      // Registrar no histórico antes de parar
+      if (this.currentTrack) {
+        this.notifyTrackEnded(false)
+      }
+     
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.pause()
+        audio.currentTime = 0
+      }
+      this.isPlaying = false
+      this.hasTrack = false
+      this.queue = []
+      this.currentIndex = 0
+      this._trackStartTime = null
+      this._totalListenedTime = 0
+    }
+  }
+}
+</script>
+
+<style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+
+.player-fade-enter-active,
+.player-fade-leave-active {
+  transition: all 0.4s ease;
+}
+
+.player-fade-enter-from,
+.player-fade-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.player-fade-enter-to,
+.player-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.music-player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(180deg, #0a0a1a 0%, #050508 100%);
+  border-top: 1px solid rgba(37, 99, 235, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  z-index: 999;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* LADO ESQUERDO */
+.player-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 30%;
+  min-width: 250px;
+}
+
+.cover-container {
+  position: relative;
+}
+
+.player-cover {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.player-cover.spinning {
+  animation: spin 8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.playing-indicator {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  display: flex;
+  gap: 2px;
+  background: rgba(37, 99, 235, 0.9);
+  padding: 3px 5px;
+  border-radius: 3px;
+}
+
+.playing-indicator span {
+  width: 2px;
+  height: 10px;
+  background: white;
+  border-radius: 1px;
+  animation: sound 0.5s ease-in-out infinite;
+}
+
+.playing-indicator span:nth-child(2) { animation-delay: 0.1s; }
+.playing-indicator span:nth-child(3) { animation-delay: 0.2s; }
+
+@keyframes sound {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.track-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.like-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.2s;
+  margin-left: 10px;
+}
+
+.like-btn:hover {
+  color: #ec4899;
+  transform: scale(1.1);
+}
+
+.like-btn.liked {
+  color: #ec4899;
+}
+
+/* CENTRO - CONTROLES */
+.player-center {
+  width: 40%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: all 0.2s;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover {
+  color: #f8fafc;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.control-btn.active {
+  color: #2563eb;
+}
+
+.control-btn:disabled {
+  color: #535353;
+  cursor: not-allowed;
+}
+
+.main-play-btn {
+  font-size: 20px !important;
+  width: 42px !important;
+  height: 42px !important;
+  background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s ease !important;
+}
+
+.main-play-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+}
+
+.main-play-btn:active {
+  transform: scale(0.95);
+}
+
+.main-play-btn.playing {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6) !important;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+}
+
+/* Progresso */
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.time {
+  color: #94a3b8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  min-width: 35px;
+}
+
+.time.current {
+  text-align: right;
+}
+
+.progress-bar-wrapper {
+  flex: 1;
+  position: relative;
+  height: 4px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.progress-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  border-radius: 2px;
+  pointer-events: none;
+  transition: width 0.1s linear;
+}
+
+.progress-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.progress-bar-wrapper:hover .progress-handle {
+  opacity: 1;
+}
+
+.progress-input {
+  position: absolute;
+  inset: -8px 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* LADO DIREITO - VOLUME */
+.player-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 30%;
+  min-width: 150px;
+  justify-content: flex-end;
+}
+
+.mute-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.mute-btn:hover {
+  color: #f8fafc;
+}
+
+.volume-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 136px;
+}
+
+.volume-bar-wrapper {
+  flex: 1;
+  position: relative;
+  height: 4px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.volume-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.volume-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  border-radius: 2px;
+  pointer-events: none;
+  transition: width 0.1s ease;
+}
+
+.volume-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.volume-bar-wrapper:hover .volume-handle {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.volume-input {
+  position: absolute;
+  inset: -8px 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Responsivo */
+@media (max-width: 1024px) {
+  .music-player {
+    padding: 0 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .music-player {
+    padding: 0 16px;
+  }
+ 
+  .player-left {
+    min-width: 150px;
+  }
+ 
+  .track-info p {
+    display: none;
+  }
+ 
+  .player-center {
+    max-width: 50%;
+  }
+ 
+  .player-right {
+    min-width: 100px;
+  }
+ 
+  .volume-section {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .like-btn {
+    display: none;
+  }
+ 
+  .control-btn:not(.main-play-btn) {
+    display: none;
+  }
+ 
+  .time {
+    font-size: 10px;
+    min-width: 30px;
   }
 }
 </style>

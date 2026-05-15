@@ -383,7 +383,8 @@ const response = await axios.put(
     bio: this.form.bio,
     localizacao: this.form.localizacao,
     avatar: this.form.avatar,
-    cover: this.form.cover
+    cover: this.form.cover,
+    onboardingCompleto: false 
   },
   {
     headers: {

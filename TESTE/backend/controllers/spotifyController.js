@@ -128,26 +128,66 @@ exports.getAlbum = async (req, res) => {
 // ================= POPULAR ARTISTS =================
 exports.getPopularArtists = async (req, res) => {
   try {
-    const { limit = 10, market = 'BR' } = req.query
+    const { limit = 45, market = 'BR' } = req.query
     
-    // Buscar artistas populares do Brasil diretamente
-    const response = await spotifyRequest({
-      method: 'GET',
-      url: `${SPOTIFY_API_URL}/search`,
-      params: { 
-        q: 'genre:"brazilian"', 
-        type: 'artist', 
-        limit: limit, 
-        market 
+    // Gêneros brasileiros/populares para buscar
+    const generos = [
+      'brazilian funk', 'sertanejo', 'pagode', 'samba', 'mpb', 
+      'brazilian rock', 'pop', 'hip hop', 'rap', 'eletronica', 
+      'gospel', 'reggae', 'indie', 'metal', 'jazz'
+    ]
+
+    // Buscar artistas por gênero (3 por gênero)
+    const groups = []
+    
+    for (const genero of generos.slice(0, 15)) {
+      try {
+        const response = await spotifyRequest({
+          method: 'GET',
+          url: `${SPOTIFY_API_URL}/search`,
+          params: { 
+            q: `genre:"${genero}"`, 
+            type: 'artist', 
+            limit: 3, 
+            market 
+          }
+        })
+
+        const artists = response.data?.artists?.items || []
+        
+        if (artists.length > 0) {
+          groups.push({
+            genre: genero,
+            artists: artists.map(artist => ({
+              id: artist.id,
+              name: artist.name,
+              images: artist.images,
+              popularity: artist.popularity,
+              followers: artist.followers,
+              genres: artist.genres
+            }))
+          })
+        }
+      } catch (err) {
+        console.warn(`⚠️ Gênero ${genero} falhou:`, err.message)
+        continue // ignora e vai pro próximo
       }
-    })
+    }
 
     res.json({
-      artists: response.data.artists // já no formato correto
+      groups: groups,        // ← formato que o frontend espera
+      totalGroups: groups.length,
+      totalArtists: groups.reduce((sum, g) => sum + g.artists.length, 0)
     })
+
   } catch (error) {
     console.error('❌ Popular artists error:', error.message)
-    res.status(500).json({ error: 'Erro artistas populares' })
+    // Retorna array vazio em vez de erro 500
+    res.status(200).json({ 
+      groups: [],
+      totalGroups: 0,
+      totalArtists: 0
+    })
   }
 }
 
@@ -163,5 +203,82 @@ exports.getPlaylist = async (req, res) => {
   } catch (error) {
     console.error('❌ Playlist error:', error.message)
     res.status(500).json({ error: 'Erro playlist', details: error.message })
+  }
+}
+
+exports.getVibes = async (req, res) => {
+  try {
+    // Vibes baseadas em playlists/features do Spotify ou estáticas
+    const vibes = [
+      {
+        id: 'spotify_festa',
+        name: 'Festa',
+        emoji: '🎉',
+        description: 'Energia alta pra curtir com os amigos',
+        gradient: 'linear-gradient(135deg,#ff512f,#dd2476)',
+        tags: ['dança', 'noite', 'funkeira']
+      },
+      {
+        id: 'spotify_chill',
+        name: 'Chill',
+        emoji: '🌈',
+        description: 'Relaxar e desacelerar',
+        gradient: 'linear-gradient(135deg,#667eea,#764ba2)',
+        tags: ['relax', 'acústico', 'tarde']
+      },
+      {
+        id: 'spotify_treino',
+        name: 'Treino',
+        emoji: '💪',
+        description: 'Energia pra academia',
+        gradient: 'linear-gradient(135deg,#11998e,#38ef7d)',
+        tags: ['academia', 'foco', 'energia']
+      },
+      {
+        id: 'spotify_focus',
+        name: 'Focus',
+        emoji: '🧠',
+        description: 'Concentração total',
+        gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)',
+        tags: ['estudo', 'trabalho', 'lo-fi']
+      },
+      {
+        id: 'spotify_sertanejo',
+        name: 'Modão',
+        emoji: '🤠',
+        description: 'Raiz e sofrência',
+        gradient: 'linear-gradient(135deg,#8B4513,#D2691E)',
+        tags: ['sertanejo', 'modão', 'universitário']
+      },
+      {
+        id: 'spotify_pagode',
+        name: 'Pagode',
+        emoji: '🪘',
+        description: 'Roda de samba e resenha',
+        gradient: 'linear-gradient(135deg,#FF6B35,#F7931E)',
+        tags: ['samba', 'pagode', 'resenha']
+      },
+      {
+        id: 'spotify_funk',
+        name: 'Funk',
+        emoji: '🔥',
+        description: 'Batida brasileira',
+        gradient: 'linear-gradient(135deg,#E91E63,#9C27B0)',
+        tags: ['funk', 'baile', 'ritmo']
+      },
+      {
+        id: 'spotify_gospel',
+        name: 'Gospel',
+        emoji: '🙏',
+        description: 'Fé e inspiração',
+        gradient: 'linear-gradient(135deg,#FFD700,#FF8C00)',
+        tags: ['gospel', 'louvor', 'fé']
+      }
+    ]
+
+    res.json(vibes)
+  } catch (error) {
+    console.error('❌ Vibes error:', error.message)
+    res.status(200).json([]) // retorna vazio em vez de erro
   }
 }

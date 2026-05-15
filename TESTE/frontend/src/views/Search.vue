@@ -1266,6 +1266,7 @@ watch: {
   }
 },
   methods: {
+    
   // Dentro do objeto methods, adicione:
 
 getCategoryIconClass(category) {

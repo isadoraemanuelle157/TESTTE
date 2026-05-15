@@ -117,6 +117,7 @@
       </div>
       <span class="counter-label">{{ selectedArtists.length >= 2 ? 'Perfeito!' : 'Selecione 2+' }}</span>
     </div>
+      
   </div>
 
   <div class="artists-grid artists-grid-flat">
@@ -129,7 +130,7 @@
       @click="toggleArtist(artist)"
     >
       <div class="artist-image">
-        <img :src="artist.photo" :alt="artist.name" @error="$event.target.src = 'https://i.pravatar.cc/400?img=12'">
+     <img :src="artist.photo" :alt="artist.name" @error="handleImageError($event)">
         <div class="artist-gradient"></div>
         <div class="selection-indicator">
           <svg viewBox="0 0 24 24" fill="currentColor">
@@ -281,6 +282,91 @@
         </div>
       </div>
     </transition>
+
+            <div v-show="showSplash" class="splash-overlay">
+        <div class="splash-content">
+          <!-- Logo Animado -->
+          <div class="splash-logo-wrapper">
+            <div class="splash-logo-glow"></div>
+            <div class="splash-logo">
+              <div class="sound-wave">
+                <span v-for="i in 5" :key="i" :style="{ animationDelay: `${i * 0.15}s` }"></span>
+              </div>
+              <span class="logo-letter">S</span>
+            </div>
+            <!-- Anel de progresso -->
+            <svg class="splash-ring" viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="splashGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#1db954" />
+                  <stop offset="100%" stop-color="#1ed760" />
+                </linearGradient>
+              </defs>
+              <circle class="ring-track" cx="60" cy="60" r="52" />
+              <circle 
+                class="ring-fill" 
+                cx="60" cy="60" r="52" 
+                :stroke-dasharray="splashCircumference"
+                :stroke-dashoffset="splashStrokeOffset"
+              />
+            </svg>
+          </div>
+
+          <!-- Texto -->
+          <div class="splash-brand" :class="{ 'show': splashProgress > 20 }">
+            <h1 class="splash-title">
+              <span v-for="(letter, i) in 'SoundUp'.split('')" :key="i" :style="{ animationDelay: `${0.3 + i * 0.08}s` }">
+                {{ letter }}
+              </span>
+            </h1>
+            <p class="splash-subtitle" :class="{ 'show': splashProgress > 40 }">
+              Preparando sua experiência musical
+            </p>
+          </div>
+
+          <!-- Barra de progresso -->
+          <div class="splash-progress-wrapper" :class="{ 'show': splashProgress > 30 }">
+            <div class="splash-progress-track">
+              <div class="splash-progress-fill" :style="{ width: splashProgress + '%' }">
+                <div class="splash-progress-shine"></div>
+              </div>
+            </div>
+            <span class="splash-percent">{{ Math.round(splashProgress) }}%</span>
+          </div>
+
+          <!-- Steps -->
+          <div class="splash-steps" :class="{ 'show': splashProgress > 50 }">
+            <div 
+              v-for="(step, i) in splashSteps" 
+              :key="i"
+              class="splash-step"
+              :class="{ 
+                'active': splashCurrentStep === i, 
+                'done': splashCurrentStep > i 
+              }"
+            >
+              <div class="step-dot">
+                <svg v-if="splashCurrentStep > i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <div v-else-if="splashCurrentStep === i" class="step-spinner"></div>
+                <div v-else class="step-idle"></div>
+              </div>
+              <span>{{ step }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Partículas de fundo -->
+        <div class="splash-particles">
+          <div v-for="n in 15" :key="n" class="particle" :style="getSplashParticleStyle(n)"></div>
+        </div>
+
+        <!-- Círculo de expansão para transição -->
+        <div class="expand-circle" :class="{ 'expand': isExpanding }"></div>
+      </div>
+    </div>
+<div>
   </div>
 </template>
 
@@ -288,7 +374,7 @@
 import Swal from "sweetalert2"
 
 export default {
-  name: "Onboarding",
+  name: "FeitoParaVoce",
 
   data() {
     return {
@@ -300,7 +386,18 @@ export default {
 
       genres: [],
       artists: [],
-      vibes: []
+      vibes: [],
+       showSplash: false,
+      splashProgress: 0,
+      splashCurrentStep: 0,
+      isExpanding: false,
+      splashSteps: [
+        'Salvando preferências',
+        'Sincronizando biblioteca',
+        'Carregando artistas',
+        'Preparando dashboard'
+      ],
+      splashCircumference: 2 * Math.PI * 52
     }
   },
 
@@ -309,6 +406,10 @@ export default {
   },
 
   computed: {
+        splashStrokeOffset() {
+      return this.splashCircumference - (this.splashProgress / 100) * this.splashCircumference
+    },
+
   headerStep() {
     return this.currentStep
   },
@@ -347,12 +448,152 @@ export default {
     ]
   },
 
-  displayedArtists() {
-    return this.artists.slice(0, 45)
-  }
+displayedArtists() {
+  console.log('👥 displayedArtists computed:', this.artists.length)
+  return this.artists.length > 0 ? this.artists.slice(0, 45) : []
+}
   },
 
   methods: {
+async scrollToTop() {
+  await this.$nextTick()                          // ✅ espera Vue renderizar
+  const contentArea = document.querySelector('.content-area')  // ✅ busca no documento
+  if (contentArea) {
+    contentArea.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+},
+
+    async loadSpotifyData() {
+  try {
+    const data = await this.fetchJson(
+      "http://localhost:3002/spotify/artists/popular",
+      "Spotify data"
+    )
+
+    // ========================
+    // GÊNEROS
+    // ========================
+    const generosUnicos = new Map()
+
+    ;(data.groups || []).forEach((group, i) => {
+      if (group.genre) {
+        generosUnicos.set(this.normalizeText(group.genre), {
+          id: "spotify_" + this.normalizeText(group.genre),
+          name: group.genre.replace('brazilian ', ''),
+          emoji: this.getEmoji(group.genre),
+          color: this.getColor(i),
+          gradient: this.getGradient(i),
+          source: "spotify"
+        })
+      }
+    })
+
+    const genres = Array.from(generosUnicos.values())
+
+    // ========================
+    // ARTISTAS
+    // ========================
+    const artists = (data.groups || []).flatMap((group, groupIndex) =>
+      (group.artists || []).slice(0, 3).map((artist, index) => ({
+        id: artist.id,
+        name: artist.name,
+        photo:
+          artist.images?.[0]?.url ||
+          this.getPlaceholderImage(groupIndex * 3 + index),
+
+        genre: group.genre,
+        genreGroup: group.genre,
+        popularity:
+          artist.popularity ||
+          Math.floor(Math.random() * 20) + 70,
+
+        source: "spotify"
+      }))
+    )
+
+    this.genres = this.limitGenres(
+      this.mergeUniqueByName(this.genres, genres)
+    )
+
+    this.artists = this.limitArtistsByGenre(
+      this.mergeUniqueByName(this.artists, artists)
+    )
+
+    console.log("✅ Spotify data carregado")
+  } catch (e) {
+    console.error("Erro Spotify data:", e)
+  }
+},
+        // ==================== SPLASH SCREEN ====================
+    getSplashParticleStyle(n) {
+      const size = Math.random() * 3 + 1
+      const left = Math.random() * 100
+      const delay = Math.random() * 4
+      const duration = Math.random() * 8 + 8
+      return {
+        width: `${size}px`,
+        height: `${size}px`,
+        left: `${left}%`,
+        animationDelay: `${delay}s`,
+        animationDuration: `${duration}s`
+      }
+    },
+
+      async startSplashTransition() {
+      // Resetar estados
+      this.showSplash = true
+      this.splashProgress = 0
+      this.splashCurrentStep = 0
+      this.isExpanding = false
+
+      const duration = 3000 // 3 segundos (mais rápido)
+      const interval = 30
+      const increment = 100 / (duration / interval)
+
+      return new Promise((resolve) => {
+        let resolved = false // flag para evitar resolve duplicado
+        
+        const timer = setInterval(() => {
+          this.splashProgress = Math.min(this.splashProgress + increment + (Math.random() * 0.8), 100)
+
+          // Atualizar steps
+          if (this.splashProgress > 15) this.splashCurrentStep = 0
+          if (this.splashProgress > 40) this.splashCurrentStep = 1
+          if (this.splashProgress > 65) this.splashCurrentStep = 2
+          if (this.splashProgress > 85) this.splashCurrentStep = 3
+
+          if (this.splashProgress >= 100 && !resolved) {
+            resolved = true
+            clearInterval(timer)
+
+            // Expansão do círculo verde
+            setTimeout(() => {
+              this.isExpanding = true
+              // Espera a animação de expansão terminar
+              setTimeout(() => {
+                this.showSplash = false // limpa o splash
+                resolve()
+              }, 700)
+            }, 400)
+          }
+        }, interval)
+      })
+    },
+
+     getPlaceholderImage(seed = 1) {
+    // Gera cores diferentes baseado no seed
+    const hues = [320, 200, 150, 45, 280, 180, 30, 250]
+    const hue = hues[seed % hues.length]
+    const svg = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(${hue},70%,20%)"/><stop offset="100%" stop-color="hsl(${hue},70%,10%)"/></linearGradient></defs><rect width="400" height="400" fill="url(#g)"/><circle cx="200" cy="150" r="50" fill="rgba(255,255,255,0.1)"/><ellipse cx="200" cy="340" rx="90" ry="70" fill="rgba(255,255,255,0.1)"/><circle cx="200" cy="135" r="45" fill="rgba(255,255,255,0.15)"/><ellipse cx="200" cy="330" rx="80" ry="60" fill="rgba(255,255,255,0.15)"/></svg>`)}`
+    return svg
+  },
+     
+  handleImageError(event) {
+    // SVG placeholder como data URI — não depende de servidor externo
+    const svg = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="%231a1a2e"/><circle cx="200" cy="160" r="60" fill="%23333"/><ellipse cx="200" cy="320" rx="100" ry="80" fill="%23333"/><text x="200" y="380" font-family="Arial" font-size="16" fill="%23666" text-anchor="middle">Artista</text></svg>`)}`
+    event.target.src = svg
+  },
+  
     limitGenres(list) {
   return this.mergeUniqueByName([], list).slice(0, 15)
 },
@@ -362,8 +603,10 @@ limitVibes(list) {
 },
 
 limitArtistsByGenre(list) {
-  const groups = new Map()
+  // Se tiver poucos dados, não limita tanto
+  if (list.length <= 45) return list
 
+  const groups = new Map()
   list.forEach(artist => {
     const genreKey =
       artist.genreGroup ||
@@ -379,7 +622,7 @@ limitArtistsByGenre(list) {
       a => this.normalizeText(a.name) === this.normalizeText(artist.name)
     )
 
-    if (!alreadyExists && group.length < 3) {
+    if (!alreadyExists && group.length < 5) {  // ✅ Aumentou para 5 por gênero
       group.push({
         ...artist,
         genre: genreKey,
@@ -389,19 +632,18 @@ limitArtistsByGenre(list) {
   })
 
   return Array.from(groups.entries())
-    .slice(0, 15)
-    .flatMap(([genre, artists]) =>
-      artists.map(artist => ({
-        ...artist,
-        genre,
-        genreGroup: genre
-      }))
-    )
+    .slice(0, 20)  // ✅ Aumentou para 20 gêneros
+    .flatMap(([genre, artists]) => artists)
 },
 
-    async fetchJson(url, label = "requisicao") {
-      const res = await fetch(url)
-      const text = await res.text()
+async fetchJson(url, label = "requisicao") {
+  const token = localStorage.getItem("token")
+  
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {}
+  })
+  
+  const text = await res.text()
 
       let data = null
       try {
@@ -421,23 +663,23 @@ limitArtistsByGenre(list) {
     },
 
 async loadInitialData() {
-  const results = await Promise.allSettled([
-    this.loadSpotifyGeneros(),
-    this.loadSpotifyArtists(),
-    this.loadSpotifyVibes(),
-    this.loadGeneros(),
-    this.loadCantores(),
-    this.loadVibes()
-  ])
+await Promise.allSettled([
+  this.loadSpotifyData(), // NOVO
+  this.loadSpotifyVibes(),
+  this.loadGeneros(),
+  this.loadCantores(),
+  this.loadVibes()
+])
 
+  // ✅ Agora sim, os dados já carregaram (de ambas as fontes)
   this.genres = this.limitGenres(this.genres)
   this.artists = this.limitArtistsByGenre(this.artists)
   this.vibes = this.limitVibes(this.vibes)
 
-  console.log("📦 loadInitialData finalizado", results)
-  console.log("genres:", this.genres.length)
-  console.log("artists:", this.artists.length)
-  console.log("vibes:", this.vibes.length)
+  console.log("📦 loadInitialData finalizado")
+  console.log("genres:", this.genres.length, this.genres.map(g => g.name))
+  console.log("artists:", this.artists.length, this.artists.map(a => a.name))
+  console.log("vibes:", this.vibes.length, this.vibes.map(v => v.name))
 },
 
     normalizeText(value) {
@@ -468,6 +710,7 @@ async loadInitialData() {
     // ==================== GENEROS ====================
     async loadGeneros() {
       try {
+        
         const res = await fetch("http://localhost:3002/generos")
         const data = await res.json()
 
@@ -497,7 +740,7 @@ async loadInitialData() {
         const mapped = data.map((c, index) => ({
           id: c._id,
           name: c.nome,
-          photo: c.foto || `https://i.pravatar.cc/400?img=${index + 10}`,
+        photo: c.foto || this.getPlaceholderImage(index + 10),
           genre: c.generos?.length
             ? c.generos.map(g => g.nome).join(", ")
             : "Sem genero",
@@ -545,7 +788,7 @@ async loadInitialData() {
       (group.artists || []).slice(0, 3).map((artist, index) => ({
         id: artist.id,
         name: artist.name,
-        photo: artist.images?.[0]?.url || `https://i.pravatar.cc/400?img=${groupIndex * 3 + index + 50}`,
+        photo: artist.images?.[0]?.url || this.getPlaceholderImage(groupIndex * 3 + index + 50),
         genre: group.genre,
         genreGroup: group.genre,
         genresArray: artist.genres || [group.genre],
@@ -566,29 +809,43 @@ async loadInitialData() {
 },
 
     // ==================== GENEROS SPOTIFY ====================
- async loadSpotifyGeneros() {
+// ==================== GENEROS SPOTIFY ====================
+async loadSpotifyGeneros() {
   try {
     const data = await this.fetchJson(
       "http://localhost:3002/spotify/artists/popular",
       "Spotify generos"
     )
 
-    const generosSpotify = (data.groups || []).slice(0, 15).map((group, i) => ({
-      id: "spotify_" + this.normalizeText(group.genre),
-      name: group.genre,
-      emoji: this.getEmoji(group.genre),
-      color: this.getColor(i),
-      gradient: this.getGradient(i),
-      source: "spotify"
-    }))
+    // Extrai gêneros únicos dos grupos de artistas
+    const generosUnicos = new Map()
+    
+    ;(data.groups || []).forEach((group, i) => {
+      if (group.genre) {
+        const nomeFormatado = group.genre
+          .replace('brazilian ', '')
+          .replace(/^./, str => str.toUpperCase())
+        
+        generosUnicos.set(this.normalizeText(group.genre), {
+          id: "spotify_" + this.normalizeText(group.genre),
+          name: nomeFormatado,
+          emoji: this.getEmoji(group.genre),
+          color: this.getColor(i),
+          gradient: this.getGradient(i),
+          source: "spotify"
+        })
+      }
+    })
+
+    const generosSpotify = Array.from(generosUnicos.values()).slice(0, 15)
 
     this.genres = this.limitGenres(
       this.mergeUniqueByName(this.genres, generosSpotify)
     )
 
-    console.log("🎸 generos carregados:", this.genres.length)
+    console.log("🎸 gêneros Spotify carregados:", this.genres.length, this.genres.map(g => g.name))
   } catch (e) {
-    console.error("Erro generos Spotify:", e)
+    console.error("Erro gêneros Spotify:", e)
   }
 },
 
@@ -748,20 +1005,24 @@ console.log("🎧 vibes API:", data)
       this.selectedVibes = this.selectedVibes.filter(v => v.id !== item.id)
     },
 
-    nextStep() {
-      if (this.currentStep === 1) {
-        this.generateVibesFromGenres()
-      }
-      if (this.currentStep === 3) {
-        this.showSuccess = true
-      } else {
-        this.currentStep++
-      }
-    },
+async nextStep() {
+  if (this.currentStep === 1) {
+    this.generateVibesFromGenres()
+  }
+  if (this.currentStep === 3) {
+    this.showSuccess = true
+  } else {
+    this.currentStep++        // ✅ PRIMEIRO troca o step
+    await this.scrollToTop()  // ✅ DEPOIS sobe pro topo
+  }
+},
 
-    prevStep() {
-      if (this.currentStep > 1) this.currentStep--
-    },
+async prevStep() {
+  if (this.currentStep > 1) {
+    this.currentStep--        // ✅ PRIMEIRO volta o step
+    await this.scrollToTop()  // ✅ DEPOIS sobe pro topo
+  }
+},
 
     goToStep(step) {
       if (step < this.currentStep) this.currentStep = step
@@ -830,27 +1091,46 @@ console.log("🎧 vibes API:", data)
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify({
-        generos: generosPayload,
-        artistasFavoritos: artistasPayload,
-        vibesFavoritas: vibesPayload,
-        onboardingCompleto: true
-      })
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || `Erro ${response.status}`)
-    }
-const updatedResponse = await response.json()
-const updatedUser = updatedResponse.user || updatedResponse
-
-localStorage.setItem("usuario", JSON.stringify({
-  ...usuario,
-  ...updatedUser,
+     // ✅ FORMATO NOVO (objeto com locais/externos) — compatível com schema atual
+body: JSON.stringify({
+  generos: {
+    locais: [],  // IDs de gêneros do banco (se houver)
+    externos: generosPayload.map(g => ({
+      source: g.source || 'local',
+      externalId: g.id?.toString(),
+      nome: g.nome || g.name,
+      icon: g.icon || '🎵',
+      color: g.color || '#1DB954'
+    }))
+  },
+  artistasFavoritos: {
+    locais: [],  // IDs de cantores do banco (se houver)
+    externos: artistasPayload.map(a => ({
+      source: a.source || 'local',
+      externalId: a.id?.toString(),
+      nome: a.nome || a.name,
+      imagem: a.imagem || a.photo || null,
+      extra: {
+        genero: a.genero || a.genre || '',
+        popularidade: a.popularidade || 0
+      }
+    }))
+  },
+  vibesFavoritas: {
+    locais: [],  // IDs de vibes do banco (se houver)
+    externas: vibesPayload.map(v => ({
+      source: v.source || 'local',
+      externalId: v.id?.toString(),
+      nome: v.nome || v.name,
+      emoji: v.emoji || '✨',
+      descricao: v.descricao || v.description || '',
+      gradient: v.gradient || 'linear-gradient(135deg,#667eea,#764ba2)',
+      tags: v.tags || []
+    }))
+  },
   onboardingCompleto: true
-}))
-
+})
+    })
 
     // Favoritar artistas locais automaticamente
     const artistasLocais = this.selectedArtists.filter(a => !a.source || a.source === 'local')
@@ -875,25 +1155,18 @@ localStorage.setItem("usuario", JSON.stringify({
       JSON.stringify(this.selectedArtists.map(a => a.id))
     )
 
-    await Swal.fire({
-      title: "Conta criada com sucesso! 🎉",
-      text: "Seu perfil esta pronto. Bora ouvir musica!",
-      icon: "success",
-      background: "#121212",
-      color: "#fff",
-      confirmButtonText: "Ir para o Dashboard 🚀",
-      confirmButtonColor: "#1DB954",
-      timer: 2500,
-      timerProgressBar: true,
-      showClass: {
-        popup: "animate__animated animate__zoomIn"
-      },
-      hideClass: {
-        popup: "animate__animated animate__fadeOut"
-      }
-    })
+    // Fechar o modal de sucesso primeiro
+    this.showSuccess = false
+    
+    // Pequeno delay para o modal sair antes do splash entrar
+    await new Promise(r => setTimeout(r, 500))
+    
+    // Mostrar splash screen de transição
+    await this.startSplashTransition()
 
-    this.$router.push('/dashboard')
+    // Navegar para o dashboard (sem animação de transição do Vue Router)
+    this.$router.replace('/dashboard')
+
   } catch (err) {
     console.error('❌ Erro ao finalizar onboarding:', err)
     Swal.fire({
@@ -919,16 +1192,14 @@ localStorage.setItem("usuario", JSON.stringify({
 
 .onboarding-container {
   min-height: 100vh;
-  min-height: 100dvh;
-  width: 100vw;
+  width: 100%;
   background: #0a0a0a;
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   display: flex;
   flex-direction: column;
-  position: fixed;
-  inset: 0;
-  overflow: hidden;
+  position: relative;  /* ✅ Normal flow */
+  overflow-x: hidden;
 }
 
 /* Background Dinamico */
@@ -997,7 +1268,7 @@ localStorage.setItem("usuario", JSON.stringify({
 
 /* Header Global */
 .global-header {
-  position: fixed;
+position: sticky;
   top: 0;
   left: 0;
   right: 0;
@@ -1031,11 +1302,13 @@ localStorage.setItem("usuario", JSON.stringify({
   flex: 1;
   position: relative;
   z-index: 1;
-  margin-top: 80px;
-  margin-bottom: 140px;
+ margin-top: 0;        /* ✅ Header é sticky agora */
+  margin-bottom: 0;  
   overflow-y: auto;
   overflow-x: hidden;
   padding: 24px 32px;
+  width: 100%;
+  scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
@@ -1055,7 +1328,7 @@ localStorage.setItem("usuario", JSON.stringify({
 
 /* Step Sections */
 .step-section {
-  min-height: 100%;
+  min-height: auto;    /* ✅ CORRETO: altura natural do conteúdo */
   display: flex;
   flex-direction: column;
 }
@@ -1166,7 +1439,361 @@ localStorage.setItem("usuario", JSON.stringify({
 .selection-counter.is-valid .counter-label {
   color: #1ed760;
 }
+/* ==================== SPLASH SCREEN ==================== */
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0a;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
 
+.splash-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+}
+
+/* Logo */
+.splash-logo-wrapper {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-logo-glow {
+  position: absolute;
+  inset: -25px;
+  background: radial-gradient(circle, rgba(29, 185, 84, 0.35) 0%, transparent 70%);
+  border-radius: 50%;
+  animation: glowPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0.9; }
+}
+
+.splash-logo {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16px 40px rgba(29, 185, 84, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+
+.sound-wave {
+  position: absolute;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 24px;
+  opacity: 0.25;
+}
+
+.sound-wave span {
+  width: 3px;
+  background: white;
+  border-radius: 2px;
+  animation: soundWave 1.2s ease-in-out infinite;
+}
+
+.sound-wave span:nth-child(1) { height: 30%; }
+.sound-wave span:nth-child(2) { height: 60%; }
+.sound-wave span:nth-child(3) { height: 90%; }
+.sound-wave span:nth-child(4) { height: 60%; }
+.sound-wave span:nth-child(5) { height: 30%; }
+
+@keyframes soundWave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+.logo-letter {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: white;
+  z-index: 2;
+}
+
+/* Anel de progresso */
+.splash-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring-track {
+  fill: none;
+  stroke: rgba(255,255,255,0.08);
+  stroke-width: 2.5;
+}
+
+.ring-fill {
+  fill: none;
+  stroke: url(#splashGradient);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
+  filter: drop-shadow(0 0 8px rgba(29, 185, 84, 0.4));
+}
+
+/* Texto */
+.splash-brand {
+  text-align: center;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.5s ease;
+}
+
+.splash-brand.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.splash-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+  display: flex;
+  justify-content: center;
+  gap: 0.06em;
+}
+
+.splash-title span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: letterPop 0.5s ease forwards;
+  background: linear-gradient(135deg, #fff 0%, #b0b0b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes letterPop {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.splash-subtitle {
+  margin: 0.6rem 0 0;
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.5);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.5s ease 0.2s;
+}
+
+.splash-subtitle.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Barra de progresso */
+.splash-progress-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  opacity: 0;
+  transform: translateY(15px);
+  transition: all 0.5s ease;
+}
+
+.splash-progress-wrapper.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.splash-progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.splash-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1db954 0%, #1ed760 100%);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+  position: relative;
+  overflow: hidden;
+}
+
+.splash-progress-shine {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  animation: shineSlide 1.8s infinite;
+}
+
+@keyframes shineSlide {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.splash-percent {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1ed760;
+  min-width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Steps */
+.splash-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.splash-steps.show {
+  opacity: 1;
+}
+
+.splash-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.35);
+  transition: all 0.3s ease;
+}
+
+.splash-step.active {
+  color: rgba(255,255,255,0.85);
+}
+
+.splash-step.done {
+  color: #1ed760;
+}
+
+.step-dot {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-dot svg {
+  width: 14px;
+  height: 14px;
+}
+
+.step-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #1ed760;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.step-idle {
+  width: 6px;
+  height: 6px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Partículas */
+.splash-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  bottom: -5px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  animation: riseUp linear infinite;
+}
+
+@keyframes riseUp {
+  0% { transform: translateY(0) scale(0); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+}
+
+/* Círculo de expansão */
+.expand-circle {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: #1db954;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 100;
+}
+
+.expand-circle.expand {
+  transform: translate(-50%, -50%) scale(50);
+}
+
+/* Gradiente SVG */
+.splash-overlay svg defs {
+  position: absolute;
+}
+
+/* Responsivo */
+@media (max-width: 480px) {
+  .splash-logo-wrapper { width: 110px; height: 110px; }
+  .splash-logo { width: 60px; height: 60px; border-radius: 18px; }
+  .logo-letter { font-size: 1.8rem; }
+  .splash-title { font-size: 1.8rem; }
+  .splash-subtitle { font-size: 0.85rem; }
+}
+
+/* Redução de movimento */
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo-glow, .sound-wave span, .splash-progress-shine, .particle, .step-spinner {
+    animation: none;
+  }
+  .splash-title span {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
 /* Genres Masonry */
 .genres-masonry {
   flex: 1;
@@ -1610,7 +2237,7 @@ localStorage.setItem("usuario", JSON.stringify({
 
 /* Preview Bar */
 .preview-bar {
-  position: fixed;
+position: sticky;
   bottom: 90px;
   left: 50%;
   transform: translateX(-50%) translateY(100px);
@@ -1710,7 +2337,7 @@ localStorage.setItem("usuario", JSON.stringify({
 
 /* Footer */
 .step-footer {
-  position: fixed;
+  position: sticky;
   bottom: 0;
   left: 0;
   right: 0;

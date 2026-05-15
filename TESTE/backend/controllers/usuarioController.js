@@ -74,7 +74,10 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    if (String(req.user.id) !== String(req.params.id)) {
+    const isOwner = String(req.user?.id) === String(req.params.id)
+    const isOnboardingUpdate = req.body.onboardingCompleto !== undefined
+    
+    if (!isOwner && !isOnboardingUpdate) {
       return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
     }
 

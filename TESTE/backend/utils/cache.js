@@ -1,11 +1,12 @@
 const cache = new Map()
 
-function getCache(key, ttl = 300000) {
+function getCache(key) {
   const item = cache.get(key)
 
   if (!item) return null
 
-  if (Date.now() - item.timestamp > ttl) {
+  // expirado
+  if (Date.now() > item.expiresAt) {
     cache.delete(key)
     return null
   }
@@ -13,15 +14,27 @@ function getCache(key, ttl = 300000) {
   return item.data
 }
 
-function setCache(key, data) {
+function setCache(key, data, ttl = 1000 * 60 * 30) {
+  // 30 minutos
+
   cache.set(key, {
     data,
-    timestamp: Date.now()
+    expiresAt: Date.now() + ttl
   })
+}
+
+function deleteCache(key) {
+  cache.delete(key)
+}
+
+function clearCache() {
+  cache.clear()
 }
 
 module.exports = {
   cache,
   getCache,
-  setCache
+  setCache,
+  deleteCache,
+  clearCache
 }

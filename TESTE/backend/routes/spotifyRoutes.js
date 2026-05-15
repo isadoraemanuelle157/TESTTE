@@ -15,5 +15,6 @@ router.get('/artist/:id/related-artists', requireAuth, spotifyController.getRela
 router.get('/album/:id', requireAuth, spotifyController.getAlbum)
 router.get('/playlist/:id', requireAuth, spotifyController.getPlaylist)
 router.get('/artists/popular', requireAuth, spotifyController.getPopularArtists)
+router.get('/vibes', requireAuth, spotifyController.getVibes)
 
 module.exports = router
