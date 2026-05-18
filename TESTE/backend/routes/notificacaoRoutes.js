@@ -1,15 +1,13 @@
 const express = require('express')
 const router = express.Router()
 
-const authMiddleware = require('../middleware/authMiddleware')
+const { requireAuth } = require('../middleware/auth')
 const notificacaoController = require('../controllers/notificacaoController')
 
-router.get('/', authMiddleware, notificacaoController.listar)
-router.patch('/:id/lida', authMiddleware, notificacaoController.marcar)
-router.patch('/marcar-todas', authMiddleware, notificacaoController.marcarTodas)
-
-// NOVAS ROTAS - Deletar:
-router.delete('/:id', authMiddleware, notificacaoController.deletar)
-router.delete('/', authMiddleware, notificacaoController.deletarTodas)
+router.get('/', requireAuth, notificacaoController.listar)
+router.patch('/:id/lida', requireAuth, notificacaoController.marcar)
+router.patch('/marcar-todas', requireAuth, notificacaoController.marcarTodas)
+router.delete('/:id', requireAuth, notificacaoController.deletar)
+router.delete('/', requireAuth, notificacaoController.deletarTodas)
 
 module.exports = router

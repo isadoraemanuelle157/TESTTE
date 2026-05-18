@@ -32,6 +32,12 @@ const usuarioSchema = new mongoose.Schema({
   username: { type: String, unique: true, sparse: true },
   email: { type: String, required: true, unique: true },
   senha: { type: String, required: true },
+  
+  role: {
+  type: String,
+  enum: ['user', 'admin'],
+  default: 'user'
+},
 
   idade: { type: Number, min: 18, max: 100, default: null },
   bio: { type: String, default: '' },

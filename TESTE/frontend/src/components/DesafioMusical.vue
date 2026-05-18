@@ -12,13 +12,6 @@
     <nav class="nav-bar" :class="{ 'scrolled': isScrolled }">
       <div class="nav-container">
         <div class="logo">
-          <div class="logo-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
-            </svg>
-          </div>
-          <span class="logo-text">SoundUp</span>
         </div>
        
         <div class="nav-links" :class="{ 'active': mobileMenuOpen }">
@@ -26,7 +19,7 @@
           <a href="#leaderboard" class="nav-link">Ranking</a>
           <a href="#rewards" class="nav-link">Recompensas</a>
           <div class="user-coins" v-if="totalCoins > 0">
-            <span class="coin-icon">🪙</span>
+            <span class="coin-icon"><i class="fa-solid fa-coins"></i></span>
             <span class="coin-amount">{{ totalCoins }}</span>
           </div>
           <button class="btn-primary" @click="startGame">
@@ -89,7 +82,12 @@
           <div class="ticker-content">
             <div class="ticker-track" :style="{ animationPlayState: isPaused ? 'paused' : 'running' }">
               <div v-for="(activity, index) in [...activities, ...activities]" :key="index" class="ticker-item">
-                <img :src="activity.avatar" :alt="activity.user" class="ticker-avatar">
+                <img 
+  :src="activity.avatar" 
+  :alt="activity.user" 
+  class="ticker-avatar"
+  @error="$event.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(activity.user) + '&background=6366f1&color=fff'"
+>
                 <span class="ticker-text">
                   <strong>{{ activity.user }}</strong> acertou <span class="highlight">{{ activity.song }}</span>
                 </span>
@@ -110,30 +108,52 @@
           <div class="tonearm" :class="{ 'active': isPlaying }"></div>
         </div>
        
-        <div class="floating-cards">
-          <div class="float-card card-1" :style="cardStyles[0]">
-            <div class="card-icon">🎵</div>
-            <div class="card-info">
-              <div class="card-title">Complete a Música</div>
-              <div class="card-meta">Nível Hard</div>
-            </div>
-          </div>
-         
-          <div class="float-card card-2" :style="cardStyles[1]">
-            <div class="card-icon">🎤</div>
-            <div class="card-info">
-              <div class="card-title">Adivinhe o Artista</div>
-              <div class="card-meta">Pop 2024</div>
-            </div>
-          </div>
-         
-          <div class="float-card card-3" :style="cardStyles[2]">
-            <div class="card-icon">🎸</div>
-            <div class="card-info">
-              <div class="card-title">Adivinhe a Música</div>
-              <div class="card-meta">Rock Clássico</div>
-            </div>
-          </div>
+    <div class="floating-cards">
+
+  <div class="float-card card-1" :style="cardStyles[0]">
+    <div class="card-icon">
+      <i class="fa-solid fa-music"></i>
+    </div>
+
+    <div class="card-info">
+      <div class="card-title">Complete a Música</div>
+      <div class="card-meta">Nível Hard</div>
+    </div>
+  </div>
+
+  <div class="float-card card-2" :style="cardStyles[1]">
+    <div class="card-icon">
+      <i class="fa-solid fa-microphone-lines"></i>
+    </div>
+
+    <div class="card-info">
+      <div class="card-title">Adivinhe o Artista</div>
+      <div class="card-meta">Pop 2024</div>
+    </div>
+  </div>
+
+  <div class="float-card card-3" :style="cardStyles[2]">
+    <div class="card-icon">
+      <i class="fa-solid fa-guitar"></i>
+    </div>
+
+    <div class="card-info">
+      <div class="card-title">Adivinhe a Música</div>
+      <div class="card-meta">Rock Clássico</div>
+    </div>
+  </div>
+
+  <div class="float-card card-4" :style="cardStyles[3]">
+    <div class="card-icon">
+      <i class="fa-solid fa-headphones"></i>
+    </div>
+
+    <div class="card-info">
+      <div class="card-title">Quiz Musical</div>
+      <div class="card-meta">Expert Mode</div>
+    </div>
+  </div>
+
         </div>
       </div>
     </section>
@@ -198,21 +218,20 @@
        
         <div class="difficulty-options">
           <button
-            v-for="diff in difficulties"
+            v-for="diff in serverDifficulties"
             :key="diff.level"
             class="difficulty-btn"
-            :class="[diff.level, { 'completed': isDifficultyCompleted(diff.level) }]"
-            @click="startGameWithDifficulty(diff)"
-            :disabled="isDifficultyLocked(diff.level)"
+            :class="[diff.level, { 'completed': diff.completed }]"
+    :disabled="diff.locked"
           >
-            <div class="diff-icon">{{ diff.icon }}</div>
+            <div class="diff-icon"><i :class="diff.iconClass || 'fa-solid fa-star'"></i></div>
             <div class="diff-info">
               <strong>{{ diff.name }}</strong>
               <span>{{ diff.description }}</span>
             </div>
             <div class="diff-status">
-              <span v-if="isDifficultyCompleted(diff.level)" class="completed-badge">✓ Completo</span>
-              <span v-else-if="isDifficultyLocked(diff.level)" class="locked-badge">🔒 Bloqueado</span>
+              <span v-if="diff.completed" class="completed-badge"><i class="fa-solid fa-check"></i> Completo</span>
+              <span v-else-if="diff.locked" class="locked-badge"><i class="fa-solid fa-lock"></i> Bloqueado</span>
               <div v-else class="diff-reward">
                 <span class="reward-multiplier">{{ diff.multiplier }}x</span>
                 <small>recompensa</small>
@@ -236,9 +255,9 @@
           </button>
           <div class="game-progress">
             <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: `${(currentQuestion / totalQuestions) * 100}%` }"></div>
+              <div class="progress-fill" :style="{ width: `${(currentQuestionNum / totalQuestions) * 100}%` }"></div>
             </div>
-            <span class="progress-text">{{ currentQuestion }}/{{ totalQuestions }}</span>
+            <span class="progress-text">{{ currentQuestionNum }}/{{ totalQuestions }}</span>
           </div>
           <div class="game-stats">
             <div class="stat-item">
@@ -247,7 +266,7 @@
             </div>
             <div class="stat-item">
               <span class="stat-label">Moedas</span>
-              <span class="coin-value">🪙 {{ sessionCoins }}</span>
+              <span class="coin-value"><i class="fa-solid fa-coins"></i> {{ sessionCoins }}</span>
             </div>
           </div>
         </div>
@@ -262,7 +281,7 @@
 
           <!-- Error State -->
           <div v-else-if="loadError" class="error-state">
-            <p>⚠️ Erro ao carregar músicas da API</p>
+            <p><i class="fa-solid fa-triangle-exclamation"></i> Erro ao carregar músicas da API</p>
             <p class="error-subtext">Usando modo offline com músicas locais...</p>
             <button @click="useOfflineMode">Jogar Offline</button>
           </div>
@@ -270,7 +289,7 @@
           <!-- Game Completed State -->
           <div v-else-if="gameCompleted" class="game-completed">
             <div class="completion-animation">
-              <div class="trophy">🏆</div>
+              <div class="trophy"><i class="fa-solid fa-trophy"></i></div>
               <h2>Desafio Completado!</h2>
               <p>Você completou o nível {{ currentDifficulty?.name }}</p>
               
@@ -281,7 +300,7 @@
                 </div>
                 <div class="comp-stat">
                   <span class="comp-label">Moedas</span>
-                  <span class="comp-value">🪙 {{ sessionCoins }}</span>
+                  <span class="comp-value"><i class="fa-solid fa-coins"></i> {{ sessionCoins }}</span>
                 </div>
                 <div class="comp-stat">
                   <span class="comp-label">Precisão</span>
@@ -320,7 +339,7 @@
             <!-- ADIVINHE A MÚSICA (Preview) - CORRIGIDO -->
             <div v-if="currentGame.id === 'guess-song'" class="question-card">
               <div class="mode-indicator">
-                <span class="mode-tag">🎧 Adivinhe a Música</span>
+                <span class="mode-tag"><i class="fa-solid fa-headphones"></i> Adivinhe a Música</span>
                 <span class="difficulty-tag" :class="currentDifficulty?.level">{{ currentDifficulty?.name }}</span>
               </div>
              
@@ -329,7 +348,7 @@
                   <div class="vinyl-disc">
                     <div class="disc-grooves"></div>
                     <div class="disc-label">
-                      <img v-if="currentTrack?.album?.cover_medium" :src="currentTrack.album.cover_medium" alt="Album">
+                    <img v-if="currentTrack?.album?.cover_medium" :src="currentTrack.album.cover_medium" alt="Album">
                       <span v-else>?</span>
                     </div>
                   </div>
@@ -368,7 +387,7 @@
             <!-- ADIVINHE O ARTISTA - CORRIGIDO: Preview apenas em Easy/Medium -->
             <div v-else-if="currentGame.id === 'guess-artist'" class="question-card">
               <div class="mode-indicator">
-                <span class="mode-tag">🎤 Adivinhe o Artista</span>
+                <span class="mode-tag"><i class="fa-solid fa-microphone-lines"></i> Adivinhe o Artista</span>
                 <span class="difficulty-tag" :class="currentDifficulty?.level">{{ currentDifficulty?.name }}</span>
               </div>
              
@@ -377,7 +396,7 @@
                   <div class="voice-avatar" :class="{ 'speaking': isAudioPlaying }">
                     <div class="avatar-glow"></div>
                     <img v-if="currentTrack?.artist?.picture_medium" :src="currentTrack.artist.picture_medium" :alt="currentTrack.artist.name" class="artist-blur">
-                    <span v-else class="mic-icon">🎤</span>
+                    <span v-else class="mic-icon"><i class="fa-solid fa-microphone"></i></span>
                   </div>
                   <div class="voice-waves" v-if="isAudioPlaying">
                     <div v-for="n in 20" :key="n" class="voice-bar"
@@ -407,7 +426,7 @@
                 </button>
                 
                 <p v-else class="no-preview-hint">
-                  🎵 Modo Difícil: Sem preview de áudio!
+                  <i class="fa-solid fa-music"></i> Modo Difícil: Sem preview de áudio!
                 </p>
               </div>
 
@@ -419,7 +438,7 @@
             <!-- COMPLETE A MÚSICA - MELHORADO -->
             <div v-else-if="currentGame.id === 'complete-lyric'" class="question-card">
               <div class="mode-indicator">
-                <span class="mode-tag">🎵 Complete a Música</span>
+                <span class="mode-tag"><i class="fa-solid fa-music"></i> Complete a Música</span>
                 <span class="difficulty-tag" :class="currentDifficulty?.level">{{ currentDifficulty?.name }}</span>
               </div>
              
@@ -456,7 +475,7 @@
                     </span>
                   </div>
                   <p class="artist-hint" v-if="currentDifficulty?.level !== 'hard'">
-                    Artista: {{ currentTrack?.artist?.name }}
+                    Artista: {{ currentTrack?.musica?.artista }}
                   </p>
                 </div>
               </div>
@@ -469,18 +488,18 @@
             <!-- QUIZ MUSICAL - MAIS PERGUNTAS -->
             <div v-else-if="currentGame.id === 'music-trivia'" class="question-card">
               <div class="mode-indicator">
-                <span class="mode-tag">🎸 Quiz Musical</span>
+                <span class="mode-tag"><i class="fa-solid fa-guitar"></i> Quiz Musical</span>
                 <span class="difficulty-tag" :class="currentDifficulty?.level">{{ currentDifficulty?.name }}</span>
               </div>
              
               <div class="trivia-challenge">
-                <div class="trivia-category" :style="{ background: currentTrivia?.categoryColor }">
-                  {{ currentTrivia?.category }}
+                <div class="trivia-category" :style="{ background: currentTrack?.corCategoria }">
+                  {{ currentTrack?.categoria }}
                 </div>
                
                 <div class="trivia-question">
-                  <div class="question-icon">{{ currentTrivia?.icon }}</div>
-                  <h3>{{ currentTrivia?.question }}</h3>
+                  <div class="question-icon"><i :class="currentTrack?.iconClass || 'fa-solid fa-circle-question'"></i></div>
+                  <h3>{{ currentTrack?.pergunta }}</h3>
                 </div>
               </div>
 
@@ -510,15 +529,17 @@
 
             <!-- FEEDBACK -->
             <div v-if="showAnswer" class="answer-feedback" :class="{ 'correct': selectedAnswer === correctAnswerIndex }">
-              <div class="feedback-icon">{{ selectedAnswer === correctAnswerIndex ? '✅' : '❌' }}</div>
+              <div class="feedback-icon">
+                <i :class="selectedAnswer === correctAnswerIndex ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'"></i>
+              </div>
               <div class="feedback-text">
                 <strong>{{ selectedAnswer === correctAnswerIndex ? 'Correto!' : 'Errado!' }}</strong>
                 <span v-if="selectedAnswer === correctAnswerIndex">
-                  +{{ calculatePoints() }} pontos / 🪙 {{ calculateCoins() }} moedas
+                 +{{ lastPointsGained }} pontos / <i class="fa-solid fa-coins"></i> {{ lastCoinsGained }} moedas
                 </span>
                 <span v-else>Era: {{ getCorrectAnswerText() }}</span>
               </div>
-              <button class="btn-next" @click="nextQuestion">Próxima →</button>
+              <button class="btn-next" @click="nextQuestion">Próxima <i class="fa-solid fa-arrow-right"></i></button>
             </div>
           </template>
         </div>
@@ -538,22 +559,22 @@
           <h3>Seu Progresso</h3>
           <div class="stats-grid">
             <div class="stat-box">
-              <span class="stat-icon">🪙</span>
+              <span class="stat-icon"><i class="fa-solid fa-coins"></i></span>
               <span class="stat-number">{{ totalCoins }}</span>
               <span class="stat-label">Moedas Totais</span>
             </div>
             <div class="stat-box">
-              <span class="stat-icon">⭐</span>
+              <span class="stat-icon"><i class="fa-solid fa-star"></i></span>
               <span class="stat-number">{{ totalScore }}</span>
               <span class="stat-label">Pontuação Máxima</span>
             </div>
             <div class="stat-box">
-              <span class="stat-icon">🔥</span>
+              <span class="stat-icon"><i class="fa-solid fa-fire"></i></span>
               <span class="stat-number">{{ streak }}</span>
               <span class="stat-label">Dias Seguidos</span>
             </div>
             <div class="stat-box">
-              <span class="stat-icon">🎯</span>
+              <span class="stat-icon"><i class="fa-solid fa-bullseye"></i></span>
               <span class="stat-number">{{ accuracy }}%</span>
               <span class="stat-label">Precisão</span>
             </div>
@@ -565,26 +586,26 @@
           <h3>Recompensa Diária</h3>
           <div class="rewards-track">
             <div
-              v-for="(day, idx) in dailyRewards"
+              v-for="(day, idx) in serverDailyRewards"
               :key="idx"
               class="reward-day"
               :class="{
-                'claimed': day.claimed,
-                'available': day.available && !day.claimed && canClaimDaily,
-                'locked': !day.available && !day.claimed
+              'claimed': day.claimed,
+    'available': day.disponivel && !day.claimed && canClaimDaily,
+    'locked': !day.disponivel && !day.claimed
               }"
               @click="claimDailyReward(day)"
             >
-              <div class="day-number">Dia {{ day.day }}</div>
-              <div class="reward-icon">{{ day.icon }}</div>
-              <div class="reward-amount">🪙 {{ day.coins }}</div>
-              <div v-if="day.claimed" class="claimed-badge">✓</div>
+                <div class="day-number">Dia {{ day.dia }}</div>
+              <div class="reward-icon"><i :class="day.iconClass || 'fa-solid fa-gift'"></i></div>
+              <div class="reward-amount"><i class="fa-solid fa-coins"></i> {{ day.moedas }}</div>
+              <div v-if="day.claimed" class="claimed-badge"><i class="fa-solid fa-check"></i></div>
             </div>
           </div>
           <p class="reward-hint" v-if="!canClaimDaily">
             Volte amanhã para mais recompensas! Próximo resgate em: {{ nextClaimTime }}
           </p>
-          <p class="reward-hint" v-else-if="!dailyRewards.find(d => d.available && !d.claimed)">
+          <p class="reward-hint" v-else-if="!serverDailyRewards.find(d => d.available && !d.claimed)">
             Clique no próximo dia disponível para resgatar!
           </p>
         </div>
@@ -594,28 +615,27 @@
           <h3>Conquistas</h3>
           <div class="achievements-grid">
             <div
-              v-for="(achievement, idx) in achievements"
+              v-for="(achievement, idx) in serverAchievements"
               :key="idx"
               class="achievement-card"
-              :class="{ 'unlocked': achievement.unlocked, 'claimable': achievement.claimable && !achievement.claimed }"
-              @click="claimAchievement(achievement)"
+          :class="{ 'unlocked': achievement.desbloqueada, 'claimable': achievement.claimable && !achievement.resgatada }"
             >
-              <div class="achievement-icon">{{ achievement.icon }}</div>
+              <div class="achievement-icon"><i :class="achievement.iconClass || 'fa-solid fa-medal'"></i></div>
               <div class="achievement-info">
-                <h4>{{ achievement.title }}</h4>
-                <p>{{ achievement.description }}</p>
-                <div class="achievement-progress" v-if="!achievement.unlocked">
+                 <h4>{{ achievement.titulo }}</h4>
+    <p>{{ achievement.descricao }}</p>
+                <div class="achievement-progress" v-if="!achievement.desbloqueada">
                   <div class="progress-bar">
                     <div class="progress-fill" :style="{ width: `${(achievement.current/achievement.total)*100}%` }"></div>
                   </div>
                   <span>{{ achievement.current }}/{{ achievement.total }}</span>
                 </div>
-                <div class="achievement-reward" v-if="achievement.unlocked && !achievement.claimed">
-                  <span>🪙 {{ achievement.coins }}</span>
-                  <button class="btn-claim">Resgatar</button>
+                <div class="achievement-reward" v-if="achievement.desbloqueada && !achievement.resgatada">
+                   <span><i class="fa-solid fa-coins"></i> {{ achievement.moedas }}</span>
+                  <button class="btn-claim" @click="claimAchievement(achievement)">Resgatar</button>
                 </div>
-                <div class="achievement-claimed" v-else-if="achievement.claimed">
-                  <span>✓ Resgatado</span>
+                <div class="achievement-claimed" v-else-if="achievement.resgatada">
+                  <span><i class="fa-solid fa-check"></i> Resgatado</span>
                 </div>
               </div>
             </div>
@@ -627,20 +647,21 @@
           <h3>Loja de Recompensas</h3>
           <p>Use suas moedas para desbloquear itens exclusivos</p>
           <div class="shop-items">
-            <div v-for="(item, idx) in shopItems" :key="idx" class="shop-item" :class="{ 'owned': item.owned }">
-              <div class="item-icon">{{ item.icon }}</div>
+            <div v-for="(item, idx) in serverShopItems" :key="idx" 
+            class="shop-item" :class="{ 'owned': item.possuido }">
+              <div class="item-icon"><i :class="item.iconClass || 'fa-solid fa-box-open'"></i></div>
               <div class="item-info">
-                <h4>{{ item.name }}</h4>
-                <p>{{ item.description }}</p>
+                 <h4>{{ item.nome }}</h4>
+    <p>{{ item.descricao }}</p>
               </div>
               <button
                 class="btn-buy"
-                :class="{ 'owned': item.owned, 'affordable': totalCoins >= item.price && !item.owned }"
+                :class="{ 'owned': item.possuido, 'affordable': totalCoins >= item.preco && !item.possuido }"
                 @click="buyItem(item)"
-                :disabled="item.owned || totalCoins < item.price"
+                 :disabled="item.possuido || totalCoins < item.preco"
               >
-                <span v-if="item.owned">Adquirido</span>
-                <span v-else>🪙 {{ item.price }}</span>
+                <span v-if="item.possuido">Adquirido</span>
+                <span v-else><i class="fa-solid fa-coins"></i> {{ item.preco }}</span>
               </button>
             </div>
           </div>
@@ -656,67 +677,66 @@
       </div>
 
       <div class="leaderboard-container">
-        <div class="podium">
-          <div class="podium-place second">
-            <div class="podium-avatar">
-              <img src="https://i.pravatar.cc/150?img=12" alt="2nd">
-              <div class="place-badge">2</div>
-            </div>
-            <div class="podium-info">
-              <h4>Ana Beatriz</h4>
-              <span class="podium-score">12.450 pts</span>
-            </div>
-            <div class="podium-base"></div>
-          </div>
-         
-          <div class="podium-place first">
-            <div class="crown">👑</div>
-            <div class="podium-avatar">
-              <img src="https://i.pravatar.cc/150?img=11" alt="1st">
-              <div class="place-badge">1</div>
-            </div>
-            <div class="podium-info">
-              <h4>Carlos Rock</h4>
-              <span class="podium-score">15.890 pts</span>
-            </div>
-            <div class="podium-base"></div>
-          </div>
-         
-          <div class="podium-place third">
-            <div class="podium-avatar">
-              <img src="https://i.pravatar.cc/150?img=5" alt="3rd">
-              <div class="place-badge">3</div>
-            </div>
-            <div class="podium-info">
-              <h4>Maria Pop</h4>
-              <span class="podium-score">11.200 pts</span>
-            </div>
-            <div class="podium-base"></div>
-          </div>
-        </div>
+<div class="podium">
+  <div class="podium-place second" v-if="top2">
+    <div class="podium-avatar">
+      <img :src="top2.usuario?.avatar || 'https://i.pravatar.cc/150?img=12'" alt="2º lugar">
+      <div class="place-badge">2</div>
+    </div>
+    <div class="podium-info">
+      <h4>{{ top2.usuario?.nome || 'Anônimo' }}</h4>
+      <span class="podium-score">{{ top2.pontuacao?.toLocaleString() || 0 }} pts</span>
+    </div>
+    <div class="podium-base"></div>
+  </div>
 
-        <div class="leaderboard-list">
-          <div
-            v-for="(player, index) in leaderboard"
-            :key="index"
-            class="leaderboard-item"
-            :class="{ 'highlight': index === 0 }"
-          >
-            <span class="rank">{{ index + 4 }}</span>
-            <img :src="player.avatar" :alt="player.name" class="player-avatar">
-            <div class="player-info">
-              <span class="player-name">{{ player.name }}</span>
-              <span class="player-status">{{ player.status }}</span>
-            </div>
-            <div class="player-stats">
-              <span class="player-score">{{ player.score }}</span>
-              <span class="player-trend" :class="player.trend">
-                {{ player.trend === 'up' ? '↑' : player.trend === 'down' ? '↓' : '→' }}
-              </span>
-            </div>
-          </div>
+  <div class="podium-place first" v-if="top1">
+    <div class="crown"><i class="fa-solid fa-crown"></i></div>
+    <div class="podium-avatar">
+      <img :src="top1.usuario?.avatar || 'https://i.pravatar.cc/150?img=11'" alt="1º lugar">
+      <div class="place-badge">1</div>
+    </div>
+    <div class="podium-info">
+      <h4>{{ top1.usuario?.nome || 'Anônimo' }}</h4>
+      <span class="podium-score">{{ top1.pontuacao?.toLocaleString() || 0 }} pts</span>
+    </div>
+    <div class="podium-base"></div>
+  </div>
+
+  <div class="podium-place third" v-if="top3">
+    <div class="podium-avatar">
+      <img :src="top3.usuario?.avatar || 'https://i.pravatar.cc/150?img=5'" alt="3º lugar">
+      <div class="place-badge">3</div>
+    </div>
+    <div class="podium-info">
+      <h4>{{ top3.usuario?.nome || 'Anônimo' }}</h4>
+      <span class="podium-score">{{ top3.pontuacao?.toLocaleString() || 0 }} pts</span>
+    </div>
+    <div class="podium-base"></div>
+  </div>
+</div>
+
+<div class="leaderboard-list">
+  <div
+    v-for="(player, index) in restLeaderboard"
+    :key="player._id || index"
+    class="leaderboard-item"
+    :class="{ 'highlight': index === 0 }"
+  >
+    <span class="rank">{{ player.posicao || index + 4 }}</span>
+    <img
+      :src="player.usuario?.avatar || `https://i.pravatar.cc/150?img=${index + 6}`"
+      :alt="player.usuario?.nome || 'Anônimo'"
+      class="player-avatar"
+    >
+    <span class="player-name">{{ player.usuario?.nome || 'Anônimo' }}</span>
+    <span class="player-status">{{ player.modo }} - {{ player.dificuldade }}</span>
+    <span class="player-score">{{ player.pontuacao?.toLocaleString() || 0 }}</span>
+    <span class="player-trend up"><i class="fa-solid fa-arrow-trend-up"></i></span>
+  </div>
+</div>
+
         </div>
-      </div>
     </section>
 
     <!-- Level Up Modal -->
@@ -727,8 +747,8 @@
           <h2>Parabéns!</h2>
           <p>Você subiu de nível!</p>
           <div class="rewards-gained">
-            <span>🪙 +{{ levelUpRewards.coins }}</span>
-            <span>⭐ +{{ levelUpRewards.xp }} XP</span>
+            <span><i class="fa-solid fa-coins"></i> +{{ levelUpRewards.coins }}</span>
+            <span><i class="fa-solid fa-star"></i> +{{ levelUpRewards.xp }} XP</span>
           </div>
           <button @click="showLevelUp = false">Continuar</button>
         </div>
@@ -736,8 +756,8 @@
     </div>
   </div>
 </template>
-
 <script>
+import { gameApi } from '@/services/gameApi'
 // MÚSICAS LOCAIS - Fallback quando API falhar
 const OFFLINE_TRACKS = {
   // Músicas populares para "Adivinhe a Música"
@@ -934,6 +954,16 @@ export default {
   name: 'SoundUp',
   data() {
     return {
+      serverDifficulties: [],
+      serverLeaderboard: [],
+      serverDailyRewards: [],
+      serverAchievements: [],
+      serverShopItems: [],
+      serverStats: null,
+      sessionId: null,
+      completionResult: null,
+      lastPointsGained: 0,
+      lastCoinsGained: 0,
       isScrolled: false,
       mobileMenuOpen: false,
       isPlaying: true,
@@ -944,7 +974,7 @@ export default {
       currentDifficulty: null,
       showDifficultyModal: false,
       selectedMode: null,
-      currentQuestion: 1,
+      currentQuestionNum: 1,
       totalQuestions: 10,
       score: 0,
       sessionCoins: 0,
@@ -975,7 +1005,8 @@ export default {
       cardStyles: [
         { transform: 'translateY(0px) rotate(-5deg)' },
         { transform: 'translateY(-20px) rotate(0deg)' },
-        { transform: 'translateY(10px) rotate(5deg)' }
+        { transform: 'translateY(10px) rotate(5deg)' },
+         { transform: 'translateY(-10px) rotate(3deg)' }
       ],
      
       activities: [
@@ -984,46 +1015,7 @@ export default {
         { user: 'Lucas_Pop', song: 'As It Was', time: '8m', avatar: 'https://i.pravatar.cc/150?img=3' },
         { user: 'Julia_Indie', song: 'Heat Waves', time: '12m', avatar: 'https://i.pravatar.cc/150?img=4' }
       ],
-     
-      difficulties: [
-        {
-          level: 'easy',
-          name: 'Fácil',
-          description: 'Mais tempo, dicas visuais',
-          icon: '🌟',
-          multiplier: 1,
-          timeLimit: 30,
-          hintCount: 2
-        },
-        {
-          level: 'medium',
-          name: 'Médio',
-          description: 'Tempo padrão, algumas dicas',
-          icon: '⚡',
-          multiplier: 1.5,
-          timeLimit: 20,
-          hintCount: 1
-        },
-        {
-          level: 'hard',
-          name: 'Difícil',
-          description: 'Pouco tempo, sem dicas',
-          icon: '🔥',
-          multiplier: 2,
-          timeLimit: 10,
-          hintCount: 0
-        },
-        {
-          level: 'expert',
-          name: 'Expert',
-          description: 'Tempo mínimo, apenas áudio',
-          icon: '👑',
-          multiplier: 3,
-          timeLimit: 5,
-          hintCount: 0
-        }
-      ],
-
+    
       gameModes: [
         {
           id: 'guess-song',
@@ -1075,106 +1067,6 @@ export default {
         }
       ],
      
-      dailyRewards: [
-        { day: 1, coins: 100, icon: '🎁', claimed: false, available: true },
-        { day: 2, coins: 150, icon: '🎁', claimed: false, available: false },
-        { day: 3, coins: 200, icon: '🎁', claimed: false, available: false },
-        { day: 4, coins: 250, icon: '🎁', claimed: false, available: false },
-        { day: 5, coins: 300, icon: '🎁', claimed: false, available: false },
-        { day: 6, coins: 400, icon: '🎁', claimed: false, available: false },
-        { day: 7, coins: 1000, icon: '👑', claimed: false, available: false }
-      ],
-     
-      achievements: [
-        {
-          icon: '🎯',
-          title: 'Precisão Perfeita',
-          description: 'Acerte 10 questões seguidas',
-          unlocked: false,
-          claimable: false,
-          claimed: false,
-          progress: 0,
-          current: 0,
-          total: 10,
-          coins: 500
-        },
-        {
-          icon: '🔥',
-          title: 'Em Chamas',
-          description: 'Mantenha uma sequência de 7 dias',
-          unlocked: true,
-          claimable: true,
-          claimed: false,
-          progress: 100,
-          current: 7,
-          total: 7,
-          coins: 1000
-        },
-        {
-          icon: '🎸',
-          title: 'Lendário',
-          description: 'Complete 50 músicas no modo Expert',
-          unlocked: false,
-          claimable: false,
-          claimed: false,
-          progress: 0,
-          current: 12,
-          total: 50,
-          coins: 2000
-        },
-        {
-          icon: '💰',
-          title: 'Colecionador',
-          description: 'Acumule 5000 moedas',
-          unlocked: false,
-          claimable: false,
-          claimed: false,
-          progress: 0,
-          current: 0,
-          total: 5000,
-          coins: 1000
-        },
-        {
-          icon: '⚡',
-          title: 'Velocista',
-          description: 'Acerte 5 músicas em menos de 5s cada',
-          unlocked: false,
-          claimable: false,
-          claimed: false,
-          progress: 0,
-          current: 2,
-          total: 5,
-          coins: 800
-        },
-        {
-          icon: '🏆',
-          title: 'Campeão',
-          description: 'Chegue ao topo do ranking',
-          unlocked: false,
-          claimable: false,
-          claimed: false,
-          progress: 0,
-          current: 4,
-          total: 1,
-          coins: 5000
-        }
-      ],
-     
-      shopItems: [
-        { id: 1, name: 'Tema Dark Premium', description: 'Tema exclusivo escuro', icon: '🌙', price: 2000, owned: false },
-        { id: 2, name: 'Avatar Dourado', description: 'Borda dourada no perfil', icon: '👤', price: 1500, owned: false },
-        { id: 3, name: 'Efeitos Especiais', description: 'Animações exclusivas', icon: '✨', price: 3000, owned: false },
-        { id: 4, name: 'Dobro de Moedas', description: '2x moedas por 24h', icon: '💎', price: 500, owned: false },
-        { id: 5, name: 'Dicas Ilimitadas', description: 'Dicas ilimitadas por 1h', icon: '💡', price: 800, owned: false }
-      ],
-     
-      leaderboard: [
-        { name: 'RockStar_99', score: '10.450', avatar: 'https://i.pravatar.cc/150?img=6', status: 'Online', trend: 'up' },
-        { name: 'MelodyQueen', score: '9.890', avatar: 'https://i.pravatar.cc/150?img=7', status: 'Jogando', trend: 'same' },
-        { name: 'BassMaster', score: '9.200', avatar: 'https://i.pravatar.cc/150?img=8', status: 'Online', trend: 'down' },
-        { name: 'GuitarHero', score: '8.950', avatar: 'https://i.pravatar.cc/150?img=9', status: 'Ausente', trend: 'up' }
-      ],
-     
       currentTrivia: null,
       answerTime: 0,
       timerInterval: null,
@@ -1183,16 +1075,21 @@ export default {
   },
 
   computed: {
-    canClaimDaily() {
-      if (!this.lastClaimDate) return true;
-     
-      const lastClaim = new Date(this.lastClaimDate);
-      const now = new Date();
-     
-      const lastClaimDay = new Date(lastClaim.getFullYear(), lastClaim.getMonth(), lastClaim.getDate());
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-     
-      return today > lastClaimDay;
+    top1() {
+  return this.serverLeaderboard?.[0] || null
+},
+top2() {
+  return this.serverLeaderboard?.[1] || null
+},
+top3() {
+  return this.serverLeaderboard?.[2] || null
+},
+restLeaderboard() {
+  return this.serverLeaderboard?.slice(3) || []
+},
+
+   canClaimDaily() {
+      return this.serverDailyRewards.some(d => d.disponivel && !d.claimed);
     },
    
     nextClaimTime() {
@@ -1225,62 +1122,25 @@ export default {
       const levels = ['easy', 'medium', 'hard', 'expert'];
       const currentIndex = levels.indexOf(this.currentDifficulty.level);
       const nextLevel = levels[currentIndex + 1];
-      return this.difficulties.find(d => d.level === nextLevel);
+      return this.serverDifficulties.find(d => d.level === nextLevel);
     },
    
     // Título com palavras mascaradas para Complete a Música
-    maskedTitle() {
-      if (!this.currentTrack) return [];
-      const title = this.currentTrack.title;
-      const words = title.split(' ');
-      
-      // Determina quantas palavras esconder baseado na dificuldade
-      let hiddenCount;
-      if (this.currentDifficulty?.level === 'easy') {
-        hiddenCount = 1;
-      } else if (this.currentDifficulty?.level === 'medium') {
-        hiddenCount = Math.max(1, Math.floor(words.length / 2));
-      } else {
-        // Hard/Expert: esconde todas menos a primeira (se houver mais de 1 palavra)
-        hiddenCount = words.length > 1 ? words.length - 1 : 1;
-      }
-      
-      // Se só tem 1 palavra, esconde ela toda no modo difícil, ou metade no fácil
-      if (words.length === 1) {
-        return [{
-          text: words[0],
-          hidden: true,
-          revealed: this.showAnswer
-        }];
-      }
-      
-      // Esconde as últimas N palavras (nunca a primeira no modo fácil/médio)
-      const indicesToHide = [];
-      const startIdx = this.currentDifficulty?.level === 'easy' ? 1 : 0;
-      
-      while (indicesToHide.length < hiddenCount && indicesToHide.length < words.length) {
-        const idx = Math.floor(Math.random() * (words.length - startIdx)) + startIdx;
-        if (!indicesToHide.includes(idx)) {
-          indicesToHide.push(idx);
-        }
-      }
-      
-      return words.map((word, idx) => ({
-        text: word,
-        hidden: indicesToHide.includes(idx),
-        revealed: !indicesToHide.includes(idx) || this.showAnswer
+   maskedTitle() {
+      if (!this.currentTrack?.tituloMascarado) return [];
+      return this.currentTrack.tituloMascarado.map((word, idx) => ({
+        text: word.texto,
+        hidden: word.oculto,
+        revealed: !word.oculto || this.showAnswer
       }));
     }
   },
- 
-  mounted() {
+
+async mounted() {
     window.addEventListener('scroll', this.handleScroll);
     this.animateCards();
-    this.initializeUserData();
-    this.loadDailyRewards();
-    this.updateAchievements();
-    this.loadCompletedDifficulties();
-  },
+    await this.loadServerData();
+},
  
   beforeDestroy() {
     window.removeEventListener('scroll', this.handleScroll);
@@ -1289,63 +1149,223 @@ export default {
   },
  
   methods: {
+    normalizeQuestion(pergunta) {
+  if (!pergunta) return null
+
+  return {
+    ...pergunta,
+    title: pergunta?.musica?.titulo || pergunta?.title || '',
+    preview: pergunta?.musica?.previewUrl || pergunta?.preview || null,
+    release_date: pergunta?.musica?.ano ? `${pergunta.musica.ano}` : pergunta?.release_date || '',
+    album: {
+      title: pergunta?.musica?.album || pergunta?.album?.title || '',
+      cover_medium: pergunta?.musica?.capa || pergunta?.album?.cover_medium || ''
+    },
+    artist: {
+      name: pergunta?.musica?.artista || pergunta?.artist?.name || '',
+      picture_medium: pergunta?.musica?.artistaImagem || pergunta?.artist?.picture_medium || ''
+    },
+    musica: pergunta?.musica || {}
+  }
+},
+
+    async loadServerData() {
+      try {
+        const statsRes = await gameApi.getStats();
+        this.serverStats = statsRes.data;
+        this.totalCoins = this.serverStats.estatisticas?.totalMoedas || 0;
+        this.totalScore = this.serverStats.estatisticas?.totalPontos || 0;
+        this.accuracy = this.serverStats.estatisticas?.precisaoMedia || 0;
+        
+        const achievementsRes = await gameApi.getAchievements();
+        this.serverAchievements = achievementsRes.data.achievements;
+        
+     const rewardsRes = await gameApi.getDailyRewards()
+this.serverDailyRewards = rewardsRes.data.dias.map(day => ({
+  ...day,
+  claimed: day.reivindicado,
+  available: day.disponivel
+}))
+
+        const shopRes = await gameApi.getShop();
+        this.serverShopItems = shopRes.data.items;
+        
+        const leaderboardRes = await gameApi.getLeaderboard();
+        this.serverLeaderboard = leaderboardRes.data.leaderboard;
+        
+      } catch (error) {
+        console.error('Erro ao carregar dados do servidor:', error);
+      }
+    },
+    
+async loadDifficulties(modoId) {
+  try {
+    const res = await gameApi.getDifficulties(modoId)
+    this.serverDifficulties = res.data.difficulties.map(diff => ({
+      level: diff.level,
+      name: diff.nome,
+      icon: diff.icone,
+      multiplier: diff.multiplicador,
+      timeLimit: diff.tempo,
+      description: `${diff.tempo}s por pergunta`,
+      completed: diff.completed,
+      locked: diff.locked,
+      bestScore: diff.bestScore || 0
+    }))
+  } catch (error) {
+    console.error('Erro ao carregar dificuldades:', error)
+  }
+},
+    
+    async startGameWithDifficulty(difficulty) {
+      this.currentDifficulty = difficulty;
+      this.showDifficultyModal = false;
+      this.currentGame = this.selectedMode;
+      this.resetGame();
+      
+      try {
+        const res = await gameApi.startGame(this.selectedMode.id, difficulty.level);
+        this.sessionId = res.data.sessionId;
+        this.currentTrack = res.data.pergunta;
+        this.totalQuestions = res.data.config.totalPerguntas;
+        this.currentQuestionNum = res.data.config.perguntaAtual;
+        this.currentOptions = this.currentTrack.opcoes.map(o => o.texto);
+        this.correctAnswerIndex = this.currentTrack.respostaCorreta;
+        this.isLoading = false;
+        
+        setTimeout(() => {
+          const gameSection = document.getElementById('game-demo');
+          if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        
+      } catch (error) {
+        console.error('Erro ao iniciar jogo:', error);
+        this.useOfflineMode();
+      }
+    },
+    
+    async selectAnswer(index) {
+      if (this.showAnswer) return;
+      
+      this.selectedAnswer = index;
+      this.showAnswer = true;
+      this.cleanupAudio();
+      
+      try {
+        const res = await gameApi.answerQuestion(
+          this.sessionId,
+          index,
+          Math.floor(this.answerTime)
+        );
+        
+        const data = res.data;
+        
+        if (data.acertou) {
+          this.correctAnswers++;
+          this.lastPointsGained = data.pontosGanhos;
+          this.lastCoinsGained = data.moedasGanhas;
+          this.score = data.pontuacaoTotal;
+          this.sessionCoins += data.moedasGanhas;
+          this.totalCoins += data.moedasGanhas;
+        }
+        
+        if (data.completado) {
+          this.completionResult = data;
+          this.gameCompleted = true;
+          if (data.subiuNivel) {
+            this.showLevelUp = true;
+            this.levelUpRewards = { coins: data.moedasGanhas, xp: data.xp };
+          }
+          await this.loadServerData();
+        }
+        
+      } catch (error) {
+        console.error('Erro ao enviar resposta:', error);
+        // Fallback local
+        if (index === this.correctAnswerIndex) {
+          this.correctAnswers++;
+          const pts = 100 * (this.currentDifficulty?.multiplier || 1);
+          const coins = 10 * (this.currentDifficulty?.multiplier || 1);
+          this.score += Math.floor(pts);
+          this.sessionCoins += Math.floor(coins);
+          this.totalCoins += Math.floor(coins);
+          this.lastPointsGained = Math.floor(pts);
+          this.lastCoinsGained = Math.floor(coins);
+        }
+      }
+    },
+    
+    async nextQuestion() {
+      if (this.gameCompleted) return;
+      
+      if (this.completionResult?.proximaPergunta) {
+        this.currentTrack = this.completionResult.proximaPergunta;
+        this.currentOptions = this.currentTrack.opcoes.map(o => o.texto);
+        this.correctAnswerIndex = this.currentTrack.respostaCorreta;
+        this.currentQuestionNum++;
+      } else {
+        this.currentQuestionNum++;
+        if (this.currentQuestionNum > this.totalQuestions) {
+          this.completeGame();
+          return;
+        }
+      }
+      
+      this.selectedAnswer = null;
+      this.showAnswer = false;
+      this.timerWidth = 100;
+      this.answerTime = 0;
+      this.startTimer();
+    },
+    
+    async claimDailyReward(day) {
+      if (!day.disponivel || day.claimed) return;
+      try {
+        const res = await gameApi.claimDailyReward(day.dia);
+        this.totalCoins = res.data.moedasTotais;
+        const rewardsRes = await gameApi.getDailyRewards();
+        this.serverDailyRewards = rewardsRes.data.dias;
+        alert(`🎉 +${res.data.moedasGanhas} moedas!`);
+      } catch (error) {
+        alert(error.response?.data?.error || 'Erro');
+      }
+    },
+    
+    async claimAchievement(achievement) {
+      if (!achievement.claimable || achievement.resgatada) return;
+      try {
+        const res = await gameApi.claimAchievement(achievement.id);
+        this.totalCoins = res.data.moedasTotais;
+        const achievementsRes = await gameApi.getAchievements();
+        this.serverAchievements = achievementsRes.data.achievements;
+        alert(`🏆 +${res.data.moedasGanhas} moedas!`);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    
+    async buyItem(item) {
+      if (item.possuido || this.totalCoins < item.preco) return;
+      try {
+        const res = await gameApi.buyItem(item.id);
+        this.totalCoins = res.data.moedasRestantes;
+        const shopRes = await gameApi.getShop();
+        this.serverShopItems = shopRes.data.items;
+        alert(`🛒 ${item.nome} comprado!`);
+      } catch (error) {
+        alert(error.response?.data?.error || 'Erro');
+      }
+    },
+    
+    async advanceToNextLevel() {
+      if (!this.completionResult?.nivelDesbloqueado) return;
+      const nextLevel = this.completionResult.nivelDesbloqueado;
+      const diff = this.serverDifficulties.find(d => d.level === nextLevel);
+      if (diff) await this.startGameWithDifficulty(diff);
+    },
+
     handleScroll() {
       this.isScrolled = window.scrollY > 50;
-    },
-   
-    initializeUserData() {
-      this.totalCoins = parseInt(localStorage.getItem('soundup_coins')) || 0;
-      this.totalScore = parseInt(localStorage.getItem('soundup_score')) || 0;
-      this.streak = parseInt(localStorage.getItem('soundup_streak')) || 1;
-      this.accuracy = parseInt(localStorage.getItem('soundup_accuracy')) || 0;
-     
-      const savedLastClaim = localStorage.getItem('soundup_last_claim_date');
-      if (savedLastClaim) {
-        this.lastClaimDate = savedLastClaim;
-      }
-     
-      const savedRewards = localStorage.getItem('soundup_daily_rewards_progress');
-      if (savedRewards) {
-        const progress = JSON.parse(savedRewards);
-        this.dailyRewards = this.dailyRewards.map((day, idx) => ({
-          ...day,
-          claimed: progress.claimedDays?.includes(day.day) || false,
-          available: day.day === (progress.nextDay || 1)
-        }));
-      }
-    },
-
-    loadCompletedDifficulties() {
-      const saved = localStorage.getItem('soundup_completed_difficulties');
-      if (saved) {
-        this.completedDifficulties = JSON.parse(saved);
-      }
-    },
-
-    saveCompletedDifficulties() {
-      localStorage.setItem('soundup_completed_difficulties', JSON.stringify(this.completedDifficulties));
-    },
-
-    isDifficultyCompleted(level) {
-      return this.completedDifficulties.includes(`${this.currentGame?.id}_${level}`);
-    },
-
-    isDifficultyLocked(level) {
-      const levels = ['easy', 'medium', 'hard', 'expert'];
-      const index = levels.indexOf(level);
-      if (index === 0) return false; // Easy nunca está bloqueado
-      
-      // Precisa completar o anterior
-      const prevLevel = levels[index - 1];
-      return !this.completedDifficulties.includes(`${this.currentGame?.id}_${prevLevel}`);
-    },
-
-    markDifficultyCompleted() {
-      const key = `${this.currentGame.id}_${this.currentDifficulty.level}`;
-      if (!this.completedDifficulties.includes(key)) {
-        this.completedDifficulties.push(key);
-        this.saveCompletedDifficulties();
-      }
     },
 
     cleanupAudio() {
@@ -1416,338 +1436,6 @@ export default {
       this.loadError = false;
       this.initializeOfflineTracks();
     },
-
-    initializeOfflineTracks() {
-      let pool = [];
-      switch(this.currentGame.id) {
-        case 'guess-song':
-          pool = [...OFFLINE_TRACKS.guessSong];
-          break;
-        case 'guess-artist':
-          pool = [...OFFLINE_TRACKS.guessArtist];
-          break;
-        case 'complete-lyric':
-          pool = [...OFFLINE_TRACKS.completeLyric];
-          break;
-        case 'music-trivia':
-          pool = [...OFFLINE_TRACKS.musicTrivia];
-          break;
-        default:
-          pool = [...OFFLINE_TRACKS.guessSong];
-      }
-      
-      this.tracksPool = pool.sort(() => Math.random() - 0.5);
-      this.loadNextTrack();
-    },
-   
-    async initializeGameTracks() {
-      this.isLoading = true;
-      this.loadError = false;
-      this.isOfflineMode = false;
-     
-      try {
-        let tracks = [];
-        
-        switch(this.currentGame.id) {
-          case 'guess-song':
-            tracks = await this.loadChartTracks();
-            if (tracks.length < 10) {
-              const searchResults = await this.searchTracks('artist:"the weeknd" OR artist:"dua lipa" OR artist:"harry styles"', 50);
-              tracks = [...tracks, ...searchResults];
-            }
-            break;
-            
-          case 'guess-artist':
-            const artistQueries = [
-              'artist:"taylor swift"',
-              'artist:"drake"', 
-              'artist:"billie eilish"',
-              'artist:"ed sheeran"',
-              'artist:"ariana grande"',
-              'artist:"justin bieber"'
-            ];
-            
-            const artistResults = await Promise.all(
-              artistQueries.map(q => this.searchTracks(q, 10))
-            );
-            
-            tracks = artistResults.flat().filter((track, index, self) => {
-              const artistCount = self.filter(t => t.artist.id === track.artist.id).length;
-              return artistCount <= 3;
-            });
-            break;
-            
-          case 'complete-lyric':
-            const titleQueries = [
-              'track:"let it be"',
-              'track:"hey jude"',
-              'track:"imagine"',
-              'track:"billie jean"',
-              'track:"wonderwall"'
-            ];
-            
-            const titleResults = await Promise.all(
-              titleQueries.map(q => this.searchTracks(q, 10))
-            );
-            
-            tracks = titleResults.flat();
-            break;
-            
-          case 'music-trivia':
-            const classicQueries = [
-              'artist:"queen"',
-              'artist:"michael jackson"',
-              'artist:"madonna"',
-              'artist:"prince"'
-            ];
-
-            const classicResults = await Promise.all(
-              classicQueries.map(q => this.searchTracks(q, 15))
-            );
-            
-            tracks = classicResults.flat();
-            break;
-            
-          default:
-            tracks = await this.loadChartTracks();
-        }
-       
-        this.tracksPool = tracks.filter(t => t.preview && t.preview.length > 0);
-        
-        if (this.tracksPool.length < 4) {
-          console.warn('Poucas músicas da API, usando modo offline');
-          this.useOfflineMode();
-          return;
-        }
-        
-        this.tracksPool = this.tracksPool.sort(() => Math.random() - 0.5);
-        
-        this.loadNextTrack();
-      } catch (error) {
-        console.error('Erro na inicialização:', error);
-        this.loadError = true;
-        this.isLoading = false;
-      }
-    },
-   
-    loadNextTrack() {
-      if (this.tracksPool.length < 4) {
-        if (this.isOfflineMode) {
-          this.initializeOfflineTracks();
-        } else {
-          this.initializeGameTracks();
-        }
-        return;
-      }
-     
-      const randomIndex = Math.floor(Math.random() * this.tracksPool.length);
-      this.currentTrack = this.tracksPool[randomIndex];
-     
-      this.tracksPool.splice(randomIndex, 1);
-     
-      this.generateOptions();
-     
-      this.selectedAnswer = null;
-      this.showAnswer = false;
-      this.isAudioPlaying = false;
-      this.timerWidth = 100;
-      this.answerTime = 0;
-     
-      this.startTimer();
-     
-      this.isLoading = false;
-     
-      // Auto-play no modo fácil
-      if (this.currentDifficulty?.level === 'easy') {
-        setTimeout(() => this.toggleAudio(), 500);
-      }
-    },
-   
-    // Gera opções diferentes para cada modo
-    generateOptions() {
-      const correct = this.currentTrack;
-      
-      // Para "Complete a Música", as opções são variações do título
-      if (this.currentGame.id === 'complete-lyric') {
-        this.generateCompleteLyricOptions(correct);
-        return;
-      }
-      
-      // Para Quiz, usa as opções da pergunta atual
-      if (this.currentGame.id === 'music-trivia') {
-        this.loadNextTrivia();
-        return;
-      }
-      
-      // Para outros modos, comportamento normal
-      const options = [correct];
-     
-      let poolForOptions = this.tracksPool.filter(t => {
-        if (this.currentGame.id === 'guess-artist') {
-          return t.artist.id !== correct.artist.id;
-        }
-        return t.id !== correct.id;
-      });
-      
-      if (poolForOptions.length < 3) {
-        poolForOptions = this.tracksPool.filter(t => t.id !== correct.id);
-      }
-     
-      const shuffled = [...poolForOptions].sort(() => Math.random() - 0.5);
-      const incorrectOptions = shuffled.slice(0, 3);
-     
-      options.push(...incorrectOptions);
-     
-      while (options.length < 4 && this.tracksPool.length > 0) {
-        const random = this.tracksPool[Math.floor(Math.random() * this.tracksPool.length)];
-        const isDuplicate = options.some(o => {
-          if (this.currentGame.id === 'guess-artist') return o.artist.id === random.artist.id;
-          return o.id === random.id;
-        });
-       
-        if (!isDuplicate) {
-          options.push(random);
-        }
-      }
-     
-      const shuffledOptions = options.sort(() => Math.random() - 0.5);
-      this.correctAnswerIndex = shuffledOptions.findIndex(o => {
-        if (this.currentGame.id === 'guess-artist') {
-          return o.artist.id === correct.artist.id;
-        }
-        return o.id === correct.id;
-      });
-     
-      this.currentOptions = shuffledOptions.map(o => {
-        if (this.currentGame.id === 'guess-artist') return o.artist.name;
-        return o.title;
-      });
-    },
-    
-    // Gera opções específicas para "Complete a Música" - MELHORADO
-    generateCompleteLyricOptions(correct) {
-      const title = correct.title;
-      const words = title.split(' ');
-      
-      // Cria 4 variações do título com diferentes palavras
-      const variations = [title]; // A correta
-      
-      // Estratégias para criar alternativas plausíveis:
-      const strategies = [
-        // 1. Trocar palavras por sinônimos comuns em títulos de músicas
-        () => {
-          const commonReplacements = {
-            'Love': ['Heart', 'Baby', 'You', 'Me'],
-            'You': ['Me', 'Love', 'Her', 'Him'],
-            'My': ['Your', 'The', 'Our'],
-            'The': ['My', 'Your', 'A'],
-            'Night': ['Day', 'Time', 'Sky'],
-            'Heart': ['Soul', 'Mind', 'Love'],
-            'World': ['Life', 'Dream', 'Heart'],
-            'Baby': ['Honey', 'Love', 'Darling'],
-            'Forever': ['Always', 'Eternity', 'Never'],
-            'Time': ['Life', 'Moment', 'Day']
-          };
-          
-          const newWords = [...words];
-          let replaced = false;
-          
-          for (let i = 0; i < newWords.length; i++) {
-            const word = newWords[i];
-            const replacements = commonReplacements[word];
-            if (replacements && !replaced && Math.random() > 0.3) {
-              newWords[i] = replacements[Math.floor(Math.random() * replacements.length)];
-              replaced = true;
-            }
-          }
-          
-          return newWords.join(' ');
-        },
-        
-        // 2. Adicionar ou remover "The", "My", "Your"
-        () => {
-          const newWords = [...words];
-          const articles = ['The', 'My', 'Your', 'Our'];
-          
-          if (Math.random() > 0.5 && !articles.includes(newWords[0])) {
-            newWords.unshift(articles[Math.floor(Math.random() * articles.length)]);
-          } else if (articles.includes(newWords[0])) {
-            newWords.shift();
-          }
-          
-          return newWords.join(' ');
-        },
-        
-        // 3. Trocar a ordem de duas palavras (se tiver 3+ palavras)
-        () => {
-          if (words.length < 3) return title;
-          const newWords = [...words];
-          const idx1 = Math.floor(Math.random() * (newWords.length - 1)) + 1;
-          const idx2 = Math.floor(Math.random() * (newWords.length - 1)) + 1;
-          [newWords[idx1], newWords[idx2]] = [newWords[idx2], newWords[idx1]];
-          return newWords.join(' ');
-        },
-        
-        // 4. Substituir números ou adicionar números
-        () => {
-          const numbers = ['One', 'Two', 'Three', 'Four', 'Five', 'Seven', 'Ten', '100', '99'];
-          const newWords = words.map(w => {
-            if (!isNaN(w) || numbers.includes(w)) {
-              return numbers[Math.floor(Math.random() * numbers.length)];
-            }
-            return w;
-          });
-          return newWords.join(' ');
-        }
-      ];
-      
-      // Gera 3 variações únicas
-      const usedVariations = new Set([title.toLowerCase()]);
-      
-      while (variations.length < 4) {
-        const strategy = strategies[Math.floor(Math.random() * strategies.length)];
-        const variation = strategy();
-        const lowerVariation = variation.toLowerCase();
-        
-        if (!usedVariations.has(lowerVariation) && variation !== title) {
-          variations.push(variation);
-          usedVariations.add(lowerVariation);
-        }
-        
-        // Evita loop infinito
-        if (variations.length < 4 && usedVariations.size > 10) {
-          // Fallback: adiciona variações simples
-          variations.push(`${title} (Remix)`, `${title} (Live)`, `The ${title}`);
-          break;
-        }
-      }
-      
-      // Embaralha e encontra o índice correto
-      const shuffled = variations.sort(() => Math.random() - 0.5);
-      this.correctAnswerIndex = shuffled.indexOf(title);
-      this.currentOptions = shuffled;
-    },
-
-    // Carrega próxima pergunta do trivia
-    loadNextTrivia() {
-      // Filtra perguntas não usadas recentemente
-      const availableIndices = TRIVIA_QUESTIONS.map((_, idx) => idx)
-        .filter(idx => !this.usedTriviaIndices.includes(idx));
-      
-      // Se usou todas, reseta
-      if (availableIndices.length === 0) {
-        this.usedTriviaIndices = [];
-        availableIndices.push(...TRIVIA_QUESTIONS.map((_, idx) => idx));
-      }
-      
-      // Seleciona aleatoriamente
-      const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
-      this.currentTrivia = TRIVIA_QUESTIONS[randomIndex];
-      this.usedTriviaIndices.push(randomIndex);
-      
-      this.currentOptions = this.currentTrivia.options;
-      this.correctAnswerIndex = this.currentTrivia.correct;
-    },
    
     toggleAudio() {
       if (!this.currentTrack?.preview) {
@@ -1800,67 +1488,15 @@ export default {
       }, 100);
     },
    
-    calculatePoints() {
-      if (!this.currentDifficulty) return 100;
-     
-      const basePoints = 100;
-      const timeBonus = Math.max(0, Math.floor((100 - this.answerTime) * 2));
-      const difficultyMultiplier = this.currentDifficulty.multiplier;
-     
-      return Math.floor((basePoints + timeBonus) * difficultyMultiplier);
-    },
-   
-    calculateCoins() {
-      const points = this.calculatePoints();
-      return Math.floor(points / 10);
-    },
-   
-    selectAnswer(index) {
-      if (this.showAnswer) return;
-     
-      this.selectedAnswer = index;
-      this.showAnswer = true;
-     
-      this.cleanupAudio();
-     
-      if (index === this.correctAnswerIndex) {
-        this.correctAnswers++;
-        const points = this.calculatePoints();
-        const coins = this.calculateCoins();
-       
-        this.score += points;
-        this.sessionCoins += coins;
-        this.totalCoins += coins;
-        this.totalScore = Math.max(this.totalScore, this.score);
-       
-        this.updateAchievements();
-       
-        if (this.score > 0 && this.score % 1000 === 0) {
-          this.showLevelUp = true;
-          this.levelUpRewards = {
-            coins: 500,
-            xp: 100
-          };
-        }
-      }
-    },
     
     // Retorna o texto da resposta correta para o feedback
     getCorrectAnswerText() {
       if (this.currentGame.id === 'complete-lyric') {
-        return this.currentTrack?.title;
+        return this.currentTrack?.musica?.titulo;
       }
       return this.currentOptions[this.correctAnswerIndex];
     },
-   
-    nextQuestion() {
-      if (this.currentQuestion < this.totalQuestions) {
-        this.currentQuestion++;
-        this.loadNextTrack();
-      } else {
-        this.completeGame();
-      }
-    },
+
 
     // Completa o jogo e mostra tela de conclusão
     completeGame() {
@@ -1880,14 +1516,6 @@ export default {
       localStorage.setItem('soundup_coins', this.totalCoins);
       localStorage.setItem('soundup_score', this.totalScore);
       localStorage.setItem('soundup_accuracy', this.accuracy);
-    },
-
-    // Avança para próximo nível
-    advanceToNextLevel() {
-      const nextDiff = this.nextDifficulty;
-      if (nextDiff) {
-        this.startGameWithDifficulty(nextDiff);
-      }
     },
 
     // Recomeça no mesmo nível
@@ -1911,42 +1539,25 @@ export default {
       }
     },
    
-    selectMode(mode) {
+  selectMode(mode) {
       this.selectedMode = mode;
+      this.loadDifficulties(mode.id); 
       this.showDifficultyModal = true;
     },
    
-    startGameWithDifficulty(difficulty) {
-      this.currentDifficulty = difficulty;
-      this.showDifficultyModal = false;
-      this.currentGame = this.selectedMode;
-      this.resetGame();
-      this.initializeGameTracks();
-     
-      setTimeout(() => {
-        const gameSection = document.getElementById('game-demo');
-        if (gameSection) {
-          gameSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    },
-   
-    resetGame() {
-      this.currentQuestion = 1;
+   resetGame() {
+      this.currentQuestionNum = 1;
       this.score = 0;
       this.sessionCoins = 0;
-      this.questionIndex = 0;
       this.correctAnswers = 0;
       this.selectedAnswer = null;
       this.showAnswer = false;
       this.timerWidth = 100;
       this.isAudioPlaying = false;
-      this.tracksPool = [];
       this.currentTrack = null;
-      this.isOfflineMode = false;
       this.gameCompleted = false;
-      this.usedTriviaIndices = [];
-     
+      this.completionResult = null;
+      this.sessionId = null;        
       this.cleanupAudio();
     },
 
@@ -1965,99 +1576,20 @@ export default {
       this.selectMode(this.gameModes[0]);
     },
    
-    loadDailyRewards() {
-      const saved = localStorage.getItem('soundup_daily_rewards_progress');
-      const lastClaim = localStorage.getItem('soundup_last_claim_date');
-     
-      if (saved) {
-        const progress = JSON.parse(saved);
-        this.dailyRewards = this.dailyRewards.map(day => ({
-          ...day,
-          claimed: progress.claimedDays?.includes(day.day) || false,
-          available: day.day === progress.nextDay && this.canClaimDaily
-        }));
-      }
-     
-      if (lastClaim) {
-        this.lastClaimDate = lastClaim;
-      }
-    },
-   
-    claimDailyReward(day) {
-      if (!this.canClaimDaily) {
-        alert('Você já resgatou sua recompensa hoje! Volte amanhã.');
-        return;
-      }
-     
-      const nextAvailableDay = this.dailyRewards.find(d => !d.claimed);
-      if (!nextAvailableDay || nextAvailableDay.day !== day.day) {
-        return;
-      }
-     
-      if (day.claimed || !day.available) return;
-     
-      day.claimed = true;
-      day.available = false;
-      this.totalCoins += day.coins;
-     
-      const now = new Date();
-      this.lastClaimDate = now.toISOString();
-      localStorage.setItem('soundup_last_claim_date', this.lastClaimDate);
-     
-      const claimedDays = this.dailyRewards
-        .filter(d => d.claimed)
-        .map(d => d.day);
-     
-      const nextDay = day.day + 1;
-      localStorage.setItem('soundup_daily_rewards_progress', JSON.stringify({
-        claimedDays,
-        nextDay: nextDay > 7 ? 1 : nextDay
-      }));
-     
-      alert(`🎉 Recompensa do Dia ${day.day} resgatada!\n🪙 +${day.coins} moedas`);
-    },
-   
-    updateAchievements() {
-      this.achievements.forEach(ach => {
-        if (ach.id === 'coins') {
-          ach.current = this.totalCoins;
-        }
-        ach.progress = Math.min(100, (ach.current / ach.total) * 100);
-        ach.unlocked = ach.current >= ach.total;
-        ach.claimable = ach.unlocked && !ach.claimed;
-      });
-    },
-   
-    claimAchievement(achievement) {
-      if (!achievement.claimable || achievement.claimed) return;
-     
-      achievement.claimed = true;
-      achievement.claimable = false;
-      this.totalCoins += achievement.coins;
-      this.updateAchievements();
-    },
-   
-    buyItem(item) {
-      if (item.owned || this.totalCoins < item.price) return;
-     
-      this.totalCoins -= item.price;
-      item.owned = true;
-      this.updateAchievements();
-    },
-   
     animateCards() {
       setInterval(() => {
-        this.cardStyles = this.cardStyles.map((style, idx) => {
-          const offset = Math.sin(Date.now() / 1000 + idx) * 10;
-          const rotate = (idx - 1) * 5 + Math.sin(Date.now() / 1500 + idx) * 3;
-          return {
-            transform: `translateY(${offset}px) rotate(${rotate}deg)`
-          };
-        });
+      this.cardStyles = this.cardStyles.map((style, idx) => {
+  const offset = Math.sin(Date.now() / 1000 + idx) * 10;
+  const rotate = (idx - 1.5) * 4 + Math.sin(Date.now() / 1500 + idx) * 3;
+  return {
+    transform: `translateY(${offset}px) rotate(${rotate}deg)`
+  };
+});
       }, 50);
     }
   }
 }
+
 </script>
 
 <style>
@@ -2098,6 +1630,7 @@ body {
 .rhythm-quest {
   min-height: 100vh;
   position: relative;
+  padding-top: 70px; /* altura da navbar fixa */
 }
 
 /* Ambient Background */
@@ -2167,10 +1700,10 @@ body {
 /* Navigation */
 .nav-bar {
   position: fixed;
-  top: 0;
+  top: 70px; /* abaixo da navbar principal */
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 999; /* abaixo da navbar principal (z-index: 1000) */
   padding: 1.5rem 2rem;
   transition: all 0.3s ease;
   background: transparent;
@@ -2325,10 +1858,10 @@ body {
 
 /* Hero Section */
 .hero {
-  min-height: 100vh;
+  min-height: calc(100vh - 70px); /* desconta a navbar */
   display: flex;
   align-items: center;
-  padding: 8rem 2rem 4rem;
+  padding: 2rem 2rem 4rem; /* remove o padding-top excessivo */
   position: relative;
   overflow: hidden;
 }
@@ -2479,7 +2012,10 @@ body {
   width: 20px;
   height: 20px;
 }
-
+.activity-ticker,
+.floating-cards {
+  z-index: 1; /* garante que fiquem abaixo da navbar */
+}
 /* Activity Ticker */
 .activity-ticker {
   display: flex;
@@ -2676,6 +2212,11 @@ body {
 .card-3 {
   bottom: 10%;
   left: 10%;
+}
+
+.card-4 {
+  top: 30%;
+  right: 5%;
 }
 
 .card-icon {
@@ -4607,7 +4148,17 @@ body {
 .level-up-animation button:hover {
   transform: scale(1.05);
 }
+.game-section,
+.modes-section,
+.rewards-section,
+.leaderboard-section {
+  padding-bottom: 100px; /* espaço para o MusicPlayer */
+}
 
+/* Ou de forma mais específica para o container principal */
+.rhythm-quest {
+  padding-bottom: 100px; /* garante que último conteúdo não fique escondido */
+}
 /* Responsive */
 @media (max-width: 1024px) {
   .hero-content {
@@ -4725,5 +4276,22 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--card-hover);
+}
+.card-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+
+  font-size: 24px;
+  color: white;
+
+  box-shadow:
+    0 10px 25px rgba(124, 58, 237, 0.35),
+    0 0 20px rgba(37, 99, 235, 0.25);
 }
 </style>

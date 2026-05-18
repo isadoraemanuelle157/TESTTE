@@ -31,6 +31,11 @@ import PerfilUsuario from '@/views/PerfilUsuario.vue'
 import MusicPlayer from '@/components/MusicPlayer.vue'
 import DetalheCantor from '@/views/DetalheCantor.vue'
 import RecuperarSenha from '@/banco/RecuperarSenha.vue'
+import Termos from '@/components/Termos.vue'
+import Privacidade from '@/components/Privacidade.vue'
+import Contato from '@/components/Contato.vue'
+import Ajuda from '@/components/Ajuda.vue'
+import Suporte from '@/components/Suporte.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -209,6 +214,31 @@ const router = createRouter({
       name: 'DetalheCantor',
       component: DetalheCantor,
       props: true,
+    },
+    {
+      path: '/termos',
+      name: 'termos',
+      component: Termos,
+    },
+    {
+      path: '/privacidade',
+      name: 'privacidade',
+      component: Privacidade,
+    },
+    {
+      path: '/contato',
+      name: 'contato',
+      component: Contato,
+    },
+    {
+      path: '/ajuda',
+      name: 'ajuda',
+      component: Ajuda,
+    },
+        {
+      path: '/suporte',
+      name: 'suporte',
+      component: Suporte,
     },
   ],
 })

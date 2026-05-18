@@ -12,12 +12,22 @@ const notificacaoSchema = new mongoose.Schema({
   },
   tipo: {
     type: String,
-    enum: ['follow_request', 'follow_accept', 'follow_reject'],
+    enum: [
+      'follow_request',
+      'follow_accept',
+      'follow_reject',
+      'support_message',
+      'support_reply'
+    ],
     required: true
   },
   mensagem: {
     type: String,
     default: ''
+  },
+  meta: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   lida: {
     type: Boolean,

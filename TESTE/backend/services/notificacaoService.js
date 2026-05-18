@@ -1,17 +1,23 @@
 const Notificacao = require('../models/Notificacao')
 
-const criar = async ({ usuarioDestino, usuarioOrigem, tipo, mensagem }) => {
+const criar = async ({ usuarioDestino, usuarioOrigem, tipo, mensagem, meta = {} }) => {
   return Notificacao.create({
     usuarioDestino,
     usuarioOrigem,
     tipo,
-    mensagem
+    mensagem,
+    meta
   })
+}
+
+const criarMuitas = async (notificacoes = []) => {
+  if (!notificacoes.length) return []
+  return Notificacao.insertMany(notificacoes)
 }
 
 const listar = async (userId) => {
   return Notificacao.find({ usuarioDestino: userId })
-    .populate('usuarioOrigem', 'nome username avatar')
+    .populate('usuarioOrigem', 'nome username avatar email role')
     .sort({ createdAt: -1 })
 }
 
@@ -30,7 +36,6 @@ const marcarTodas = async (userId) => {
   )
 }
 
-// NOVO: Deletar uma notificação específica
 const deletar = async (id, userId) => {
   return Notificacao.findOneAndDelete({
     _id: id,
@@ -38,13 +43,13 @@ const deletar = async (id, userId) => {
   })
 }
 
-// NOVO: Deletar todas as notificações do usuário
 const deletarTodas = async (userId) => {
   return Notificacao.deleteMany({ usuarioDestino: userId })
 }
 
 module.exports = {
   criar,
+  criarMuitas,
   listar,
   marcarComoLida,
   marcarTodas,

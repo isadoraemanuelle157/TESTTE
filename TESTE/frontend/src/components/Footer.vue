@@ -84,11 +84,11 @@
       <div class="footer-section">
         <h4 class="footer-title">Suporte</h4>
         <ul class="footer-links">
-          <li><a href="#" @click.prevent="navigateTo('/vibe')">Vibe</a></li>
-          <li><a href="#" @click.prevent="showHelp">Ajuda</a></li>
-          <li><a href="#" @click.prevent="showPrivacy">Privacidade</a></li>
-          <li><a href="#" @click.prevent="showTerms">Termos</a></li>
-          <li><a href="#" @click.prevent="contactUs">Contato</a></li>
+          <li><a href="#" @click.prevent="navigateTo('/ajuda')">Ajuda</a></li>
+          <li><a href="#" @click.prevent="navigateTo('/privacidade')">Privacidade</a></li>
+          <li><a href="#" @click.prevent="navigateTo('/termos')">Termos</a></li>
+          <li><a href="#" @click.prevent="navigateTo('/contato')">Contato</a></li>
+          <li><a href="#" @click.prevent="navigateTo('/suporte')">Suporte</a></li>
         </ul>
       </div>
 
@@ -101,9 +101,9 @@
           &copy; {{ currentYear }} SoundUp. Todos os direitos reservados.
         </p>
         <div class="footer-bottom-links">
-          <a href="#" @click.prevent="showPrivacy">Privacidade</a>
+          <a href="#" @click.prevent="navigateTo('/privacidade')">Privacidade</a>
           <span class="divider">|</span>
-          <a href="#" @click.prevent="showTerms">Termos</a>
+          <a href="#" @click.prevent="navigateTo('/termos')">Termos</a>
           <span class="divider">|</span>
           <a href="#" @click.prevent="showCookies">Cookies</a>
         </div>
@@ -498,7 +498,7 @@ export default {
 /* ===== BACK TO TOP ===== */
 .back-to-top {
   position: fixed;
-  bottom: 100px;
+  bottom: 110px;
   right: 30px;
   width: 48px;
   height: 48px;

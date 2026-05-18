@@ -34,7 +34,7 @@
       
       <div class="content">
         <router-view />
-        <!-- FOOTER - SÓ SOME NAS PÁGINAS DE AUTH -->
+        <!-- FOOTER - SÓ SOME NAS PÁGINAS DE AUTH E KARAOKE -->
         <Footer v-show="showFooter" />
       </div>
     </div>
@@ -68,12 +68,12 @@ export default {
   },
 
   watch: {
-    // 🔥 Observa mudanças de rota
+    // Observa mudanças de rota
     '$route.path': {
       immediate: true,
       handler(newPath) {
-        const authPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha']
-        this.showFooter = !authPages.includes(newPath)
+        const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical']
+        this.showFooter = !noFooterPages.includes(newPath)
         console.log('[App] Rota:', newPath, '| Footer visível:', this.showFooter)
       }
     }

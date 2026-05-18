@@ -78,6 +78,8 @@ const deezerRoutes = safeRequire('./routes/deezerRoutes')
 const locaisRoutes = safeRequire('./routes/locaisRoutes')
 const spotifyRoutes = safeRequire('./routes/spotifyRoutes')
 const geniusRoutes = require('./routes/geniusRoutes')
+const gameRoutes = safeRequire('./routes/gameRoutes')
+const suporteRoutes = safeRequire('./routes/suporteRoutes')
 
 // ============================================
 // 📌 ROTAS APP
@@ -100,6 +102,8 @@ app.use('/matches', matchRoutes)
 app.use('/deezer', deezerRoutes)
 app.use('/locais', locaisRoutes)
 app.use('/genius', geniusRoutes)
+app.use('/game', gameRoutes)
+app.use('/suporte', suporteRoutes)
 
 app.post('/chat/message', checkChatLimit, async (req, res) => {
   try {
@@ -368,5 +372,20 @@ console.log('GET /locais/:nome/musicas')
   console.log('')
   console.log('💚 Health:')
   console.log('GET /health')
+
   console.log('')
+console.log('🎮 Jogo Musical:')
+console.log('GET  /game/modes')
+console.log('GET  /game/modes/:modo/difficulties')
+console.log('POST /game/start')
+console.log('POST /game/answer')
+console.log('GET  /game/leaderboard')
+console.log('GET  /game/rewards/daily')
+console.log('POST /game/rewards/daily/claim')
+console.log('GET  /game/shop')
+console.log('POST /game/shop/buy')
+console.log('GET  /game/achievements')
+console.log('POST /game/achievements/claim')
+console.log('GET  /game/stats')
+console.log('GET  /game/activities/live')
 })
