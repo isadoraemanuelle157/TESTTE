@@ -63,7 +63,11 @@
           <li><a href="#" @click.prevent="navigateTo('/perfil')">Perfil</a></li>
           <li><a href="#" @click.prevent="navigateTo('/curtidas')">Curtidas</a></li>
           <li><a href="#" @click.prevent="navigateTo('/favoritas')">Favoritas</a></li>
-          <li><a href="#" @click.prevent="navigateTo('/feitoparavoce')">Feito Para Você</a></li>
+         <li>
+  <a href="#" @click.prevent="goToMadeForYou">
+    Feito Para Você
+  </a>
+</li>
           <li><a href="#" @click.prevent="navigateTo('/notificacoes')">Notificações</a></li>
         </ul>
       </div>
@@ -155,6 +159,38 @@ export default {
   },
 
   methods: {
+    goToMadeForYou() {
+  // Vai para o dashboard com hash da seção
+  this.$router.push('/dashboard#feito-para-voce')
+
+  this.$nextTick(() => {
+    setTimeout(() => {
+      const section = document.getElementById('feito-para-voce')
+
+      if (section) {
+        section.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      }
+
+      // mantém o scroll interno funcionando
+      const content = this.getContentElement()
+      if (content && section) {
+        const top =
+          section.getBoundingClientRect().top +
+          content.scrollTop -
+          80
+
+        content.scrollTo({
+          top,
+          behavior: 'smooth'
+        })
+      }
+    }, 300)
+  })
+},
+
     // 🔥 Encontra o elemento .content que tem overflow-y: auto
     getContentElement() {
       return document.querySelector('.content')

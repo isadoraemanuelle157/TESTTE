@@ -33,10 +33,13 @@
 
       <!-- Hero Section -->
       <section class="hero-section">
-        <div class="hero-badge">
-          <span class="badge-icon">🔒</span>
-          <span>Política de Privacidade</span>
-        </div>
+<div class="hero-badge">
+  <span class="badge-icon">
+    <i class="fa-solid fa-lock"></i>
+  </span>
+
+  <span>Política de Privacidade</span>
+</div>
 
         <h1 class="hero-title">
           Sua privacidade
@@ -67,7 +70,9 @@
           :style="{ animationDelay: index * 0.1 + 's' }"
         >
           <div class="card-glow"></div>
-          <div class="card-icon">{{ card.icon }}</div>
+         <div class="card-icon">
+  <i :class="card.icon"></i>
+</div>
           <h2>{{ card.title }}</h2>
           <p>{{ card.description }}</p>
           <div class="card-shine"></div>
@@ -77,9 +82,9 @@
       <!-- Highlight Section -->
       <section class="highlight-section">
         <div class="highlight-glow"></div>
-        <div class="highlight-icon">
-          <span>🛡️</span>
-        </div>
+<div class="highlight-icon">
+  <i class="fa-solid fa-shield-halved"></i>
+</div>
         <div class="highlight-content">
           <h3>Compromisso com Segurança</h3>
           <p>
@@ -93,7 +98,9 @@
       <section class="extra-info">
         <div class="info-box">
           <div class="info-header">
-            <div class="info-icon">📋</div>
+           <div class="info-icon">
+  <i class="fa-solid fa-clipboard-list"></i>
+</div>
             <h3>Direitos do Usuário</h3>
           </div>
           <ul>
@@ -111,22 +118,33 @@
 
       <!-- Trust Badges -->
       <section class="trust-section">
-        <div class="trust-badge-item">
-          <div class="trust-icon">🔐</div>
-          <span>SSL Seguro</span>
-        </div>
-        <div class="trust-badge-item">
-          <div class="trust-icon">🛡️</div>
-          <span>LGPD Compatível</span>
-        </div>
-        <div class="trust-badge-item">
-          <div class="trust-icon">☁️</div>
-          <span>Dados Criptografados</span>
-        </div>
-        <div class="trust-badge-item">
-          <div class="trust-icon">👁️</div>
-          <span>Transparência Total</span>
-        </div>
+<div class="trust-badge-item">
+  <div class="trust-icon">
+    <i class="fa-solid fa-lock"></i>
+  </div>
+  <span>SSL Seguro</span>
+</div>
+
+<div class="trust-badge-item">
+  <div class="trust-icon">
+    <i class="fa-solid fa-shield-halved"></i>
+  </div>
+  <span>LGPD Compatível</span>
+</div>
+
+<div class="trust-badge-item">
+  <div class="trust-icon">
+    <i class="fa-solid fa-cloud"></i>
+  </div>
+  <span>Dados Criptografados</span>
+</div>
+
+<div class="trust-badge-item">
+  <div class="trust-icon">
+    <i class="fa-solid fa-eye"></i>
+  </div>
+  <span>Transparência Total</span>
+</div>
       </section>
 
       <!-- Actions -->
@@ -186,32 +204,32 @@ export default {
       },
       privacyCards: [
         {
-          icon: '📋',
+          icon: 'fa-solid fa-clipboard-list',
           title: 'Informações Coletadas',
           description: 'Podemos coletar informações como nome, e-mail, playlists favoritas, curtidas e preferências musicais para melhorar sua experiência.'
         },
         {
-          icon: '🎧',
+           icon: 'fa-solid fa-headphones',
           title: 'Personalização',
           description: 'Utilizamos seus gostos musicais para recomendar artistas, playlists e conteúdos personalizados dentro do SoundUp.'
         },
         {
-          icon: '🔐',
+              icon: 'fa-solid fa-lock',
           title: 'Proteção de Dados',
           description: 'Seus dados são protegidos com tecnologias modernas de segurança, criptografia e autenticação para evitar acessos não autorizados.'
         },
         {
-          icon: '🍪',
+          icon: 'fa-solid fa-cookie-bite',
           title: 'Uso de Cookies',
           description: 'Utilizamos cookies para lembrar preferências, manter sessões ativas e melhorar o desempenho da plataforma.'
         },
         {
-          icon: '🌎',
+           icon: 'fa-solid fa-earth-americas',
           title: 'Compartilhamento',
           description: 'Não vendemos suas informações pessoais. Compartilhamentos acontecem apenas quando necessários para funcionamento da plataforma.'
         },
         {
-          icon: '⚙️',
+         icon: 'fa-solid fa-gear',
           title: 'Controle do Usuário',
           description: 'Você pode atualizar suas informações, preferências e configurações de privacidade a qualquer momento.'
         }
@@ -638,10 +656,50 @@ export default {
 }
 
 .card-icon {
-  font-size: 2.5rem;
-  margin-bottom: 20px;
-  display: inline-block;
-  transition: transform 0.3s ease;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+
+  background: linear-gradient(
+    135deg,
+    rgba(37, 99, 235, 0.18),
+    rgba(124, 58, 237, 0.14)
+  );
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow:
+    0 10px 25px rgba(124, 58, 237, 0.18),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  position: relative;
+  overflow: hidden;
+
+  transition: all 0.35s ease;
+}
+
+.card-icon i {
+  font-size: 2rem;
+  color: #c4b5fd;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.privacy-card:hover .card-icon {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow:
+    0 16px 35px rgba(124, 58, 237, 0.28),
+    0 0 20px rgba(124, 58, 237, 0.12);
+}
+
+.privacy-card:hover .card-icon i {
+  color: #ffffff;
 }
 
 .privacy-card:hover .card-icon {

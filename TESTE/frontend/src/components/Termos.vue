@@ -16,8 +16,6 @@
       <div v-for="n in 20" :key="n" class="particle" :style="getParticleStyle(n)"></div>
     </div>
 
-    <!-- Header -->
-
     <!-- Content -->
     <main class="terms-container">
       
@@ -85,7 +83,7 @@
           <p>{{ term.description }}</p>
 
           <div class="card-footer">
-            <span class="read-more">
+            <span class="read-more" @click="openModal(term)">
               Saiba mais
               <i class="fa-solid fa-arrow-right"></i>
             </span>
@@ -177,16 +175,68 @@
       </div>
 
       <!-- Footer Note -->
-      <div class="footer-note">
-        <i class="fa-solid fa-circle-info"></i>
-        <p>
-          Ao clicar em "Aceitar Termos", você concorda com nossa 
-          <a href="#">Política de Privacidade</a> e 
-          <a href="#">Cookies</a>.
-        </p>
-      </div>
+<div class="footer-note">
+  <i class="fa-solid fa-circle-info"></i>
+  <p>
+    Ao clicar em "Aceitar Termos", você concorda com nossa 
+    <a href="#" @click.prevent="goToPrivacy">Política de Privacidade</a> e 
+    <a href="#" @click.prevent="goToCookies">Cookies</a>.
+  </p>
+</div>
 
     </main>
+
+    <!-- Modal -->
+    <transition name="modal-fade">
+      <div v-if="showModal" class="modal-overlay" @click="closeModal">
+        <div class="modal-container" @click.stop>
+          <div class="modal-glow" :class="`glow-${selectedTerm.color}`"></div>
+          
+          <button class="modal-close" @click="closeModal">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+
+          <div class="modal-header">
+            <div class="modal-icon" :class="`icon-${selectedTerm.color}`">
+              <i :class="selectedTerm.icon"></i>
+            </div>
+            <div class="modal-title-section">
+              <span class="modal-number">0{{ selectedTermIndex + 1 }}</span>
+              <h2>{{ selectedTerm.title }}</h2>
+            </div>
+          </div>
+
+          <div class="modal-divider"></div>
+
+          <div class="modal-body">
+            <p class="modal-description">{{ selectedTerm.fullDescription }}</p>
+            
+            <div class="modal-details">
+              <h4><i class="fa-solid fa-circle-check"></i> O que está incluído</h4>
+              <ul>
+                <li v-for="(item, i) in selectedTerm.details" :key="i">
+                  <i class="fa-solid fa-chevron-right"></i>
+                  {{ item }}
+                </li>
+              </ul>
+            </div>
+
+            <div class="modal-warning" v-if="selectedTerm.warning">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <p>{{ selectedTerm.warning }}</p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button class="modal-btn-close" @click="closeModal">
+              <i class="fa-solid fa-check"></i>
+              Entendi
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
   </div>
 </template>
 
@@ -202,43 +252,106 @@ export default {
       termsAccepted: false,
       scrollProgress: 0,
       timelineActive: 0,
+      showModal: false,
+      selectedTerm: {},
+      selectedTermIndex: 0,
       
       termsList: [
         {
           title: 'Uso da Plataforma',
           description: 'O SoundUp permite que usuários descubram músicas, criem playlists, curtam artistas e participem de experiências musicais interativas de forma segura e responsável.',
+          fullDescription: 'A plataforma SoundUp foi desenvolvida para proporcionar uma experiência musical completa e imersiva. Ao utilizar nossos serviços, você terá acesso a milhões de faixas, playlists curadas por especialistas e ferramentas de descoberta musical personalizadas.',
           icon: 'fa-solid fa-music',
-          color: 'blue'
+          color: 'blue',
+          details: [
+            'Acesso ilimitado ao catálogo musical completo',
+            'Criação de playlists personalizadas ilimitadas',
+            'Sistema de recomendações baseado em IA',
+            'Modo offline para músicas salvas',
+            'Sincronização entre dispositivos',
+            'Experiências musicais interativas e eventos ao vivo'
+          ],
+          warning: 'O uso comercial da plataforma sem autorização prévia é estritamente proibido.'
         },
         {
           title: 'Privacidade & Dados',
           description: 'Suas informações são protegidas com criptografia de ponta e utilizadas apenas para melhorar sua experiência dentro da plataforma. Nunca vendemos seus dados.',
+          fullDescription: 'A privacidade dos nossos usuários é uma prioridade absoluta. Implementamos as mais rigorosas medidas de segurança para garantir que seus dados pessoais e hábitos musicais estejam sempre protegidos.',
           icon: 'fa-solid fa-lock',
-          color: 'purple'
+          color: 'purple',
+          details: [
+            'Criptografia AES-256 para todos os dados sensíveis',
+            'Conformidade total com LGPD e GDPR',
+            'Dados anonimizados para análises estatísticas',
+            'Controle total sobre suas preferências de privacidade',
+            'Exclusão permanente de dados sob solicitação',
+            'Transparência total sobre como os dados são utilizados'
+          ],
+          warning: 'Compartilhar sua conta pode comprometer a segurança dos seus dados pessoais.'
         },
         {
           title: 'Conduta do Usuário',
           description: 'Não é permitido utilizar a plataforma para atividades ilegais, ofensivas, fraudulentas ou que prejudiquem outros usuários da comunidade.',
+          fullDescription: 'Para manter uma comunidade musical saudável e respeitosa, estabelecemos diretrizes claras de conduta. Todos os usuários devem seguir estas regras para garantir uma experiência positiva para todos.',
           icon: 'fa-solid fa-user-shield',
-          color: 'pink'
+          color: 'pink',
+          details: [
+            'Respeito mútuo entre todos os usuários',
+            'Proibição de conteúdo ofensivo ou discriminatório',
+            'Não tolerância com assédio ou bullying',
+            'Proibição de spam ou conteúdo promocional não autorizado',
+            'Uso adequado dos recursos de comentários e reviews',
+            'Responsabilidade pelo conteúdo compartilhado'
+          ],
+          warning: 'Violações graves podem resultar em banimento permanente da plataforma.'
         },
         {
           title: 'Direitos Autorais',
           description: 'Todas as músicas, logos, artes e conteúdos pertencem aos seus respectivos proprietários e parceiros licenciados. Respeitamos a propriedade intelectual.',
+          fullDescription: 'O SoundUp opera com licenças oficiais de gravadoras, editoras e artistas. Todo o conteúdo disponível na plataforma está devidamente licenciado e protegido por leis de direitos autorais.',
           icon: 'fa-solid fa-copyright',
-          color: 'cyan'
+          color: 'cyan',
+          details: [
+            'Licenciamento oficial com todas as grandes gravadoras',
+            'Pagamento justo de royalties aos artistas',
+            'Proteção contra pirataria e distribuição ilegal',
+            'Respeito aos direitos de propriedade intelectual',
+            'Processo de disputa de direitos autorais transparente',
+            'Parcerias com associações de proteção aos artistas'
+          ],
+          warning: 'Qualquer tentativa de download ou redistribuição não autorizada é crime.'
         },
         {
           title: 'Suspensão de Conta',
           description: 'Contas que violarem nossos termos poderão ser suspensas ou removidas permanentemente sem aviso prévio, garantindo a segurança da comunidade.',
+          fullDescription: 'Para proteger nossa comunidade, reservamo-nos o direito de suspender ou encerrar contas que violem nossos termos de uso. Cada caso é analisado individualmente e de forma justa.',
           icon: 'fa-solid fa-ban',
-          color: 'red'
+          color: 'red',
+          details: [
+            'Análise cuidadosa de cada caso de violação',
+            'Notificação prévia quando aplicável',
+            'Possibilidade de recurso e revisão',
+            'Escalonamento progressivo de penalidades',
+            'Preservação de dados por período legal determinado',
+            'Cooperação com autoridades quando necessário'
+          ],
+          warning: 'Contas envolvidas em atividades ilegais serão encerradas imediatamente.'
         },
         {
           title: 'Atualizações',
           description: 'Os termos podem ser atualizados periodicamente para refletir melhorias, novas funcionalidades e mudanças legais. Notificaremos sobre alterações.',
+          fullDescription: 'Estamos constantemente evoluindo para oferecer a melhor experiência possível. Por isso, nossos termos de uso podem ser atualizados periodicamente para refletir novas funcionalidades e requisitos legais.',
           icon: 'fa-solid fa-rotate',
-          color: 'green'
+          color: 'green',
+          details: [
+            'Notificação prévia de 30 dias para alterações significativas',
+            'Histórico completo de versões anteriores dos termos',
+            'Explicação clara sobre o que mudou e por quê',
+            'Aceitação tácita após período de notificação',
+            'Possibilidade de encerramento da conta sem penalidades',
+            'Consulta pública para mudanças estruturais'
+          ],
+          warning: 'O uso continuado após atualizações implica aceitação dos novos termos.'
         }
       ],
 
@@ -268,18 +381,44 @@ export default {
     }
   },
 
-  mounted() {
-    window.addEventListener('scroll', this.handleScroll)
-    this.animateStats()
-    this.startTimeline()
-    this.checkTermsAccepted()
-  },
+mounted() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+
+  window.addEventListener('scroll', this.handleScroll)
+  this.animateStats()
+  this.startTimeline()
+  this.checkTermsAccepted()
+},
 
   beforeDestroy() {
     window.removeEventListener('scroll', this.handleScroll)
   },
 
   methods: {
+     goToPrivacy() {
+    this.$router.push('/privacidade')
+    this.$nextTick(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  },
+
+  goToCookies() {
+    this.$router.push('/cookies')
+    this.$nextTick(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  },
+  
+    scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+},
+
     handleScroll() {
       this.isScrolled = window.scrollY > 50
       
@@ -337,25 +476,23 @@ export default {
       this.termsAccepted = localStorage.getItem('soundup_terms_accepted') === 'true'
     },
 
-    goHome() {
-      this.$router.push('/')
-    },
+goHome() {
+  this.$router.push('/')
+},
 
     goBack() {
       this.$router.back()
     },
 
-    acceptTerms() {
-      localStorage.setItem('soundup_terms_accepted', 'true')
-      this.termsAccepted = true
-      
-      // Celebration effect
-      this.createConfetti()
-      
-      setTimeout(() => {
-        this.$router.push('/dashboard')
-      }, 1500)
-    },
+acceptTerms() {
+  localStorage.setItem('soundup_terms_accepted', 'true')
+  this.termsAccepted = true
+  this.createConfetti()
+  
+  setTimeout(() => {
+    this.$router.push('/dashboard')
+  }, 1500)
+},
 
     createConfetti() {
       const colors = ['#2563eb', '#7c3aed', '#ec4899', '#10b981', '#f59e0b']
@@ -376,6 +513,22 @@ export default {
       link.href = '#'
       link.download = 'soundup-termos-de-uso.pdf'
       link.click()
+    },
+
+    openModal(term) {
+      this.selectedTerm = term
+      this.selectedTermIndex = this.termsList.indexOf(term)
+      this.showModal = true
+      document.body.style.overflow = 'hidden'
+    },
+
+    closeModal() {
+      this.showModal = false
+      document.body.style.overflow = ''
+      setTimeout(() => {
+        this.selectedTerm = {}
+        this.selectedTermIndex = 0
+      }, 300)
     }
   }
 }
@@ -504,126 +657,6 @@ export default {
   z-index: 1001;
   transition: width 0.1s ease;
   box-shadow: 0 0 20px rgba(124, 58, 237, 0.5);
-}
-
-/* ===== HEADER ===== */
-.terms-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  padding: 20px 40px;
-  backdrop-filter: blur(20px);
-  background: rgba(5,5,8,0.5);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.4s ease;
-}
-
-.terms-header.scrolled {
-  background: rgba(5,5,8,0.9);
-  padding: 15px 40px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-}
-
-.logo-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.logo-section:hover {
-  transform: scale(1.05);
-}
-
-.logo-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #2563eb, #7c3aed, #ec4899);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.4);
-  transition: box-shadow 0.3s ease;
-}
-
-.logo-section:hover .logo-icon {
-  box-shadow: 0 8px 40px rgba(124, 58, 237, 0.6);
-}
-
-.logo-icon svg {
-  width: 22px;
-  height: 22px;
-  color: white;
-}
-
-.logo-text {
-  font-size: 1.6rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #2563eb, #7c3aed, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.header-nav {
-  display: flex;
-  gap: 32px;
-}
-
-.nav-link {
-  color: rgba(255,255,255,0.6);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #2563eb, #7c3aed);
-  transition: width 0.3s ease;
-  border-radius: 2px;
-}
-
-.nav-link:hover {
-  color: white;
-}
-
-.nav-link:hover::after {
-  width: 100%;
-}
-
-.back-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.06);
-  color: white;
-  border: 1px solid rgba(255,255,255,0.08);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.back-btn:hover {
-  background: rgba(255,255,255,0.12);
-  transform: translateX(-4px);
-  border-color: rgba(124, 58, 237, 0.3);
 }
 
 /* ===== CONTENT ===== */
@@ -920,17 +953,18 @@ export default {
   font-size: 0.85rem;
   font-weight: 600;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .read-more i {
   transition: transform 0.3s ease;
 }
 
-.term-card:hover .read-more {
+.read-more:hover {
   color: #a78bfa;
 }
 
-.term-card:hover .read-more i {
+.read-more:hover i {
   transform: translateX(4px);
 }
 
@@ -1310,6 +1344,313 @@ export default {
   text-decoration: underline;
 }
 
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.85);
+  backdrop-filter: blur(20px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: modal-overlay-in 0.3s ease;
+}
+
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-container {
+  background: linear-gradient(145deg, rgba(20, 20, 30, 0.95), rgba(10, 10, 15, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 32px;
+  padding: 48px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modal-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 
+    0 25px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-glow {
+  position: absolute;
+  top: -30%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  opacity: 0.3;
+  pointer-events: none;
+  filter: blur(80px);
+}
+
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.modal-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  transform: rotate(90deg);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  animation: modal-icon-in 0.5s ease 0.2s both;
+}
+
+@keyframes modal-icon-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(-10deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.modal-title-section {
+  flex: 1;
+}
+
+.modal-number {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(124, 58, 237, 0.8);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.modal-title-section h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, white, #c4b5fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.modal-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #2563eb, #7c3aed, #ec4899);
+  border-radius: 2px;
+  margin-bottom: 24px;
+  opacity: 0.5;
+}
+
+.modal-body {
+  margin-bottom: 32px;
+}
+
+.modal-description {
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.8;
+  font-size: 1rem;
+  margin-bottom: 28px;
+}
+
+.modal-details {
+  margin-bottom: 24px;
+}
+
+.modal-details h4 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.modal-details h4 i {
+  color: #10b981;
+}
+
+.modal-details ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.modal-details li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+  animation: modal-item-in 0.4s ease both;
+}
+
+.modal-details li:nth-child(1) { animation-delay: 0.1s; }
+.modal-details li:nth-child(2) { animation-delay: 0.15s; }
+.modal-details li:nth-child(3) { animation-delay: 0.2s; }
+.modal-details li:nth-child(4) { animation-delay: 0.25s; }
+.modal-details li:nth-child(5) { animation-delay: 0.3s; }
+.modal-details li:nth-child(6) { animation-delay: 0.35s; }
+
+@keyframes modal-item-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.modal-details li:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(124, 58, 237, 0.2);
+  transform: translateX(4px);
+}
+
+.modal-details li i {
+  color: #a78bfa;
+  font-size: 0.7rem;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.modal-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 16px;
+  animation: modal-warning-in 0.5s ease 0.4s both;
+}
+
+@keyframes modal-warning-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-warning i {
+  color: #f59e0b;
+  font-size: 1.2rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.modal-warning p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: center;
+}
+
+.modal-btn-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3);
+}
+
+.modal-btn-close:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(124, 58, 237, 0.4);
+}
+
+.modal-btn-close i {
+  font-size: 0.9rem;
+}
+
+/* Modal Transitions */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-fade-enter,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter .modal-container,
+.modal-fade-leave-to .modal-container {
+  transform: scale(0.95) translateY(10px);
+}
+
 /* ===== CONFETTI ===== */
 .confetti {
   position: fixed;
@@ -1359,14 +1700,6 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .terms-header {
-    padding: 16px 20px;
-  }
-  
-  .header-nav {
-    display: none;
-  }
-  
   .terms-container {
     padding: 120px 20px 60px;
   }
@@ -1412,6 +1745,21 @@ export default {
     width: 100%;
     justify-content: center;
   }
+
+  .modal-container {
+    padding: 32px 24px;
+    border-radius: 24px;
+  }
+
+  .modal-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .modal-icon {
+    margin: 0 auto;
+  }
 }
 
 /* ===== SCROLLBAR ===== */
@@ -1430,5 +1778,19 @@ export default {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(124, 58, 237, 0.5);
+}
+
+/* Modal scrollbar */
+.modal-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.2);
+  border-radius: 3px;
 }
 </style>

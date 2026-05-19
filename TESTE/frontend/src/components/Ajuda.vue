@@ -14,16 +14,20 @@
 
       </div>
 
-      <button class="back-btn" @click="goBack">
-        ← Voltar
-      </button>
+<button class="back-btn" @click="goBack">
+  <i class="fa-solid fa-arrow-left"></i>
+  Voltar
+</button>
     </header>
 
     <!-- Main -->
     <main class="help-container">
       <!-- Hero -->
       <section class="hero-section">
-        <span class="hero-badge">❓ Central de Ajuda</span>
+ <span class="hero-badge">
+  <i class="fa-solid fa-circle-question"></i>
+  Central de Ajuda
+</span>
 
         <h1 class="hero-title">
           Como podemos
@@ -71,7 +75,9 @@
           v-for="topic in filteredTopics"
           :key="topic.id"
         >
-          <div class="card-icon">{{ topic.icon }}</div>
+          <div class="card-icon">
+  <i :class="topic.icon"></i>
+</div>
 
           <h2>{{ topic.title }}</h2>
 
@@ -85,7 +91,9 @@
 
       <!-- Empty state -->
       <section v-if="search && !hasResults" class="empty-state">
-        <div class="empty-icon">🔎</div>
+        <div class="empty-icon">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</div>
         <h3>Nenhum resultado encontrado</h3>
         <p>
           Tente pesquisar com outros termos, como
@@ -117,9 +125,15 @@
             >
               <span>{{ faq.question }}</span>
 
-              <span class="faq-icon">
-                {{ openFaq === faq.id ? '−' : '+' }}
-              </span>
+<span class="faq-icon">
+  <i
+    :class="
+      openFaq === faq.id
+        ? 'fa-solid fa-minus'
+        : 'fa-solid fa-plus'
+    "
+  ></i>
+</span>
             </button>
 
             <transition name="faq">
@@ -140,7 +154,9 @@
 
       <!-- Support Box -->
       <section class="support-box">
-        <div class="support-icon">🎧</div>
+        <div class="support-icon">
+  <i class="fa-solid fa-headset"></i>
+</div>
 
         <div class="support-content">
           <h3>Não encontrou o que procura?</h3>
@@ -168,7 +184,9 @@
           </button>
 
           <div class="modal-header">
-            <div class="modal-icon">{{ selectedTopic.icon }}</div>
+           <div class="modal-icon">
+  <i :class="selectedTopic.icon"></i>
+</div>
 
             <div>
               <span class="modal-badge">Ajuda detalhada</span>
@@ -224,7 +242,7 @@ export default {
       topics: [
         {
           id: 'playlist',
-          icon: '🎵',
+             icon: 'fa-solid fa-music',
           title: 'Músicas e Playlists',
           description: 'Aprenda a criar, organizar, editar e compartilhar playlists com facilidade.',
           modalDescription: 'Aqui você encontra ajuda para montar playlists, adicionar faixas, reorganizar músicas e compartilhar suas coleções favoritas.',
@@ -240,7 +258,7 @@ export default {
         },
         {
           id: 'profile',
-          icon: '👤',
+           icon: 'fa-solid fa-user',
           title: 'Conta e Perfil',
           description: 'Edite seu perfil, altere senha, atualize dados e personalize sua conta.',
           modalDescription: 'Tudo o que você precisa para gerenciar sua conta, atualizar informações pessoais e manter seu perfil sempre em dia.',
@@ -256,7 +274,7 @@ export default {
         },
         {
           id: 'security',
-          icon: '🔒',
+          icon: 'fa-solid fa-shield-halved',
           title: 'Privacidade e Segurança',
           description: 'Proteja sua conta e controle suas permissões com mais segurança.',
           modalDescription: 'Entenda como reforçar a segurança da sua conta, proteger seus dados e configurar permissões com tranquilidade.',
@@ -272,7 +290,7 @@ export default {
         },
         {
           id: 'community',
-          icon: '💬',
+           icon: 'fa-solid fa-comments',
           title: 'Comunidade',
           description: 'Interaja com amigos, compartilhe músicas e participe do universo SoundUp.',
           modalDescription: 'Descubra como seguir pessoas, compartilhar conteúdos e participar da comunidade musical dentro da plataforma.',

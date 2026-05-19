@@ -257,7 +257,7 @@
       </section>
 
       <!-- SEÇÃO: Feito para Você -->
-      <section class="section" v-if="madeForYou.length > 0">
+      <section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
             <h2 class="section-title">

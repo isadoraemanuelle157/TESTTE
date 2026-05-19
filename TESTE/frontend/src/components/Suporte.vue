@@ -28,9 +28,10 @@
       <!-- Hero -->
       <section class="hero-section">
 
-        <span class="hero-badge">
-          🎧 Suporte SoundUp
-        </span>
+<span class="hero-badge">
+  <i class="fa-solid fa-headset"></i>
+  <span>Suporte SoundUp</span>
+</span>
 
         <h1 class="hero-title">
           Estamos aqui para
@@ -49,7 +50,9 @@
 
         <div class="support-card">
 
-          <div class="card-icon">💬</div>
+   <div class="card-icon">
+  <i class="fa-solid fa-comments"></i>
+</div>
 
           <h2>Chat ao Vivo</h2>
 
@@ -66,7 +69,9 @@
 
         <div class="support-card">
 
-          <div class="card-icon">📧</div>
+   <div class="card-icon">
+  <i class="fa-solid fa-envelope"></i>
+</div>
 
           <h2>Suporte por E-mail</h2>
 
@@ -83,7 +88,9 @@
 
         <div class="support-card">
 
-          <div class="card-icon">📞</div>
+          <div class="card-icon">
+  <i class="fa-solid fa-headphones"></i>
+</div>
 
           <h2>Atendimento</h2>
 
@@ -107,9 +114,9 @@
 
           <div class="section-title">
 
-            <div class="title-icon">
-              📝
-            </div>
+<div class="title-icon">
+  <i class="fa-solid fa-clipboard-list"></i>
+</div>
 
             <div>
               <h2>Abrir Ticket</h2>
@@ -178,8 +185,109 @@
               Enviar Ticket
             </button>
 
-          </form>
+<!-- CONTATO ESCOLHIDO -->
+<div
+  v-if="selectedContactType"
+  class="selected-contact"
+>
+  <i class="fa-solid fa-circle-check"></i>
 
+  <div>
+    <strong>Forma de contato selecionada</strong>
+
+    <p>
+      {{ selectedContactType }}:
+      {{ selectedContactValue }}
+    </p>
+  </div>
+</div>
+
+<!-- ALERTA LOGIN -->
+<div
+  v-if="!isLoggedIn"
+  class="login-warning"
+>
+  <i class="fa-solid fa-triangle-exclamation"></i>
+
+  <div>
+    <strong>Atenção</strong>
+
+    <p>
+      Sem login o ticket não será salvo
+      no histórico do suporte.
+    </p>
+  </div>
+</div>
+
+          </form>
+<!-- HISTÓRICO LOCAL -->
+<section class="history-local-section">
+
+  <div class="history-local-card">
+
+    <div class="history-header">
+
+      <div class="header-icon">
+        <i class="fa fa-clock-rotate-left"></i>
+      </div>
+
+      <div>
+        <h2>Histórico enviado</h2>
+        <p>Mensagens enviadas recentemente.</p>
+      </div>
+
+    </div>
+
+    <div
+      v-if="supportHistory.length === 0"
+      class="empty-history"
+    >
+      <i class="fa fa-inbox"></i>
+      <span>Nenhuma mensagem enviada.</span>
+    </div>
+
+    <div
+      v-for="item in supportHistory"
+      :key="item.id"
+      class="history-item"
+       :class="{ 'collapsed': collapsedLocal[item.id] }"
+    >
+
+      <div class="history-top">
+
+        <span class="history-category">
+          {{ item.categoria }}
+        </span>
+
+        <button 
+      class="minimize-btn"
+      @click="toggleLocalHistory(item.id)"
+      :title="collapsedLocal[item.id] ? 'Expandir' : 'Minimizar'"
+    >
+      <i class="fa" :class="collapsedLocal[item.id] ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+    </button>
+
+        <span class="history-date">
+          {{ formatDate(item.data) }}
+        </span>
+      </div>
+
+        <div v-show="!collapsedLocal[item.id]" class="history-content">
+    <div class="history-user" v-if="item.nome">
+      <i class="fa fa-user"></i>
+      <strong>{{ item.nome }}</strong>
+    </div>
+    <h3>{{ item.assunto }}</h3>
+    <p>{{ item.mensagem }}</p>
+    <div class="history-contact">
+      <i class="fa fa-envelope"></i>
+      {{ item.contato }}
+    </div>
+  </div>
+</div>
+</div>
+
+</section>
         </div>
 
       </section>
@@ -223,26 +331,225 @@
       </section>
 
     </main>
+<!-- ========================= -->
+<!-- MODAL EMAIL -->
+<!-- ========================= -->
+<div
+  v-if="showEmailModal"
+  class="contact-modal-overlay"
+>
 
+  <div class="contact-modal">
+
+    <h2>
+      <i class="fa-solid fa-envelope"></i>
+      Escolha um e-mail
+    </h2>
+
+    <button
+      v-for="email in emails"
+      :key="email"
+      class="contact-option"
+      @click="chooseEmail(email)"
+    >
+      <i class="fa-solid fa-envelope-circle-check"></i>
+      {{ email }}
+    </button>
+
+    <button
+      class="close-modal-btn"
+      @click="showEmailModal = false"
+    >
+      Fechar
+    </button>
+
+  </div>
+
+</div>
+
+<!-- ========================= -->
+<!-- MODAL TELEFONE -->
+<!-- ========================= -->
+<div
+  v-if="showPhoneModal"
+  class="contact-modal-overlay"
+>
+
+  <div class="contact-modal">
+
+    <h2>
+      <i class="fa-solid fa-phone"></i>
+      Escolha um telefone
+    </h2>
+
+    <button
+      v-for="phone in phones"
+      :key="phone"
+      class="contact-option"
+      @click="choosePhone(phone)"
+    >
+      <i class="fa-solid fa-phone-volume"></i>
+      {{ phone }}
+    </button>
+
+    <button
+      class="close-modal-btn"
+      @click="showPhoneModal = false"
+    >
+      Fechar
+    </button>
+
+  </div>
+
+</div>
   </div>
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: 'SupportPage',
 
   data() {
     return {
+      isLoggedIn: false,
+      sending: false,
+      loadingMessages: false,
+
+      myMessages: [],
+      supportHistory: [],
+      replyMap: {},
+      collapsedLocal: {},
+      collapsedThreads: {},
+
+      // =========================
+      // TICKET
+      // =========================
       ticket: {
         name: '',
         email: '',
         category: '',
         description: ''
+      },
+
+      // =========================
+      // CONTATO ESCOLHIDO
+      // =========================
+      selectedContactType: '',
+      selectedContactValue: '',
+
+      // =========================
+      // MODAIS
+      // =========================
+      showEmailModal: false,
+      showPhoneModal: false,
+
+      // =========================
+      // DADOS
+      // =========================
+      emails: [
+        'isa@gmail.com',
+        'pablo@gmail.com'
+      ],
+
+      phones: [
+        '(31) 98888-1111',
+        '(11) 97777-2222'
+      ],
+
+      // =========================
+      // ALERT
+      // =========================
+      alert: {
+        visible: false,
+        type: 'info',
+        title: '',
+        message: '',
+        duration: 4000,
+        timer: null
       }
     }
   },
 
+  computed: {
+    alertIcon() {
+      const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+      }
+
+      return icons[this.alert.type] || 'fa-info-circle'
+    }
+  },
+
+  mounted() {
+    this.loadAuth()
+    this.supportHistory = JSON.parse(
+  localStorage.getItem('supportHistory') || '[]'
+)
+
+    if (this.isLoggedIn) {
+      this.loadMyMessages()
+    }
+  },
+
   methods: {
+toggleLocalHistory(id) {
+  // Cria uma cópia reativa do objeto para garantir que o Vue detecte a mudança
+  this.collapsedLocal = {
+    ...this.collapsedLocal,
+    [id]: !this.collapsedLocal[id]
+  }
+},
+
+    // =========================
+    // ALERT
+    // =========================
+    showAlert(type, title, message, duration = 4000) {
+      if (this.alert.timer) {
+        clearTimeout(this.alert.timer)
+      }
+
+      this.alert = {
+        visible: true,
+        type,
+        title,
+        message,
+        duration,
+        timer: null
+      }
+
+      this.alert.timer = setTimeout(() => {
+        this.closeAlert()
+      }, duration)
+    },
+
+    closeAlert() {
+      this.alert.visible = false
+
+      if (this.alert.timer) {
+        clearTimeout(this.alert.timer)
+      }
+    },
+
+    // =========================
+    // AUTH
+    // =========================
+    loadAuth() {
+      this.isLoggedIn =
+        localStorage.getItem('isLoggedIn') === 'true'
+    },
+
+    getToken() {
+      return localStorage.getItem('token')
+    },
+
+    // =========================
+    // NAVEGAÇÃO
+    // =========================
     goHome() {
       this.$router.push('/')
     },
@@ -252,33 +559,360 @@ export default {
     },
 
     openChat() {
-      alert('💬 Abrindo chat de suporte...')
+      this.showAlert(
+        'info',
+        'Chat',
+        'Abrindo chat de suporte...'
+      )
     },
 
+    // =========================
+    // EMAIL
+    // =========================
     sendEmail() {
-      window.location.href = 'mailto:suporte@soundup.com'
+      this.showEmailModal = true
     },
 
+    chooseEmail(email) {
+      this.selectedContactType = 'email'
+      this.selectedContactValue = email
+
+      this.showEmailModal = false
+
+      this.showAlert(
+        'success',
+        'E-mail selecionado',
+        `Contato selecionado: ${email}`
+      )
+    },
+
+    // =========================
+    // TELEFONE
+    // =========================
     callSupport() {
-      alert('📞 Conectando ao suporte...')
+      this.showPhoneModal = true
     },
 
-    submitTicket() {
-      alert('✅ Ticket enviado com sucesso!')
+    choosePhone(phone) {
+      const confirmCall = confirm(
+        `Deseja realmente ligar para ${phone}?`
+      )
 
-      this.ticket = {
-        name: '',
-        email: '',
-        category: '',
-        description: ''
+      if (!confirmCall) return
+
+      this.selectedContactType = 'telefone'
+      this.selectedContactValue = phone
+
+      this.showPhoneModal = false
+
+      // LIGAÇÃO REAL
+      window.location.href = `tel:${phone.replace(/\D/g, '')}`
+    },
+
+    // =========================
+    // TICKET
+    // =========================
+ async submitTicket() {
+
+  // =========================
+  // LOGIN
+  // =========================
+  if (!this.isLoggedIn) {
+
+    this.showAlert(
+      'warning',
+      'Login necessário',
+      'Você será redirecionado para o login para enviar um ticket.'
+    )
+
+    setTimeout(() => {
+      this.$router.push('/login')
+    }, 2000)
+
+    return
+  }
+
+  // =========================
+  // VALIDAÇÃO
+  // =========================
+  if (
+    !this.ticket.name ||
+    !this.ticket.email ||
+    !this.ticket.category ||
+    !this.ticket.description
+  ) {
+
+    this.showAlert(
+      'warning',
+      'Campos obrigatórios',
+      'Preencha todos os campos do ticket.'
+    )
+
+    return
+  }
+
+  try {
+
+    this.sending = true
+
+    const contatoSelecionado =
+      this.selectedContactValue || this.ticket.email
+
+    const tipoContato =
+      this.selectedContactType || 'email'
+
+    // =========================
+    // ENVIO API
+    // =========================
+    await axios.post(
+      'http://localhost:3002/suporte/mensagens',
+      {
+        assunto: `Suporte - ${this.ticket.category}`,
+
+        categoria: this.ticket.category,
+
+        mensagem: `
+Nome: ${this.ticket.name}
+Email: ${this.ticket.email}
+
+Contato selecionado:
+${tipoContato}
+
+${contatoSelecionado}
+
+Mensagem:
+${this.ticket.description}
+        `
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.getToken()}`
+        }
       }
+    )
+
+    // =========================
+    // HISTÓRICO LOCAL
+    // =========================
+    const novoItem = {
+      id: Date.now(),
+
+      assunto: `Suporte - ${this.ticket.category}`,
+
+      categoria: this.ticket.category,
+
+      mensagem: this.ticket.description,
+
+      contato: contatoSelecionado,
+
+      nome: this.ticket.name,
+
+      data: new Date().toISOString()
+    }
+
+    // PEGA HISTÓRICO
+    const historico = JSON.parse(
+      localStorage.getItem('supportHistory') || '[]'
+    )
+
+    // ADICIONA NO INÍCIO
+    historico.unshift(novoItem)
+
+    // SALVA
+    localStorage.setItem(
+      'supportHistory',
+      JSON.stringify(historico)
+    )
+
+    // ATUALIZA TELA
+    this.supportHistory = historico
+
+    // =========================
+    // RESET FORM
+    // =========================
+    this.ticket = {
+      name: '',
+      email: '',
+      category: '',
+      description: ''
+    }
+
+    this.selectedContactType = ''
+    this.selectedContactValue = ''
+
+    // =========================
+    // ALERT SUCESSO
+    // =========================
+    this.showAlert(
+      'success',
+      'Ticket enviado',
+      'Seu ticket foi enviado com sucesso.'
+    )
+
+    // RECARREGA MENSAGENS
+    await this.loadMyMessages()
+
+  } catch (error) {
+
+    console.error(error)
+
+    this.showAlert(
+      'error',
+      'Erro',
+      error.response?.data?.message ||
+      'Erro ao enviar ticket.'
+    )
+
+  } finally {
+
+    this.sending = false
+  }
+},
+    // =========================
+    // LISTAR
+    // =========================
+    async loadMyMessages() {
+      try {
+
+        this.loadingMessages = true
+
+        const { data } = await axios.get(
+          'http://localhost:3002/suporte/minhas',
+          {
+            headers: {
+              Authorization: `Bearer ${this.getToken()}`
+            }
+          }
+        )
+
+        this.myMessages = data
+
+      } catch (error) {
+        console.error(error)
+      } finally {
+        this.loadingMessages = false
+      }
+    },
+
+    // =========================
+    // RESPONDER
+    // =========================
+    async replySupportMessage(suporteId) {
+
+      const mensagem =
+        this.replyMap[suporteId]
+
+      if (!mensagem?.trim()) {
+        return this.showAlert(
+          'warning',
+          'Atenção',
+          'Digite uma resposta.'
+        )
+      }
+
+      try {
+
+        await axios.post(
+          `http://localhost:3002/suporte/${suporteId}/responder`,
+          { mensagem },
+          {
+            headers: {
+              Authorization: `Bearer ${this.getToken()}`
+            }
+          }
+        )
+
+        this.replyMap[suporteId] = ''
+
+        await this.loadMyMessages()
+
+        this.showAlert(
+          'success',
+          'Resposta enviada',
+          'Mensagem respondida com sucesso.'
+        )
+
+      } catch (error) {
+
+        this.showAlert(
+          'error',
+          'Erro',
+          'Erro ao responder mensagem.'
+        )
+      }
+    },
+
+    // =========================
+    // EXCLUIR
+    // =========================
+    async deleteConversation(id) {
+
+      const confirmDelete = confirm(
+        'Deseja excluir esta conversa?'
+      )
+
+      if (!confirmDelete) return
+
+      try {
+
+        await axios.delete(
+          `http://localhost:3002/suporte/${id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${this.getToken()}`
+            }
+          }
+        )
+
+        this.myMessages =
+          this.myMessages.filter(
+            item => item._id !== id
+          )
+
+        this.showAlert(
+          'success',
+          'Conversa excluída',
+          'A conversa foi removida.'
+        )
+
+      } catch (error) {
+
+        this.showAlert(
+          'error',
+          'Erro',
+          'Erro ao excluir conversa.'
+        )
+      }
+    },
+
+    // =========================
+    // UI
+    // =========================
+    softenConversation(id) {
+      this.collapsedThreads[id] =
+        !this.collapsedThreads[id]
+    },
+
+    formatDate(date) {
+
+      if (!date) return ''
+
+      const d = new Date(date)
+
+      return d.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
   }
 }
 </script>
 
 <style scoped>
-
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
 /* ===== PAGE ===== */
 .support-page {
   min-height: 100vh;
@@ -493,7 +1127,33 @@ export default {
 
   margin-bottom: 70px;
 }
+.minimize-btn {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.3s ease;
+  margin-left: auto;
+  margin-right: 12px;
+}
 
+.minimize-btn:hover {
+  background: rgba(124,58,237,0.25);
+}
+
+.history-item.collapsed {
+  opacity: 0.7;
+}
+
+.history-item.collapsed .history-top {
+  margin-bottom: 0;
+}
 /* ===== CARD ===== */
 .support-card,
 .ticket-card,
@@ -727,7 +1387,271 @@ select option {
 .status-card p {
   color: rgba(255,255,255,0.65);
 }
+/* ========================= */
+/* MODAL */
+/* ========================= */
+.contact-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 9999;
+
+  backdrop-filter: blur(8px);
+}
+
+.contact-modal {
+  width: 100%;
+  max-width: 420px;
+
+  background: #111827;
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  border-radius: 24px;
+
+  padding: 30px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  animation: modalIn .25s ease;
+}
+
+.contact-modal h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 12px;
+}
+.history-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #c4b5fd;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.history-user i {
+  font-size: 0.8rem;
+}
+.contact-option {
+  width: 100%;
+
+  border: none;
+
+  padding: 16px;
+
+  border-radius: 16px;
+
+  background: rgba(255,255,255,0.06);
+
+  color: white;
+
+  cursor: pointer;
+
+  transition: .25s ease;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  font-size: 1rem;
+}
+
+.contact-option:hover {
+  background: rgba(124,58,237,0.25);
+
+  transform: translateY(-2px);
+}
+
+.close-modal-btn {
+  margin-top: 10px;
+
+  border: none;
+
+  padding: 14px;
+
+  border-radius: 16px;
+
+  background: #ef4444;
+
+  color: white;
+
+  cursor: pointer;
+}
+
+/* ========================= */
+/* CONTATO SELECIONADO */
+/* ========================= */
+.selected-contact {
+  margin-top: 20px;
+
+  padding: 18px;
+
+  border-radius: 18px;
+
+  background: rgba(34,197,94,0.12);
+
+  border: 1px solid rgba(34,197,94,0.25);
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  color: #86efac;
+}
+
+.selected-contact i {
+  font-size: 1.4rem;
+}
+
+/* ========================= */
+/* ALERTA LOGIN */
+/* ========================= */
+.login-warning {
+  margin-top: 22px;
+
+  padding: 18px;
+
+  border-radius: 18px;
+
+  background: rgba(245,158,11,0.12);
+
+  border: 1px solid rgba(245,158,11,0.25);
+
+  display: flex;
+  gap: 14px;
+
+  color: #fcd34d;
+}
+
+.login-warning i {
+  font-size: 1.3rem;
+  margin-top: 2px;
+}
+/* ========================= */
+/* HISTÓRICO LOCAL */
+/* ========================= */
+
+.history-local-section {
+  margin-top: 40px;
+}
+
+.history-local-card {
+  background: rgba(255,255,255,0.04);
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  border-radius: 28px;
+
+  padding: 30px;
+
+  backdrop-filter: blur(20px);
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  margin-bottom: 26px;
+}
+
+.empty-history {
+  padding: 40px;
+
+  text-align: center;
+
+  color: rgba(255,255,255,0.5);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-history i {
+  font-size: 2rem;
+}
+
+.history-item {
+  padding: 22px;
+
+  border-radius: 20px;
+
+  background: rgba(255,255,255,0.04);
+
+  border: 1px solid rgba(255,255,255,0.06);
+
+  margin-bottom: 18px;
+}
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+}
+
+.history-category {
+  background: rgba(124,58,237,0.2);
+
+  color: #c4b5fd;
+
+  padding: 6px 12px;
+
+  border-radius: 999px;
+
+  font-size: .85rem;
+}
+
+.history-date {
+  color: rgba(255,255,255,0.5);
+
+  font-size: .85rem;
+}
+
+.history-item h3 {
+  margin-bottom: 12px;
+}
+
+.history-item p {
+  color: rgba(255,255,255,0.7);
+
+  line-height: 1.7;
+
+  margin-bottom: 18px;
+}
+
+.history-contact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  color: #93c5fd;
+
+  font-size: .95rem;
+}
+/* ========================= */
+/* ANIMAÇÃO */
+/* ========================= */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
 
