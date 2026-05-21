@@ -1,1331 +1,1468 @@
-    <template>
-      <div class="musical-match">
-        <!-- ONBOARDING / PROFILE CREATION FLOW -->
-        <div v-if="!hasProfile" class="onboarding-flow">
-          <!-- Step 1: Welcome -->
-          <div v-if="onboardingStep === 1" class="onboarding-step welcome-step">
-            <div class="onboarding-content">
-              <div class="logo-large">
-                <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon-large">
-                  <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                </svg>
-              </div>
-              <h1 class="welcome-title">Musical Match</h1>
-              <p class="welcome-subtitle">Conecte-se através da música</p>
+<template>
+  <div class="musical-match">
+    <!-- ============================================ -->
+    <!-- ONBOARDING / PROFILE CREATION FLOW           -->
+    <!-- ============================================ -->
+    <div v-if="!hasProfile" class="onboarding-flow">
+      
+      <!-- Step 1: Welcome -->
+      <div v-if="onboardingStep === 1" class="onboarding-step welcome-step">
+        <div class="onboarding-content">
+          <div class="logo-large">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon-large">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+          </div>
+          <h1 class="welcome-title">Musical Match</h1>
+          <p class="welcome-subtitle">Conecte-se através da música</p>
 
-              <div class="features-preview">
-                <div class="feature-item">
-                  <div class="feature-icon"><i class="fas fa-music"></i></div>
-                  <span>Descubra músicas</span>
-                </div>
-                <div class="feature-item">
-                  <div class="feature-icon"><i class="fas fa-heart"></i></div>
-                  <span>Curta suas favoritas</span>
-                </div>
-                <div class="feature-item">
-                  <div class="feature-icon"><i class="fas fa-users"></i></div>
-                  <span>Encontre matches</span>
-                </div>
-              </div>
+          <div class="features-preview">
+            <div class="feature-item">
+              <div class="feature-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+  </svg>
+</div>
+              <span>Descubra músicas</span>
+            </div>
+            <div class="feature-item">
+            <div class="feature-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+  </svg>
+</div>
+              <span>Curta suas favoritas</span>
+            </div>
+            <div class="feature-item">
+             <div class="feature-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+  </svg>
+</div>
+              <span>Encontre matches</span>
+            </div>
+          </div>
 
-              <button @click="nextStep" class="btn-primary btn-large">
-                Começar
+          <button @click="nextStep" class="btn-primary btn-large">
+            Começar
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Basic Info -->
+      <div v-else-if="onboardingStep === 2" class="onboarding-step">
+        <div class="onboarding-header">
+          <button @click="prevStep" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+          </button>
+          <div class="step-indicator">
+            <span class="step-dot active"></span>
+            <span class="step-dot active"></span>
+            <span class="step-dot"></span>
+            <span class="step-dot"></span>
+          </div>
+          <div class="placeholder"></div>
+        </div>
+
+        <div class="onboarding-content compact">
+          <h2 class="step-title">Vamos criar seu perfil</h2>
+          <p class="step-subtitle">Como devemos te chamar?</p>
+
+          <div class="form-group">
+            <label for="onboarding-name">Nome</label>
+            <input
+              id="onboarding-name"
+              v-model="onboardingData.name"
+              type="text"
+              class="onboarding-input"
+              placeholder="Seu nome"
+              maxlength="30"
+            >
+            <span class="input-hint">{{ onboardingData.name.length }}/30</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="onboarding-age">Idade</label>
+              <input
+                id="onboarding-age"
+                v-model.number="onboardingData.age"
+                type="number"
+                class="onboarding-input"
+                placeholder="18"
+                min="18"
+                max="100"
+              >
+            </div>
+            <div class="form-group half">
+              <label for="onboarding-location">Cidade</label>
+              <input
+                id="onboarding-location"
+                v-model="onboardingData.location"
+                type="text"
+                class="onboarding-input"
+                placeholder="São Paulo, SP"
+              >
+            </div>
+          </div>
+
+          <button
+            @click="nextStep"
+            class="btn-primary btn-large"
+            :disabled="!canProceedStep2"
+          >
+            Continuar
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Photo -->
+      <div v-else-if="onboardingStep === 3" class="onboarding-step">
+        <div class="onboarding-header">
+          <button @click="prevStep" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+          </button>
+          <div class="step-indicator">
+            <span class="step-dot active"></span>
+            <span class="step-dot active"></span>
+            <span class="step-dot active"></span>
+            <span class="step-dot"></span>
+          </div>
+          <div class="placeholder"></div>
+        </div>
+
+        <div class="onboarding-content compact">
+          <h2 class="step-title">Sua foto</h2>
+          <p class="step-subtitle">Escolha uma foto que te represente</p>
+
+          <div class="photo-upload-area">
+            <div v-if="!onboardingData.avatar" class="upload-placeholder" @click="triggerOnboardingFileInput">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+              </svg>
+              <span>Clique para adicionar foto</span>
+              <small>Ou arraste uma imagem aqui</small>
+            </div>
+
+            <div v-else class="photo-preview-container">
+              <img :src="onboardingData.avatar" alt="Preview" class="photo-preview-large">
+              <button @click="removePhoto" class="remove-photo-btn">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
+              </button>
+            </div>
+
+            <input
+              ref="onboardingFileInput"
+              type="file"
+              accept="image/*"
+              @change="handleOnboardingFileChange"
+              class="hidden-input"
+            >
+          </div>
+
+          <div class="avatar-presets">
+            <p>Ou escolha um avatar:</p>
+            <div class="preset-avatars">
+              <button
+                v-for="n in 6"
+                :key="n"
+                @click="selectPresetAvatar(n)"
+                class="preset-avatar-btn"
+                :class="{ active: onboardingData.avatar === getPresetAvatarUrl(n) }"
+              >
+                <img :src="getPresetAvatarUrl(n)" alt="Avatar option" @error="onAvatarError($event, n)">
               </button>
             </div>
           </div>
 
-          <!-- Step 2: Basic Info -->
-          <div v-else-if="onboardingStep === 2" class="onboarding-step">
-            <div class="onboarding-header">
-              <button @click="prevStep" class="back-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
-              <div class="step-indicator">
-                <span class="step-dot active"></span>
-                <span class="step-dot active"></span>
-                <span class="step-dot"></span>
-                <span class="step-dot"></span>
-              </div>
-              <div class="placeholder"></div>
-            </div>
+          <button
+            @click="nextStep"
+            class="btn-primary btn-large"
+            :disabled="!onboardingData.avatar"
+          >
+            Continuar
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
 
-            <div class="onboarding-content compact">
-              <h2 class="step-title">Vamos criar seu perfil</h2>
-              <p class="step-subtitle">Como devemos te chamar?</p>
+      <!-- Step 4: Bio & Music Preferences -->
+      <div v-else-if="onboardingStep === 4" class="onboarding-step">
+        <div class="onboarding-header">
+          <button @click="prevStep" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+            </svg>
+          </button>
+          <div class="step-indicator">
+            <span class="step-dot active"></span>
+            <span class="step-dot active"></span>
+            <span class="step-dot active"></span>
+            <span class="step-dot active"></span>
+          </div>
+          <div class="placeholder"></div>
+        </div>
 
-              <div class="form-group">
-                <label for="onboarding-name">Nome</label>
-                <input
-                  id="onboarding-name"
-                  v-model="onboardingData.name"
-                  type="text"
-                  class="onboarding-input"
-                  placeholder="Seu nome"
-                  maxlength="30"
-                >
-                <span class="input-hint">{{ onboardingData.name.length }}/30</span>
-              </div>
+        <div class="onboarding-content compact">
+          <h2 class="step-title">Quase lá!</h2>
+          <p class="step-subtitle">Conte um pouco sobre você e seus gostos musicais</p>
 
-              <div class="form-row">
-                <div class="form-group half">
-                  <label for="onboarding-age">Idade</label>
-                  <input
-                    id="onboarding-age"
-                    v-model.number="onboardingData.age"
-                    type="number"
-                    class="onboarding-input"
-                    placeholder="18"
-                    min="18"
-                    max="100"
-                  >
-                </div>
-                <div class="form-group half">
-                  <label for="onboarding-location">Cidade</label>
-                  <input
-                    id="onboarding-location"
-                    v-model="onboardingData.location"
-                    type="text"
-                    class="onboarding-input"
-                    placeholder="São Paulo, SP"
-                  >
-                </div>
-              </div>
-
-              <button
-                @click="nextStep"
-                class="btn-primary btn-large"
-                :disabled="!canProceedStep2"
-              >
-                Continuar
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                </svg>
-              </button>
-            </div>
+          <div class="form-group">
+            <label for="onboarding-bio">Bio</label>
+            <textarea
+              id="onboarding-bio"
+              v-model="onboardingData.bio"
+              class="onboarding-textarea"
+              placeholder="Fale sobre você, seus estilos musicais favoritos, artistas preferidos..."
+              rows="3"
+              maxlength="150"
+            ></textarea>
+            <span class="input-hint">{{ onboardingData.bio.length }}/150</span>
           </div>
 
-          <!-- Step 3: Photo -->
-          <div v-else-if="onboardingStep === 3" class="onboarding-step">
-            <div class="onboarding-header">
-              <button @click="prevStep" class="back-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
-              <div class="step-indicator">
-                <span class="step-dot active"></span>
-                <span class="step-dot active"></span>
-                <span class="step-dot active"></span>
-                <span class="step-dot"></span>
-              </div>
-              <div class="placeholder"></div>
-            </div>
-
-            <div class="onboarding-content compact">
-              <h2 class="step-title">Sua foto</h2>
-              <p class="step-subtitle">Escolha uma foto que te represente</p>
-
-              <div class="photo-upload-area">
-                <div v-if="!onboardingData.avatar" class="upload-placeholder" @click="triggerOnboardingFileInput">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-                    <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
-                  </svg>
-                  <span>Clique para adicionar foto</span>
-                  <small>Ou arraste uma imagem aqui</small>
-                </div>
-
-                <div v-else class="photo-preview-container">
-                  <img :src="onboardingData.avatar" alt="Preview" class="photo-preview-large">
-                  <button @click="removePhoto" class="remove-photo-btn">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <input
-                  ref="onboardingFileInput"
-                  type="file"
-                  accept="image/*"
-                  @change="handleOnboardingFileChange"
-                  class="hidden-input"
-                >
-              </div>
-
-              <div class="avatar-presets">
-                <p>Ou escolha um avatar:</p>
-                <div class="preset-avatars">
-                  <button
-                    v-for="n in 6"
-                    :key="n"
-                    @click="selectPresetAvatar(n)"
-                    class="preset-avatar-btn"
-                    :class="{ active: onboardingData.avatar === `https://i.pravatar.cc/300?img=${n + 10}` }"
-                  >
-                    <img :src="getPresetAvatarUrl(n)" alt="Avatar option" @error="onAvatarError($event, n)">
-                  </button>
-                </div>
-              </div>
-
+          <div class="form-group">
+            <label>Estilos musicais favoritos (selecione até 3)</label>
+            <div class="genre-selector">
               <button
-                @click="nextStep"
-                class="btn-primary btn-large"
-                :disabled="!onboardingData.avatar"
+                v-for="genre in availableGenres"
+                :key="genre._id"
+                @click="toggleGenre(genre)"
+                class="genre-select-btn"
+                :class="{ active: isGenreSelected(genre._id) }"
+                :disabled="
+                  !isGenreSelected(genre._id) &&
+                  onboardingData.favoriteGenres.length >= 3
+                "
+                :style="{
+                  borderColor: genre.color,
+                  color: isGenreSelected(genre._id) ? '#fff' : genre.color,
+                  background: isGenreSelected(genre._id)
+                    ? genre.color
+                    : 'transparent'
+                }"
               >
-                Continuar
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                </svg>
+                <span v-html="genre.icon"></span>
+                {{ genre.nome }}
               </button>
             </div>
+            <span class="input-hint" :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }">
+              {{ onboardingData.favoriteGenres.length }}/3 selecionados
+            </span>
           </div>
 
-          <!-- Step 4: Bio & Music Preferences -->
-          <div v-else-if="onboardingStep === 4" class="onboarding-step">
-            <div class="onboarding-header">
-              <button @click="prevStep" class="back-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                  <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-                </svg>
-              </button>
-              <div class="step-indicator">
-                <span class="step-dot active"></span>
-                <span class="step-dot active"></span>
-                <span class="step-dot active"></span>
-                <span class="step-dot active"></span>
-              </div>
-              <div class="placeholder"></div>
+          <button
+            @click="finishOnboarding"
+            class="btn-primary btn-large btn-finish"
+            :disabled="!canFinish"
+          >
+            <span v-if="creatingProfile">Criando perfil...</span>
+            <span v-else>
+              Começar a usar
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+ <!-- ============================================ -->
+    <!-- MAIN APP                                     -->
+    <!-- ============================================ -->
+    <template v-else>
+      <header class="match-header">
+        <div class="header-content">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+            <span class="logo-text">Musical Match</span>
+          </div>
+
+          <div class="header-actions">
+            <button class="icon-btn chat-btn" @click="openChatList" :disabled="chats.length === 0 && !hasChatsLoaded">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+              </svg>
+              <span v-if="totalUnread > 0" class="badge chat-badge">{{ totalUnread }}</span>
+            </button>
+
+            <button class="icon-btn" @click="showMatches = true" :disabled="matches.length === 0">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+              </svg>
+              <span v-if="unreadMatches > 0" class="badge">{{ unreadMatches }}</span>
+              <span v-if="matches.length === 0" class="lock-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+  </svg>
+</span>
+            </button>
+
+            <button class="icon-btn profile-btn" @click="openProfile">
+              <img :src="currentUser.avatar" alt="Profile" class="avatar-small">
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="match-main">
+        <!-- Loading State -->
+        <div v-if="loading" class="empty-state">
+          <div class="vinyl-animation">
+            <div class="vinyl"></div>
+          </div>
+          <h2>Carregando músicas...</h2>
+          <p>Buscando as melhores tracks para você</p>
+        </div>
+
+        <!-- Empty State (all songs explored) -->
+        <div v-else-if="currentIndex >= songs.length" class="empty-state">
+          <div class="empty-illustration">
+            <div class="vinyl-animation">
+              <div class="vinyl"></div>
             </div>
-
-            <div class="onboarding-content compact">
-              <h2 class="step-title">Quase lá!</h2>
-              <p class="step-subtitle">Conte um pouco sobre você e seus gostos musicais</p>
-
-              <div class="form-group">
-                <label for="onboarding-bio">Bio</label>
-                <textarea
-                  id="onboarding-bio"
-                  v-model="onboardingData.bio"
-                  class="onboarding-textarea"
-                  placeholder="Fale sobre você, seus estilos musicais favoritos, artistas preferidos..."
-                  rows="3"
-                  maxlength="150"
-                ></textarea>
-                <span class="input-hint">{{ onboardingData.bio.length }}/150</span>
-              </div>
-
-              <div class="form-group">
-                <label>Estilos musicais favoritos (selecione até 3)</label>
-                <div class="genre-selector">
-                  <button
-                    v-for="genre in availableGenres"
-                    :key="genre._id"
-                    @click="toggleGenre(genre)"
-                    class="genre-select-btn"
-                    :class="{ active: isGenreSelected(genre._id) }"
-                    :disabled="
-                      !isGenreSelected(genre._id) &&
-                      onboardingData.favoriteGenres.length >= 3
-                    "
-                    :style="{
-                      borderColor: genre.color,
-                      color: isGenreSelected(genre._id) ? '#fff' : genre.color,
-                      background: isGenreSelected(genre._id)
-                        ? genre.color
-                        : 'transparent'
-                    }"
-                  >
-                    <span v-html="genre.icon"></span>
-                    {{ genre.nome }}
-                  </button>
-                </div>
-                <span class="input-hint" :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }">
-                  {{ onboardingData.favoriteGenres.length }}/3 selecionados
-                </span>
-              </div>
-
-              <button
-                @click="finishOnboarding"
-                class="btn-primary btn-large btn-finish"
-                :disabled="!canFinish"
-              >
-                <span v-if="creatingProfile">Criando perfil...</span>
-                <span v-else>
-                  Começar a usar
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                    <path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/>
-                  </svg>
-                </span>
-              </button>
-            </div>
+          </div>
+          <h2>Você explorou todas as músicas!</h2>
+          <p>Descubra seus matches musicais ou volte mais tarde para novas recomendações</p>
+          <div class="empty-actions">
+            <button v-if="matches.length > 0" @click="showMatches = true" class="btn-primary">
+              Ver Meus Matches ({{ matches.length }})
+            </button>
+            <button @click="loadMoreSongs" class="btn-secondary">
+              Carregar Mais
+            </button>
           </div>
         </div>
 
-        <!-- MAIN APP -->
-        <template v-else>
-          <header class="match-header">
-            <div class="header-content">
-              <div class="logo">
-                <svg viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
-                  <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                </svg>
-                <span class="logo-text">Musical Match</span>
-              </div>
+        <!-- Cards -->
+        <div v-else class="cards-wrapper">
+          <div class="cards-container">
+            <div
+              v-for="(song, index) in visibleSongs"
+              :key="song.id"
+              class="song-card"
+              :class="{
+                'top-card': index === visibleSongs.length - 1,
+                'swiping-left': swipingLeft && index === visibleSongs.length - 1,
+                'swiping-right': swipingRight && index === visibleSongs.length - 1
+              }"
+              :style="getCardStyle(index)"
+              @mousedown="startDrag"
+              @touchstart="startDrag"
+              @mousemove="onDrag"
+              @touchmove="onDrag"
+              @mouseup="endDrag"
+              @touchend="endDrag"
+              @mouseleave="endDrag"
+            >
+              <div class="card-media">
+                <img :src="song.cover || song.album?.cover_medium || 'https://e-cdns-images.dzcdn.net/images/cover/default/500x500.jpg'" :alt="song.title" class="cover-image">
 
-              <div class="header-actions">
-  <button class="icon-btn chat-btn" @click="openChatList" :disabled="chats.length === 0 && !hasChatsLoaded">
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-    </svg>
-    <span v-if="totalUnread > 0" class="badge chat-badge">{{ totalUnread }}</span>
-  </button>
-
-  <button class="icon-btn" @click="showMatches = true" :disabled="matches.length === 0">
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-    </svg>
-    <span v-if="unreadMatches > 0" class="badge">{{ unreadMatches }}</span>
-    <span v-if="matches.length === 0" class="lock-icon">🔒</span>
-  </button>
-
-  <button class="icon-btn profile-btn" @click="openProfile">
-    <img :src="currentUser.avatar" alt="Profile" class="avatar-small">
-  </button>
-              </div>
-            </div>
-          </header>
-
-          <main class="match-main">
-            <div v-if="loading" class="empty-state">
-              <div class="vinyl-animation">
-                <div class="vinyl"></div>
-              </div>
-              <h2>Carregando músicas...</h2>
-              <p>Buscando as melhores tracks para você</p>
-            </div>
-
-            <div v-else-if="currentIndex >= songs.length" class="empty-state">
-              <div class="empty-illustration">
-                <div class="vinyl-animation">
-                  <div class="vinyl"></div>
+                <div v-if="currentPlaying === song.id" class="visualizer">
+                  <div
+                    v-for="n in 5"
+                    :key="n"
+                    class="bar"
+                    :style="{
+                      animationDelay: n * 0.1 + 's',
+                      height: Math.random() * 40 + 20 + 'px'
+                    }"
+                  ></div>
                 </div>
-              </div>
-              <h2>Você explorou todas as músicas!</h2>
-              <p>Descubra seus matches musicais ou volte mais tarde para novas recomendações</p>
-              <div class="empty-actions">
-                <button v-if="matches.length > 0" @click="showMatches = true" class="btn-primary">
-                  Ver Meus Matches ({{ matches.length }})
-                </button>
-                <button @click="loadMoreSongs" class="btn-secondary">
-                  Carregar Mais
-                </button>
-              </div>
-            </div>
 
-            <div v-else class="cards-wrapper">
-              <div class="cards-container">
-                <div
-                  v-for="(song, index) in visibleSongs"
-                  :key="song.id"
-                  class="song-card"
-                  :class="{
-                    'top-card': index === visibleSongs.length - 1,
-                    'swiping-left': swipingLeft && index === visibleSongs.length - 1,
-                    'swiping-right': swipingRight && index === visibleSongs.length - 1
-                  }"
-                  :style="getCardStyle(index)"
-                  @mousedown="startDrag"
-                  @touchstart="startDrag"
-                  @mousemove="onDrag"
-                  @touchmove="onDrag"
-                  @mouseup="endDrag"
-                  @touchend="endDrag"
-                  @mouseleave="endDrag"
+                <button
+                  class="play-overlay-btn"
+                  @click.stop="togglePlay(song)"
+                  :class="{ playing: currentPlaying === song.id }"
                 >
-                  <div class="card-media">
-                    <img :src="song.cover || song.album?.cover_medium || 'https://e-cdns-images.dzcdn.net/images/cover/default/500x500.jpg'" :alt="song.title" class="cover-image">
+                  <svg v-if="currentPlaying !== song.id" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                  </svg>
+                </button>
 
-                    <div v-if="currentPlaying === song.id" class="visualizer">
-                      <div
-                        v-for="n in 5"
-                        :key="n"
-                        class="bar"
-                        :style="{
-                          animationDelay: n * 0.1 + 's',
-                          height: Math.random() * 40 + 20 + 'px'
-                        }"
-                      ></div>
-                    </div>
-
-                    <button
-                      class="play-overlay-btn"
-                      @click.stop="togglePlay(song)"
-                      :class="{ playing: currentPlaying === song.id }"
-                    >
-                      <svg v-if="currentPlaying !== song.id" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
-                      <svg v-else viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                      </svg>
-                    </button>
-
-                    <div class="swipe-indicator like" :class="{ active: dragOffset > 50 }">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                      </svg>
-                      <span>CURTIR</span>
-                    </div>
-
-                    <div class="swipe-indicator skip" :class="{ active: dragOffset < -50 }">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                      </svg>
-                      <span>PULAR</span>
-                    </div>
-
-                    <div v-if="isFavorite(song)" class="favorite-badge">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div class="card-info">
-                    <div class="song-header">
-                      <h2 class="song-title">{{ song.title }}</h2>
-                      <span v-if="currentPlaying === song.id" class="now-playing-badge">Tocando</span>
-                    </div>
-                    <p class="song-artist">{{ song.artist?.name || song.artist }}</p>
-
-                    <div class="song-details">
-                      <span class="genre-tag">{{ song.album?.title || song.genre }}</span>
-                      <span class="duration">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                        </svg>
-                        {{ formatDuration(song.duration) }}
-                      </span>
-                    </div>
-
-                    <div class="source-badge" :style="{ backgroundColor: sourceBadge?.color + '20', color: sourceBadge?.color, borderColor: sourceBadge?.color }">
-  <span v-html="sourceBadge?.icon"></span>
-  {{ sourceBadge?.text }}
-</div>
-
-                    <div v-if="currentPlaying === song.id" class="progress-container">
-                      <div class="progress-bar">
-                        <div class="progress-fill" :style="{ width: progress + '%' }"></div>
-                      </div>
-                      <div class="time-display">
-                        <span>{{ formatTime(currentTime) }}</span>
-                        <span>{{ formatDuration(song.duration) }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="action-buttons-container">
-                <div class="action-buttons">
-                  <button class="action-btn skip" @click="swipeLeft" aria-label="Pular">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-
-                  <button class="action-btn super-like" @click="toggleFavorite" :class="{ active: isFavorite(currentSong) }" aria-label="Favoritar">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  </button>
-
-                  <button class="action-btn like" @click="swipeRight" aria-label="Curtir">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                  </button>
+                <div class="swipe-indicator like" :class="{ active: dragOffset > 50 }">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                  <span>CURTIR</span>
                 </div>
 
-                <p class="instructions">
-                  Arraste para os lados ou use os botões
-                  <span v-if="matches.length === 0" class="unlock-hint">• Desbloqueie matches curtindo músicas</span>
-                </p>
-              </div>
-            </div>
-          </main>
-        </template>
-
-        <!-- Matches Modal -->
-        <Transition name="modal">
-          <div v-if="showMatches" class="modal-overlay" @click.self="closeMatches">
-            <div class="modal-content matches-modal">
-              <div class="modal-header">
-                <div class="header-title">
-                  <h3>Seus Matches Musicais</h3>
-                  <span v-if="matches.length > 0" class="match-count">{{ matches.length }} pessoa{{ matches.length !== 1 ? 's' : '' }}</span>
-                </div>
-                <button @click="closeMatches" class="close-btn">
+                <div class="swipe-indicator skip" :class="{ active: dragOffset < -50 }">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                   </svg>
+                  <span>PULAR</span>
+                </div>
+
+                <div v-if="isFavorite(song)" class="favorite-badge">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="card-info">
+                <div class="song-header">
+                  <h2 class="song-title">{{ song.title }}</h2>
+                  <span v-if="currentPlaying === song.id" class="now-playing-badge">Tocando</span>
+                </div>
+                <p class="song-artist">{{ song.artist?.name || song.artist }}</p>
+
+                <div class="song-details">
+                  <span class="genre-tag">{{ song.album?.title || song.genre }}</span>
+                  <span class="duration">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                    {{ formatDuration(song.duration) }}
+                  </span>
+                </div>
+
+                <div class="source-badge" :style="{ backgroundColor: sourceBadge?.color + '20', color: sourceBadge?.color, borderColor: sourceBadge?.color }">
+                  <span v-html="sourceBadge?.icon"></span>
+                  {{ sourceBadge?.text }}
+                </div>
+
+                <div v-if="currentPlaying === song.id" class="progress-container">
+                  <div class="progress-bar">
+                    <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+                  </div>
+                  <div class="time-display">
+                    <span>{{ formatTime(currentTime) }}</span>
+                    <span>{{ formatDuration(song.duration) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-buttons-container">
+            <div class="action-buttons">
+              <button class="action-btn skip" @click="swipeLeft" aria-label="Pular">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+
+              <button class="action-btn super-like" @click="toggleFavorite" :class="{ active: isFavorite(currentSong) }" aria-label="Favoritar">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </button>
+
+              <button class="action-btn like" @click="swipeRight" aria-label="Curtir">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </button>
+            </div>
+
+            <p class="instructions">
+              Arraste para os lados ou use os botões
+              <span v-if="matches.length === 0" class="unlock-hint">• Desbloqueie matches curtindo músicas</span>
+            </p>
+          </div>
+        </div>
+      </main>
+    </template>
+
+  <!-- ============================================ -->
+    <!-- MATCHES MODAL                                -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showMatches" class="modal-overlay" @click.self="closeMatches">
+        <div class="modal-content matches-modal">
+          <div class="modal-header">
+            <div class="header-title">
+              <h3>Seus Matches Musicais</h3>
+              <span v-if="matches.length > 0" class="match-count">{{ matches.length }} pessoa{{ matches.length !== 1 ? 's' : '' }}</span>
+            </div>
+            <button @click="closeMatches" class="close-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <div v-if="matches.length === 0" class="empty-matches">
+              <div class="lock-animation">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+  </svg>
+</div>
+              <h4>Matches bloqueados</h4>
+              <p>Curta pelo menos 3 músicas para desbloquear seus matches musicais!</p>
+              <div class="progress-lock">
+                <div class="progress-bar-lock">
+                  <div class="fill" :style="{ width: Math.min((likedSongs.length / 3) * 100, 100) + '%' }"></div>
+                </div>
+                <span>{{ likedSongs.length }}/3 músicas</span>
+              </div>
+            </div>
+
+            <div v-else class="matches-list">
+              <div v-for="match in matches" :key="match.id" class="match-card" @click="openMatchDetail(match)">
+                <div class="match-header-card">
+                  <div class="match-avatars">
+                    <img :src="currentUser.avatar" alt="You" class="avatar you">
+                    <img :src="match.user.avatar" alt="Match" class="avatar them">
+                    <div class="compatibility-badge">{{ match.compatibility }}%</div>
+                  </div>
+                  <div class="match-actions">
+                    <button class="icon-btn-small" @click.stop="removeMatch(match)">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="match-info">
+                  <h4>{{ match.user.name }}, {{ match.user.age }}</h4>
+                  <p class="match-location" v-if="match.user.location">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    {{ match.user.location }}
+                  </p>
+
+                  <div class="common-songs">
+                    <h5>Músicas em comum</h5>
+                    <div class="songs-tags">
+                      <span v-for="(song, i) in match.commonSongs.slice(0, 3)" :key="i" class="song-tag">
+                        {{ song }}
+                      </span>
+                      <span v-if="match.commonSongs.length > 3" class="more-tag">+{{ match.commonSongs.length - 3 }}</span>
+                    </div>
+                  </div>
+
+                  <div class="match-genres">
+                    <span v-for="genre in match.commonGenres" :key="genre" class="genre-pill">
+                      {{ genre }}
+                    </span>
+                  </div>
+                </div>
+
+                <button class="chat-btn-main" @click.stop="startChat(match)">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                  </svg>
+                  Iniciar Conversa
                 </button>
               </div>
-
-              <div class="modal-body">
-                <div v-if="matches.length === 0" class="empty-matches">
-                  <div class="lock-animation"><i class="fas fa-lock"></i></div>
-                  <h4>Matches bloqueados</h4>
-                  <p>Curta pelo menos 3 músicas para desbloquear seus matches musicais!</p>
-                  <div class="progress-lock">
-                    <div class="progress-bar-lock">
-                      <div class="fill" :style="{ width: Math.min((likedSongs.length / 3) * 100, 100) + '%' }"></div>
-                    </div>
-                    <span>{{ likedSongs.length }}/3 músicas</span>
-                  </div>
-                </div>
-
-                <div v-else class="matches-list">
-                  <div v-for="match in matches" :key="match.id" class="match-card" @click="openMatchDetail(match)">
-                    <div class="match-header-card">
-                      <div class="match-avatars">
-                        <img :src="currentUser.avatar" alt="You" class="avatar you">
-                        <img :src="match.user.avatar" alt="Match" class="avatar them">
-                        <div class="compatibility-badge">{{ match.compatibility }}%</div>
-                      </div>
-                      <div class="match-actions">
-                        <button class="icon-btn-small" @click.stop="removeMatch(match)">
-                          <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div class="match-info">
-                      <h4>{{ match.user.name }}, {{ match.user.age }}</h4>
-                      <p class="match-location" v-if="match.user.location">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                        </svg>
-                        {{ match.user.location }}
-                      </p>
-
-                      <div class="common-songs">
-                        <h5>Músicas em comum</h5>
-                        <div class="songs-tags">
-                          <span v-for="(song, i) in match.commonSongs.slice(0, 3)" :key="i" class="song-tag">
-                            {{ song }}
-                          </span>
-                          <span v-if="match.commonSongs.length > 3" class="more-tag">+{{ match.commonSongs.length - 3 }}</span>
-                        </div>
-                      </div>
-
-                      <div class="match-genres">
-                        <span v-for="genre in match.commonGenres" :key="genre" class="genre-pill">
-                          {{ genre }}
-                        </span>
-                      </div>
-                    </div>
-
-                    <button class="chat-btn-main" @click.stop="startChat(match)">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                      </svg>
-                      Iniciar Conversa
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
-        </Transition>
+        </div>
+      </div>
+    </Transition>
 
-        <!-- Profile Modal with Edit -->
-        <Transition name="modal">
-          <div v-if="showProfile" class="modal-overlay" @click.self="closeProfile">
-            <div class="modal-content profile-modal-full">
-              <div class="modal-header">
-                <h3>{{ isEditing ? 'Editar Perfil' : 'Meu Perfil' }}</h3>
-                <div class="header-actions-modal">
-                  <button v-if="!isEditing" @click="startEdit" class="btn-text">
-                    Editar
-                  </button>
-                  <button @click="closeProfile" class="close-btn">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <div class="modal-body profile-body">
-                <div v-if="!isEditing" class="profile-view">
-                  <div class="profile-hero">
-                    <div class="avatar-container">
-                      <img :src="currentUser.avatar" alt="Profile" class="profile-avatar-large">
-                      <div class="online-status"></div>
-                    </div>
-                    <h2>{{ currentUser.name }}, {{ currentUser.age }}</h2>
-                    <p class="profile-bio">{{ currentUser.bio }}</p>
-                    <p v-if="currentUser.location" class="profile-location">
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                      </svg>
-                      {{ currentUser.location }}
-                    </p>
-                  </div>
-
-                  <div class="stats-grid">
-                    <div class="stat-card">
-                      <span class="stat-number">{{ likedSongs.length }}</span>
-                      <span class="stat-label">Músicas Curtidas</span>
-                    </div>
-                    <div class="stat-card">
-                      <span class="stat-number">{{ favorites.length }}</span>
-                      <span class="stat-label">Favoritos</span>
-                    </div>
-                    <div class="stat-card">
-                      <span class="stat-number">{{ matches.length }}</span>
-                      <span class="stat-label">Matches</span>
-                    </div>
-                  </div>
-
-                  <div class="music-preferences">
-                    <h4>Preferências Musicais</h4>
-                    <div class="genres-cloud">
-                      <span
-                        v-for="genre in favoriteGenreObjects"
-                        :key="genre._id"
-                        class="genre-cloud-tag"
-                        :style="{ background: genre.color }"
-                      >
-                         <span v-html="genre.icon"></span> {{ genre.nome }}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="recent-likes" v-if="favorites.length > 0">
-                    <div class="recent-likes-header">
-                     <h4><i class="fas fa-star"></i> Favoritos</h4>
-                      <span class="likes-count">{{ favorites.length }} música{{ favorites.length !== 1 ? 's' : '' }}</span>
-                    </div>
-                    <div class="mini-song-list">
-                      <div v-for="song in [...favorites].reverse()" :key="song.id" class="mini-song">
-                        <div class="mini-cover">
-                          <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
-                        </div>
-                        <div class="mini-info">
-                          <span class="mini-title">{{ song.title }}</span>
-                          <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
-                        </div>
-                        <button
-                          class="unlike-btn favorite-active"
-                          @click="removeFavorite(song)"
-                          title="Remover dos favoritos"
-                        >
-                          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="recent-likes" v-if="likedSongs.length > 0">
-                    <div class="recent-likes-header">
-                      <h4>Curtidas Recentes</h4>
-                      <span class="likes-count">{{ likedSongs.length }} música{{ likedSongs.length !== 1 ? 's' : '' }}</span>
-                    </div>
-                    <div class="mini-song-list">
-                      <div v-for="song in [...likedSongs].reverse()" :key="song.id" class="mini-song">
-                        <div class="mini-cover">
-                          <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
-                        </div>
-                        <div class="mini-info">
-                          <span class="mini-title">{{ song.title }}</span>
-                          <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
-                        </div>
-                        <button
-                          class="unlike-btn"
-                          @click="unlikeSong(song)"
-                          title="Remover curtida"
-                        >
-                          <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                 <div class="logout-section">
-  <button @click="confirmLogout" class="btn-logout">
-    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-      <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-    </svg>
-    Sair da conta
-  </button>
-  
-  <!-- BOTÃO EXCLUIR CONTA -->
-  <button @click="confirmDeleteAccount" class="btn-delete-account">
-    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-    </svg>
-    Excluir conta
-  </button>
-</div>
-                </div>
-
-                <div v-else class="profile-edit">
-                  <div class="edit-section">
-                    <label>Foto de Perfil</label>
-                    <div class="avatar-edit">
-                      <img :src="editForm.avatar" alt="Preview" class="avatar-preview">
-                      <button class="change-photo-btn" @click="triggerFileInput">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                          <path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm3 6V7h3V4h7l1.83 2H21c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V10h3zm7 9c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-3.2-5c0 1.77 1.43 3.2 3.2 3.2s3.2-1.43 3.2-3.2-1.43-3.2-3.2-3.2-3.2 1.43-3.2 3.2z"/>
-                        </svg>
-                        Alterar foto
-                      </button>
-                      <input
-                        ref="fileInput"
-                        type="file"
-                        accept="image/*"
-                        @change="handleFileChange"
-                        class="hidden-input"
-                      >
-                    </div>
-                  </div>
-
-                  <div class="edit-section">
-                    <label for="edit-name">Nome</label>
-                    <input
-                      id="edit-name"
-                      v-model="editForm.name"
-                      type="text"
-                      class="edit-input"
-                      placeholder="Seu nome"
-                    >
-                  </div>
-
-                  <div class="edit-row">
-                    <div class="edit-section half">
-                      <label for="edit-age">Idade</label>
-                      <input
-                        id="edit-age"
-                        v-model.number="editForm.age"
-                        type="number"
-                        min="18"
-                        max="100"
-                        class="edit-input"
-                      >
-                    </div>
-                    <div class="edit-section half">
-                      <label for="edit-location">Localização</label>
-                      <input
-                        id="edit-location"
-                        v-model="editForm.location"
-                        type="text"
-                        class="edit-input"
-                        placeholder="Cidade, Estado"
-                      >
-                    </div>
-                  </div>
-
-                  <div class="edit-section">
-                    <label for="edit-bio">Bio</label>
-                    <textarea
-                      id="edit-bio"
-                      v-model="editForm.bio"
-                      class="edit-textarea"
-                      rows="3"
-                      placeholder="Conte sobre você e seus gostos musicais..."
-                      maxlength="150"
-                    ></textarea>
-                    <span class="char-count">{{ editForm.bio.length }}/150</span>
-                  </div>
-
-                  <div class="edit-actions">
-                    <button @click="cancelEdit" class="btn-secondary">Cancelar</button>
-                    <button @click="saveProfile" class="btn-primary" :disabled="!isFormValid">
-                      Salvar Alterações
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Transition>
-
-        <!-- Logout Confirmation Modal -->
-        <Transition name="modal">
-          <div v-if="showLogoutConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelLogout">
-            <div class="modal-content logout-confirm-modal">
-              <div class="logout-icon">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+    <!-- ============================================ -->
+    <!-- PROFILE MODAL                                -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showProfile" class="modal-overlay" @click.self="closeProfile">
+        <div class="modal-content profile-modal-full">
+          <div class="modal-header">
+            <h3>{{ isEditing ? 'Editar Perfil' : 'Meu Perfil' }}</h3>
+            <div class="header-actions-modal">
+              <button v-if="!isEditing" @click="startEdit" class="btn-text">
+                Editar
+              </button>
+              <button @click="closeProfile" class="close-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                 </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="modal-body profile-body">
+            <!-- Profile View -->
+            <div v-if="!isEditing" class="profile-view">
+              <div class="profile-hero">
+                <div class="avatar-container">
+                  <img :src="currentUser.avatar" alt="Profile" class="profile-avatar-large">
+                  <div class="online-status"></div>
+                </div>
+                <h2>{{ currentUser.name }}, {{ currentUser.age }}</h2>
+                <p class="profile-bio">{{ currentUser.bio }}</p>
+                <p v-if="currentUser.location" class="profile-location">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  {{ currentUser.location }}
+                </p>
               </div>
-              <h3>Sair da conta?</h3>
-              <p>Você precisará fazer login novamente para acessar seu perfil e matches.</p>
-              <div class="logout-actions">
-                <button @click="cancelLogout" class="btn-secondary">Cancelar</button>
-                <button @click="logout" class="btn-logout-confirm">
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <span class="stat-number">{{ likedSongs.length }}</span>
+                  <span class="stat-label">Músicas Curtidas</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-number">{{ favorites.length }}</span>
+                  <span class="stat-label">Favoritos</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-number">{{ matches.length }}</span>
+                  <span class="stat-label">Matches</span>
+                </div>
+              </div>
+
+              <div class="music-preferences">
+                <h4>Preferências Musicais</h4>
+                <div class="genres-cloud">
+                  <span
+                    v-for="genre in favoriteGenreObjects"
+                    :key="genre._id"
+                    class="genre-cloud-tag"
+                    :style="{ background: genre.color }"
+                  >
+                    <span v-html="genre.icon"></span> {{ genre.nome }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="recent-likes" v-if="favorites.length > 0">
+                <div class="recent-likes-header">
+                  <h4>
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="vertical-align: middle; margin-right: 4px;">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+  </svg>
+  Favoritos
+</h4>
+                  <span class="likes-count">{{ favorites.length }} música{{ favorites.length !== 1 ? 's' : '' }}</span>
+                </div>
+                <div class="mini-song-list">
+                  <div v-for="song in [...favorites].reverse()" :key="song.id" class="mini-song">
+                    <div class="mini-cover">
+                      <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
+                    </div>
+                    <div class="mini-info">
+                      <span class="mini-title">{{ song.title }}</span>
+                      <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
+                    </div>
+                    <button
+                      class="unlike-btn favorite-active"
+                      @click="removeFavorite(song)"
+                      title="Remover dos favoritos"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="recent-likes" v-if="likedSongs.length > 0">
+                <div class="recent-likes-header">
+                  <h4>Curtidas Recentes</h4>
+                  <span class="likes-count">{{ likedSongs.length }} música{{ likedSongs.length !== 1 ? 's' : '' }}</span>
+                </div>
+                <div class="mini-song-list">
+                  <div v-for="song in [...likedSongs].reverse()" :key="song.id" class="mini-song">
+                    <div class="mini-cover">
+                      <img :src="song.album?.cover_small || song.cover" alt="cover" width="40" height="40" style="border-radius: 6px; object-fit: cover;">
+                    </div>
+                    <div class="mini-info">
+                      <span class="mini-title">{{ song.title }}</span>
+                      <span class="mini-artist">{{ song.artist?.name || song.artist }}</span>
+                    </div>
+                    <button
+                      class="unlike-btn"
+                      @click="unlikeSong(song)"
+                      title="Remover curtida"
+                    >
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="logout-section">
+                <button @click="confirmLogout" class="btn-logout">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                     <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
                   </svg>
-                  Sair
+                  Sair da conta
+                </button>
+                
+                <button @click="confirmDeleteAccount" class="btn-delete-account">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
+                  Excluir conta
+                </button>
+              </div>
+            </div>
+
+            <!-- Profile Edit -->
+            <div v-else class="profile-edit">
+              <div class="edit-section">
+                <label>Foto de Perfil</label>
+                <div class="avatar-edit">
+                  <img :src="editForm.avatar" alt="Preview" class="avatar-preview">
+                  <button class="change-photo-btn" @click="triggerFileInput">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                      <path d="M3 4V1h2v3h3v2H5v3H3V6H0V4h3zm3 6V7h3V4h7l1.83 2H21c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V10h3zm7 9c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-3.2-5c0 1.77 1.43 3.2 3.2 3.2s3.2-1.43 3.2-3.2-1.43-3.2-3.2-3.2-3.2 1.43-3.2 3.2z"/>
+                    </svg>
+                    Alterar foto
+                  </button>
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    accept="image/*"
+                    @change="handleFileChange"
+                    class="hidden-input"
+                  >
+                </div>
+              </div>
+
+              <div class="edit-section">
+                <label for="edit-name">Nome</label>
+                <input
+                  id="edit-name"
+                  v-model="editForm.name"
+                  type="text"
+                  class="edit-input"
+                  placeholder="Seu nome"
+                >
+              </div>
+
+              <div class="edit-row">
+                <div class="edit-section half">
+                  <label for="edit-age">Idade</label>
+                  <input
+                    id="edit-age"
+                    v-model.number="editForm.age"
+                    type="number"
+                    min="18"
+                    max="100"
+                    class="edit-input"
+                  >
+                </div>
+                <div class="edit-section half">
+                  <label for="edit-location">Localização</label>
+                  <input
+                    id="edit-location"
+                    v-model="editForm.location"
+                    type="text"
+                    class="edit-input"
+                    placeholder="Cidade, Estado"
+                  >
+                </div>
+              </div>
+
+              <div class="edit-section">
+                <label for="edit-bio">Bio</label>
+                <textarea
+                  id="edit-bio"
+                  v-model="editForm.bio"
+                  class="edit-textarea"
+                  rows="3"
+                  placeholder="Conte sobre você e seus gostos musicais..."
+                  maxlength="150"
+                ></textarea>
+                <span class="char-count">{{ editForm.bio.length }}/150</span>
+              </div>
+
+              <div class="edit-actions">
+                <button @click="cancelEdit" class="btn-secondary">Cancelar</button>
+                <button @click="saveProfile" class="btn-primary" :disabled="!isFormValid">
+                  Salvar Alterações
                 </button>
               </div>
             </div>
           </div>
-        </Transition>
-
-        <!-- Match Notification -->
-        <Transition name="toast">
-          <div v-if="showMatchNotification" class="match-toast">
-            <div class="match-toast-content">
-              <div class="match-avatars-toast">
-                <img :src="currentUser.avatar" alt="You">
-                <img :src="lastMatch?.user.avatar" alt="Match">
-              </div>
-              <div class="match-toast-text">
-                <h4>It's a Musical Match! <i class="fas fa-music"></i></h4>
-                <p>Você e {{ lastMatch?.user.name }} curtiram as mesmas músicas</p>
-              </div>
-              <button @click="viewMatch" class="btn-primary-small">Ver</button>
-            </div>
-          </div>
-        </Transition>
-
-        <!-- Favorite Toast -->
-        <Transition name="toast">
-          <div v-if="showFavoriteToast" class="match-toast favorite-toast">
-            <div class="match-toast-content">
-              <div class="match-toast-text">
-                <h4><i class="fas fa-star"></i> Adicionado aos Favoritos!</h4>
-                <p>{{ lastFavorited?.title }} foi salva nos seus favoritos</p>
-              </div>
-              <button @click="showFavoriteToast = false" class="btn-primary-small">OK</button>
-            </div>
-          </div>
-        </Transition>
-
-        <!-- Delete Account Confirmation Modal -->
-<Transition name="modal">
-  <div v-if="showDeleteAccountConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelDeleteAccount">
-    <div class="modal-content logout-confirm-modal">
-      <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-        </svg>
+        </div>
       </div>
-      <h3>Excluir conta?</h3>
-      <p>Esta ação é <strong>irreversível</strong>. Todos os seus dados, curtidas, favoritos e matches serão permanentemente apagados.</p>
-      <div class="logout-actions">
-        <button @click="cancelDeleteAccount" class="btn-secondary">Cancelar</button>
-        <button @click="deleteAccount" class="btn-logout-confirm" style="background: #dc2626;" :disabled="deletingAccount">
-          <span v-if="deletingAccount">Excluindo...</span>
-          <span v-else>
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+    </Transition>
+
+    <!-- ============================================ -->
+    <!-- LOGOUT CONFIRMATION MODAL                    -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showLogoutConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelLogout">
+        <div class="modal-content logout-confirm-modal">
+          <div class="logout-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+          </div>
+          <h3>Sair da conta?</h3>
+          <p>Você precisará fazer login novamente para acessar seu perfil e matches.</p>
+          <div class="logout-actions">
+            <button @click="cancelLogout" class="btn-secondary">Cancelar</button>
+            <button @click="logout" class="btn-logout-confirm">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ============================================ -->
+    <!-- DELETE ACCOUNT CONFIRMATION MODAL            -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showDeleteAccountConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelDeleteAccount">
+        <div class="modal-content logout-confirm-modal">
+          <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
               <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
             </svg>
-            Excluir Conta
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
-</Transition>
-
-<Transition name="modal">
-  <div v-if="showChatList" class="modal-overlay chat-list-overlay" @click.self="closeChatList">
-    <div class="modal-content chat-list-modal">
-      <div class="chat-list-header">
-        <div class="chat-list-title">
-          <h3>Mensagens</h3>
-          <span v-if="totalUnread > 0" class="unread-badge">{{ totalUnread }}</span>
+          </div>
+          <h3>Excluir conta?</h3>
+          <p>Esta ação é <strong>irreversível</strong>. Todos os seus dados, curtidas, favoritos e matches serão permanentemente apagados.</p>
+          <div class="logout-actions">
+            <button @click="cancelDeleteAccount" class="btn-secondary">Cancelar</button>
+            <button @click="deleteAccount" class="btn-logout-confirm" style="background: #dc2626;" :disabled="deletingAccount">
+              <span v-if="deletingAccount">Excluindo...</span>
+              <span v-else>
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+                Excluir Conta
+              </span>
+            </button>
+          </div>
         </div>
-        <button @click="closeChatList" class="close-btn">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-          </svg>
-        </button>
       </div>
+    </Transition>
 
-      <div class="chat-list-body">
-        <div v-if="chats.length === 0" class="empty-chats">
-          <div class="empty-chat-icon">💬</div>
-          <h4>Nenhuma conversa ainda</h4>
-          <p>Curta músicas e faça matches para começar a conversar!</p>
+    <!-- ============================================ -->
+    <!-- MATCH NOTIFICATION TOAST                     -->
+    <!-- ============================================ -->
+    <Transition name="toast">
+      <div v-if="showMatchNotification" class="match-toast">
+        <div class="match-toast-content">
+          <div class="match-avatars-toast">
+            <img :src="currentUser.avatar" alt="You">
+            <img :src="lastMatch?.user.avatar" alt="Match">
+          </div>
+          <div class="match-toast-text">
+           <h4>
+  It's a Musical Match!
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="vertical-align: middle; margin-left: 4px;">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+  </svg>
+</h4>
+            <p>Você e {{ lastMatch?.user.name }} curtiram as mesmas músicas</p>
+          </div>
+          <button @click="viewMatch" class="btn-primary-small">Ver</button>
         </div>
+      </div>
+    </Transition>
 
-        <div v-else class="chat-items">
-          <div
-            v-for="chat in chats"
-            :key="chat.id"
-            class="chat-item"
-            :class="{ unread: chat.unreadCount > 0 }"
-            @click="openChat(chat)"
-          >
-            <div class="chat-avatar">
-              <img :src="chat.user.avatar" :alt="chat.user.name">
-              <div v-if="chat.unreadCount > 0" class="online-dot"></div>
+    <!-- ============================================ -->
+    <!-- FAVORITE TOAST                               -->
+    <!-- ============================================ -->
+    <Transition name="toast">
+      <div v-if="showFavoriteToast" class="match-toast favorite-toast">
+        <div class="match-toast-content">
+          <div class="match-toast-text">
+            <h4>
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="vertical-align: middle; margin-right: 4px;">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+  </svg>
+  Adicionado aos Favoritos!
+</h4>
+            <p>{{ lastFavorited?.title }} foi salva nos seus favoritos</p>
+          </div>
+          <button @click="showFavoriteToast = false" class="btn-primary-small">OK</button>
+        </div>
+      </div>
+    </Transition>
+
+  <!-- ============================================ -->
+    <!-- CHAT LIST MODAL                              -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showChatList" class="modal-overlay chat-list-overlay" @click.self="closeChatList">
+        <div class="modal-content chat-list-modal">
+          <div class="chat-list-header">
+            <div class="chat-list-title">
+              <h3>Mensagens</h3>
+              <span v-if="totalUnread > 0" class="unread-badge">{{ totalUnread }}</span>
             </div>
-            <div class="chat-info">
-              <div class="chat-row">
-  <div class="chat-name-group">
-    <h4 class="chat-name">{{ chat.user.name }}</h4>
+            <button @click="closeChatList" class="close-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
 
-    <span v-if="chat.silenciado" class="chat-muted-badge" title="Chat silenciado">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-        <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-      </svg>
-    </span>
-
-    <button
-      class="chat-delete-inline-btn"
-      @click.stop="abrirModalExcluirChat(chat)"
-      title="Excluir chat"
-    >
-      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-      </svg>
-    </button>
-  </div>
-
-  <span class="chat-time">{{ formatChatTime(chat.ultimaData) }}</span>
+          <div class="chat-list-body">
+            <div v-if="chats.length === 0" class="empty-chats">
+              <div class="empty-chat-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+  </svg>
 </div>
+              <h4>Nenhuma conversa ainda</h4>
+              <p>Curta músicas e faça matches para começar a conversar!</p>
+            </div>
 
-              <div class="chat-row">
-              <p class="chat-preview">
-  {{ chat.bloqueado ? 'Usuário bloqueado' : chat.ultimaMensagem }}
-</p>
-
-                <span v-if="chat.unreadCount > 0" class="unread-count">{{ chat.unreadCount }}</span>
+            <div v-else class="chat-items">
+              <div
+                v-for="chat in chats"
+                :key="chat.id"
+                class="chat-item"
+                :class="{ unread: chat.unreadCount > 0 }"
+                @click="openChat(chat)"
+              >
+                <div class="chat-avatar">
+                  <img :src="chat.user.avatar" :alt="chat.user.name">
+                  <div v-if="chat.unreadCount > 0" class="online-dot"></div>
+                </div>
+                <div class="chat-info">
+                  <div class="chat-row">
+                    <div class="chat-name-group">
+                      <h4 class="chat-name">{{ chat.user.name }}</h4>
+                      <span v-if="chat.silenciado" class="chat-muted-badge" title="Chat silenciado">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                          <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                        </svg>
+                      </span>
+                      <button
+                        class="chat-delete-inline-btn"
+                        @click.stop="abrirModalExcluirChat(chat)"
+                        title="Excluir chat"
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <span class="chat-time">{{ formatChatTime(chat.ultimaData) }}</span>
+                  </div>
+                  <div class="chat-row">
+                    <p class="chat-preview">
+                      {{ chat.bloqueado ? 'Usuário bloqueado' : chat.ultimaMensagem }}
+                    </p>
+                    <span v-if="chat.unreadCount > 0" class="unread-count">{{ chat.unreadCount }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</Transition>
+    </Transition>
 
-<!-- ============================================ -->
-<!-- CHAT CONVERSATION MODAL (Whatsapp style) -->
-<!-- ============================================ -->
-<Transition name="chat-slide">
-  <div v-if="showChat" class="chat-overlay" @click.self="closeChat">
-    <div class="chat-container">
-      <!-- Chat Header -->
-      <div class="chat-header">
-        <button @click="closeChat" class="chat-back-btn">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-          </svg>
-        </button>
-        <div class="chat-user-info">
-          <img :src="activeChatUser?.avatar" :alt="activeChatUser?.name" class="chat-user-avatar">
-          <div class="chat-user-details">
-            <h4>{{ activeChatUser?.name }}</h4>
-            <span class="chat-status">online</span>
-          </div>
-        </div>
-               <div class="chat-menu-container">
-          <button class="chat-menu-btn" @click="showChatMenu = !showChatMenu">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-          </button>
-
-          <!-- Dropdown Menu -->
-          <div v-if="showChatMenu" class="chat-dropdown-menu">
-            <button @click="limparChat" class="dropdown-item">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+    <!-- ============================================ -->
+    <!-- CHAT CONVERSATION MODAL (Whatsapp style)     -->
+    <!-- ============================================ -->
+    <Transition name="chat-slide">
+      <div v-if="showChat" class="chat-overlay" @click.self="closeChat">
+        <div class="chat-container">
+          <!-- Chat Header -->
+          <div class="chat-header">
+            <button @click="closeChat" class="chat-back-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
               </svg>
-              <span>Limpar conversa</span>
             </button>
- <button @click="silenciarChat" class="dropdown-item">
-  <svg v-if="!chatSilenciado" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-  </svg>
+            <div class="chat-user-info">
+              <img :src="activeChatUser?.avatar" :alt="activeChatUser?.name" class="chat-user-avatar">
+              <div class="chat-user-details">
+                <h4>{{ activeChatUser?.name }}</h4>
+                <span class="chat-status">online</span>
+              </div>
+            </div>
+            <div class="chat-menu-container">
+              <button class="chat-menu-btn" @click="showChatMenu = !showChatMenu">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                </svg>
+              </button>
 
-  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-    <path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71 0 1.5-.37 2.91-1.03 4.15l1.51 1.51C20.44 16.07 21 14.11 21 12c0-4.28-2.99-7.86-7-8.77zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l5.73 5.73 1.27-1.27L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+              <!-- Dropdown Menu -->
+              <div v-if="showChatMenu" class="chat-dropdown-menu">
+                <button @click="limparChat" class="dropdown-item">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                  </svg>
+                  <span>Limpar conversa</span>
+                </button>
+                <button @click="silenciarChat" class="dropdown-item">
+                  <svg v-if="!chatSilenciado" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M14 3.23v2.06c2.89.86 5 3.54 5 6.71 0 1.5-.37 2.91-1.03 4.15l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l5.73 5.73 1.27-1.27L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                  <span>{{ chatSilenciado ? 'Dessilenciar chat' : 'Silenciar chat' }}</span>
+                </button>
+<button 
+  v-if="!chatBloqueado || !bloqueadoPorMim" 
+  @click="abrirModalBloqueio" 
+  class="dropdown-item danger"
+>
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
   </svg>
-
-  <span>{{ chatSilenciado ? 'Dessilenciar chat' : 'Silenciar chat' }}</span>
+  <span>Bloquear</span>
 </button>
 
-         <button @click="abrirModalBloqueio" class="dropdown-item danger">
-
-              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
-              </svg>
-              <span>Bloquear</span>
-            </button>
-            <button @click="denunciarChat" class="dropdown-item danger">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
-              </svg>
-              <span>Denunciar</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chat Messages -->
-<div class="chat-messages" ref="chatMessagesRef" id="chat-messages-container">
-  <div v-if="chatBloqueado" class="chat-blocked-state">
-    <div class="chat-blocked-icon">🚫</div>
-    <h4>{{ bloqueadoPorMim ? 'Usuário bloqueado' : 'Você foi bloqueado' }}</h4>
-    <p v-if="bloqueadoPorMim">
-      As mensagens foram ocultadas e você não pode mais enviar mensagens para esta pessoa.
-    </p>
-    <p v-else>
-      Esta conversa está indisponível porque este usuário bloqueou você.
-    </p>
-  </div>
-<div v-else-if="chatMessages.length === 0" class="chat-welcome">
-  <div class="empty-chat-content">
-    <div class="empty-chat-icon">🎵</div>
-    <h4>Comece a conversa</h4>
-    <p>Envie uma mensagem para iniciar o chat</p>
-  </div>
-</div>
-
-<div
-  v-for="(msg, index) in chatMessages"
-          :key="msg.id"
-          class="message"
-          :class="{
-            'message-sent': msg.remetente === currentUserId,
-            'message-received': msg.remetente !== currentUserId,
-            'message-musica': msg.tipo === 'musica'
-          }"
-        >
-          <!-- Music Message -->
-          <div v-if="msg.tipo === 'musica'" class="musica-card">
-            <img :src="msg.musica?.cover" alt="cover" class="musica-cover">
-            <div class="musica-info">
-              <span class="musica-title">{{ msg.musica?.title }}</span>
-              <span class="musica-artist">{{ msg.musica?.artist }}</span>
-            </div>
-            <button v-if="msg.musica?.preview" @click="playPreview(msg.musica)" class="musica-play">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </button>
-          </div>
-
-                    <!-- Audio Message -->
-          <div v-else-if="msg.tipo === 'audio'" class="audio-message">
-            <button @click="tocarAudio(msg)" class="audio-play-btn">
-              <svg v-if="audioTocando !== msg.id" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <svg v-else viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-              </svg>
-            </button>
-            <div class="audio-wave">
-              <div v-for="n in 20" :key="n" class="wave-bar" :style="{ height: Math.random() * 20 + 5 + 'px' }"></div>
-            </div>
-            <span class="audio-duration">{{ formatarTempoAudio(msg.duracao || 0) }}</span>
-          </div>
-
-          <!-- Image Message -->
-<div v-else-if="msg.tipo === 'imagem'" class="image-message">
-<img 
-  :src="getFullUrl(msg.arquivo?.url)" 
-  alt="Foto" 
-  class="chat-image" 
-  @click="abrirImagem(msg)"
-  @error="handleImageError($event, msg)"
+<button 
+  v-else 
+  @click="desbloquearUsuario" 
+  class="dropdown-item"
+  :disabled="unblockingUser"
 >
-</div>
-
-          <!-- File Message -->
-          <div v-else-if="msg.tipo === 'arquivo'" class="file-message">
-            <div class="file-icon">📎</div>
-            <div class="file-info">
-              <span class="file-name">{{ msg.arquivo?.nome || 'Arquivo' }}</span>
-              <span class="file-size">{{ formatarTamanhoArquivo(msg.arquivo?.tamanho) }}</span>
+  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
+  </svg>
+  <span>{{ unblockingUser ? 'Desbloqueando...' : 'Desbloquear' }}</span>
+</button>
+                <button @click="denunciarChat" class="dropdown-item danger">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
+                  </svg>
+                  <span>Denunciar</span>
+                </button>
+              </div>
             </div>
-          <a :href="getFullUrl(msg.arquivo?.url)" target="_blank" download class="file-download">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-              </svg>
-            </a>
           </div>
 
-          <!-- Text Message -->
-          <p v-else class="message-text">{{ msg.conteudo }}</p>
+          <!-- Chat Messages -->
+          <div class="chat-messages" ref="chatMessagesRef" id="chat-messages-container">
+            <!-- Blocked State -->
+            <div v-if="chatBloqueado" class="chat-blocked-state">
+              <div class="chat-blocked-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
+  </svg>
+</div>
+              <h4>{{ bloqueadoPorMim ? 'Usuário bloqueado' : 'Você foi bloqueado' }}</h4>
+              <p v-if="bloqueadoPorMim">
+                As mensagens foram ocultadas e você não pode mais enviar mensagens para esta pessoa.
+              </p>
+              <p v-else>
+                Esta conversa está indisponível porque este usuário bloqueou você.
+              </p>
+            </div>
 
-          <div class="message-meta">
-            <span class="message-time">{{ formatChatTime(msg.createdAt) }}</span>
-            <span v-if="msg.remetente === currentUserId" class="message-status">
-              <svg v-if="msg.lida" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="read">
-                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+            <!-- Empty State -->
+            <div v-else-if="chatMessages.length === 0" class="chat-welcome">
+              <div class="empty-chat-content">
+                <div class="empty-chat-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+  </svg>
+</div>
+                <h4>Comece a conversa</h4>
+                <p>Envie uma mensagem para iniciar o chat</p>
+              </div>
+            </div>
+
+            <!-- Messages List -->
+            <div
+              v-for="(msg, index) in chatMessages"
+              :key="msg.id"
+              class="message"
+              :class="{
+                'message-sent': msg.remetente === currentUserId,
+                'message-received': msg.remetente !== currentUserId,
+                'message-musica': msg.tipo === 'musica'
+              }"
+            >
+              <!-- Music Message -->
+              <div v-if="msg.tipo === 'musica'" class="musica-card">
+                <img :src="msg.musica?.cover" alt="cover" class="musica-cover">
+                <div class="musica-info">
+                  <span class="musica-title">{{ msg.musica?.title }}</span>
+                  <span class="musica-artist">{{ msg.musica?.artist }}</span>
+                </div>
+                <button v-if="msg.musica?.preview" @click="playPreview(msg.musica)" class="musica-play">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Audio Message -->
+              <div v-else-if="msg.tipo === 'audio'" class="audio-message">
+                <button @click="tocarAudio(msg)" class="audio-play-btn">
+                  <svg v-if="audioTocando !== msg.id" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                  </svg>
+                </button>
+                <div class="audio-wave">
+                  <div v-for="n in 20" :key="n" class="wave-bar" :style="{ height: Math.random() * 20 + 5 + 'px' }"></div>
+                </div>
+                <span class="audio-duration">{{ formatarTempoAudio(msg.duracao || 0) }}</span>
+              </div>
+
+              <!-- Image Message -->
+              <div v-else-if="msg.tipo === 'imagem'" class="image-message">
+                <img 
+                  :src="getFullUrl(msg.arquivo?.url)" 
+                  alt="Foto" 
+                  class="chat-image" 
+                  @click="abrirImagem(msg)"
+                  @error="handleImageError($event, msg)"
+                >
+              </div>
+
+              <!-- File Message -->
+              <div v-else-if="msg.tipo === 'arquivo'" class="file-message">
+                <div class="file-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+    <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+  </svg>
+</div>
+                <div class="file-info">
+                  <span class="file-name">{{ msg.arquivo?.nome || 'Arquivo' }}</span>
+                  <span class="file-size">{{ formatarTamanhoArquivo(msg.arquivo?.tamanho) }}</span>
+                </div>
+                <a :href="getFullUrl(msg.arquivo?.url)" target="_blank" download class="file-download">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                  </svg>
+                </a>
+              </div>
+
+              <!-- Text Message -->
+              <p v-else class="message-text">{{ msg.conteudo }}</p>
+
+              <div class="message-meta">
+                <span class="message-time">{{ formatChatTime(msg.createdAt) }}</span>
+                <span v-if="msg.remetente === currentUserId" class="message-status">
+                  <svg v-if="msg.lida" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="read">
+                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Preview Bar -->
+          <div v-if="showPreviewMidia" class="media-preview-bar">
+            <div class="preview-content">
+              <img v-if="previewMidia.tipo === 'imagem'" :src="previewMidia.url" class="preview-image">
+              <div v-else class="preview-file">
+                <span class="file-icon-preview">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+    <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+  </svg>
+</span>
+                <div class="preview-file-info">
+                  <span class="preview-file-name">{{ previewMidia.nome }}</span>
+                  <span class="preview-file-size">{{ formatarTamanhoArquivo(previewMidia.tamanho) }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="preview-actions">
+              <button @click="cancelarPreview" class="preview-btn cancel">✕</button>
+              <button @click="confirmarEnvioMidia" class="preview-btn send">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Blocked Input State -->
+          <div v-if="chatBloqueado" class="chat-input-blocked">
+            <span v-if="bloqueadoPorMim">Você bloqueou este usuário</span>
+            <span v-else>Você não pode responder nesta conversa</span>
+          </div>
+
+          <!-- Chat Input Area (only when not blocked) -->
+          <div v-else class="chat-input-area">
+            <!-- Emoji Picker Overlay -->
+            <div v-if="showEmojiPicker" class="emoji-overlay" @click.self="closeEmojiPicker">
+              <div class="emoji-picker-premium">
+                <div class="picker-header">
+                  <div class="picker-title">
+                   <span class="picker-icon">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
+  </svg>
+</span>
+                    <div class="picker-text">
+                      <h4>Escolha um Emoji</h4>
+                      <p>Clique para selecionar</p>
+                    </div>
+                  </div>
+                  <button @click="closeEmojiPicker" class="btn-close-picker">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="picker-categories">
+                  <button 
+                    v-for="cat in emojiCategories" 
+                    :key="cat.name"
+                    @click="activeEmojiCategory = cat.name"
+                    :class="{ active: activeEmojiCategory === cat.name }"
+                    class="category-tab"
+                    :title="cat.name"
+                  >
+                    <span class="cat-icon">{{ cat.icon }}</span>
+                    <span class="cat-name">{{ cat.name }}</span>
+                  </button>
+                </div>
+
+                <div class="picker-emojis-container">
+                  <div class="emoji-grid-premium">
+                    <button
+                      v-for="emoji in filteredChatEmojis"
+                      :key="emoji"
+                      @click="insertEmoji(emoji)"
+                      class="emoji-btn-premium"
+                    >
+                      {{ emoji }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="picker-footer">
+                  <span class="selected-preview">{{ emojiSearch || 'Nenhum' }}</span>
+                  <button @click="closeEmojiPicker" class="btn-done">Concluir</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Emoji Button -->
+            <button class="chat-emoji-btn" @click="toggleEmojiPicker" :class="{ active: showEmojiPicker }">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
               </svg>
-              <svg v-else viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+            </button>
+
+            <!-- Attach Button -->
+            <button class="chat-attach-btn" @click="showAttachMenu = !showAttachMenu">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
               </svg>
-            </span>
+            </button>
+
+            <!-- Input Wrapper -->
+            <div class="chat-input-wrapper">
+              <!-- Text Input or Recording -->
+              <template v-if="!gravandoAudio">
+                <input
+                  v-model="novaMensagem"
+                  type="text"
+                  class="chat-input"
+                  placeholder="Mensagem..."
+                  @keyup.enter="enviarMensagem"
+                  ref="chatInputRef"
+                >
+              </template>
+              <template v-else>
+                <div class="audio-recording">
+                  <div class="recording-dot"></div>
+                  <span class="recording-time">{{ formatarTempoAudio(tempoGravacao) }}</span>
+                  <span class="recording-label">Gravando...</span>
+                </div>
+              </template>
+
+              <!-- Send Button (when text exists) -->
+              <button v-if="novaMensagem.trim() && !gravandoAudio" @click="enviarMensagem" class="chat-send-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+              
+              <!-- Mic Button (when no text) -->
+              <button 
+                v-else-if="!gravandoAudio" 
+                class="chat-mic-btn"
+                @mousedown="iniciarGravacao"
+                @touchstart.prevent="iniciarGravacao"
+                @mouseup="pararGravacao"
+                @touchend.prevent="pararGravacao"
+                @mouseleave="cancelarGravacao"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+              </button>
+
+              <!-- Cancel Recording -->
+              <button 
+                v-if="gravandoAudio" 
+                @click="cancelarGravacao"
+                class="chat-cancel-audio"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+
+              <!-- Confirm Recording -->
+              <button 
+                v-if="gravandoAudio" 
+                @click="pararGravacao"
+                class="chat-send-btn"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Attach Menu -->
+          <div v-if="showAttachMenu" class="attach-menu">
+            <button @click="selecionarFoto" class="attach-option">
+              <span class="attach-icon">
+</span>
+              <span>Foto</span>
+            </button>
+            
+            <button @click="selecionarArquivo" class="attach-option">
+             <span class="attach-icon">
+</span>
+              <span>Arquivo</span>
+            </button>
+          </div>
+
+          <!-- Hidden File Inputs -->
+          <input 
+            ref="fileInputFoto" 
+            type="file" 
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            class="hidden-input" 
+            @change="(e) => onFileSelected(e, 'imagem')"
+          />
+
+          <input 
+            ref="fileInputArquivo" 
+            type="file"
+            accept=".pdf,.txt,.doc,.docx"
+            class="hidden-input" 
+            @change="(e) => onFileSelected(e, 'arquivo')"
+          />
+
+           <!-- ============================================ -->
+    <!-- BLOCK USER CONFIRMATION MODAL                -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showBlockConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelarModalBloqueio">
+        <div class="modal-content logout-confirm-modal">
+          <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
+            </svg>
+          </div>
+
+          <h3>Bloquear usuário?</h3>
+          <p>
+            As mensagens desta conversa serão ocultadas e você não poderá mais enviar novas mensagens.
+          </p>
+
+          <div class="logout-actions">
+            <button @click="cancelarModalBloqueio" class="btn-secondary">Cancelar</button>
+            <button @click="confirmarBloqueioUsuario" class="btn-logout-confirm" style="background: #dc2626;" :disabled="blockingUser">
+              <span v-if="blockingUser">Bloqueando...</span>
+              <span v-else>Bloquear</span>
+            </button>
           </div>
         </div>
       </div>
-
-<!-- Preview de mídia estilo WhatsApp -->
-<div v-if="showPreviewMidia" class="media-preview-bar">
-  <div class="preview-content">
-    <img v-if="previewMidia.tipo === 'imagem'" :src="previewMidia.url" class="preview-image">
-    <div v-else class="preview-file">
-      <span class="file-icon-preview">📎</span>
-      <div class="preview-file-info">
-        <span class="preview-file-name">{{ previewMidia.nome }}</span>
-        <span class="preview-file-size">{{ formatarTamanhoArquivo(previewMidia.tamanho) }}</span>
+    </Transition>
+        </div>
       </div>
+    </Transition>
+
+    <!-- ============================================ -->
+    <!-- DELETE CHAT CONFIRMATION MODAL               -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showDeleteChatConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelarExcluirChat">
+        <div class="modal-content logout-confirm-modal">
+          <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+              <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+            </svg>
+          </div>
+
+          <h3>Excluir chat?</h3>
+          <p>
+            Esta conversa com <strong>{{ chatToDelete?.user?.name }}</strong> será removida da sua lista.
+          </p>
+
+          <div class="logout-actions">
+            <button @click="cancelarExcluirChat" class="btn-secondary">Cancelar</button>
+            <button @click="confirmarExcluirChat" class="btn-logout-confirm" style="background: #dc2626;" :disabled="deletingChat">
+              <span v-if="deletingChat">Excluindo...</span>
+              <span v-else>Excluir</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+  <Transition name="toast">
+  <div v-if="toast.show" class="toast-notification" :class="`toast-${toast.type}`">
+    <div class="toast-icon">
+      <svg v-if="toast.type === 'success'" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      </svg>
+      <svg v-else-if="toast.type === 'error'" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+      <svg v-else-if="toast.type === 'warning'" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+      </svg>
+      <svg v-else viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+      </svg>
     </div>
-  </div>
-  <div class="preview-actions">
-    <button @click="cancelarPreview" class="preview-btn cancel">✕</button>
-    <button @click="confirmarEnvioMidia" class="preview-btn send">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+    <div class="toast-content">
+      <h4 v-if="toast.title" class="toast-title">{{ toast.title }}</h4>
+      <p class="toast-message">{{ toast.message }}</p>
+    </div>
+    <button @click="hideToast" class="toast-close">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
       </svg>
     </button>
   </div>
-</div>
-      <!-- Chat Input -->
-  <div v-if="!chatBloqueado" class="chat-input-area">
-
-        <!-- Botão Emoji -->
-<div v-if="showEmojiPicker" class="emoji-overlay" @click.self="closeEmojiPicker">
-  <div class="emoji-picker-premium">
-    <div class="picker-header">
-      <div class="picker-title">
-        <span class="picker-icon">😊</span>
-        <div class="picker-text">
-          <h4>Escolha um Emoji</h4>
-          <p>Clique para selecionar</p>
-        </div>
-      </div>
-      <button @click="closeEmojiPicker" class="btn-close-picker">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-
-    <div class="picker-categories">
-      <button 
-        v-for="cat in emojiCategories" 
-        :key="cat.name"
-        @click="activeEmojiCategory = cat.name"
-        :class="{ active: activeEmojiCategory === cat.name }"
-        class="category-tab"
-        :title="cat.name"
-      >
-        <span class="cat-icon">{{ cat.icon }}</span>
-        <span class="cat-name">{{ cat.name }}</span>
-      </button>
-    </div>
-
-    <div class="picker-emojis-container">
-      <div class="emoji-grid-premium">
-        <button
-          v-for="emoji in filteredChatEmojis"
-          :key="emoji"
-          @click="insertEmoji(emoji)"
-          class="emoji-btn-premium"
-        >
-          {{ emoji }}
-        </button>
-      </div>
-    </div>
-
-    <div class="picker-footer">
-      <span class="selected-preview">{{ emojiSearch || 'Nenhum' }}</span>
-      <button @click="closeEmojiPicker" class="btn-done">Concluir</button>
-    </div>
-  </div>
-  <div v-else class="chat-input-blocked">
-  <span v-if="bloqueadoPorMim">Você bloqueou este usuário</span>
-  <span v-else>Você não pode responder nesta conversa</span>
-</div>
-
-</div>
-        <!-- Botão Emoji -->
-        <button class="chat-emoji-btn" @click="toggleEmojiPicker" :class="{ active: showEmojiPicker }">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/>
-          </svg>
-        </button>
-
-        <button class="chat-attach-btn" @click="showAttachMenu = !showAttachMenu">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-            <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
-          </svg>
-        </button>
-
-        <div class="chat-input-wrapper">
-
-          <!-- Input de texto ou gravação -->
-          <template v-if="!gravandoAudio">
-            <input
-              v-model="novaMensagem"
-              type="text"
-              class="chat-input"
-              placeholder="Mensagem..."
-              @keyup.enter="enviarMensagem"
-              ref="chatInputRef"
-            >
-          </template>
-          <template v-else>
-            <div class="audio-recording">
-              <div class="recording-dot"></div>
-              <span class="recording-time">{{ formatarTempoAudio(tempoGravacao) }}</span>
-              <span class="recording-label">Gravando...</span>
-            </div>
-          </template>
-
-          <!-- Botões de ação -->
-          <button v-if="novaMensagem.trim() && !gravandoAudio" @click="enviarMensagem" class="chat-send-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-            </svg>
-          </button>
-          
-          <button 
-            v-else-if="!gravandoAudio" 
-            class="chat-mic-btn"
-            @mousedown="iniciarGravacao"
-            @touchstart.prevent="iniciarGravacao"
-            @mouseup="pararGravacao"
-            @touchend.prevent="pararGravacao"
-            @mouseleave="cancelarGravacao"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-            </svg>
-          </button>
-
-          <button 
-            v-if="gravandoAudio" 
-            @click="cancelarGravacao"
-            class="chat-cancel-audio"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-            </svg>
-          </button>
-
-          <button 
-            v-if="gravandoAudio" 
-            @click="pararGravacao"
-            class="chat-send-btn"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <!-- Attach Menu -->
-           <!-- Attach Menu -->
-      <div v-if="showAttachMenu" class="attach-menu">
-        <button @click="selecionarFoto" class="attach-option">
-          <span class="attach-icon">📷</span>
-          <span>Foto</span>
-        </button>
-        
-        <button @click="selecionarArquivo" class="attach-option">
-          <span class="attach-icon">📎</span>
-          <span>Arquivo</span>
-        </button>
-<input 
-  ref="fileInputFoto" 
-  type="file" 
-  accept="image/jpeg,image/png,image/gif,image/webp"
-  class="hidden-input" 
-  @change="(e) => onFileSelected(e, 'imagem')"
-/>
-
-<input 
-  ref="fileInputArquivo" 
-  type="file"
-  accept=".pdf,.txt,.doc,.docx"
-  class="hidden-input" 
-  @change="(e) => onFileSelected(e, 'arquivo')"
-/>
-      </div>
-    </div>
-  </div>
 </Transition>
-
-<Transition name="modal">
-  <div v-if="showBlockConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelarModalBloqueio">
-    <div class="modal-content logout-confirm-modal">
-      <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
-        </svg>
-      </div>
-
-      <h3>Bloquear usuário?</h3>
-      <p>
-        As mensagens desta conversa serão ocultadas e você não poderá mais enviar novas mensagens.
-      </p>
-
-      <div class="logout-actions">
-        <button @click="cancelarModalBloqueio" class="btn-secondary">Cancelar</button>
-        <button @click="confirmarBloqueioUsuario" class="btn-logout-confirm" style="background: #dc2626;" :disabled="blockingUser">
-          <span v-if="blockingUser">Bloqueando...</span>
-          <span v-else>Bloquear</span>
-        </button>
-      </div>
-    </div>
   </div>
-</Transition>
-
-<Transition name="modal">
-  <div v-if="showDeleteChatConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelarExcluirChat">
-    <div class="modal-content logout-confirm-modal">
-      <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-        </svg>
-      </div>
-
-      <h3>Excluir chat?</h3>
-      <p>
-        Esta conversa com <strong>{{ chatToDelete?.user?.name }}</strong> será removida da sua lista.
-      </p>
-
-      <div class="logout-actions">
-        <button @click="cancelarExcluirChat" class="btn-secondary">Cancelar</button>
-        <button @click="confirmarExcluirChat" class="btn-logout-confirm" style="background: #dc2626;" :disabled="deletingChat">
-          <span v-if="deletingChat">Excluindo...</span>
-          <span v-else>Excluir</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</Transition>
-</div>
-      </div>
-    </template>
+</template>
 
     <script>
     import api from '@/services/api'
@@ -1379,6 +1516,14 @@ emojiCategories: [
           availableGenres: [],
           loadingGenres: false,
 
+           toast: {
+      show: false,
+      type: 'success', // success | error | warning | info
+      title: '',
+      message: '',
+      timer: null
+    },
+
           currentIndex: 0,
           dragOffset: 0,
           dragStartX: 0,
@@ -1389,6 +1534,7 @@ emojiCategories: [
           chatBloqueado: false,
 bloqueadoPorMim: false,
 bloqueadoPorOutro: false,
+unblockingUser: false,
 
 showBlockConfirm: false,
 blockingUser: false,
@@ -1550,6 +1696,82 @@ showPreviewMidia: false,
   },
 
       methods: {
+         showToast({ type = 'success', title = '', message = '', duration = 4000 }) {
+    // Limpa timer anterior se existir
+    if (this.toast.timer) {
+      clearTimeout(this.toast.timer)
+    }
+
+    this.toast = {
+      show: true,
+      type,
+      title,
+      message,
+      timer: null
+    }
+
+    // Auto-hide após duration
+    this.toast.timer = setTimeout(() => {
+      this.hideToast()
+    }, duration)
+  },
+
+  hideToast() {
+    this.toast.show = false
+    if (this.toast.timer) {
+      clearTimeout(this.toast.timer)
+      this.toast.timer = null
+    }
+  },
+
+        async desbloquearUsuario() {
+  if (!this.activeChat) return
+
+  try {
+    this.unblockingUser = true
+
+    const { data } = await api.post(`/chats/${this.activeChat.id}/desbloquear`)
+
+    this.chatBloqueado = false
+    this.bloqueadoPorMim = false
+    this.bloqueadoPorOutro = false
+    this.showChatMenu = false
+
+    // Atualiza a lista de chats
+    this.chats = this.chats.map(chat =>
+      chat.id === this.activeChat.id
+        ? {
+            ...chat,
+            bloqueado: false,
+            bloqueadoPorMim: false,
+            bloqueadoPorOutro: false,
+            ultimaMensagem: 'Usuário desbloqueado',
+            unreadCount: 0
+          }
+        : chat
+    )
+
+    // Recarrega as mensagens
+    const { data: refreshData } = await api.get(`/chats/${this.activeChat.id}/mensagens`)
+    this.chatMessages = refreshData.mensagens || []
+
+this.showToast({
+  type: 'success',
+  title: 'Desbloqueado',
+  message: data.message || 'Usuário desbloqueado com sucesso'
+})
+
+  } catch (error) {
+    console.error('Erro ao desbloquear usuário:', error)
+this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: error.response?.data?.error || 'Erro ao desbloquear usuário'
+})
+  } finally {
+    this.unblockingUser = false
+  }
+},
         abrirModalBloqueio() {
   this.showChatMenu = false
   this.showBlockConfirm = true
@@ -1588,10 +1810,18 @@ async confirmarBloqueioUsuario() {
         : chat
     )
 
-    alert(data.message || 'Usuário bloqueado com sucesso')
+    this.showToast({
+  type: 'success',
+  title: 'Bloqueado',
+  message: data.message || 'Usuário bloqueado com sucesso'
+})
   } catch (error) {
     console.error('Erro ao bloquear usuário:', error)
-    alert(error.response?.data?.error || 'Erro ao bloquear usuário')
+  this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: error.response?.data?.error || 'Erro ao bloquear usuário'
+})
   } finally {
     this.blockingUser = false
   }
@@ -1625,7 +1855,11 @@ async confirmarExcluirChat() {
     this.chatToDelete = null
   } catch (error) {
     console.error('Erro ao excluir chat:', error)
-    alert(error.response?.data?.error || 'Erro ao excluir chat')
+this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: error.response?.data?.error || 'Erro ao excluir chat'
+})
   } finally {
     this.deletingChat = false
   }
@@ -1709,7 +1943,11 @@ focusInputForEmoji() {
 
     } catch (err) {
       console.error('Erro ao acessar microfone:', err)
-      alert('Não foi possível acessar o microfone. Verifique as permissões.')
+   this.showToast({
+  type: 'error',
+  title: 'Microfone',
+  message: 'Não foi possível acessar o microfone. Verifique as permissões.'
+})
     }
   },
 
@@ -1775,7 +2013,11 @@ onFileSelected(event, tipo) {
   // Validações
   const maxSize = 10 * 1024 * 1024 // 10MB
   if (file.size > maxSize) {
-    alert('Arquivo muito grande. Máximo 10MB.')
+this.showToast({
+  type: 'warning',
+  title: 'Arquivo grande',
+  message: 'Arquivo muito grande. Máximo 10MB.'
+})
     event.target.value = ''
     return
   }
@@ -1839,7 +2081,11 @@ if (!this.previewMidia || !this.activeChat || this.chatBloqueado) return
     this.cancelarPreview()
   } catch (error) {
     console.error('Erro ao enviar mídia:', error)
-    alert(error.response?.data?.error || error.message)
+this.showToast({
+  type: 'error',
+  title: 'Erro ao enviar',
+  message: error.response?.data?.error || error.message
+})
   }
 },
 
@@ -1880,7 +2126,11 @@ if (!this.activeChat || audioBlob.size === 0 || this.chatBloqueado) return
     
   } catch (error) {
     console.error('Erro ao enviar áudio:', error)
-    alert('Erro ao enviar áudio. Tente novamente.')
+  this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao enviar áudio. Tente novamente.'
+})
   }
 },
 
@@ -1906,7 +2156,11 @@ async limparChat() {
     await this.buscarChats()
   } catch (error) {
     console.error('Erro ao limpar chat:', error)
-    alert('Erro ao limpar conversa')
+  this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao limpar conversa'
+})
   }
 },
 
@@ -1925,10 +2179,21 @@ async silenciarChat() {
         : chat
     )
 
-    alert(data.silenciado ? 'Chat silenciado' : 'Chat dessilenciado')
+ this.showToast({
+  type: 'success',
+  title: data.silenciado ? 'Chat silenciado' : 'Chat dessilenciado',
+  message: data.silenciado 
+    ? 'Você não receberá mais notificações desta conversa.' 
+    : 'Notificações desta conversa foram reativadas.',
+  duration: 3000
+})
   } catch (error) {
     console.error('Erro ao silenciar chat:', error)
-    alert(error.response?.data?.error || 'Erro ao silenciar chat')
+this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: error.response?.data?.error || 'Erro ao silenciar chat'
+})
   }
 },
 
@@ -1941,11 +2206,20 @@ async bloquearUsuario() {
     this.showChatMenu = false
     this.closeChat()
     await this.buscarChats()
-    alert(data.message || 'Usuário bloqueado')
+  this.showToast({
+  type: 'success',
+  title: 'Usuário bloqueado',
+  message: data.message || 'Você não receberá mais mensagens deste usuário.',
+  duration: 4000
+})
   } catch (error) {
     console.error('Erro ao bloquear usuário:', error)
     const msg = error.response?.data?.error || 'Erro ao bloquear usuário'
-    alert(msg)
+   this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: msg
+})
     
     // Se for erro de autorização, redireciona para login
     if (error.response?.status === 401 || error.response?.status === 403) {
@@ -1960,11 +2234,19 @@ async denunciarChat() {
   
   try {
     await api.post(`/chats/${this.activeChat.id}/denunciar`, { motivo })
-    alert('Denúncia enviada. Obrigado por nos ajudar a manter a comunidade segura.')
+this.showToast({
+  type: 'success',
+  title: 'Denúncia enviada',
+  message: 'Obrigado por nos ajudar a manter a comunidade segura.'
+})
     this.showChatMenu = false
   } catch (error) {
     console.error('Erro ao denunciar:', error)
-    alert('Erro ao enviar denúncia')
+this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao enviar denúncia'
+})
   }
 },
 
@@ -2055,7 +2337,11 @@ closeChat() {
     })
   } catch (error) {
     console.error('Erro ao enviar mensagem:', error)
-    alert(error.response?.data?.error || 'Erro ao enviar mensagem')
+this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: error.response?.data?.error || 'Erro ao enviar mensagem'
+})
   }
 },
 
@@ -2785,7 +3071,11 @@ getGenreEmoji(name) {
                       error?.response?.data?.details ||
                       error.message
       
-      alert(apiError || 'Erro ao criar perfil. Tente novamente.')
+     this.showToast({
+  type: 'error',
+  title: 'Erro ao criar perfil',
+  message: apiError || 'Erro ao criar perfil. Tente novamente.'
+})
       
       if (apiError?.includes('expirada') || 
           apiError?.includes('Token') || 
@@ -2892,7 +3182,11 @@ async deleteAccount() {
   } catch (error) {
     console.error('Erro ao excluir dados do Musical Match:', error)
     this.deletingAccount = false
-    alert('Erro ao excluir dados. Tente novamente.')
+ this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao excluir dados. Tente novamente.'
+})
   }
 },
 
@@ -3074,7 +3368,12 @@ async deleteAccount() {
       }
 
     } catch (error) {
-      console.error('Erro ao curtir:', error)
+     this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao curtir música. Tente novamente.'
+})
+console.error('Erro ao curtir:', error)
     }
   },
 
@@ -3119,7 +3418,12 @@ async deleteAccount() {
       }
 
     } catch (error) {
-      console.error('Erro ao favoritar:', error)
+     this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao favoritar música. Tente novamente.'
+})
+console.error('Erro ao favoritar:', error)
     }
   },
 
@@ -3138,7 +3442,12 @@ async deleteAccount() {
             })
             this.favorites = this.favorites.filter(f => String(f.id) !== String(song.id))
           } catch (error) {
-            console.error('Erro ao remover favorito:', error)
+           this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao remover favorito. Tente novamente.'
+})
+console.error('Erro ao remover favorito:', error)
           }
         },
 
@@ -3154,7 +3463,12 @@ async deleteAccount() {
             this.likedSongs = this.likedSongs.filter(s => String(s.id) !== String(song.id))
             await this.buscarMatches()
           } catch (error) {
-            console.error('Erro ao remover curtida:', error)
+         this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao remover curtida. Tente novamente.'
+})
+console.error('Erro ao remover curtida:', error)
           }
         },
 
@@ -3291,7 +3605,12 @@ async deleteAccount() {
             localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
             this.isEditing = false
           } catch (error) {
-            console.error('Erro ao salvar perfil:', error)
+         this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao salvar perfil. Tente novamente.'
+})
+console.error('Erro ao salvar perfil:', error)
           }
         },
 
@@ -3337,7 +3656,12 @@ async deleteAccount() {
             this.matches = this.matches.filter(m => m.id !== match.id)
             this.unreadMatches = this.matches.filter(m => m.unread).length
           } catch (error) {
-            console.error('Erro ao remover match:', error)
+           this.showToast({
+  type: 'error',
+  title: 'Erro',
+  message: 'Erro ao remover match. Tente novamente.'
+})
+console.error('Erro ao remover match:', error)
           }
         },
 
@@ -5954,7 +6278,114 @@ padding: 8px 20px 80px;
   align-items: center;
   justify-content: center;
 }
+/* Toast Notification System */
+.toast-notification {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  min-width: 320px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: toastSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+}
 
+.toast-success {
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.95) 0%, rgba(30, 215, 96, 0.95) 100%);
+  color: #000;
+  border: 1px solid rgba(29, 185, 84, 0.3);
+}
+
+.toast-error {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.95) 0%, rgba(239, 68, 68, 0.95) 100%);
+  color: #fff;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.toast-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95) 0%, rgba(251, 191, 36, 0.95) 100%);
+  color: #000;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.toast-info {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(96, 165, 250, 0.95) 100%);
+  color: #fff;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  line-height: 1.2;
+}
+
+.toast-message {
+  font-size: 0.875rem;
+  margin: 0;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+.toast-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+@keyframes toastSlide {
+  from {
+    transform: translateX(-50%) translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
 .emoji-btn-premium:hover {
   background: rgba(29, 185, 84, 0.15);
   border-color: rgba(29, 185, 84, 0.5);

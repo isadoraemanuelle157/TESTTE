@@ -244,6 +244,34 @@ const denunciarChat = async (req, res) => {
   }
 }
 
+const desbloquearUsuario = async (req, res) => {
+  try {
+    const { chatId } = req.params
+    const userId = req.user.id
+
+    const resultado = await chatService.desbloquearUsuario(chatId, userId)
+
+    res.json({
+      message: 'Usuário desbloqueado com sucesso',
+      ...resultado
+    })
+  } catch (error) {
+    console.error('Erro ao desbloquear usuário:', error)
+
+    const statusCode =
+      error.message.includes('inválido') ? 400 :
+      error.message.includes('não encontrado') ? 404 :
+      error.message.includes('não participa') ? 403 :
+      error.message.includes('não está bloqueado') ? 409 :
+      500
+
+    res.status(statusCode).json({
+      error: error.message,
+      code: statusCode
+    })
+  }
+}
+
 module.exports = {
   iniciarChat,
   enviarMensagem,
@@ -256,5 +284,6 @@ module.exports = {
   excluirChat,
   silenciarChat,
   bloquearUsuario,
-  denunciarChat
+  denunciarChat,
+   desbloquearUsuario
 }

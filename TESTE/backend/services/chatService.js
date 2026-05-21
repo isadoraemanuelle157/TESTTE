@@ -440,6 +440,46 @@ const excluirChat = async (chatId, userId) => {
 
   return { success: true }
 }
+const desbloquearUsuario = async (chatId, userId) => {
+  if (!mongoose.Types.ObjectId.isValid(chatId)) {
+    throw new Error('ID do chat inválido')
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new Error('ID do usuário inválido')
+  }
+
+  const chat = await Chat.findById(chatId)
+  if (!chat) throw new Error('Chat não encontrado')
+
+  const userIdStr = String(userId)
+  const participantesStr = chat.participantes.map(p => String(p))
+
+  if (!participantesStr.includes(userIdStr)) {
+    throw new Error('Você não participa deste chat')
+  }
+
+  const outroUsuario = participantesStr.find(p => p !== userIdStr)
+  if (!outroUsuario) throw new Error('Usuário não encontrado no chat')
+
+  const bloqueio = await Bloqueio.findOne({
+    bloqueador: userId,
+    bloqueado: outroUsuario
+  })
+
+  if (!bloqueio) {
+    throw new Error('Usuário não está bloqueado')
+  }
+
+  await Bloqueio.deleteOne({ _id: bloqueio._id })
+
+  return {
+    bloqueado: false,
+    usuarioId: outroUsuario,
+    mensagensOcultas: false,
+    envioBloqueado: false
+  }
+}
 
 module.exports = {
   getOrCreateChat,
@@ -452,5 +492,6 @@ module.exports = {
   excluirChat,
   toggleSilenciar,
   bloquearUsuario,
-  criarDenuncia
+  criarDenuncia,
+  desbloquearUsuario
 }

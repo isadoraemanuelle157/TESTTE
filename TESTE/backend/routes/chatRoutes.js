@@ -64,6 +64,7 @@ router.delete('/:chatId/limpar', requireAuth, chatController.limparChat)
 router.delete('/:chatId', requireAuth, chatController.excluirChat)
 router.put('/:chatId/silenciar', requireAuth, chatController.silenciarChat)
 router.post('/:chatId/bloquear', requireAuth, chatController.bloquearUsuario)
+router.post('/:chatId/desbloquear', requireAuth, chatController.desbloquearUsuario)
 router.post('/:chatId/denunciar', requireAuth, chatController.denunciarChat)
 
 module.exports = router
