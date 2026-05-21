@@ -41,29 +41,29 @@
     <!-- SONG SELECTION SCREEN -->
     <div v-if="showSongSelection" class="song-selection-overlay">
       <div class="selection-content">
-       <h1><i class="fas fa-microphone-lines"></i> KARAOKÊ</h1>
-       <p class="subtitle">
-  Escolha uma música para começar • Fonte: {{ currentProviderLabel }}
-</p>
+        <h1><i class="fas fa-microphone-lines"></i> KARAOKÊ</h1>
+        <p class="subtitle">
+          Escolha uma música para começar • Fonte: {{ currentProviderLabel }}
+        </p>
 
         <!-- MODO DE JOGO - SEMPRE VISÍVEL E CLARO -->
         <div class="mode-selection">
-      <h3><i class="fas fa-gamepad"></i> Modo de Jogo</h3>
+          <h3><i class="fas fa-gamepad"></i> Modo de Jogo</h3>
           <div class="mode-buttons">
-       <button
-  :class="{ active: withMicrophone }"
-  @click="withMicrophone = true"
->
-  <i class="fas fa-microphone"></i>
-  Com Microfone
-</button>
-<button
-  :class="{ active: !withMicrophone }"
-  @click="withMicrophone = false"
->
-  <i class="fas fa-music"></i>
-  Sem Microfone
-</button>
+            <button
+              :class="{ active: withMicrophone }"
+              @click="withMicrophone = true"
+            >
+              <i class="fas fa-microphone"></i>
+              Com Microfone
+            </button>
+            <button
+              :class="{ active: !withMicrophone }"
+              @click="withMicrophone = false"
+            >
+              <i class="fas fa-music"></i>
+              Sem Microfone
+            </button>
           </div>
           <p class="mode-hint">
             {{ withMicrophone ? 'Cante e ganhe pontos pela precisão!' : 'Apenas acompanhe as letras e a música.' }}
@@ -92,6 +92,20 @@
             @keyup.enter="searchMusic"
             @input="handleInput"
           />
+          <button v-if="searchQuery" class="clear-search-btn" @click="clearSearch">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Result count indicator -->
+        <div v-if="searchResults.length > 0 && !isLoading" class="results-count">
+          <span>{{ filteredSearchResults.length }} música(s) encontrada(s)</span>
+          <span v-if="filteredSearchResults.length > displayLimit" class="show-more-hint">
+            Mostrando {{ displayLimit }} de {{ filteredSearchResults.length }}
+          </span>
         </div>
 
         <div class="songs-grid">
@@ -101,9 +115,9 @@
           </div>
 
           <div
-            v-else-if="searchResults.length > 0"
-            v-for="(track, index) in filteredSearchResults.slice(0, 12)"
-            :key="index"
+            v-else-if="filteredSearchResults.length > 0"
+            v-for="(track, index) in paginatedResults"
+            :key="track.id || index"
             class="song-card"
             @click="selectTrackAndStart(track)"
           >
@@ -111,9 +125,9 @@
             <div class="song-card-info">
               <h3>{{ track.title }}</h3>
               <p>{{ track.artist?.name || track.artist }}</p>
-              <span class="difficulty-badge" :class="track.difficulty">
-                {{ getDifficultyLabel(track.difficulty) }}
-              </span>
+       <span class="difficulty-badge" :class="track.difficulty">
+  {{ getDifficultyLabel(track.difficulty) }}
+</span>
             </div>
           </div>
 
@@ -144,6 +158,14 @@
               <small>Explore milhares de músicas para cantar</small>
             </div>
           </div>
+        </div>
+
+        <!-- Load more button -->
+        <div v-if="filteredSearchResults.length > displayLimit && !isLoading" class="load-more-wrapper">
+          <button class="btn-load-more" @click="displayLimit += 18">
+            <i class="fas fa-chevron-down"></i>
+            Carregar mais ({{ filteredSearchResults.length - displayLimit }} restantes)
+          </button>
         </div>
       </div>
     </div>
@@ -238,7 +260,7 @@
           <button @click="loadLyricsForCurrentSong">Tentar novamente</button>
         </div>
 
-       <div v-else class="lyrics-wrapper">
+        <div v-else class="lyrics-wrapper">
           <div
             v-for="(line, index) in processedLyrics"
             :key="index"
@@ -253,18 +275,18 @@
             }"
             :data-time="line.time"
           >
-          <span v-if="line.isInstrumental" class="instrumental-indicator">
-  <i class="fas fa-wave-square"></i>
-  Instrumental
-</span>
+            <span v-if="line.isInstrumental" class="instrumental-indicator">
+              <i class="fas fa-wave-square"></i>
+              Instrumental
+            </span>
             <span v-else class="lyric-text" :style="{ fontSize: fontSize + 'px' }">{{ line.text }}</span>
             <span v-if="showPhonetic && currentLineIndex === index && line.phonetic" class="lyric-phonetic">{{ line.phonetic }}</span>
-      <span v-if="visualFeedback && line.correct && withMicrophone" class="feedback-icon correct">
-  <i class="fas fa-check"></i>
-</span>      
-          <span v-if="visualFeedback && line.wrong && withMicrophone" class="feedback-icon wrong">
-  <i class="fas fa-xmark"></i>
-</span>
+            <span v-if="visualFeedback && line.correct && withMicrophone" class="feedback-icon correct">
+              <i class="fas fa-check"></i>
+            </span>
+            <span v-if="visualFeedback && line.wrong && withMicrophone" class="feedback-icon wrong">
+              <i class="fas fa-xmark"></i>
+            </span>
           </div>
         </div>
 
@@ -413,10 +435,10 @@
     <transition name="fade">
       <div v-if="showSettings" class="settings-modal" @click.self="toggleSettings">
         <div class="settings-content">
-        <h3>
-  <i class="fas fa-gear"></i>
-  Configurações
-</h3>
+          <h3>
+            <i class="fas fa-gear"></i>
+            Configurações
+          </h3>
 
           <div class="setting-item">
             <label>Modo de Exibição</label>
@@ -438,17 +460,17 @@
           </div>
 
           <div class="setting-item checkbox">
-            <input type="checkbox" v-model="showPhonetic" id="phonetic">
+            <input type="checkbox" v-model="showPhonetic" id="phonetic" @change="saveSettings">
             <label for="phonetic">Mostrar Pronúncia</label>
           </div>
 
           <div class="setting-item checkbox">
-            <input type="checkbox" v-model="visualFeedback" id="feedback">
+           <input type="checkbox" v-model="visualFeedback" id="feedback" @change="saveSettings">
             <label for="feedback">Feedback Visual</label>
           </div>
 
           <div class="setting-item checkbox">
-            <input type="checkbox" v-model="autoScroll" id="autoscroll">
+           <input type="checkbox" v-model="autoScroll" id="autoscroll" @change="saveSettings">
             <label for="autoscroll">Auto-scroll de Letras</label>
           </div>
 
@@ -470,16 +492,18 @@
       @ended="handleAudioEnded"
       :src="audioPreviewUrl"
       crossorigin="anonymous"
-       loop 
+      loop
     ></audio>
   </div>
 </template>
+
 <script>
 export default {
   name: 'KaraokeComponent',
 
   data() {
     return {
+      // Toast
       micPermissionToast: {
         show: false,
         type: 'error',
@@ -487,18 +511,27 @@ export default {
         message: '',
         timer: null
       },
+
+      // Song selection
       showSongSelection: true,
       withMicrophone: true,
-      CORS_PROXY: 'https://proxy.corsfix.com/?',
-      DEEZER_API: 'https://api.deezer.com',
-      GENIUS_API: 'https://api.genius.com',
-      GENIUS_TOKEN: '',
       searchQuery: '',
       searchResults: [],
       showSearchResults: false,
       isSearchFocused: false,
       searchTimeout: null,
       isLoading: false,
+      displayLimit: 24,
+
+      // Difficulty
+      selectedDifficulty: 'medium',
+      difficultySeedQueries: {
+        easy: 'Ed Sheeran Jason Mraz Beatles Elvis Presley',
+        medium: 'Adele Coldplay Dua Lipa The Weeknd Rihanna',
+        hard: 'Queen Whitney Houston Mariah Carey Eminem Ariana Grande Bruno Mars'
+      },
+
+      // Current song
       currentSong: {
         title: 'Selecione uma música',
         artist: 'Artista',
@@ -506,27 +539,37 @@ export default {
         genre: 'Pop',
         difficulty: 'medium',
         duration: 180,
+        previewDuration: 30,
         preview_url: '',
         deezerId: null,
-        lyricsTimeScale: 1,  
-        previewStartOffset: 0,    // ← ADICIONAR
-    hasRealLRC: false, 
+        spotifyId: null,
+        source: 'deezer',
         stats: null
       },
+
+      // Lyrics
       rawLyrics: '',
       processedLyrics: [],
       currentLineIndex: 0,
       isLoadingLyrics: false,
       lyricsError: null,
       lyricsStartTime: 0,
+      hasRealLRC: false,
+      lyricsTimeScale: 1,
+      previewStartOffset: 0,
+      lyricsSyncOffset: 0,
+
+      // Audio
       audioPreviewUrl: '',
       isPlaying: false,
       currentTime: 0,
-      duration: 0,
+      duration: 30,
       progressPercent: 0,
       playbackRate: 1,
       isMuted: false,
       volume: 70,
+
+      // Score
       currentScore: 0,
       maxScore: 10000,
       combo: 0,
@@ -536,9 +579,12 @@ export default {
       correctAttempts: 0,
       scoreAnimation: '',
       strictMode: false,
-      selectedDifficulty: 'medium',
+
+      // Pitch
       pitchShift: 0,
       pitchPosition: 30,
+
+      // Display
       isFullscreen: false,
       showSettings: false,
       displayMode: 'standard',
@@ -551,6 +597,8 @@ export default {
       showPhonetic: false,
       visualFeedback: true,
       autoScroll: true,
+
+      // Microphone
       micActive: false,
       micStream: null,
       micLevel: 0,
@@ -562,93 +610,56 @@ export default {
       recognition: null,
       isListening: false,
       lastRecognizedText: '',
+      lastSpeechSyncAt: 0,
+
+      // Recording
       isRecording: false,
       recordingTime: 0,
       recordingInterval: null,
       mediaRecorder: null,
       recordedChunks: [],
+
+      // Animation / Loop
       playbackInterval: null,
       animationFrame: null,
       scoringTimer: null,
-      lyricsSyncOffset: 0,
-  API_BASE: import.meta.env.VITE_API_URL || 'http://localhost:3002',
-       isAuthenticated: false,
-    musicProvider: 'deezer',
 
-    micPermissionToast: {
-      show: false,
-      type: 'error',
-      title: '',
-      message: '',
-      timer: null
-    },
-    showSongSelection: true,
-    withMicrophone: true,
-    CORS_PROXY: 'https://proxy.corsfix.com/?',
-    DEEZER_API: 'https://api.deezer.com',
-    GENIUS_API: 'https://api.genius.com',
-    GENIUS_TOKEN: '',
-    searchQuery: '',
-    searchResults: [],
-    showSearchResults: false,
-    isSearchFocused: false,
-    searchTimeout: null,
-    isLoading: false,
-    currentSong: {
-      title: 'Selecione uma música',
-      artist: 'Artista',
-      cover: 'https://via.placeholder.com/200',
-      genre: 'Pop',
-      difficulty: 'medium',
-      duration: 180,
-      preview_url: '',
-      deezerId: null,
-      spotifyId: null,
-      source: 'deezer',
-      stats: null
-    },
-difficultySeedQueries: {
-  easy: 'Ed Sheeran Jason Mraz Beatles Elvis Presley',
-  medium: 'Adele Coldplay Dua Lipa The Weeknd Rihanna',
-  hard: 'Queen Whitney Houston Mariah Carey Eminem Ariana Grande Bruno Mars'
-},
-lastSpeechSyncAt: 0
-
+      // API
+      API_BASE: import.meta.env.VITE_API_URL || 'http://localhost:3002',
+      CORS_PROXY: 'https://proxy.corsfix.com/?',
+      DEEZER_API: 'https://api.deezer.com',
+      GENIUS_API: 'https://api.genius.com',
+      GENIUS_TOKEN: '',
+      isAuthenticated: false,
+      musicProvider: 'deezer'
     }
   },
 
   computed: {
-//  lyricsTransform() {
-//     if (!this.autoScroll) return { transform: 'translateY(0)' }
-//     const lineHeight = this.selectedDifficulty === 'easy' ? 100 : 80
-//     const containerHeight = 400
-//     const offset = (this.currentLineIndex * lineHeight) - (containerHeight / 2) + (lineHeight / 2)
-//     return {
-//       transform: `translateY(${-Math.max(0, offset)}px)`
-//     }
-//   },
+    lyricsMarkers() {
+      const previewDuration = this.currentSong.previewDuration || this.duration || 30
+      return this.processedLyrics.map((l, i) => ({
+        time: l.time / this.lyricsTimeScale,
+        index: i
+      })).filter(l => l.time > 0 && l.time <= previewDuration)
+    },
 
-lyricsMarkers() {
-  // ← CORREÇÃO: Usar previewDuration para posicionar markers na barra de 30s
-  const previewDuration = this.currentSong.previewDuration || this.duration || 30
-  return this.processedLyrics.map((l, i) => ({
-    time: l.time / this.lyricsTimeScale, // converter para escala do preview
-    index: i
-  })).filter(l => l.time > 0 && l.time <= previewDuration)
-},
+    filteredSearchResults() {
+      if (!this.selectedDifficulty) return this.searchResults
+      return this.searchResults.filter(track => track.difficulty === this.selectedDifficulty)
+    },
 
-  filteredSearchResults() {
-    if (!this.selectedDifficulty) return this.searchResults
-    return this.searchResults.filter(track => track.difficulty === this.selectedDifficulty)
+    paginatedResults() {
+      return this.filteredSearchResults.slice(0, this.displayLimit)
+    },
+
+    currentProviderLabel() {
+      return this.isAuthenticated ? 'Spotify' : 'Deezer'
+    }
   },
 
-  currentProviderLabel() {
-    return this.isAuthenticated ? 'Spotify' : 'Deezer'
-  }
-  },
-
-  watch: {
-selectedDifficulty: {
+watch: {
+  selectedDifficulty: {
     immediate: false,
     async handler(newVal) {
       if (newVal === 'easy') {
@@ -662,549 +673,388 @@ selectedDifficulty: {
         this.strictMode = false
       }
 
+      this.saveSettings()
+
       if (!this.searchQuery.trim()) {
         await this.loadSongsByDifficulty(newVal)
       }
     }
   },
-    currentLineIndex(newVal, oldVal) {
+
+  currentLineIndex(newVal, oldVal) {
     if (newVal === oldVal) return
+    if (!this.autoScroll) return
+
     this.$nextTick(() => {
       const container = this.$refs.lyricsContainer
       const activeLine = container?.querySelector('.lyric-line.active')
-      if (activeLine && container) {
-        const containerRect = container.getBoundingClientRect()
-        const lineRect = activeLine.getBoundingClientRect()
-        const scrollTop = container.scrollTop + (lineRect.top - containerRect.top) - (containerRect.height / 2) + (lineRect.height / 2)
-        container.scrollTo({ top: scrollTop, behavior: 'smooth' })
-      }
+      if (!activeLine || !container) return
+
+      const containerRect = container.getBoundingClientRect()
+      const lineRect = activeLine.getBoundingClientRect()
+
+      // mais para cima em fullscreen, um pouco menos no modo normal
+      const anchorRatio = this.isFullscreen ? 0.28 : 0.38
+      const targetTop = container.clientHeight * anchorRatio
+
+      const delta =
+        (lineRect.top - containerRect.top) -
+        targetTop +
+        (lineRect.height / 2)
+
+      container.scrollTo({
+        top: Math.max(0, container.scrollTop + delta),
+        behavior: 'smooth'
+      })
     })
-  }
-},
-
-mounted() {
-  this.detectAuthProvider()
-  this.initAudio()
-  if (this.withMicrophone) {
-    this.initSpeechRecognition()
-  }
-  window.addEventListener('keydown', this.handleKeydown)
-  this.loadSettings()
-  this.loadSongsByDifficulty(this.selectedDifficulty)
-  this.$emit('karaoke-active', true)
-},
-
-  beforeDestroy() {
-    this.stopPlayback()
-    this.stopMicrophone()
-    window.removeEventListener('keydown', this.handleKeydown)
-    cancelAnimationFrame(this.animationFrame)
-    if (this.recognition) this.recognition.stop()
-    this.hideMicPermissionToast()
-    this.$emit('karaoke-active', false)
   },
 
+  showPhonetic() {
+    this.saveSettings()
+  },
+
+  visualFeedback() {
+    this.saveSettings()
+  },
+
+  autoScroll() {
+    this.saveSettings()
+  },
+
+  fontSize() {
+    this.saveSettings()
+  },
+
+  micSensitivity() {
+    this.saveSettings()
+  },
+
+  playbackRate() {
+    this.saveSettings()
+  }
+},
+
+  mounted() {
+    this.detectAuthProvider()
+    this.initAudio()
+    if (this.withMicrophone) {
+      this.initSpeechRecognition()
+    }
+    window.addEventListener('keydown', this.handleKeydown)
+    this.loadSettings()
+    this.loadSongsByDifficulty(this.selectedDifficulty)
+    this.$emit('karaoke-active', true)
+  },
+
+beforeUnmount() {
+  this.stopPlayback()
+  this.stopMicrophone()
+  window.removeEventListener('keydown', this.handleKeydown)
+  cancelAnimationFrame(this.animationFrame)
+  if (this.recognition) this.recognition.stop()
+  this.hideMicPermissionToast()
+  this.$emit('karaoke-active', false)
+},
+
   methods: {
- calculateLyricsTimeScale() {
-  if (!this.processedLyrics.length) return
-
-  const previewDuration = this.duration || 30
-  const fullDuration = this.currentSong.duration || 180
-
-  // se não for LRC real, usa fallback antigo
-  if (!this.hasRealLRC) {
-    this.lyricsTimeScale = fullDuration / previewDuration
-    this.previewStartOffset = Math.max(
-      0,
-      (fullDuration - previewDuration) / 2
-    )
-    return
-  }
-
-  // =========================
-  // DETECTAR TRECHO DO PREVIEW
-  // =========================
-
-  const lines = this.processedLyrics
-
-  // Deezer/Spotify preview geralmente vem:
-  // - refrão
-  // - parte mais energética
-  // - miolo da música
-  //
-  // então vamos procurar:
-  // 1. trecho com mais repetição
-  // 2. trecho mais "denso"
-  // 3. janela de 30s mais relevante
-
-  let bestWindow = {
-    score: -Infinity,
-    startTime: 0,
-    endTime: previewDuration
-  }
-
-  for (let i = 0; i < lines.length; i++) {
-    const start = lines[i].time
-    const end = start + previewDuration
-
-    const windowLines = lines.filter(
-      l => l.time >= start && l.time <= end
-    )
-
-    if (!windowLines.length) continue
-
-    let score = 0
-
-    const unique = new Set()
-
-    windowLines.forEach(line => {
-      const txt = line.text
-        .toLowerCase()
-        .replace(/[^\w\s]/g, '')
-        .trim()
-
-      // linhas repetidas = provável refrão
-      if (unique.has(txt)) {
-        score += 5
-      }
-
-      unique.add(txt)
-
-      // linhas maiores = mais cantadas
-      score += Math.min(txt.length / 10, 4)
-
-      // penalizar instrumental
-      if (line.isInstrumental) {
-        score -= 3
-      }
-    })
-
-    // bônus para região central da música
-    const center = fullDuration / 2
-    const distance = Math.abs(start - center)
-
-    score += Math.max(0, 15 - distance / 5)
-
-    if (score > bestWindow.score) {
-      bestWindow = {
-        score,
-        startTime: start,
-        endTime: end
-      }
-    }
-  }
-
-  // =========================
-  // RECORTAR APENAS TRECHO
-  // =========================
-
-  const clippedLyrics = lines
-    .filter(
-      line =>
-        line.time >= bestWindow.startTime &&
-        line.time <= bestWindow.endTime
-    )
-    .map(line => ({
-      ...line,
-
-      // reajustar tempo para começar do 0
-      time: line.time - bestWindow.startTime
-    }))
-
-  this.processedLyrics = clippedLyrics
-
-  this.previewStartOffset = bestWindow.startTime
-
-  this.lyricsTimeScale = 1
-
-  console.log('🎯 Preview detectado automaticamente:')
-  console.log(
-    `Trecho: ${bestWindow.startTime.toFixed(1)}s → ${bestWindow.endTime.toFixed(1)}s`
-  )
-
-  console.log(
-    `Linhas recortadas: ${clippedLyrics.length}`
-  )
-},
-    // ADICIONAR NO BLOCO methods: {}
-analyzeLyricStructure(lines) {
-  const chorusLines = []
-  const bridgeLines = []
-  
-  // Detectar refrão: linhas que se repetem
-  const lineCounts = new Map()
-  for (let i = 0; i < lines.length; i++) {
-    const normalized = lines[i].toLowerCase().replace(/[^\w\s]/g, '').trim()
-    if (normalized.length > 10) {
-      const count = lineCounts.get(normalized) || []
-      count.push(i)
-      lineCounts.set(normalized, count)
-    }
-  }
-
-  // Linhas que aparecem 2+ vezes = provável refrão
-  for (const [_, indices] of lineCounts) {
-    if (indices.length >= 2) {
-      chorusLines.push(...indices)
-    }
-  }
-
-  // Detectar ponte: seção curta no meio (tipicamente 4-8 linhas)
-  const totalLines = lines.length
-  const middleStart = Math.floor(totalLines * 0.4)
-  const middleEnd = Math.floor(totalLines * 0.7)
-  
-  // Heurística simples: seção entre 40-70% com linhas únicas = ponte
-  for (let i = middleStart; i < middleEnd; i++) {
-    if (!chorusLines.includes(i)) {
-      bridgeLines.push(i)
-    }
-  }
-
-  return { chorusLines, bridgeLines }
-},
-
-// ADICIONAR NO BLOCO methods: {}
-async fetchLRCFromLRCLIB(title, artist, duration) {
-  try {
-    // LRCLIB API - https://lrclib.net/
-    const query = `${title} ${artist}`.toLowerCase().trim()
-    
-    // Busca por track
-    const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`
-    const response = await fetch(searchUrl)
-    
-    if (!response.ok) return null
-    
-    const data = await response.json()
-    if (!data || data.length === 0) return null
-
-    // Encontrar a melhor correspondência (mais próxima da duração)
-    let bestMatch = null
-    let bestDurationDiff = Infinity
-    
-    for (const track of data) {
-      const diff = Math.abs((track.duration || 0) - (duration || 180))
-      if (diff < bestDurationDiff) {
-        bestDurationDiff = diff
-        bestMatch = track
-      }
-    }
-
-    if (!bestMatch || !bestMatch.syncedLyrics) return null
-
-    // Parse do formato LRC: [mm:ss.xx] letra
-    const lrcLines = bestMatch.syncedLyrics.split('\n')
-    const parsed = []
-
-    for (const line of lrcLines) {
-      const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/)
-      if (match) {
-        const minutes = parseInt(match[1])
-        const seconds = parseInt(match[2])
-        const centis = parseInt(match[3].padEnd(3, '0').substring(0, 3))
-        const time = minutes * 60 + seconds + centis / 1000
-        const text = match[4].trim()
-        
-        if (text) {
-          parsed.push({ time, text })
-        }
-      }
-    }
-
-    return parsed.sort((a, b) => a.time - b.time)
-  } catch (error) {
-    console.warn('LRCLIB falhou:', error)
-    return null
-  }
-},
+    // ===================== AUTH / PROVIDER =====================
     detectAuthProvider() {
-  const token =
-    localStorage.getItem('token') ||
-    localStorage.getItem('authToken') ||
-    localStorage.getItem('access_token')
+      const token =
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('access_token')
 
-  this.isAuthenticated = !!token
-  this.musicProvider = this.isAuthenticated ? 'spotify' : 'deezer'
-},
-
-getAuthHeaders() {
-  const token =
-    localStorage.getItem('token') ||
-    localStorage.getItem('authToken') ||
-    localStorage.getItem('access_token')
-
-  return token
-    ? { Authorization: `Bearer ${token}` }
-    : {}
-},
-
-mapSpotifyTrack(track) {
-  return {
-    id: track.id,
-    title: track.name,
-    artist: {
-      name: track.artists?.map(a => a.name).join(', ') || 'Artista desconhecido'
+      this.isAuthenticated = !!token
+      this.musicProvider = this.isAuthenticated ? 'spotify' : 'deezer'
     },
-    album: {
-      cover: track.album?.images?.[2]?.url || track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
-      cover_medium: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
-      cover_big: track.album?.images?.[0]?.url
+
+    getAuthHeaders() {
+      const token =
+        localStorage.getItem('token') ||
+        localStorage.getItem('authToken') ||
+        localStorage.getItem('access_token')
+
+      return token
+        ? { Authorization: `Bearer ${token}` }
+        : {}
     },
-    cover: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
-    preview: track.preview_url || '',
-    duration: track.duration_ms ? Math.round(track.duration_ms / 1000) : 30,
-    source: 'spotify',
-    raw: track
-  }
-},
+getEffectiveLyricsTime(includeManualOffset = true) {
+  const manualOffset = includeManualOffset ? this.lyricsSyncOffset : 0
 
-mapDeezerTrack(track) {
-  return {
-    ...track,
-    source: 'deezer'
-  }
-},
-
-async searchTracksByProvider(query, limit = 20) {
-  this.detectAuthProvider()
-
-  if (this.isAuthenticated) {
-    const response = await fetch(
-      `${this.API_BASE}/spotify/search?q=${encodeURIComponent(query)}&type=track&market=BR`,
-      {
-        headers: this.getAuthHeaders()
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`Spotify HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
-    return (data.tracks?.items || []).map(track => this.mapSpotifyTrack(track))
+  // Quando já recortou o LRC para o preview, os tempos já estão relativos ao preview
+  if (this.hasRealLRC) {
+    return this.currentTime + manualOffset
   }
 
-  const response = await fetch(
-    `${this.API_BASE}/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`
+  // Letras estimadas ainda usam escala e offset do trecho do preview
+  return (
+    this.previewStartOffset +
+    (this.currentTime * this.lyricsTimeScale) +
+    manualOffset
   )
-
-  if (!response.ok) {
-    throw new Error(`Deezer HTTP ${response.status}`)
-  }
-
-  const data = await response.json()
-  return (data.data || []).map(track => this.mapDeezerTrack(track))
 },
 
-    normalizeLyricText(text = '') {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^\w\s']/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-},
-findBestLyricMatch(transcript) {
-  const normalizedTranscript = this.normalizeLyricText(transcript)
+    // ===================== TRACK MAPPING =====================
+    mapSpotifyTrack(track) {
+      return {
+        id: track.id,
+        title: track.name,
+        artist: {
+          name: track.artists?.map(a => a.name).join(', ') || 'Artista desconhecido'
+        },
+        album: {
+          cover: track.album?.images?.[2]?.url || track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
+          cover_medium: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
+          cover_big: track.album?.images?.[0]?.url
+        },
+        cover: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
+        preview: track.preview_url || '',
+        duration: track.duration_ms ? Math.round(track.duration_ms / 1000) : 30,
+        source: 'spotify',
+        raw: track
+      }
+    },
 
-  if (!normalizedTranscript || normalizedTranscript.split(' ').length < 2) {
-    return null
-  }
+    mapDeezerTrack(track) {
+      return {
+        ...track,
+        source: 'deezer'
+      }
+    },
 
-  let bestMatch = { index: -1, score: 0 }
+    // ===================== SEARCH =====================
+    async searchTracksByProvider(query, limit = 40) {
+      this.detectAuthProvider()
 
-  // se já está sincronizado, procura perto da linha atual
-  let start = 0
-  let end = this.processedLyrics.length - 1
+      if (this.isAuthenticated) {
+        const response = await fetch(
+          `${this.API_BASE}/spotify/search?q=${encodeURIComponent(query)}&type=track&market=BR`,
+          {
+            headers: this.getAuthHeaders()
+          }
+        )
 
-  if (this.currentLineIndex > 0 || this.lyricsSyncOffset !== 0) {
-    start = Math.max(0, this.currentLineIndex - 4)
-    end = Math.min(this.processedLyrics.length - 1, this.currentLineIndex + 6)
-  }
+        if (!response.ok) {
+          throw new Error(`Spotify HTTP ${response.status}`)
+        }
 
-  for (let i = start; i <= end; i++) {
-    const line = this.processedLyrics[i]
-    if (!line || line.isInstrumental) continue
+        const data = await response.json()
+        return (data.tracks?.items || []).map(track => this.mapSpotifyTrack(track))
+      }
 
-    const score = this.calculateSimilarity(
-      normalizedTranscript,
-      this.normalizeLyricText(line.text)
-    )
-
-    if (score > bestMatch.score) {
-      bestMatch = { index: i, score }
-    }
-  }
-
-  // fallback global se a busca local não foi boa
-  if (bestMatch.score < 0.55) {
-    for (let i = 0; i < this.processedLyrics.length; i++) {
-      const line = this.processedLyrics[i]
-      if (!line || line.isInstrumental) continue
-
-      const score = this.calculateSimilarity(
-        normalizedTranscript,
-        this.normalizeLyricText(line.text)
+      const response = await fetch(
+        `${this.API_BASE}/deezer/search?q=${encodeURIComponent(query)}&limit=${limit}`
       )
 
-      if (score > bestMatch.score) {
-        bestMatch = { index: i, score }
+      if (!response.ok) {
+        throw new Error(`Deezer HTTP ${response.status}`)
       }
-    }
-  }
 
-  return bestMatch.score >= 0.55 ? bestMatch : null
-},
+      const data = await response.json()
+      return (data.data || []).map(track => this.mapDeezerTrack(track))
+    },
 
-   async loadSongsByDifficulty(difficulty = this.selectedDifficulty) {
-  this.isLoading = true
+    async searchMusic() {
+      if (!this.searchQuery.trim()) return
 
-  try {
-    const seedQuery = this.difficultySeedQueries[difficulty] || this.difficultySeedQueries.medium
-    const tracks = await this.searchTracksByProvider(seedQuery, 40)
+      this.isLoading = true
+      this.searchResults = []
+      this.displayLimit = 24
 
-    const normalizedTracks = tracks.map(track => ({
-      ...track,
-      difficulty: this.calculateDifficulty(track)
-    }))
+      try {
+        const tracks = await this.searchTracksByProvider(this.searchQuery, 60)
 
-    const exactMatches = normalizedTracks.filter(track => track.difficulty === difficulty)
-    this.searchResults = exactMatches.length ? exactMatches : normalizedTracks
-  } catch (error) {
-    console.error('Erro ao carregar músicas por dificuldade:', error)
-    this.searchResults = []
-  } finally {
-    this.isLoading = false
-  }
-},
+        this.searchResults = tracks.map(track => ({
+          ...track,
+          difficulty: this.calculateDifficulty(track)
+        }))
 
+        this.showSearchResults = true
+      } catch (error) {
+        console.error('Erro na busca:', error)
+        this.searchResults = []
+        alert(`Erro ao buscar músicas via ${this.currentProviderLabel}.`)
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    handleInput() {
+      if (this.searchTimeout) clearTimeout(this.searchTimeout)
+      this.searchTimeout = setTimeout(() => {
+        if (this.searchQuery.length >= 2) this.searchMusic()
+      }, 400)
+    },
+
+    clearSearch() {
+      this.searchQuery = ''
+      this.searchResults = []
+      this.showSearchResults = false
+      this.displayLimit = 12
+      this.loadSongsByDifficulty(this.selectedDifficulty)
+    },
+
+    // ===================== SONG SELECTION =====================
+    async selectTrackAndStart(track) {
+      await this.setSongData(track)
+      this.showSongSelection = false
+      this.searchQuery = ''
+      this.displayLimit = 12
+    },
+
+    async setSongData(track) {
+      const difficulty = track.difficulty || this.calculateDifficulty(track)
+      const previewDuration = 30
+      const artistName = track.artist?.name || track.artist || 'Artista'
+
+      this.currentSong = {
+        title: track.title || track.name,
+        artist: artistName,
+        cover: track.album?.cover_big || track.album?.cover_medium || track.album?.cover || track.cover,
+        genre: track.genre?.name || track.genre || 'Pop',
+        difficulty,
+        duration: track.duration || 30,
+        previewDuration,
+        preview_url: track.preview || track.preview_url || '',
+        deezerId: track.source === 'deezer' ? track.id : null,
+        spotifyId: track.source === 'spotify' ? track.id : null,
+        source: track.source,
+        stats: null
+      }
+
+      // Fallback caso Spotify não tenha preview_url
+      if (!this.currentSong.preview_url) {
+        try {
+          const audioRes = await fetch(
+            `${this.API_BASE}/musicas/${encodeURIComponent(this.currentSong.title + ' ' + this.currentSong.artist)}/audio`,
+            { headers: this.getAuthHeaders() }
+          )
+          if (audioRes.ok) {
+            const audioData = await audioRes.json()
+            this.currentSong.preview_url = audioData.url || ''
+            this.currentSong.cover = this.currentSong.cover || audioData.cover
+          }
+        } catch (e) {
+          console.warn('Fallback de preview falhou:', e)
+        }
+      }
+
+      this.duration = previewDuration
+      this.audioPreviewUrl = this.currentSong.preview_url
+      this.currentTime = 0
+      this.progressPercent = 0
+      this.currentLineIndex = 0
+      this.lyricsStartTime = 0
+      this.lyricsSyncOffset = 0
+      this.hasRealLRC = false
+      this.lyricsTimeScale = 1
+      this.previewStartOffset = 0
+      this.resetScore()
+
+      await this.loadLyricsForCurrentSong()
+
+      // Após carregar letras, calcular escala de sincronização
+      this.calculateLyricsTimeScale()
+    },
+
+    async loadSongsByDifficulty(difficulty = this.selectedDifficulty) {
+      this.isLoading = true
+
+      try {
+        const seedQuery = this.difficultySeedQueries[difficulty] || this.difficultySeedQueries.medium
+        const tracks = await this.searchTracksByProvider(seedQuery, 60)
+
+        const normalizedTracks = tracks.map(track => ({
+          ...track,
+          difficulty: this.calculateDifficulty(track)
+        }))
+
+        const exactMatches = normalizedTracks.filter(track => track.difficulty === difficulty)
+        this.searchResults = exactMatches.length ? exactMatches : normalizedTracks
+      } catch (error) {
+        console.error('Erro ao carregar músicas por dificuldade:', error)
+        this.searchResults = []
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // ===================== DIFFICULTY =====================
+    calculateDifficulty(track, lyrics = '') {
+      let score = 2
+
+      const duration = Number(track.duration || 180)
+      const artistName = track.artist?.name || track.artist || ''
+      const genre = (track.genre?.name || track.genre || '').toLowerCase()
+
+      if (duration >= 240) score += 1
+      if (duration >= 330) score += 1
+      if (duration <= 140) score -= 1
+
+      score += this.getArtistDifficultyBoost(artistName)
+
+      const fastGenres = ['rap', 'hip hop', 'hip-hop', 'drum & bass', 'techno', 'metal', 'trap']
+      const slowGenres = ['ballad', 'acoustic', 'jazz', 'blues', 'folk']
+
+      if (fastGenres.some(g => genre.includes(g))) score += 1
+      if (slowGenres.some(g => genre.includes(g))) score -= 1
+
+      if (lyrics) {
+        const cleanLyrics = lyrics
+          .toLowerCase()
+          .replace(/[^\w\s']/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+
+        const words = cleanLyrics.split(' ').filter(Boolean)
+        const totalWords = words.length || 1
+        const uniqueWords = new Set(words).size
+        const wordDensity = totalWords / Math.max(1, duration / 60)
+
+        const lines = lyrics.split('\n').map(l => l.trim()).filter(Boolean)
+        const avgWordsPerLine = lines.length
+          ? lines.reduce((sum, line) => sum + line.split(/\s+/).length, 0) / lines.length
+          : 0
+
+        const complexityRatio = uniqueWords / totalWords
+
+        if (wordDensity >= 120) score += 2
+        else if (wordDensity >= 90) score += 1
+
+        if (complexityRatio >= 0.55) score += 1
+        if (avgWordsPerLine >= 7) score += 1
+      }
+
+      if (score >= 5) return 'hard'
+      if (score >= 3) return 'medium'
+      return 'easy'
+    },
 
     getArtistDifficultyBoost(artistName = '') {
-  const artist = artistName.toLowerCase()
+      const artist = artistName.toLowerCase()
 
-  const hardArtists = [
-    'whitney houston',
-    'mariah carey',
-    'queen',
-    'ariana grande',
-    'celine dion',
-    'eminem',
-    'twista',
-    'busta rhymes',
-    'guns n roses',
-    'bruno mars'
-  ]
+      const hardArtists = [
+        'whitney houston', 'mariah carey', 'queen', 'ariana grande',
+        'celine dion', 'eminem', 'twista', 'busta rhymes',
+        'guns n roses', 'bruno mars'
+      ]
 
-  const mediumArtists = [
-    'adele',
-    'coldplay',
-    'dua lipa',
-    'the weeknd',
-    'imagine dragons',
-    'rihanna',
-    'sia',
-    'lady gaga'
-  ]
+      const mediumArtists = [
+        'adele', 'coldplay', 'dua lipa', 'the weeknd',
+        'imagine dragons', 'rihanna', 'sia', 'lady gaga'
+      ]
 
-  const easyArtists = [
-    'bob dylan',
-    'johnny cash',
-    'ed sheeran',
-    'jason mraz',
-    'beatles',
-    'elvis presley'
-  ]
+      const easyArtists = [
+        'bob dylan', 'johnny cash', 'ed sheeran', 'jason mraz',
+        'beatles', 'elvis presley'
+      ]
 
-  if (hardArtists.some(a => artist.includes(a))) return 3
-  if (mediumArtists.some(a => artist.includes(a))) return 1
-  if (easyArtists.some(a => artist.includes(a))) return -1
+      if (hardArtists.some(a => artist.includes(a))) return 3
+      if (mediumArtists.some(a => artist.includes(a))) return 1
+      if (easyArtists.some(a => artist.includes(a))) return -1
 
-  return 0
-},
-
-    showMicPermissionToast(type, title, message, duration = 5000) {
-      if (this.micPermissionToast.timer) {
-        clearTimeout(this.micPermissionToast.timer)
-      }
-      this.micPermissionToast = {
-        show: true,
-        type,
-        title,
-        message,
-        timer: setTimeout(() => {
-          this.hideMicPermissionToast()
-        }, duration)
-      }
+      return 0
     },
-
-    hideMicPermissionToast() {
-      if (this.micPermissionToast.timer) {
-        clearTimeout(this.micPermissionToast.timer)
-      }
-      this.micPermissionToast.show = false
-    },
-
-async selectTrackAndStart(track) {
-  await this.setSongData(track)
-  this.showSongSelection = false
-  this.searchQuery = ''
-},
-
-   calculateDifficulty(track, lyrics = '') {
-  let score = 2 // base: médio por padrão
-
-  const duration = Number(track.duration || 180)
-  const artistName = track.artist?.name || track.artist || ''
-  const genre = (track.genre?.name || track.genre || '').toLowerCase()
-
-  // duração
-  if (duration >= 240) score += 1
-  if (duration >= 330) score += 1
-  if (duration <= 140) score -= 1
-
-  // artista
-  score += this.getArtistDifficultyBoost(artistName)
-
-  // gênero
-  const fastGenres = ['rap', 'hip hop', 'hip-hop', 'drum & bass', 'techno', 'metal', 'trap']
-  const slowGenres = ['ballad', 'acoustic', 'jazz', 'blues', 'folk']
-
-  if (fastGenres.some(g => genre.includes(g))) score += 1
-  if (slowGenres.some(g => genre.includes(g))) score -= 1
-
-  // se tiver letra, aí refina de verdade
-  if (lyrics) {
-    const cleanLyrics = lyrics
-      .toLowerCase()
-      .replace(/[^\w\s']/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    const words = cleanLyrics.split(' ').filter(Boolean)
-    const totalWords = words.length || 1
-    const uniqueWords = new Set(words).size
-    const wordDensity = totalWords / Math.max(1, duration / 60)
-
-    const lines = lyrics.split('\n').map(l => l.trim()).filter(Boolean)
-    const avgWordsPerLine = lines.length
-      ? lines.reduce((sum, line) => sum + line.split(/\s+/).length, 0) / lines.length
-      : 0
-
-    const complexityRatio = uniqueWords / totalWords
-
-    if (wordDensity >= 120) score += 2
-    else if (wordDensity >= 90) score += 1
-
-    if (complexityRatio >= 0.55) score += 1
-    if (avgWordsPerLine >= 7) score += 1
-  }
-
-  if (score >= 5) return 'hard'
-  if (score >= 3) return 'medium'
-  return 'easy'
-},
 
     getDifficultyColor(difficulty) {
       const colors = {
@@ -1229,6 +1079,56 @@ async selectTrackAndStart(track) {
       if (percent >= 70) return '#f59e0b'
       if (percent >= 50) return '#ef4444'
       return '#8b5cf6'
+    },
+
+    // ===================== LYRICS SYNC =====================
+    async fetchLRCFromLRCLIB(title, artist, duration) {
+      try {
+        const query = `${title} ${artist}`.toLowerCase().trim()
+        const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`
+        const response = await fetch(searchUrl)
+
+        if (!response.ok) return null
+
+        const data = await response.json()
+        if (!data || data.length === 0) return null
+
+        let bestMatch = null
+        let bestDurationDiff = Infinity
+
+        for (const track of data) {
+          const diff = Math.abs((track.duration || 0) - (duration || 180))
+          if (diff < bestDurationDiff) {
+            bestDurationDiff = diff
+            bestMatch = track
+          }
+        }
+
+        if (!bestMatch || !bestMatch.syncedLyrics) return null
+
+        const lrcLines = bestMatch.syncedLyrics.split('\n')
+        const parsed = []
+
+        for (const line of lrcLines) {
+          const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/)
+          if (match) {
+            const minutes = parseInt(match[1])
+            const seconds = parseInt(match[2])
+            const centis = parseInt(match[3].padEnd(3, '0').substring(0, 3))
+            const time = minutes * 60 + seconds + centis / 1000
+            const text = match[4].trim()
+
+            if (text) {
+              parsed.push({ time, text })
+            }
+          }
+        }
+
+        return parsed.sort((a, b) => a.time - b.time)
+      } catch (error) {
+        console.warn('LRCLIB falhou:', error)
+        return null
+      }
     },
 
     async fetchLyricsFromGenius(title, artist) {
@@ -1257,7 +1157,7 @@ async selectTrackAndStart(track) {
         const lyricsPage = await fetch(`${this.CORS_PROXY}${songUrl}`)
         const html = await lyricsPage.text()
 
-         const lyricsMatch = html.match(/<div class="lyrics">([\s\S]*?)<\/div>/)
+        const lyricsMatch = html.match(/<div class="lyrics">([\s\S]*?)<\/div>/)
         if (lyricsMatch) {
           return this.cleanLyrics(lyricsMatch[1])
         }
@@ -1296,85 +1196,175 @@ async selectTrackAndStart(track) {
         .trim()
     },
 
-  // NOVO processLyricsWithTiming() — substitua o método inteiro
-processLyricsWithTiming(lyricsText, songDuration, lrcData = null) {
-  // Se temos dados LRC com timestamps reais, use-os
-  if (lrcData && lrcData.length > 0) {
-    return lrcData.map(item => ({
-      time: item.time,
-      text: item.text,
-      phonetic: this.generatePhonetic(item.text),
-      correct: false,
-      wrong: false,
-      sung: false,
-      isInstrumental: item.text.includes('♪') || item.text.includes('Instrumental'),
-      duration: 0 // será calculado pelo próximo item
-    })).map((line, i, arr) => {
-      const next = arr[i + 1]
-      line.duration = next ? next.time - line.time : 3
-      return line
-    })
-  }
+    analyzeLyricStructure(lines) {
+      const chorusLines = []
+      const bridgeLines = []
 
-  // Fallback: heurísticas melhoradas para estimar timing
-  const lines = lyricsText
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
+      const lineCounts = new Map()
+      for (let i = 0; i < lines.length; i++) {
+        const normalized = lines[i].toLowerCase().replace(/[^\w\s]/g, '').trim()
+        if (normalized.length > 10) {
+          const count = lineCounts.get(normalized) || []
+          count.push(i)
+          lineCounts.set(normalized, count)
+        }
+      }
 
-  // Detectar estrutura: verso, refrão, ponte, instrumental
-  const structure = this.analyzeLyricStructure(lines)
-  
-  let currentTime = 0
-  const avgLineDuration = songDuration / lines.length
+      for (const [_, indices] of lineCounts) {
+        if (indices.length >= 2) {
+          chorusLines.push(...indices)
+        }
+      }
 
-  return lines.map((line, index) => {
-    const isInstrumental = line.includes('Instrumental') || line.includes('♪')
-    const isChorus = structure.chorusLines.includes(index)
-    const isBridge = structure.bridgeLines.includes(index)
-    
-    // Heurística de duração por tipo de linha
-    let duration = avgLineDuration
-    if (isInstrumental) duration *= 2
-    if (isChorus) duration *= 0.9 // refrão costuma ser mais rápido
-    if (line.length < 10) duration *= 0.7 // linhas curtas = mais rápido
-    if (line.length > 50) duration *= 1.3 // linhas longas = mais devagar
-    
-    // Adicionar pausa após refrão
-    if (isChorus && structure.chorusLines[structure.chorusLines.length - 1] === index) {
-      duration *= 1.2
-    }
+      const totalLines = lines.length
+      const middleStart = Math.floor(totalLines * 0.4)
+      const middleEnd = Math.floor(totalLines * 0.7)
 
-    const processedLine = {
-      time: currentTime,
-      text: line,
-      phonetic: this.generatePhonetic(line),
-      correct: false,
-      wrong: false,
-      sung: false,
-      isInstrumental,
-      duration
-    }
+      for (let i = middleStart; i < middleEnd; i++) {
+        if (!chorusLines.includes(i)) {
+          bridgeLines.push(i)
+        }
+      }
 
-    currentTime += duration
-    return processedLine
-  })
-},
+      return { chorusLines, bridgeLines }
+    },
+
+    processLyricsWithTiming(lyricsText, songDuration, lrcData = null) {
+      if (lrcData && lrcData.length > 0) {
+        return lrcData.map(item => ({
+          time: item.time,
+          text: item.text,
+          phonetic: this.generatePhonetic(item.text),
+          correct: false,
+          wrong: false,
+          sung: false,
+          isInstrumental: item.text.includes('♪') || item.text.includes('Instrumental'),
+          duration: 0
+        })).map((line, i, arr) => {
+          const next = arr[i + 1]
+          line.duration = next ? next.time - line.time : 3
+          return line
+        })
+      }
+
+      const lines = lyricsText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+
+      const structure = this.analyzeLyricStructure(lines)
+
+      let currentTime = 0
+      const avgLineDuration = songDuration / lines.length
+
+      return lines.map((line, index) => {
+        const isInstrumental = line.includes('Instrumental') || line.includes('♪')
+        const isChorus = structure.chorusLines.includes(index)
+
+        let duration = avgLineDuration
+        if (isInstrumental) duration *= 2
+        if (isChorus) duration *= 0.9
+        if (line.length < 10) duration *= 0.7
+        if (line.length > 50) duration *= 1.3
+
+        if (isChorus && structure.chorusLines[structure.chorusLines.length - 1] === index) {
+          duration *= 1.2
+        }
+
+        const processedLine = {
+          time: currentTime,
+          text: line,
+          phonetic: this.generatePhonetic(line),
+          correct: false,
+          wrong: false,
+          sung: false,
+          isInstrumental,
+          duration
+        }
+
+        currentTime += duration
+        return processedLine
+      })
+    },
+
+    calculateLyricsTimeScale() {
+      if (!this.processedLyrics.length) return
+
+      const previewDuration = this.duration || 30
+      const fullDuration = this.currentSong.duration || 180
+
+      if (!this.hasRealLRC) {
+        this.lyricsTimeScale = fullDuration / previewDuration
+        this.previewStartOffset = Math.max(0, (fullDuration - previewDuration) / 2)
+        return
+      }
+
+      const lines = this.processedLyrics
+
+      let bestWindow = {
+        score: -Infinity,
+        startTime: 0,
+        endTime: previewDuration
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const start = lines[i].time
+        const end = start + previewDuration
+
+        const windowLines = lines.filter(l => l.time >= start && l.time <= end)
+
+        if (!windowLines.length) continue
+
+        let score = 0
+        const unique = new Set()
+
+        windowLines.forEach(line => {
+          const txt = line.text
+            .toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .trim()
+
+          if (unique.has(txt)) {
+            score += 5
+          }
+
+          unique.add(txt)
+          score += Math.min(txt.length / 10, 4)
+
+          if (line.isInstrumental) {
+            score -= 3
+          }
+        })
+
+        const center = fullDuration / 2
+        const distance = Math.abs(start - center)
+        score += Math.max(0, 15 - distance / 5)
+
+        if (score > bestWindow.score) {
+          bestWindow = { score, startTime: start, endTime: end }
+        }
+      }
+
+      const clippedLyrics = lines
+        .filter(line => line.time >= bestWindow.startTime && line.time <= bestWindow.endTime)
+        .map(line => ({
+          ...line,
+          time: line.time - bestWindow.startTime
+        }))
+
+      this.processedLyrics = clippedLyrics
+      this.previewStartOffset = bestWindow.startTime
+      this.lyricsTimeScale = 1
+
+      console.log('Preview detectado:', `${bestWindow.startTime.toFixed(1)}s → ${bestWindow.endTime.toFixed(1)}s`)
+      console.log('Linhas recortadas:', clippedLyrics.length)
+    },
 
     generatePhonetic(text) {
       const phoneticMap = {
-        'love': 'lʌv',
-        'you': 'juː',
-        'me': 'miː',
-        'heart': 'hɑːrt',
-        'night': 'naɪt',
-        'day': 'deɪ',
-        'way': 'weɪ',
-        'time': 'taɪm',
-        'life': 'laɪf',
-        'baby': 'ˈbeɪbi',
-        'oh': 'oʊ',
-        'yeah': 'jɛə'
+        'love': 'lʌv', 'you': 'juː', 'me': 'miː', 'heart': 'hɑːrt',
+        'night': 'naɪt', 'day': 'deɪ', 'way': 'weɪ', 'time': 'taɪm',
+        'life': 'laɪf', 'baby': 'ˈbeɪbi', 'oh': 'oʊ', 'yeah': 'jɛə'
       }
 
       return text.toLowerCase().split(' ')
@@ -1383,72 +1373,70 @@ processLyricsWithTiming(lyricsText, songDuration, lrcData = null) {
         .join(' ')
     },
 
-  // NOVO loadLyricsForCurrentSong() — substitua o método inteiro
-async loadLyricsForCurrentSong() {
-  this.isLoadingLyrics = true
-  this.lyricsError = null
+    async loadLyricsForCurrentSong() {
+      this.isLoadingLyrics = true
+      this.lyricsError = null
 
-  try {
-    // 1. TENTAR LRCLIB PRIMEIRO (tem timestamps reais!)
-    let lrcData = await this.fetchLRCFromLRCLIB(
-      this.currentSong.title,
-      this.currentSong.artist,
-      this.currentSong.duration
-    )
-
-    if (lrcData && lrcData.length > 0) {
-      this.rawLyrics = lrcData.map(l => l.text).join('\n')
-      this.processedLyrics = this.processLyricsWithTiming(
-        this.rawLyrics,
-        this.currentSong.duration,
-        lrcData
-      )
-      console.log('✅ Letra sincronizada via LRCLIB')
-    } else {
-      // 2. Fallback: Genius API (sem timestamps)
-      let lyricsText = await this.fetchLyricsFromGenius(
-        this.currentSong.title,
-        this.currentSong.artist
-      )
-
-      if (!lyricsText) {
-        lyricsText = await this.fetchLyricsFromAlternativeAPI(
+      try {
+        let lrcData = await this.fetchLRCFromLRCLIB(
           this.currentSong.title,
-          this.currentSong.artist
+          this.currentSong.artist,
+          this.currentSong.duration
         )
+
+        if (lrcData && lrcData.length > 0) {
+          this.rawLyrics = lrcData.map(l => l.text).join('\n')
+          this.processedLyrics = this.processLyricsWithTiming(
+            this.rawLyrics,
+            this.currentSong.duration,
+            lrcData
+          )
+          this.hasRealLRC = true
+          console.log('✅ Letra sincronizada via LRCLIB')
+        } else {
+          let lyricsText = await this.fetchLyricsFromGenius(
+            this.currentSong.title,
+            this.currentSong.artist
+          )
+
+          if (!lyricsText) {
+            lyricsText = await this.fetchLyricsFromAlternativeAPI(
+              this.currentSong.title,
+              this.currentSong.artist
+            )
+          }
+
+          if (lyricsText) {
+            this.rawLyrics = lyricsText
+            const estimatedSongDuration = this.currentSong.duration || 180
+            this.processedLyrics = this.processLyricsWithTiming(
+              lyricsText,
+              estimatedSongDuration
+            )
+            this.hasRealLRC = false
+          } else {
+            throw new Error('Letras não disponíveis')
+          }
+        }
+
+        const realDifficulty = this.calculateDifficulty(this.currentSong, this.rawLyrics)
+        this.currentSong.difficulty = realDifficulty
+
+        const words = this.rawLyrics.split(/\s+/).length
+        this.currentSong.stats = {
+          wordDensity: Math.round((words / this.currentSong.duration) * 60),
+          uniqueWords: new Set(this.rawLyrics.toLowerCase().split(/\s+/)).size,
+          totalLines: this.processedLyrics.length
+        }
+
+      } catch (error) {
+        console.error('Erro ao carregar letras:', error)
+        this.lyricsError = 'Letras não disponíveis. Usando letras de exemplo.'
+        this.loadFallbackLyrics()
+      } finally {
+        this.isLoadingLyrics = false
       }
-
-      if (lyricsText) {
-        this.rawLyrics = lyricsText
-        const estimatedSongDuration = this.currentSong.duration || 180
-        this.processedLyrics = this.processLyricsWithTiming(
-          lyricsText,
-          estimatedSongDuration
-        )
-      } else {
-        throw new Error('Letras não disponíveis')
-      }
-    }
-
-    // Calcular dificuldade real com base na letra
-    const realDifficulty = this.calculateDifficulty(this.currentSong, this.rawLyrics)
-    this.currentSong.difficulty = realDifficulty
-
-    const words = this.rawLyrics.split(/\s+/).length
-    this.currentSong.stats = {
-      wordDensity: Math.round((words / this.currentSong.duration) * 60),
-      uniqueWords: new Set(this.rawLyrics.toLowerCase().split(/\s+/)).size,
-      totalLines: this.processedLyrics.length
-    }
-
-  } catch (error) {
-    console.error('Erro ao carregar letras:', error)
-    this.lyricsError = 'Letras não disponíveis. Usando letras de exemplo.'
-    this.loadFallbackLyrics()
-  } finally {
-    this.isLoadingLyrics = false
-  }
-},
+    },
 
     loadFallbackLyrics() {
       const fallbackLyrics = {
@@ -1476,126 +1464,140 @@ async loadLyricsForCurrentSong() {
 
       const diff = this.currentSong.difficulty || 'medium'
       this.processedLyrics = fallbackLyrics[diff] || fallbackLyrics.medium
+      this.hasRealLRC = false
     },
 
-    loadSettings() {
-      const saved = localStorage.getItem('karaokeSettings')
-      if (saved) {
-        const settings = JSON.parse(saved)
-        this.displayMode = settings.displayMode || 'standard'
-        this.fontSize = settings.fontSize || 28
-        this.showPhonetic = settings.showPhonetic !== false
-        this.visualFeedback = settings.visualFeedback !== false
-        this.autoScroll = settings.autoScroll !== false
-        this.micSensitivity = settings.micSensitivity || 70
-        this.selectedDifficulty = settings.selectedDifficulty || 'medium'
-      }
-    },
+    // ===================== AUDIO SYNC =====================
+   syncLyricsWithAudio() {
+  if (!this.processedLyrics.length) return
 
-    saveSettings() {
-      const settings = {
-        displayMode: this.displayMode,
-        fontSize: this.fontSize,
-        showPhonetic: this.showPhonetic,
-        visualFeedback: this.visualFeedback,
-        autoScroll: this.autoScroll,
-        micSensitivity: this.micSensitivity,
-        selectedDifficulty: this.selectedDifficulty
-      }
-      localStorage.setItem('karaokeSettings', JSON.stringify(settings))
-    },
-
-    setDisplayMode(mode) {
-      this.displayMode = mode
-      this.saveSettings()
-    },
-
-   async searchMusic() {
-  if (!this.searchQuery.trim()) return
-
-  this.isLoading = true
-  this.searchResults = []
-
-  try {
-    const tracks = await this.searchTracksByProvider(this.searchQuery, 20)
-
-    this.searchResults = tracks.map(track => ({
-      ...track,
-      difficulty: this.calculateDifficulty(track)
-    }))
-
-    this.showSearchResults = true
-  } catch (error) {
-    console.error('Erro na busca:', error)
-    this.searchResults = []
-    alert(`Erro ao buscar músicas via ${this.currentProviderLabel}.`)
-  } finally {
-    this.isLoading = false
-  }
-},
-
-
-    handleInput() {
-      if (this.searchTimeout) clearTimeout(this.searchTimeout)
-      this.searchTimeout = setTimeout(() => {
-        if (this.searchQuery.length > 2) this.searchMusic()
-      }, 300)
-    },
-
-  async setSongData(track) {
-  const difficulty = track.difficulty || this.calculateDifficulty(track)
-  const previewDuration = 30
-  const artistName = track.artist?.name || track.artist || 'Artista'
-
-  this.currentSong = {
-    title: track.title || track.name,
-    artist: artistName,
-    cover: track.album?.cover_big || track.album?.cover_medium || track.album?.cover || track.cover,
-    genre: track.genre?.name || track.genre || 'Pop',
-    difficulty,
-    duration: track.duration || 30,
-    previewDuration,
-    preview_url: track.preview || track.preview_url || '',
-    deezerId: track.source === 'deezer' ? track.id : null,
-    spotifyId: track.source === 'spotify' ? track.id : null,
-    source: track.source,
-    stats: null
+  if (this.withMicrophone && Date.now() - this.lastSpeechSyncAt < 1200) {
+    return
   }
 
-  // fallback caso Spotify não tenha preview_url
-  if (!this.currentSong.preview_url) {
-    try {
-      const audioRes = await fetch(
-        `${this.API_BASE}/musicas/${encodeURIComponent(this.currentSong.title + ' ' + this.currentSong.artist)}/audio`,
-        { headers: this.getAuthHeaders() }
-      )
-      if (audioRes.ok) {
-        const audioData = await audioRes.json()
-        this.currentSong.preview_url = audioData.url || ''
-        this.currentSong.cover = this.currentSong.cover || audioData.cover
-      }
-    } catch (e) {
-      console.warn('Fallback de preview falhou:', e)
+  const effectiveTime = this.getEffectiveLyricsTime(true)
+
+  let newLineIndex = this.processedLyrics.findIndex((line, i) => {
+    const nextLine = this.processedLyrics[i + 1]
+    const start = Math.max(0, line.time - 0.15)
+    const end = nextLine ? nextLine.time - 0.05 : line.time + (line.duration || 3)
+    return effectiveTime >= start && effectiveTime < end
+  })
+
+  if (newLineIndex === -1) {
+    if (effectiveTime <= (this.processedLyrics[0]?.time || 0)) {
+      newLineIndex = 0
+    } else {
+      newLineIndex = this.processedLyrics.length - 1
     }
   }
 
-  this.duration = previewDuration
-  this.audioPreviewUrl = this.currentSong.preview_url
-  this.currentTime = 0
-  this.progressPercent = 0
-  this.currentLineIndex = 0
-  this.lyricsStartTime = 0
-  this.lyricsSyncOffset = 0
-  this.hasRealLRC = false        // ← ADICIONAR
-  this.lyricsTimeScale = 1       // ← ADICIONAR (default)
-  this.resetScore()
-
-  await this.loadLyricsForCurrentSong()
-
-  // ← ADICIONAR AQUI: após carregar letras, calcular escala
-  this.calculateLyricsTimeScale()
+  if (newLineIndex !== this.currentLineIndex) {
+    this.currentLineIndex = newLineIndex
+  }
 },
 
+    onAudioTimeUpdate() {
+      const audio = this.$refs.audioPlayer
+      if (!audio) return
+
+      this.currentTime = audio.currentTime
+      this.duration = this.currentSong.previewDuration || 30
+      this.progressPercent = (this.currentTime / this.duration) * 100
+
+      this.syncLyricsWithAudio()
+    },
+
+    onAudioLoaded() {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.volume = this.volume / 100
+        audio.playbackRate = this.playbackRate
+      }
+    },
+
+    handleAudioEnded() {
+      const audio = this.$refs.audioPlayer
+      if (audio && audio.paused) {
+        this.isPlaying = false
+      }
+    },
+
+    // ===================== PLAYBACK CONTROLS =====================
+    togglePlay() {
+      if (!this.audioPreviewUrl) {
+        alert('Nenhum preview disponível.')
+        return
+      }
+
+      this.isPlaying = !this.isPlaying
+
+      if (this.isPlaying) {
+        this.$refs.audioPlayer?.play()
+        if (this.withMicrophone && !this.micActive) this.startMicrophone()
+      } else {
+        this.$refs.audioPlayer?.pause()
+      }
+    },
+
+    skipBackward() {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.currentTime = Math.max(0, audio.currentTime - 5)
+        this.currentTime = audio.currentTime
+        this.syncLyricsWithAudio()
+      }
+    },
+
+    skipForward() {
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.currentTime = Math.min(this.duration, audio.currentTime + 5)
+        this.currentTime = audio.currentTime
+        this.syncLyricsWithAudio()
+      }
+    },
+
+    seekTo(event) {
+      const rect = this.$refs.progressBar.getBoundingClientRect()
+      const percent = (event.clientX - rect.left) / rect.width
+      const newTime = percent * this.duration
+
+      const audio = this.$refs.audioPlayer
+      if (audio) audio.currentTime = newTime
+
+      this.currentTime = newTime
+      this.progressPercent = percent * 100
+      this.syncLyricsWithAudio()
+    },
+
+    updateVolume() {
+      const audio = this.$refs.audioPlayer
+      if (audio) audio.volume = this.volume / 100
+    },
+
+    updatePlaybackRate() {
+      const audio = this.$refs.audioPlayer
+      if (audio) audio.playbackRate = this.playbackRate
+    },
+
+    toggleMute() {
+      this.isMuted = !this.isMuted
+      const audio = this.$refs.audioPlayer
+      if (audio) audio.muted = this.isMuted
+    },
+
+    stopPlayback() {
+      this.isPlaying = false
+      const audio = this.$refs.audioPlayer
+      if (audio) {
+        audio.pause()
+        audio.currentTime = 0
+      }
+      this.stopMicrophone()
+    },
+
+    // ===================== SCORING =====================
     resetScore() {
       this.currentScore = 0
       this.combo = 0
@@ -1605,24 +1607,19 @@ async loadLyricsForCurrentSong() {
       this.correctAttempts = 0
     },
 
-    previewTrack(track) {
-      const audio = new Audio(track.preview)
-      audio.volume = this.volume / 100
-      audio.play()
+    addScore(points, type) {
+      if (this.strictMode && type !== 'perfect') {
+        points *= 0.5
+      }
+
+      this.currentScore = Math.min(this.maxScore, this.currentScore + points)
+      this.scoreAnimation = type
+      setTimeout(() => this.scoreAnimation = '', 300)
+
+      this.starRating = Math.min(5, Math.floor(this.currentScore / 2000))
     },
 
-    handleSearchBlur() {
-      setTimeout(() => {
-        this.isSearchFocused = false
-      }, 200)
-    },
-
-    clearSearch() {
-      this.searchQuery = ''
-      this.searchResults = []
-      this.showSearchResults = false
-    },
-
+    // ===================== SPEECH RECOGNITION =====================
     initSpeechRecognition() {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
       if (!SpeechRecognition) {
@@ -1659,7 +1656,7 @@ async loadLyricsForCurrentSong() {
           )
           this.micActive = false
         } else if (event.error === 'no-speech') {
-          // Silencioso - normal quando não há fala
+          // Silencioso
         } else {
           console.error('Speech error:', event.error)
           this.showMicPermissionToast(
@@ -1773,7 +1770,8 @@ async loadLyricsForCurrentSong() {
       }
     },
 
- checkSingingAccuracy(transcript) {
+    // ===================== SINGING ACCURACY =====================
+  checkSingingAccuracy(transcript) {
   if (!this.processedLyrics.length) return
 
   const match = this.findBestLyricMatch(transcript)
@@ -1782,19 +1780,14 @@ async loadLyricsForCurrentSong() {
   const matchedLine = this.processedLyrics[match.index]
   if (!matchedLine) return
 
-  // ← CORREÇÃO: Calcular offset usando tempo ESCALADO
-const scaledCurrentTime =
-  this.previewStartOffset +
-  (this.currentTime * this.lyricsTimeScale)
-  const rawOffset = matchedLine.time - scaledCurrentTime
-  const maxCorrection = 5 // máximo 5 segundos na escala da letra
-  
+  const predictedTime = this.getEffectiveLyricsTime(false)
+  const rawOffset = matchedLine.time - predictedTime
+  const maxCorrection = 5
+
   let newOffset = rawOffset
   if (Math.abs(rawOffset) > maxCorrection) {
-    // Correção muito grande = provavelmente erro de reconhecimento
     newOffset = this.lyricsSyncOffset + (rawOffset - this.lyricsSyncOffset) * 0.3
   } else {
-    // Correção pequena = confiável, aplicar média móvel
     newOffset = this.lyricsSyncOffset * 0.7 + rawOffset * 0.3
   }
 
@@ -1842,12 +1835,72 @@ const scaledCurrentTime =
     : 0
 },
 
-    calculateSimilarity(str1, str2) {
-      const clean1 = str1.toLowerCase().replace(/[^\\w\\s]/g, '')
-      const clean2 = str2.toLowerCase().replace(/[^\\w\\s]/g, '')
+    normalizeLyricText(text = '') {
+      return text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w\s']/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    },
 
-      const words1 = clean1.split(/\\s+/)
-      const words2 = clean2.split(/\\s+/)
+    findBestLyricMatch(transcript) {
+      const normalizedTranscript = this.normalizeLyricText(transcript)
+
+      if (!normalizedTranscript || normalizedTranscript.split(' ').length < 2) {
+        return null
+      }
+
+      let bestMatch = { index: -1, score: 0 }
+
+      let start = 0
+      let end = this.processedLyrics.length - 1
+
+      if (this.currentLineIndex > 0 || this.lyricsSyncOffset !== 0) {
+        start = Math.max(0, this.currentLineIndex - 4)
+        end = Math.min(this.processedLyrics.length - 1, this.currentLineIndex + 6)
+      }
+
+      for (let i = start; i <= end; i++) {
+        const line = this.processedLyrics[i]
+        if (!line || line.isInstrumental) continue
+
+        const score = this.calculateSimilarity(
+          normalizedTranscript,
+          this.normalizeLyricText(line.text)
+        )
+
+        if (score > bestMatch.score) {
+          bestMatch = { index: i, score }
+        }
+      }
+
+      if (bestMatch.score < 0.55) {
+        for (let i = 0; i < this.processedLyrics.length; i++) {
+          const line = this.processedLyrics[i]
+          if (!line || line.isInstrumental) continue
+
+          const score = this.calculateSimilarity(
+            normalizedTranscript,
+            this.normalizeLyricText(line.text)
+          )
+
+          if (score > bestMatch.score) {
+            bestMatch = { index: i, score }
+          }
+        }
+      }
+
+      return bestMatch.score >= 0.55 ? bestMatch : null
+    },
+
+    calculateSimilarity(str1, str2) {
+      const clean1 = str1.toLowerCase().replace(/[^\w\s]/g, '')
+      const clean2 = str2.toLowerCase().replace(/[^\w\s]/g, '')
+
+      const words1 = clean1.split(/\s+/)
+      const words2 = clean2.split(/\s+/)
 
       if (words1.length === 0 || words2.length === 0) return 0
 
@@ -1894,227 +1947,71 @@ const scaledCurrentTime =
       return matrix[str2.length][str1.length]
     },
 
-    addScore(points, type) {
-      if (this.strictMode && type !== 'perfect') {
-        points *= 0.5
-      }
+    // ===================== SETTINGS =====================
+   loadSettings() {
+  const saved = localStorage.getItem('karaokeSettings')
+  if (!saved) return
 
-      this.currentScore = Math.min(this.maxScore, this.currentScore + points)
-      this.scoreAnimation = type
-      setTimeout(() => this.scoreAnimation = '', 300)
+  try {
+    const settings = JSON.parse(saved)
 
-      this.starRating = Math.min(5, Math.floor(this.currentScore / 2000))
-    },
+    this.displayMode = settings.displayMode ?? 'standard'
+    this.fontSize = Number(settings.fontSize ?? 28)
 
-    togglePlay() {
-      if (!this.audioPreviewUrl) {
-        alert('Nenhum preview disponível.')
-        return
-      }
+    this.showPhonetic =
+      typeof settings.showPhonetic === 'boolean'
+        ? settings.showPhonetic
+        : false
 
-      this.isPlaying = !this.isPlaying
+    this.visualFeedback =
+      typeof settings.visualFeedback === 'boolean'
+        ? settings.visualFeedback
+        : true
 
-      if (this.isPlaying) {
-        this.$refs.audioPlayer?.play()
-        this.startPlaybackLoop()
-        if (this.withMicrophone && !this.micActive) this.startMicrophone()
-      } else {
-        this.$refs.audioPlayer?.pause()
-        this.stopPlaybackLoop()
-      }
-    },
+    this.autoScroll =
+      typeof settings.autoScroll === 'boolean'
+        ? settings.autoScroll
+        : true
 
-    startPlaybackLoop() {
-      const loop = () => {
-        if (!this.isPlaying) return
-        this.updateProgress()
-        this.animationFrame = requestAnimationFrame(loop)
-      }
-      loop()
-    },
-
-    stopPlaybackLoop() {
-      cancelAnimationFrame(this.animationFrame)
-    },
-
-    updateProgress() {
-      const audio = this.$refs.audioPlayer
-      if (!audio) return
-
-      this.currentTime = audio.currentTime
-      this.duration = audio.duration || this.duration
-      this.progressPercent = (this.currentTime / this.duration) * 100
-      this.syncLyricsWithAudio()
-    },
-
-  syncLyricsWithAudio() {
-  if (this.processedLyrics.length === 0) return
-
-  // Se acabou de corrigir por voz, dê uma pausa
-  if (this.withMicrophone && Date.now() - this.lastSpeechSyncAt < 1200) {
-    return
-  }
-
-  // ← CORREÇÃO: Aplicar escala de tempo + offset
-const scaledTime =
-  this.previewStartOffset +
-  (this.currentTime * this.lyricsTimeScale) +
-  this.lyricsSyncOffset
-
-  let newLineIndex = this.currentLineIndex
-
-  // Procurar a linha ativa no tempo escalado
-  for (let i = 0; i < this.processedLyrics.length; i++) {
-    const line = this.processedLyrics[i]
-    const nextLine = this.processedLyrics[i + 1]
-
-    const lineStart = line.time - 0.3
-    const lineEnd = nextLine ? nextLine.time : Number.MAX_SAFE_INTEGER
-
-    if (scaledTime >= lineStart && scaledTime < lineEnd) {
-      newLineIndex = i
-      break
-    }
-  }
-
-  // ← CORREÇÃO: Se passou do final da letra, voltar para o início (loop da letra)
-  const lastLine = this.processedLyrics[this.processedLyrics.length - 1]
-  if (scaledTime >= lastLine.time + lastLine.duration) {
-    newLineIndex = 0
-  }
-
-  // Suavizar transição
-  if (newLineIndex !== this.currentLineIndex) {
-    const diff = Math.abs(newLineIndex - this.currentLineIndex)
-
-    if (diff > 3) {
-      this.currentLineIndex = newLineIndex
-    } else {
-      const direction = newLineIndex > this.currentLineIndex ? 1 : -1
-      this.currentLineIndex += direction
-    }
+    this.micSensitivity = Number(settings.micSensitivity ?? 70)
+    this.selectedDifficulty = settings.selectedDifficulty ?? 'medium'
+    this.playbackRate = Number(settings.playbackRate ?? 1)
+  } catch (e) {
+    console.error('Erro ao carregar configurações:', e)
   }
 },
 
-    onAudioTimeUpdate() {
-      const audio = this.$refs.audioPlayer
-      if (!audio) return
-      this.currentTime = audio.currentTime
-      this.duration = audio.duration || this.duration
-      this.progressPercent = (this.currentTime / this.duration) * 100
-      this.syncLyricsWithAudio()
+    saveSettings() {
+      const settings = {
+        displayMode: this.displayMode,
+        fontSize: this.fontSize,
+        showPhonetic: this.showPhonetic,
+        visualFeedback: this.visualFeedback,
+        autoScroll: this.autoScroll,
+        micSensitivity: this.micSensitivity,
+        selectedDifficulty: this.selectedDifficulty
+      }
+      localStorage.setItem('karaokeSettings', JSON.stringify(settings))
     },
 
-onAudioLoaded() {
-  const audio = this.$refs.audioPlayer
-  if (audio) {
-    // ← CORREÇÃO: Não sobrescrever duration! Manter o previewDuration (30s)
-    // this.duration = audio.duration  // REMOVIDO
-    audio.volume = this.volume / 100
-    audio.playbackRate = this.playbackRate
+setDisplayMode(mode) {
+  this.displayMode = mode
+  this.saveSettings()
+  
+  // ✅ NOVO: Aplica classes CSS específicas para cada modo
+  const container = this.$el
+  if (container) {
+    container.classList.remove('standard', 'minimal', 'party')
+    container.classList.add(mode)
   }
 },
-
-handleAudioEnded() {
-  // NÃO resetar nada! O <audio loop> já cuida do loop nativamente.
-  // Apenas verificar se realmente parou (não loopou)
-  const audio = this.$refs.audioPlayer
-  if (audio && audio.paused) {
-    this.isPlaying = false
-  }
-  // REMOVIDO: this.currentTime = 0
-  // REMOVIDO: this.progressPercent = 0
-  // REMOVIDO: this.lyricsSyncOffset = 0
-  // REMOVIDO: this.lastSpeechSyncAt = 0
-},
-
-    skipBackward() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.currentTime = Math.max(0, audio.currentTime - 5)
-        this.currentTime = audio.currentTime
-        this.syncLyricsWithAudio()
-      }
-    },
-
-    skipForward() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.currentTime = Math.min(this.duration, audio.currentTime + 5)
-        this.currentTime = audio.currentTime
-        this.syncLyricsWithAudio()
-      }
-    },
-
-    seekTo(event) {
-      const rect = this.$refs.progressBar.getBoundingClientRect()
-      const percent = (event.clientX - rect.left) / rect.width
-      const newTime = percent * this.duration
-
-      const audio = this.$refs.audioPlayer
-      if (audio) audio.currentTime = newTime
-
-      this.currentTime = newTime
-      this.progressPercent = percent * 100
-
-      this.syncLyricsWithAudio()
-    },
-
-    updateVolume() {
-      const audio = this.$refs.audioPlayer
-      if (audio) audio.volume = this.volume / 100
-    },
-
-    updatePlaybackRate() {
-      const audio = this.$refs.audioPlayer
-      if (audio) audio.playbackRate = this.playbackRate
-    },
-
-    initAudio() {
-      this.$nextTick(() => {
-        this.initAudioVisualizer()
-        this.initBackgroundVisualizer()
-      })
-    },
-
-    initAudioVisualizer() {
-      const canvas = this.$refs.audioCanvas
-      if (!canvas) return
-      canvas.width = canvas.offsetWidth || 800
-      canvas.height = canvas.offsetHeight || 100
-    },
-
-    initBackgroundVisualizer() {
-      const canvas = this.$refs.bgCanvas
-      if (!canvas) return
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    },
-
-    toggleMute() {
-      this.isMuted = !this.isMuted
-      const audio = this.$refs.audioPlayer
-      if (audio) audio.muted = this.isMuted
-    },
-
-    changePitch(delta) {
-      this.pitchShift = Math.max(-5, Math.min(5, this.pitchShift + delta))
-    },
-
-    toggleFullscreen() {
-      this.isFullscreen = !this.isFullscreen
-      if (this.isFullscreen) {
-        document.documentElement.requestFullscreen?.()
-      } else {
-        document.exitFullscreen?.()
-      }
-    },
 
     toggleSettings() {
       this.showSettings = !this.showSettings
       if (!this.showSettings) this.saveSettings()
     },
 
+    // ===================== RECORDING =====================
     toggleRecording() {
       if (this.isRecording) {
         this.stopRecording()
@@ -2166,20 +2063,45 @@ handleAudioEnded() {
       }
     },
 
+    // ===================== UI / MISC =====================
+    showMicPermissionToast(type, title, message, duration = 5000) {
+      if (this.micPermissionToast.timer) {
+        clearTimeout(this.micPermissionToast.timer)
+      }
+      this.micPermissionToast = {
+        show: true,
+        type,
+        title,
+        message,
+        timer: setTimeout(() => {
+          this.hideMicPermissionToast()
+        }, duration)
+      }
+    },
+
+    hideMicPermissionToast() {
+      if (this.micPermissionToast.timer) {
+        clearTimeout(this.micPermissionToast.timer)
+      }
+      this.micPermissionToast.show = false
+    },
+
+    toggleFullscreen() {
+      this.isFullscreen = !this.isFullscreen
+      if (this.isFullscreen) {
+        document.documentElement.requestFullscreen?.()
+      } else {
+        document.exitFullscreen?.()
+      }
+    },
+
+    changePitch(delta) {
+      this.pitchShift = Math.max(-5, Math.min(5, this.pitchShift + delta))
+    },
+
     goBack() {
       this.showSongSelection = true
       this.stopPlayback()
-      this.stopMicrophone()
-    },
-
-    stopPlayback() {
-      this.isPlaying = false
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.pause()
-        audio.currentTime = 0
-      }
-      this.stopPlaybackLoop()
       this.stopMicrophone()
     },
 
@@ -2187,6 +2109,27 @@ handleAudioEnded() {
       const mins = Math.floor(seconds / 60)
       const secs = Math.floor(seconds % 60)
       return `${mins}:${secs.toString().padStart(2, '0')}`
+    },
+
+    initAudio() {
+      this.$nextTick(() => {
+        this.initAudioVisualizer()
+        this.initBackgroundVisualizer()
+      })
+    },
+
+    initAudioVisualizer() {
+      const canvas = this.$refs.audioCanvas
+      if (!canvas) return
+      canvas.width = canvas.offsetWidth || 800
+      canvas.height = canvas.offsetHeight || 100
+    },
+
+    initBackgroundVisualizer() {
+      const canvas = this.$refs.bgCanvas
+      if (!canvas) return
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
     },
 
     handleKeydown(e) {
@@ -2387,7 +2330,7 @@ handleAudioEnded() {
   margin-bottom: 32px;
 }
 
-/* ============ MODO DE JOGO - DESTAQUE MELHORADO ============ */
+/* ============ MODO DE JOGO ============ */
 
 .mode-selection {
   background: linear-gradient(135deg, rgba(255, 0, 110, 0.1), rgba(131, 56, 236, 0.1));
@@ -2492,7 +2435,7 @@ handleAudioEnded() {
   border: 2px solid transparent;
   border-radius: 12px;
   padding: 12px 16px;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   transition: all 0.2s;
   backdrop-filter: blur(10px);
 }
@@ -2523,13 +2466,84 @@ handleAudioEnded() {
   color: rgba(255, 255, 255, 0.5);
 }
 
+.clear-search-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.clear-search-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ============ RESULTS COUNT ============ */
+
+.results-count {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.show-more-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+
+/* ============ LOAD MORE BUTTON ============ */
+
+.load-more-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding-bottom: 20px;
+}
+
+.btn-load-more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-load-more:hover {
+  background: linear-gradient(135deg, #ff006e, #8338ec);
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 0, 110, 0.4);
+}
+
 /* ============ SONGS GRID ============ */
 
 .songs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 20px;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
 }
 
 .loading-state {
@@ -2587,19 +2601,23 @@ handleAudioEnded() {
 }
 
 .difficulty-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 12px;
   border-radius: 12px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
+  min-width: 60px;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .difficulty-badge.easy { background: #22c55e; color: #000; }
 .difficulty-badge.medium { background: #f59e0b; color: #000; }
-.difficulty-badge.hard { background: #ef4444; }
-
-/* ============ NO RESULTS - HORIZONTAL ============ */
+.difficulty-badge.hard { background: #ef4444; color: #fff; }
+/* ============ NO RESULTS ============ */
 
 .no-results {
   grid-column: 1 / -1;
@@ -2635,7 +2653,7 @@ handleAudioEnded() {
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ============ EMPTY STATE - DIGITE ALGO ============ */
+/* ============ EMPTY STATE ============ */
 
 .empty-state {
   flex-direction: column;
@@ -2706,39 +2724,6 @@ handleAudioEnded() {
   50% { filter: hue-rotate(180deg); }
 }
 
-.lyrics-wrapper {
-  /* will-change: transform; */
-  /* transform: translateZ(0); */
-  /* transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); */
-  padding: 160px 0;  /* espaço para scroll no topo e embaixo */
-}
-
-.lyric-line {
-  text-align: center;
-  padding: 16px 20px;
-  position: relative;
-  opacity: 0.25;
-  transform: scale(0.92);
-  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  min-height: 60px;  /* altura mínima para consistência */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lyric-line.active {
-  opacity: 1;
-  transform: scale(1.08);
-  font-weight: 800;
-}
-
-.lyric-line.past {
-  opacity: 0.4;
-}
-
-.lyric-line.future {
-  opacity: 0.15;
-}
 /* ============ VISUALIZER ============ */
 
 .visualizer-bg {
@@ -3020,12 +3005,51 @@ handleAudioEnded() {
 .lyrics-section {
   position: relative;
   height: 400px;
-  overflow-y: auto;        /* ← MUDAR de hidden para auto */
+  overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  padding-top: 8px;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%);
 }
+
+.lyrics-wrapper {
+  padding: 12px 0 80px;
+}
+
+.karaoke-container.fullscreen .karaoke-stage {
+  grid-template-columns: 1fr;
+  align-items: flex-start;
+  padding-top: 0;
+  padding-bottom: 8px;
+  gap: 0;
+}
+
+.karaoke-container.fullscreen .lyrics-section {
+  height: calc(100vh - 185px);
+  margin-top: -36px;
+  padding-top: 0;
+}
+
+.karaoke-container.fullscreen .lyrics-wrapper {
+  padding-top: 0;
+  padding-bottom: 120px;
+}
+
+.karaoke-container.fullscreen .progress-line {
+  top: 30%;
+}
+
+.karaoke-container.fullscreen .lyric-line {
+  min-height: 54px;
+  padding: 12px 20px;
+}
+
+.karaoke-container.fullscreen .karaoke-header {
+  padding: 10px 40px;
+  min-height: auto;
+}
+
 
 .lyrics-loading, .lyrics-error {
   display: flex;
@@ -3056,6 +3080,33 @@ handleAudioEnded() {
   font-weight: 600;
 }
 
+.lyric-line {
+  text-align: center;
+  padding: 16px 20px;
+  position: relative;
+  opacity: 0.25;
+  transform: scale(0.92);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lyric-line.active {
+  opacity: 1;
+  transform: scale(1.08);
+  font-weight: 800;
+}
+
+.lyric-line.past {
+  opacity: 0.4;
+}
+
+.lyric-line.future {
+  opacity: 0.15;
+}
+
 .lyric-line.instrumental {
   opacity: 0.4;
 }
@@ -3064,6 +3115,9 @@ handleAudioEnded() {
   font-size: 24px;
   opacity: 0.5;
   font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .lyric-text {
@@ -3663,12 +3717,22 @@ handleAudioEnded() {
   display: flex;
   align-items: center;
   gap: 12px;
+  justify-content: flex-start;
+}
+
+.setting-item.checkbox label {
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  opacity: 1;
 }
 
 .setting-item.checkbox input[type="checkbox"] {
   width: 20px;
   height: 20px;
   accent-color: #1DB954;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
 .btn-close {
@@ -3740,13 +3804,47 @@ handleAudioEnded() {
   opacity: 0;
 }
 
-.karaoke-container.fullscreen .karaoke-stage {
-  grid-template-columns: 1fr;
+.karaoke-container.fullscreen .song-info-mini h3 {
+  font-size: 22px;  /* ✅ Ligeiramente maior para destaque */
 }
 
-.karaoke-container.fullscreen .lyrics-section {
-  height: 60vh;
+/* ============ PARTY MODE ============ */
+.karaoke-container.party {
+  background: linear-gradient(135deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%);
+  animation: partyBg 8s infinite alternate;
 }
+
+.karaoke-container.party .lyric-line.active .lyric-text {
+  background: linear-gradient(135deg, #ff006e, #ffeb3b, #00e676);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: glow 1s ease-in-out infinite, partyPulse 2s infinite;
+}
+
+.karaoke-container.party .visualizer-bg {
+  opacity: 0.8;
+  animation: partyBg 5s infinite;
+}
+
+@keyframes partyPulse {
+  0%, 100% { transform: scale(1.08); }
+  50% { transform: scale(1.15); }
+}
+
+/* ============ MINIMAL MODE ============ */
+.karaoke-container.minimal .album-section,
+.karaoke-container.minimal .score-section {
+  display: none !important;
+}
+
+.karaoke-container.minimal .karaoke-stage {
+  grid-template-columns: 1fr !important;
+}
+
+.karaoke-container.minimal .lyrics-section {
+  height: 70vh;
+}
+/* ============ RESPONSIVE ============ */
 
 @media (max-width: 1200px) {
   .karaoke-stage {
@@ -3819,6 +3917,12 @@ handleAudioEnded() {
 
   .empty-state {
     padding: 40px 20px;
+  }
+
+  .results-count {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
   }
 }
 </style>
