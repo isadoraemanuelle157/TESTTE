@@ -25,21 +25,45 @@ const normalizarGeneros = (generosInput = []) => {
   generosInput.forEach(g => {
     if (!g) return
     if (typeof g === 'string') {
-      locais.push(g)
+      if (mongoose.Types.ObjectId.isValid(g)) {
+        locais.push(g)
+      } else {
+        // String que não é ObjectId vira externo genérico
+        externos.push({
+          source: 'local',
+          externalId: g,
+          nome: g,
+          icon: '🎵',
+          color: '#1DB954'
+        })
+      }
       return
     }
+
+    // Se é objeto com source externo
     if (g.source && g.source !== 'local') {
       externos.push({
         source: g.source,
-        externalId: g.externalId || g.id,
+        externalId: g.externalId || g.id || String(g._id),
         nome: g.nome || g.name || 'Desconhecido',
         icon: g.icon || g.emoji || '🎵',
         color: g.color || '#1DB954'
       })
-    } else if (g.id && !g.source) {
-      locais.push(g.id)
-    } else if (g._id) {
-      locais.push(g._id)
+    } 
+    // Se é objeto sem source ou source local, verificar ID
+    else if (g._id || g.id) {
+      const id = String(g._id || g.id)
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        locais.push(id)
+      } else {
+        externos.push({
+          source: g.source || 'local',
+          externalId: id,
+          nome: g.nome || g.name || 'Desconhecido',
+          icon: g.icon || g.emoji || '🎵',
+          color: g.color || '#1DB954'
+        })
+      }
     }
   })
 
@@ -338,10 +362,13 @@ const updateUser = async (id, data) => {
     usuarioAtual.generos = { locais: norm.locais, externos: norm.externos }
   }
 
-  if (artistasFavoritos !== undefined) {
-    const norm = normalizarArtistas(artistasFavoritos)
-    usuarioAtual.artistasFavoritos = { locais: norm.locais, externos: norm.externos }
-  }
+if (artistasFavoritos !== undefined) {
+  const norm = normalizarArtistas(artistasFavoritos)
+  
+  // ✅ Forçar reset do campo para migrar de array antigo para objeto novo
+  usuarioAtual.markModified('artistasFavoritos')
+  usuarioAtual.artistasFavoritos = { locais: norm.locais, externos: norm.externos }
+}
 
   if (vibesFavoritas !== undefined) {
     const norm = normalizarVibes(vibesFavoritas)

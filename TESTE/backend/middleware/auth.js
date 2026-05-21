@@ -15,16 +15,13 @@ function optionalAuth(req, res, next) {
   if (!authHeader) return next()
 
   const token = authHeader.split(' ')[1]
-
   if (!token) return next()
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-
     req.user = decoded
     req.isLogged = true
     req.isAuthenticated = true
-
     next()
   } catch (err) {
     req.tokenExpired = err.name === 'TokenExpiredError'
@@ -46,7 +43,6 @@ function requireAuth(req, res, next) {
   }
 
   const token = authHeader.split(' ')[1]
-
   if (!token) {
     return res.status(401).json({
       error: 'TOKEN_REQUIRED'
@@ -55,17 +51,13 @@ function requireAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-
     req.user = decoded
     req.isLogged = true
     req.isAuthenticated = true
-
     next()
   } catch (err) {
     return res.status(401).json({
-      error: err.name === 'TokenExpiredError'
-        ? 'TOKEN_EXPIRED'
-        : 'INVALID_TOKEN'
+      error: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN'
     })
   }
 }

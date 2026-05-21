@@ -189,9 +189,9 @@ usuarioSchema.methods.getVibesCompletas = async function() {
 
 usuarioSchema.pre('save', function(next) {
   // Se generos vier como array simples (do onboarding), converter para formato interno
-  if (Array.isArray(this.generos)) {
+   if (Array.isArray(this.generos)) {
     const externos = this.generos
-      .filter(g => g.source && g.source !== 'local')
+      .filter(g => g && typeof g === 'object' && g.source && g.source !== 'local')
       .map(g => ({
         source: g.source,
         externalId: g.id?.toString() || g.externalId,
@@ -201,11 +201,35 @@ usuarioSchema.pre('save', function(next) {
       }))
     
     const locais = this.generos
-      .filter(g => !g.source || g.source === 'local')
-      .map(g => g.id || g._id)
+      .filter(g => {
+        if (!g) return false
+        if (typeof g === 'string') return mongoose.Types.ObjectId.isValid(g)
+        return !g.source || g.source === 'local'
+      })
+      .map(g => typeof g === 'string' ? g : (g.id || g._id))
       .filter(id => id && mongoose.Types.ObjectId.isValid(id))
     
     this.generos = { locais, externos }
+  }
+  
+  // ✅ NOVO: Se generos já é objeto { locais, externos }, validar locais
+  if (this.generos && typeof this.generos === 'object' && !Array.isArray(this.generos)) {
+    // Validar locais
+    if (Array.isArray(this.generos.locais)) {
+      this.generos.locais = this.generos.locais
+        .map(id => {
+          if (typeof id === 'object') return id._id?.toString() || id.id?.toString() || id.toString()
+          return String(id)
+        })
+        .filter(id => mongoose.Types.ObjectId.isValid(id))
+    } else {
+      this.generos.locais = []
+    }
+    
+    // Garantir externos é array
+    if (!Array.isArray(this.generos.externos)) {
+      this.generos.externos = []
+    }
   }
   
   // Se artistasFavoritos vier como array simples

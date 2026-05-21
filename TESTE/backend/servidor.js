@@ -59,6 +59,8 @@ const { requireAuth, optionalAuth } = require('./middleware/auth')
 const { spotifyRequest, isTokenValid } = require('./utils/spotifyRequest')
 const cache = require('./utils/cache')
 const { checkChatLimit } = require('./middleware/chatLimit')
+const path = require('path')
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 const usuarioRoutes = safeRequire('./routes/usuarioRoutes')
 const musicaRoutes = safeRequire('./routes/musicaRoutes')
@@ -80,6 +82,7 @@ const spotifyRoutes = safeRequire('./routes/spotifyRoutes')
 const geniusRoutes = require('./routes/geniusRoutes')
 const gameRoutes = safeRequire('./routes/gameRoutes')
 const suporteRoutes = safeRequire('./routes/suporteRoutes')
+const chatRoutes = safeRequire('./routes/chatRoutes')
 
 // ============================================
 // 📌 ROTAS APP
@@ -96,6 +99,7 @@ app.use('/spotify', requireAuth, spotifyRoutes)      // 🔒 Protegido
 app.use('/curtidas', requireAuth, curtidaRoutes)     // 🔒 Protegido
 app.use('/favoritas', requireAuth, favoritaRoutes)   // 🔒 Protegido
 app.use('/historico', requireAuth, historicoRoutes)  // 🔒 Protegido
+app.use('/chats', requireAuth, chatRoutes)
 app.use('/notificacoes', notificacaoRoutes)                                                                                                                                  
 app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)
@@ -228,63 +232,57 @@ const MOODS = [
 // ============================================
 // 🎵 ÁUDIO DA MÚSICA
 // ============================================
-app.get('/musicas/:id/audio', async (req, res) => {
+app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params
-
     const query = id
+    const isAuthenticated = !!(req.user && req.user.id)
 
-    // Spotify
+    // =========================
+    // COM LOGIN -> SPOTIFY PRIMEIRO
+    // =========================
+    if (isAuthenticated) {
+      try {
+        const spotifyResponse = await spotifyRequest({
+          method: 'GET',
+          url: `${SPOTIFY_API_URL}/search`,
+          params: {
+            q: query,
+            type: 'track',
+            limit: 5,
+            market: 'BR'
+          }
+        })
+
+        const spotifyTrack =
+          spotifyResponse.data?.tracks?.items?.find(track => track.preview_url)
+
+        if (spotifyTrack) {
+          return res.json({
+            source: 'spotify',
+            url: spotifyTrack.preview_url,
+            title: spotifyTrack.name,
+            artist: spotifyTrack.artists?.map(a => a.name).join(', '),
+            cover: spotifyTrack.album?.images?.[0]?.url
+          })
+        }
+      } catch (err) {
+        console.log('⚠️ Spotify preview falhou')
+      }
+    }
+
+    // =========================
+    // SEM LOGIN -> DEEZER PRIMEIRO
+    // =========================
     try {
-      const spotifyResponse = await spotifyRequest({
-        method: 'GET',
-        url: `${SPOTIFY_API_URL}/search`,
+      const deezerResponse = await axios.get(`${DEEZER_API_URL}/search`, {
         params: {
           q: query,
-          type: 'track',
-          limit: 5,
-          market: 'BR'
+          limit: 5
         }
       })
 
-      const spotifyTrack =
-        spotifyResponse.data?.tracks?.items?.find(
-          track => track.preview_url
-        )
-
-      if (spotifyTrack) {
-        return res.json({
-          source: 'spotify',
-          url: spotifyTrack.preview_url,
-          title: spotifyTrack.name,
-          artist: spotifyTrack.artists
-            ?.map(a => a.name)
-            .join(', '),
-
-          cover:
-            spotifyTrack.album?.images?.[0]?.url
-        })
-      }
-
-    } catch (err) {
-      console.log('⚠️ Spotify preview falhou')
-    }
-
-    // Deezer fallback
-    try {
-      const deezerResponse = await axios.get(
-        `${DEEZER_API_URL}/search`,
-        {
-          params: {
-            q: query,
-            limit: 5
-          }
-        }
-      )
-
-      const track = deezerResponse.data?.data?.find(
-        t => t.preview
-      )
+      const track = deezerResponse.data?.data?.find(t => t.preview)
 
       if (track) {
         return res.json({
@@ -295,15 +293,44 @@ app.get('/musicas/:id/audio', async (req, res) => {
           cover: track.album?.cover_medium
         })
       }
-
     } catch (err) {
       console.log('⚠️ Deezer preview falhou')
+    }
+
+    // fallback final: se logado e Spotify ainda não tentou ou falhou sem preview
+    if (!isAuthenticated) {
+      try {
+        const spotifyResponse = await spotifyRequest({
+          method: 'GET',
+          url: `${SPOTIFY_API_URL}/search`,
+          params: {
+            q: query,
+            type: 'track',
+            limit: 5,
+            market: 'BR'
+          }
+        })
+
+        const spotifyTrack =
+          spotifyResponse.data?.tracks?.items?.find(track => track.preview_url)
+
+        if (spotifyTrack) {
+          return res.json({
+            source: 'spotify',
+            url: spotifyTrack.preview_url,
+            title: spotifyTrack.name,
+            artist: spotifyTrack.artists?.map(a => a.name).join(', '),
+            cover: spotifyTrack.album?.images?.[0]?.url
+          })
+        }
+      } catch (err) {
+        console.log('⚠️ Spotify fallback falhou')
+      }
     }
 
     res.status(404).json({
       error: 'Preview não encontrado'
     })
-
   } catch (error) {
     console.error('❌ Audio error:', error.message)
 
@@ -312,6 +339,7 @@ app.get('/musicas/:id/audio', async (req, res) => {
     })
   }
 })
+
 
 // ============================================
 // 💚 HEALTH CHECK

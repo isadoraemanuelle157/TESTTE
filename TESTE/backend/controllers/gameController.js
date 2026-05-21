@@ -126,7 +126,22 @@ const claimDailyReward = async (req, res) => {
 
 const getShop = async (req, res) => {
   try {
-    const items = await gameService.getShopItems(req.user.id)
+    // Se não tiver usuário autenticado, retorna itens sem status de "possuído"
+    const userId = req.user?.id
+    
+    let items
+    if (userId) {
+      items = await gameService.getShopItems(userId)
+    } else {
+      // Retorna itens sem informação de posse
+      const { LOJA_ITENS } = require('../services/gameService')
+      items = LOJA_ITENS.map(item => ({
+        ...item,
+        possuido: false,
+        podeComprar: false // Não pode comprar sem login
+      }))
+    }
+    
     res.json({ items })
   } catch (error) {
     res.status(500).json({ error: error.message })

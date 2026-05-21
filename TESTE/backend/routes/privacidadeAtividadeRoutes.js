@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const authMiddleware = require('../middleware/authMiddleware')
+const { requireAuth } = require('../middleware/auth')
 const controller = require('../controllers/privacidadeAtividadeController')
 
 router.get('/atividade/opcoes', authMiddleware, controller.listarOpcoes)

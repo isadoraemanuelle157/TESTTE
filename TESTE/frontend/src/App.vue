@@ -72,7 +72,7 @@ export default {
     '$route.path': {
       immediate: true,
       handler(newPath) {
-        const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical']
+        const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical', '/matchmusical', 'chatiamusica']
         this.showFooter = !noFooterPages.includes(newPath)
         console.log('[App] Rota:', newPath, '| Footer visível:', this.showFooter)
       }

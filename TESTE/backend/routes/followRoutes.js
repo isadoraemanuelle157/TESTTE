@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const followController = require('../controllers/followController')
-const authMiddleware = require('../middleware/authMiddleware')
+const { requireAuth } = require('../middleware/auth')
 
 router.post('/seguir', authMiddleware, followController.seguir)
 router.get('/seguindo/:id', followController.seguindoPorId)

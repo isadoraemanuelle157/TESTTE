@@ -1169,34 +1169,91 @@ async mounted() {
   }
 },
 
-    async loadServerData() {
-      try {
-        const statsRes = await gameApi.getStats();
-        this.serverStats = statsRes.data;
-        this.totalCoins = this.serverStats.estatisticas?.totalMoedas || 0;
-        this.totalScore = this.serverStats.estatisticas?.totalPontos || 0;
-        this.accuracy = this.serverStats.estatisticas?.precisaoMedia || 0;
-        
-        const achievementsRes = await gameApi.getAchievements();
-        this.serverAchievements = achievementsRes.data.achievements;
-        
-     const rewardsRes = await gameApi.getDailyRewards()
-this.serverDailyRewards = rewardsRes.data.dias.map(day => ({
-  ...day,
-  claimed: day.reivindicado,
-  available: day.disponivel
-}))
+   async loadServerData() {
+  try {
+    // Verifica se usuário está logado
+    const token = localStorage.getItem('token')
+    const isLoggedIn = !!token
 
-        const shopRes = await gameApi.getShop();
-        this.serverShopItems = shopRes.data.items;
-        
-        const leaderboardRes = await gameApi.getLeaderboard();
-        this.serverLeaderboard = leaderboardRes.data.leaderboard;
-        
-      } catch (error) {
-        console.error('Erro ao carregar dados do servidor:', error);
-      }
-    },
+    // Leaderboard é público - sempre carrega
+    try {
+      const leaderboardRes = await gameApi.getLeaderboard()
+      this.serverLeaderboard = leaderboardRes.data.leaderboard
+    } catch (e) {
+      console.warn('Leaderboard offline:', e.message)
+      this.serverLeaderboard = []
+    }
+
+    // Atividades ao vivo - público
+    try {
+      const activitiesRes = await gameApi.getLiveActivities()
+      this.activities = activitiesRes.data.activities || this.activities
+    } catch (e) {
+      console.warn('Activities offline:', e.message)
+    }
+
+    // Só carrega dados protegidos se estiver logado
+    if (!isLoggedIn) {
+      console.log('Usuário não logado - modo offline')
+      this.loadOfflineData()
+      return
+    }
+
+    // Dados protegidos (precisam de token)
+    try {
+      const statsRes = await gameApi.getStats()
+      this.serverStats = statsRes.data
+      this.totalCoins = this.serverStats.estatisticas?.totalMoedas || 0
+      this.totalScore = this.serverStats.estatisticas?.totalPontos || 0
+      this.accuracy = this.serverStats.estatisticas?.precisaoMedia || 0
+    } catch (e) {
+      console.error('Erro stats:', e.message)
+    }
+
+    try {
+      const achievementsRes = await gameApi.getAchievements()
+      this.serverAchievements = achievementsRes.data.achievements
+    } catch (e) {
+      console.error('Erro achievements:', e.message)
+    }
+
+    try {
+      const rewardsRes = await gameApi.getDailyRewards()
+      this.serverDailyRewards = rewardsRes.data.dias.map(day => ({
+        ...day,
+        claimed: day.reivindicado,
+        available: day.disponivel
+      }))
+    } catch (e) {
+      console.error('Erro rewards:', e.message)
+    }
+
+    try {
+      const shopRes = await gameApi.getShop()
+      this.serverShopItems = shopRes.data.items
+    } catch (e) {
+      console.error('Erro shop:', e.message)
+    }
+
+  } catch (error) {
+    console.error('Erro geral:', error)
+    this.loadOfflineData()
+  }
+},
+
+loadOfflineData() {
+  // Dados padrão para modo offline
+  this.serverStats = {
+    estatisticas: {
+      totalMoedas: 0,
+      totalPontos: 0,
+      precisaoMedia: 0
+    }
+  }
+  this.serverAchievements = []
+  this.serverDailyRewards = []
+  this.serverShopItems = []
+},
     
 async loadDifficulties(modoId) {
   try {
@@ -1539,11 +1596,27 @@ async loadDifficulties(modoId) {
       }
     },
    
-  selectMode(mode) {
-      this.selectedMode = mode;
-      this.loadDifficulties(mode.id); 
-      this.showDifficultyModal = true;
-    },
+async selectMode(mode) {
+  // Verifica se usuário está logado para modos que precisam de auth
+  const token = localStorage.getItem('token')
+  
+  if (!token) {
+    // Modo demo/offline - não carrega dificuldades do servidor
+    this.selectedMode = mode
+    this.showDifficultyModal = true
+    // Usa dificuldades padrão offline
+    this.serverDifficulties = [
+      { level: 'easy', name: 'Fácil', icon: '🌱', multiplier: 1, timeLimit: 30, description: '30s por pergunta', completed: false, locked: false, bestScore: 0 },
+      { level: 'medium', name: 'Médio', icon: '🔥', multiplier: 1.5, timeLimit: 20, description: '20s por pergunta', completed: false, locked: true, bestScore: 0 },
+      { level: 'hard', name: 'Difícil', icon: '💀', multiplier: 2.5, timeLimit: 15, description: '15s por pergunta', completed: false, locked: true, bestScore: 0 }
+    ]
+    return
+  }
+  
+  this.selectedMode = mode
+  await this.loadDifficulties(mode.id)
+  this.showDifficultyModal = true
+},
    
    resetGame() {
       this.currentQuestionNum = 1;

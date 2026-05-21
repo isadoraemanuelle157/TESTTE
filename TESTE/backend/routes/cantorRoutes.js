@@ -1,7 +1,7 @@
 const express = require('express')
     const router = express.Router()
     const cantorController = require('../controllers/cantorController')
-    const authMiddleware = require('../middleware/authMiddleware')
+const { requireAuth } = require('../middleware/auth')
 
     // Rotas
     router.post('/', cantorController.create)           // Criar

@@ -122,6 +122,22 @@ const removerMatch = async (req, res) => {
   }
 }
 
+const excluirConta = async (req, res) => {
+  try {
+    const userId = req.user.id
+
+    // Excluir todas as interações do usuário no Musical Match
+    await MatchInteracao.deleteMany({ usuario: userId })
+
+    // Excluir todos os matches onde o usuário participa
+    await MatchMusical.deleteMany({ usuarios: userId })
+
+    res.json({ message: 'Dados do Musical Match excluídos com sucesso' })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
 module.exports = {
   sugestoes,
   listarCurtidas,
@@ -130,5 +146,6 @@ module.exports = {
   listarMatches,
   marcarVisto,
   responder,
-  removerMatch
+  removerMatch,
+  excluirConta  // ← ADICIONAR
 }
