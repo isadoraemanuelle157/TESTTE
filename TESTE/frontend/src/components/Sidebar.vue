@@ -107,20 +107,6 @@
             </li>
             
             <li>
-              <router-link to="/carregamento2" class="nav-link" @click="$emit('close')">
-                <i class="fa fa-spinner"></i>
-                <span>Carregamento 1</span>
-              </router-link>
-            </li>
-            
-            <li>
-              <router-link to="/carregamento1" class="nav-link" @click="$emit('close')">
-                <i class="fa fa-circle-o-notch"></i>
-                <span>Carregamento 2</span>
-              </router-link>
-            </li>
-            
-            <li>
               <router-link to="/chatiamusica" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-comments"></i>
                 <span>Chat IA</span>

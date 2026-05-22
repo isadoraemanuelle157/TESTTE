@@ -13,10 +13,10 @@
   <div class="empty-icon">
     <i class="fa fa-heart-o"></i>
   </div>
-  <h3>Nenhuma música curtida do Spotify</h3>
-  <p>As músicas do Spotify que você curtir aparecerão aqui</p>
+  <h3>Nenhuma música curtida</h3>
+  <p>As músicas que você curtir aparecerão aqui</p>
   <button class="btn-explore" @click="goToSearch">
-    <i class="fa fa-search"></i> Buscar no Spotify
+    <i class="fa fa-search"></i> Buscar
   </button>
 </div>
 
@@ -228,7 +228,7 @@
                   <strong class="playlist-card-name">{{ playlist.nome }}</strong>
                   <span class="playlist-card-count">
                     {{ playlist.musicas?.length || 0 }} músicas
-                    <span v-if="playlist.privada" class="playlist-private-badge">🔒</span>
+                <span v-if="playlist.privada" class="playlist-private-badge"><i class="fa fa-lock"></i></span>
                   </span>
                 </div>
 
@@ -290,8 +290,20 @@ export default {
   }
 },
 mounted() {
-  const user = JSON.parse(localStorage.getItem("usuario") || "{}")
-  this.usuarioId = user?._id || user?.id
+const token = localStorage.getItem("token")
+
+if (!token) {
+  this.usuarioId = null
+  return
+}
+
+try {
+  const payload = JSON.parse(atob(token.split('.')[1]))
+  this.usuarioId = payload.id || payload._id
+} catch (e) {
+  console.error('Token inválido')
+  this.usuarioId = null
+}
 
   this.carregarCurtidas()
 

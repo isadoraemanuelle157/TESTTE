@@ -207,8 +207,28 @@
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
         </button>
+        <button v-if="!visualFeedback" class="btn-icon warning" title="Feedback Visual Desativado">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+</button>
       </div>
     </header>
+
+    <div v-if="isFullscreen && !showSongSelection" class="fullscreen-album">
+  <div class="album-art-mini" :style="{ backgroundImage: `url(${currentSong.cover})` }">
+    <div class="vinyl-ring-mini" :class="{ 'spinning': isPlaying }">
+      <div class="vinyl-center-mini"></div>
+    </div>
+  </div>
+  <div class="fullscreen-song-info">
+    <span class="live-badge" :class="{ 'recording': isRecording }">LIVE</span>
+    <h3>{{ currentSong.title }}</h3>
+    <p>{{ currentSong.artist }}</p>
+  </div>
+</div>
 
     <!-- Main Stage -->
     <main v-if="!showSongSelection" class="karaoke-stage">
@@ -280,7 +300,7 @@
               Instrumental
             </span>
             <span v-else class="lyric-text" :style="{ fontSize: fontSize + 'px' }">{{ line.text }}</span>
-            <span v-if="showPhonetic && currentLineIndex === index && line.phonetic" class="lyric-phonetic">{{ line.phonetic }}</span>
+          <div v-if="showPhonetic && line.phonetic" class="lyric-phonetic">{{ line.phonetic }}</div>
             <span v-if="visualFeedback && line.correct && withMicrophone" class="feedback-icon correct">
               <i class="fas fa-check"></i>
             </span>
@@ -1360,18 +1380,230 @@ getEffectiveLyricsTime(includeManualOffset = true) {
       console.log('Linhas recortadas:', clippedLyrics.length)
     },
 
-    generatePhonetic(text) {
-      const phoneticMap = {
-        'love': 'lʌv', 'you': 'juː', 'me': 'miː', 'heart': 'hɑːrt',
-        'night': 'naɪt', 'day': 'deɪ', 'way': 'weɪ', 'time': 'taɪm',
-        'life': 'laɪf', 'baby': 'ˈbeɪbi', 'oh': 'oʊ', 'yeah': 'jɛə'
-      }
+generatePhonetic(text) {
+  const ptPhoneticMap = {
+    // Palavras simples
+    'love': 'lóvi', 'you': 'iu', 'me': 'mi', 'heart': 'rárti',
+    'night': 'náiti', 'day': 'dêi', 'way': 'uêi', 'time': 'táimi',
+    'life': 'láifi', 'baby': 'bêibi', 'oh': 'ôu', 'yeah': 'ié',
+    'i': 'ái', 'my': 'mái', 'your': 'iór', 'the': 'dâ',
+    'and': 'éndi', 'to': 'tu', 'a': 'â', 'of': 'óvi',
+    'in': 'in', 'is': 'iz', 'it': 'iti', 'that': 'dât',
+    'for': 'fór', 'on': 'ón', 'with': 'uífi', 'he': 'rí',
+    'she': 'xí', 'we': 'uí', 'they': 'dêi', 'this': 'dis',
+    'have': 'révi', 'has': 'réz', 'had': 'réd', 'do': 'du',
+    'does': 'dáz', 'did': 'díd', 'will': 'uîu', 'would': 'uûd',
+    'can': 'quén', 'could': 'cûd', 'should': 'xûd', 'may': 'méi',
+    'might': 'máiti', 'must': 'mást', 'shall': 'xóu', 'let': 'lét',
+    'go': 'gôu', 'come': 'câm', 'see': 'sí', 'know': 'nôu',
+    'get': 'gét', 'make': 'mêiki', 'take': 'têiki', 'think': 'fínki',
+    'say': 'sêi', 'tell': 'téu', 'give': 'gívi', 'find': 'fáindi',
+    'feel': 'fíu', 'become': 'bikâm', 'leave': 'lívi', 'put': 'pût',
+    'mean': 'mín', 'keep': 'kípi', 'begin': 'bigín', 'seem': 'síim',
+    'help': 'rélpi', 'show': 'xôu', 'hear': 'ríer', 'play': 'plêi',
+    'run': 'rân', 'move': 'mûvi', 'live': 'lívi', 'believe': 'bilívi',
+    'bring': 'brín', 'happen': 'répân', 'stand': 'isténdi', 'lose': 'lûzi',
+    'pay': 'pêi', 'meet': 'míti', 'include': 'inklûdi', 'continue': 'kântinûu',
+    'set': 'sét', 'learn': 'lérni', 'change': 'tchêinji', 'lead': 'lídi',
+    'understand': 'ândêristéndi', 'watch': 'uótchi', 'follow': 'fóloû',
+    'stop': 'istópi', 'create': 'kriêiti', 'speak': 'ispíiki', 'read': 'rídi',
+    'allow': 'éláû', 'add': 'édi', 'spend': 'ispéndi', 'grow': 'grôu',
+    'open': 'ôupân', 'walk': 'uóki', 'win': 'uín', 'offer': 'ófer',
+    'remember': 'rimémber', 'consider': 'kânsíder', 'appear': 'ápír', 'buy': 'bái',
+    'wait': 'uêiti', 'serve': 'sérvi', 'die': 'dái', 'send': 'séndi',
+    'expect': 'ikspékti', 'build': 'bíu', 'stay': 'istêi', 'fall': 'fóu',
+    'cut': 'kât', 'reach': 'ríchi', 'kill': 'kíu', 'remain': 'rimêin',
+    'suggest': 'sajésti', 'raise': 'rêizi', 'pass': 'pés', 'sell': 'séu',
+    'require': 'riquáier', 'report': 'ripórti', 'decide': 'disáidi', 'pull': 'pûu',
+    'son': 'sân', 'sometimes': 'sâmtáimzi', 'may': 'méi', 'seem': 'síim',
+    'dark': 'dárki', 'told': 'tôu', 'never': 'néver', 'tender': 'ténder',
+    'sweet': 'suíti', 'complete': 'kâmplíti', 'real': 'ríou', 'fantasy': 'féntâsi',
+    'caught': 'cóti', 'landslide': 'léndiisláidi', 'escape': 'iskêipi',
+    'reality': 'riéliti', 'eyes': 'áizi', 'smile': 'smáili',
+    'childhood': 'tcháildrûdi', 'memories': 'mémoûrizi', 'everything': 'évritín',
+    'fresh': 'fréxi', 'bright': 'bráiti', 'blue': 'blû', 'sky': 'skái',
+    'world': 'uórudi', 'song': 'sóngi', 'dance': 'dénsi', 'dream': 'dríim',
+    'star': 'istár', 'moon': 'mûn', 'sun': 'sân', 'rain': 'rêin',
+    'wind': 'uíndi', 'fire': 'fáier', 'water': 'uóter', 'earth': 'érzi',
+    'friend': 'fréndi', 'home': 'rôum', 'hope': 'rôupi', 'peace': 'písi',
+    'joy': 'dchói', 'pain': 'pêin', 'fear': 'fíer', 'courage': 'kériji',
+    'free': 'frí', 'true': 'trû', 'good': 'gûdi', 'bad': 'bédi',
+    'new': 'niû', 'old': 'ôudi', 'young': 'iângi', 'big': 'bígi',
+    'small': 'ismóu', 'long': 'lóngi', 'short': 'xórti', 'high': 'rái',
+    'low': 'lôu', 'fast': 'fésti', 'slow': 'islôu', 'hot': 'róti',
+    'cold': 'côudi', 'warm': 'uórmi', 'cool': 'cûu', 'happy': 'répi',
+    'sad': 'sédi', 'angry': 'éngrí', 'tired': 'táierdi', 'hungry': 'rângri',
+    'thirsty': 'férsiti', 'sick': 'síki', 'healthy': 'réuzi', 'beautiful': 'biútifou',
+    'ugly': 'ágli', 'rich': 'ríxi', 'poor': 'pûer', 'clean': 'klín',
+    'dirty': 'dérti', 'easy': 'ízi', 'hard': 'rár', 'soft': 'sôfti',
+    'rough': 'râfi', 'smooth': 'ismûfi', 'sharp': 'xárpi', 'dull': 'dâu',
+    'light': 'láiti', 'heavy': 'révi', 'deep': 'dípi', 'shallow': 'xéloû',
+    'wide': 'uáidi', 'narrow': 'néroû', 'full': 'fûu', 'empty': 'émpti',
+    'right': 'ráiti', 'wrong': 'róngi', 'left': 'léfti', 'straight': 'istrêiti',
+    'round': 'ráundi', 'square': 'skuéer', 'late': 'lêiti', 'early': 'érlí',
+    'now': 'náû', 'then': 'dên', 'today': 'tudêi', 'tomorrow': 'tumóroû',
+    'yesterday': 'iésterdêi', 'always': 'óuêizi', 'often': 'ófân',
+    'usually': 'iûxûali', 'again': 'agêin', 'still': 'istíu', 'yet': 'iéti',
+    'already': 'órédí', 'just': 'djâsti', 'only': 'ôunli', 'even': 'ívan',
+    'also': 'óusôu', 'too': 'tû', 'very': 'véri', 'really': 'ríali',
+    'quite': 'kuáiti', 'rather': 'ráder', 'pretty': 'príti', 'fairly': 'féerli',
+    'almost': 'óumôusti', 'nearly': 'níerli', 'hardly': 'rárli', 'barely': 'béerli',
+    'scarcely': 'skéersli', 'seldom': 'séldâm', 'rarely': 'réerli',
+    'frequently': 'fríquântli', 'occasionally': 'akêiçonali', 'constantly': 'kânstântli',
+    'continuously': 'kântínûasli', 'regularly': 'régûlerli', 'daily': 'dêili',
+    'weekly': 'uíkli', 'monthly': 'mânflí', 'yearly': 'íerli',
+    'hourly': 'áuerli', 'minute': 'míniti', 'second': 'sékândi', 'moment': 'môumânt',
+    'while': 'uáili', 'during': 'djûring', 'before': 'bifór', 'after': 'éfter',
+    'since': 'sins', 'until': 'ântíu', 'till': 'tíu', 'as': 'éz',
+    'when': 'uén', 'whenever': 'uéneva', 'once': 'uâns', 'twice': 'tuáisi',
+    'here': 'ríer', 'there': 'déer', 'everywhere': 'évriuér', 'somewhere': 'sâmuér',
+    'nowhere': 'nôuér', 'anywhere': 'énniuér', 'elsewhere': 'élsuér',
+    'above': 'abâvi', 'below': 'bilôu', 'over': 'ôuva', 'under': 'ândâ',
+    'between': 'bituíni', 'among': 'amângi', 'through': 'frû', 'across': 'acrôsi',
+    'into': 'intû', 'onto': 'ântû', 'towards': 'tuórzi', 'against': 'agênsti',
+    'beside': 'bisáidi', 'besides': 'bisáidzi', 'beyond': 'biândi', 'within': 'uífini',
+    'without': 'uífáûti', 'inside': 'insáidi', 'outside': 'autsáidi', 'along': 'alóngi',
+    'around': 'aráundi', 'behind': 'biráindi', 'except': 'ikcépti',
+    'despite': 'dispáiti', 'regarding': 'rigárding', 'concerning': 'kânsérning',
+    'according': 'akórding', 'depending': 'dipénding', 'following': 'fóloûing',
+    'throughout': 'frûáûti', 'upon': 'apân', 'toward': 'tuórde',
+    'whether': 'uéder', 'either': 'áider', 'neither': 'níder', 'both': 'bôufi',
+    'all': 'óu', 'each': 'ítchi', 'every': 'évri', 'another': 'anâder',
+    'other': 'âder', 'others': 'âderzi', 'such': 'sâtchi', 'what': 'uót',
+    'which': 'uítchi', 'who': 'rû', 'whom': 'rûm', 'whose': 'rûzi',
+    'where': 'uér', 'why': 'uái', 'how': 'ráû', 'whatever': 'uóteva',
+    'whoever': 'rûeva', 'whichever': 'uítcheva', 'however': 'ráueva',
+    'whenever': 'uéneva', 'wherever': 'uéreva', 'because': 'bikôzi', 'since': 'sins',
+    'although': 'óudôu', 'though': 'dôu', 'while': 'uáili', 'whereas': 'uéréz',
+    'unless': 'anlés', 'provided': 'praváidi', 'assuming': 'asúming',
+    'supposing': 'sapôuzi', 'if': 'ifi', 'than': 'dân', 'like': 'láiki',
+    'so': 'sôu', 'thus': 'dás', 'therefore': 'déerfór', 'hence': 'réns',
+    'consequently': 'kânsikuentli', 'accordingly': 'akórdingli',
+    'otherwise': 'âderuáizi', 'instead': 'instéd', 'meanwhile': 'mínuáili',
+    'moreover': 'morôuva', 'furthermore': 'fédermór', 'nevertheless': 'néverdaless',
+    'nonetheless': 'nândaless', 'however': 'ráueva', 'still': 'istíu', 'yet': 'iéti',
+    'though': 'dôu', 'although': 'óudôu', 'even': 'ívan', 'despite': 'dispáiti',
+    'regardless': 'rigárles', 'notwithstanding': 'nâtuífisténdi', 'whereas': 'uéréz',
+    'else': 'éls', 'perhaps': 'pérépzi', 'maybe': 'méibi', 'probably': 'próbâbli',
+    'possibly': 'pósibli', 'likely': 'láikli', 'unlikely': 'anláikli',
+    'certainly': 'sértânli', 'definitely': 'définitli', 'absolutely': 'ébsalûtli',
+    'exactly': 'igzéktli', 'precisely': 'prisáisli', 'specifically': 'spisífikli',
+    'particularly': 'partíkûlerli', 'especially': 'espéciali', 'mainly': 'mêinli',
+    'mostly': 'môustli', 'largely': 'lárjli', 'partly': 'pártli', 'slightly': 'sláitli',
+    'somewhat': 'sâmuót', 'somehow': 'sâmráû', 'anyway': 'énniuêi', 'anyhow': 'énni-ráû',
+    'besides': 'bisáidzi', 'moreover': 'morôuva', 'furthermore': 'fédermór',
+    'additionally': 'adíçonali', 'also': 'óusôu', 'too': 'tû', 'well': 'uél',
+    'nor': 'nór', 'or': 'ór', 'and': 'éndi', 'but': 'bât', 'for': 'fór',
+    'soon': 'sûn', 'long': 'lóngi', 'enough': 'inâfi', 'very': 'véri',
+    'enough': 'inâfi', 'almost': 'óumôusti', 'nearly': 'níerli', 'barely': 'béerli',
+    'hardly': 'rárli', 'scarcely': 'skéersli', 'seldom': 'séldâm', 'rarely': 'réerli',
+    'never': 'néver', 'always': 'óuêizi', 'often': 'ófân', 'frequently': 'fríquântli',
+    'occasionally': 'akêiçonali', 'sometimes': 'sâmtáimzi', 'usually': 'iûxûali',
+    'generally': 'dchénerali', 'normally': 'nórmali', 'typically': 'típicli',
+    'commonly': 'kâmânli', 'widely': 'uáidli', 'extensively': 'iksténsivli',
+    'broadly': 'bródi', 'loosely': 'lûsli', 'strictly': 'istríktli',
+    'rigorously': 'rígorasli', 'carefully': 'kérfuli', 'cautiously': 'côçasli',
+    'warily': 'uérili', 'hesitantly': 'hézitântli', 'reluctantly': 'rilâktântli',
+    'grudgingly': 'grâdingli', 'willingly': 'uílingli', 'eagerly': 'ígerli',
+    'enthusiastically': 'enfuziástikli', 'passionately': 'péçonâtli',
+    'intensely': 'inténsli', 'fiercely': 'fíersli', 'violently': 'váiolântli',
+    'aggressively': 'agrésivli', 'forcibly': 'fórsibli', 'powerfully': 'páuerfuli',
+    'strongly': 'istróngli', 'firmly': 'férmali', 'solidly': 'sólidli',
+    'steadily': 'stédali', 'constantly': 'kânstântli', 'continuously': 'kântínûasli',
+    'continually': 'kântínûali', 'repeatedly': 'ripítidli', 'regularly': 'régûlerli',
+    'routinely': 'rutínli', 'habitually': 'râbitxuáli', 'customarily': 'kâstumérili',
+    'traditionally': 'trâdíçonali', 'conventionally': 'kânvençonali', 'ordinarily': 'órdinerili',
+    'universally': 'iunivérsali', 'globally': 'glôubali', 'internationally': 'internéçonali',
+    'nationally': 'néçonali', 'locally': 'lôkali', 'regionally': 'ríjonali',
+    'provincially': 'pravínçali', 'rurally': 'rûrali', 'domestically': 'dâméstikli',
+    'internally': 'intérnali', 'externally': 'ikstérnali', 'outwardly': 'autuérdli',
+    'inwardly': 'inuérdli', 'overtly': 'ôuvértli', 'covertly': 'côuvértli',
+    'secretly': 'síkrâtli', 'privately': 'práivâtli', 'personally': 'pérsânli',
+    'individually': 'indivíduali', 'separately': 'séparâtli', 'independently': 'indipéndântli',
+    'alone': 'alôun', 'together': 'tugéder', 'jointly': 'djóintli', 'collectively': 'kâléktivli',
+    'mutually': 'mûtuali', 'reciprocally': 'resíprocali', 'respectively': 'rispektívli',
+    'correspondingly': 'kârispândingli', 'similarly': 'símilarli', 'likewise': 'láik-uáizi',
+    'equally': 'íkuali', 'identically': 'aidéntikli', 'uniformly': 'iúniformli',
+    'consistently': 'kânsístântli', 'coherently': 'kouhírentli', 'logically': 'lódjikli',
+    'rationally': 'réçonali', 'reasonably': 'rízanabli', 'sensibly': 'sénsibli',
+    'practically': 'préktikli', 'realistically': 'riâlístikli', 'optimistically': 'optimístikli',
+    'pessimistically': 'pessimístikli', 'idealistically': 'aidiâlístikli', 'romantically': 'romântikli',
+    'pragmatically': 'pragmátikli', 'dogmatically': 'dogmátikli', 'systematically': 'sistimátikli',
+    'methodically': 'mefódikli', 'orderly': 'órdeli', 'neatly': 'níitli', 'tidily': 'táidili',
+    'cleanly': 'klínli', 'smoothly': 'ismûfli', 'evenly': 'ívânli', 'stably': 'stêibili',
+    'securely': 'sikiúrli', 'safely': 'sêifli', 'dangerously': 'dêinjerosli',
+    'hazardously': 'rézardosli', 'riskily': 'rískili', 'perilously': 'périlosli',
+    'precariously': 'prikériasli', 'uncertainly': 'ansértânli', 'doubtfully': 'dáutfli',
+    'skeptically': 'sképtikli', 'cynically': 'sínikli', 'suspiciously': 'saspíçasli',
+    'dubiously': 'djúbiasli', 'questionably': 'kuéçionabli', 'debatable': 'dibêitâbli',
+    'arguably': 'árgiuabli', 'conceivably': 'kânsíivabli', 'potentially': 'poténçali',
+    'theoretically': 'fiârétikli', 'hypothetically': 'haipotétikli', 'ideally': 'aidíali',
+    'preferably': 'préferabli', 'optimally': 'óptimabli', 'perfectly': 'pérfiktli',
+    'flawlessly': 'flólisli', 'impeccably': 'impekâbli', 'excellently': 'ékselântli',
+    'superbly': 'supérbli', 'magnificently': 'magnífisântli', 'splendidly': 'spléndidli',
+    'gloriously': 'glóriasli', 'brilliantly': 'bríliântli', 'outstandingly': 'autsténdiŋli',
+    'remarkably': 'rimárkâbli', 'extraordinarily': 'ikstrôrdinérili', 'exceptionally': 'iksepçonali',
+    'unusually': 'aníuuali', 'abnormally': 'abnórmali', 'incredibly': 'inkrédibili',
+    'unbelievably': 'anbilívabli', 'astonishingly': 'astôniçingli', 'amazingly': 'amêizingli',
+    'surprisingly': 'surpráizingli', 'unexpectedly': 'anikspéktidli', 'suddenly': 'sâdânli',
+    'abruptly': 'abrâptli', 'immediately': 'imídiâtli', 'instantly': 'ínstântli',
+    'promptly': 'prómptli', 'quickly': 'kuíkli', 'rapidly': 'répidli', 'swiftly': 'suíftli',
+    'speedily': 'spíidili', 'hastily': 'hêistili', 'hurriedly': 'hâridli', 'slowly': 'islôuli',
+    'gradually': 'grédiuali', 'gently': 'djéntli', 'softly': 'sôftli', 'quietly': 'kuáiatli',
+    'silently': 'sáilântli', 'peacefully': 'písfali', 'calmly': 'kâmli', 'serenely': 'serínli',
+    'tranquilly': 'tránkuili', 'placidly': 'plésidli', 'mildly': 'máildli', 'moderately': 'móderâtli',
+    'marginally': 'márjinâli', 'minimally': 'mínimâli', 'infrequently': 'infriquântli'
+  }
 
-      return text.toLowerCase().split(' ')
-        .map(word => phoneticMap[word.replace(/[^a-z]/g, '')] || '')
-        .filter(Boolean)
-        .join(' ')
-    },
+  // Tenta frases exatas primeiro (mais preciso)
+  const phraseMap = {
+    'he told me': 'ri tôu-di mí',
+    'son sometimes': 'sân sâm-táimzi',
+    'it may seem dark': 'iti méi síim dárki',
+    'love me tender': 'lóvi mí tén-der',
+    'love me sweet': 'lóvi mí suít',
+    'never let me go': 'né-ver lét mí gôu',
+    'you have made': 'iu révi mêidi',
+    'my life complete': 'mái láifi kâm-plíti',
+    'and i love you so': 'éndi ái lóvi iu sôu',
+    'is this the real life': 'iz dis dâ rí-ou láifi',
+    'is this just fantasy': 'iz dis djâsti fén-tâ-si',
+    'caught in a landslide': 'cóti in â lén-di-sláidi',
+    'no escape from reality': 'nôu is-kêipi frâm ri-é-li-ti',
+    'open your eyes': 'ôu-pân iór ái-zi',
+    'she\'s got a smile': 'xí góti â smái-li',
+    'that it seems to me': 'dât iti síimz tu mí',
+    'reminds me of': 'ri-máindi mí óvi',
+    'childhood memories': 'tchái-ldrû-di mé-moû-rizi',
+    'where everything': 'uér é-vri-tín',
+    'was as fresh': 'uóz éz fréxi',
+    'as the bright blue sky': 'éz dâ bráiti blû skái'
+  }
+
+  const lowerText = text.toLowerCase().trim().replace(/[^\w\s']/g, '')
+  
+  // Tenta frase exata primeiro
+  if (phraseMap[lowerText]) {
+    return phraseMap[lowerText]
+  }
+
+  // Tenta frases parciais (2-3 palavras)
+  const words = lowerText.split(/\s+/).filter(Boolean)
+  for (let i = 0; i < words.length - 1; i++) {
+    const twoWords = words.slice(i, i + 2).join(' ')
+    const threeWords = words.slice(i, i + 3).join(' ')
+    if (phraseMap[threeWords]) return phraseMap[threeWords]
+    if (phraseMap[twoWords]) return phraseMap[twoWords]
+  }
+
+  // Fallback: palavra por palavra
+  const phonetics = words.map(word => {
+    const clean = word.replace(/[^a-z']/g, '')
+    return ptPhoneticMap[clean] || ''
+  }).filter(Boolean)
+
+  return phonetics.join(' ') || lowerText
+},
 
     async loadLyricsForCurrentSong() {
       this.isLoadingLyrics = true
@@ -1470,6 +1702,8 @@ getEffectiveLyricsTime(includeManualOffset = true) {
     // ===================== AUDIO SYNC =====================
    syncLyricsWithAudio() {
   if (!this.processedLyrics.length) return
+  
+ if (!this.autoScroll) return  // Não sincroniza linha se auto-scroll desativado
 
   if (this.withMicrophone && Date.now() - this.lastSpeechSyncAt < 1200) {
     return
@@ -2424,7 +2658,93 @@ setDisplayMode(mode) {
   border-color: transparent;
   box-shadow: 0 0 20px rgba(255, 0, 110, 0.4);
 }
+/* ============ FULLSCREEN ALBUM TOP ============ */
+.fullscreen-album {
+  display: none;
+}
 
+.karaoke-container.fullscreen .fullscreen-album {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0 2px;
+  z-index: 10;
+  position: relative;
+}
+
+.fullscreen-album .album-art-mini {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  margin-bottom: 8px;
+}
+
+.fullscreen-album .vinyl-ring-mini {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+ width: 42px;
+  height: 42px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+}
+
+.fullscreen-album .vinyl-ring-mini.spinning {
+  animation: spin 2s linear infinite;
+}
+
+.fullscreen-album .vinyl-center-mini {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+width: 16px;
+  height: 16px;
+  background: #1a1a2e;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.5);
+}
+
+.fullscreen-album .fullscreen-song-info {
+  text-align: center;
+}
+
+.fullscreen-album .fullscreen-song-info h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.fullscreen-album .fullscreen-song-info p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Ajuste o stage em fullscreen para acomodar o disco */
+.karaoke-container.fullscreen .karaoke-stage {
+  grid-template-columns: 1fr;
+  align-items: flex-start;
+  padding-top: 0;
+  padding-bottom: 8px;
+  gap: 0;
+}
+
+.karaoke-container.fullscreen .lyrics-section {
+  height: calc(100vh - 220px);
+  margin-top: -10px;
+  padding-top: 0;
+}
 /* ============ SEARCH ============ */
 
 .search-wrapper-selection {
@@ -3027,26 +3347,26 @@ setDisplayMode(mode) {
 
 .karaoke-container.fullscreen .lyrics-section {
   height: calc(100vh - 185px);
-  margin-top: -36px;
+  margin-top: -50px;
   padding-top: 0;
 }
 
 .karaoke-container.fullscreen .lyrics-wrapper {
   padding-top: 0;
-  padding-bottom: 120px;
+  padding-bottom: 40px;
 }
 
 .karaoke-container.fullscreen .progress-line {
-  top: 30%;
+  top: 35%;
 }
 
 .karaoke-container.fullscreen .lyric-line {
-  min-height: 54px;
-  padding: 12px 20px;
+  min-height: 48px;
+  padding: 8px 20px;
 }
 
 .karaoke-container.fullscreen .karaoke-header {
-  padding: 10px 40px;
+  padding: 6px 40px;
   min-height: auto;
 }
 
@@ -3151,10 +3471,21 @@ setDisplayMode(mode) {
 .lyric-phonetic {
   display: block;
   font-size: 14px;
-  margin-top: 8px;
+  margin-top: 6px;
   opacity: 0.7;
   font-style: italic;
   color: #a5b4fc;
+  width: 100%;
+  text-align: center;
+}
+
+/* ADICIONE para fullscreen: */
+.karaoke-container.fullscreen .lyric-phonetic {
+  font-size: 18px;
+  opacity: 0.85;
+  margin-top: 8px;
+  width: 100%;
+  text-align: center;
 }
 
 .progress-line {

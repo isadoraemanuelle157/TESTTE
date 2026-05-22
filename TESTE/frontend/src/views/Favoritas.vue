@@ -214,7 +214,11 @@
   abrirCantor(item)
 ">
         <div class="cover-wrapper">
-          <img :src="item.cover || '/api/placeholder/150/150'" class="cover" />
+         <img 
+  :src="item.cover || fallbackImage" 
+  class="cover"
+  @error="handleImageError"
+/>
           <div class="cover-overlay" v-if="item.type === 'musica'">
             <div class="play-icon">
               <svg viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px; margin-left: 2px;">
@@ -268,7 +272,8 @@
               <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
-              {{ item.trackCount || 0 }} músicas
+            {{ Number(item.trackCount || item.quantidadeMusicas || item.totalMusicas || 0) }}
+    {{ Number(item.trackCount || item.quantidadeMusicas || item.totalMusicas || 0) === 1 ? 'música' : 'músicas' }}
             </span>
             <span>
               <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
@@ -282,7 +287,7 @@
               <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
-              {{ item.trackCount || 0 }} músicas
+  {{ item.totalDuration || item.duracaoTotal || tempoDecorrido(item.addedAt) }}
             </span>
             <span>
               <svg viewBox="0 0 24 24" fill="currentColor" class="meta-icon">
@@ -345,12 +350,6 @@
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
-
-          <button class="btn btn-more" @click.stop="mostrarOpcoes(item)" title="Mais opções">
-            <svg viewBox="0 0 24 24" fill="currentColor" style="width: 16px; height: 16px;">
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-          </button>
         </div>
       </div>
     </transition-group>
@@ -389,7 +388,9 @@ export default {
       loading: true,
       filtroAtivo: 'todos',
       toasts: [],
-      toastId: 0
+      toastId: 0,
+       fallbackImage:
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzAwMDAwMCIvPjwvc3ZnPg==",
     }
   },
   computed: {
@@ -422,6 +423,10 @@ export default {
     window.removeEventListener("focus", this.carregarFavoritas)
   },
   methods: {
+    handleImageError(event) {
+  event.target.src = this.fallbackImage
+},
+
     showToast(message, type = 'success', title = null) {
       const titles = {
         success: 'Sucesso!',
@@ -535,18 +540,39 @@ async carregarFavoritas() {
             }
           }
 
-          if (f.playlist) {
-            return {
-              id: f.playlist._id,
-              title: f.playlist.nome,
-              subtitle: f.playlist.descricao || "Playlist",
-              cover: f.playlist.capa,
-              trackCount: f.playlist.quantidadeMusicas,
-              totalDuration: f.playlist.duracaoTotal,
-              addedAt: f.createdAt,
-              type: "playlist"
-            }
-          }
+if (f.playlist) {
+  // 🔥 CORREÇÃO: Garantir que musicas e musicasExternas são arrays
+  const musicasLocal = Array.isArray(f.playlist.musicas) ? f.playlist.musicas : []
+  const musicasExterna = Array.isArray(f.playlist.musicasExternas) ? f.playlist.musicasExternas : []
+  
+  // 🔥 CORREÇÃO: Contar TODAS as músicas (local + externa)
+  const totalMusicas = musicasLocal.length + musicasExterna.length
+
+  // 🔥 DEBUG: Ver o que está chegando do backend
+  console.log('📦 Playlist favorita:', f.playlist.nome, {
+    local: musicasLocal.length,
+    externa: musicasExterna.length,
+    total: totalMusicas,
+    rawTotalMusicas: f.playlist.totalMusicas,
+    rawQuantidade: f.playlist.quantidadeMusicas
+  })
+
+  return {
+    id: f.playlist._id,
+    title: f.playlist.nome,
+    subtitle: f.playlist.descricao || "Playlist",
+    cover: f.playlist.capa,
+
+    // 🔥 CORREÇÃO: Usar o total calculado com fallback nos campos do backend
+    trackCount: totalMusicas || Number(f.playlist.totalMusicas) || Number(f.playlist.quantidadeMusicas) || 0,
+    totalMusicas: totalMusicas || Number(f.playlist.totalMusicas) || Number(f.playlist.quantidadeMusicas) || 0,
+    quantidadeMusicas: totalMusicas || Number(f.playlist.totalMusicas) || Number(f.playlist.quantidadeMusicas) || 0,
+
+    totalDuration: f.playlist.duracaoTotal || f.playlist.totalDuration,
+    addedAt: f.createdAt,
+    type: "playlist"
+  }
+}
 
           if (f.album) {
             return {
@@ -650,9 +676,12 @@ async remover(item) {
       }))
       this.showToast(`Tocando: ${item.title}`, 'success', 'Reproduzindo')
     },
-    abrirPlaylist(item) {
-      this.$router.push(`/playlist/${item.id}`)
-    },
+   abrirPlaylist(item) {
+  this.$router.push({
+    path: '/playlist',
+    query: { id: String(item.id) }
+  })
+},
     abrirAlbum(item) {
       this.$router.push(`/album/${item.id}`)
     },

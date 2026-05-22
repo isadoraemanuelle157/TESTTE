@@ -36,11 +36,12 @@
 
           <div class="card-info">
             <h3>{{ playlist.title }}</h3>
-            <p class="card-meta">
-              <i :class="playlist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
-              {{ playlist.songs.length }}
-              {{ playlist.songs.length === 1 ? 'música' : 'músicas' }}
-            </p>
+  <p class="card-meta">
+  <i :class="playlist.isPublic ? 'fa fa-globe' : 'fa fa-lock'"></i>
+  <!-- 🔥 CORREÇÃO: Forçar número e mostrar 0 se necessário -->
+  {{ Number(playlist.totalMusicas || playlist.quantidadeMusicas || playlist.trackCount || playlist.songs.length || 0) }}
+  {{ Number(playlist.totalMusicas || playlist.quantidadeMusicas || playlist.trackCount || playlist.songs.length || 0) === 1 ? 'música' : 'músicas' }}
+</p>
           </div>
         </div>
       </div>
@@ -223,12 +224,16 @@
               {{ currentPlaylist.description }}
             </p>
 
-            <div class="playlist-meta">
-              <span><i class="fa fa-user-circle"></i> {{ currentPlaylist.authorName }}</span>
-              <span>•</span>
-              <span>{{ currentPlaylist.songs.length }} músicas</span>
-              <span v-if="totalDuration">• {{ totalDuration }}</span>
-            </div>
+<div class="playlist-meta">
+  <span><i class="fa fa-user-circle"></i> {{ currentPlaylist.authorName }}</span>
+  <span>•</span>
+  <span>
+    <!-- 🔥 CORREÇÃO: Forçar número -->
+    {{ Number(currentPlaylist.totalMusicas || currentPlaylist.quantidadeMusicas || currentPlaylist.trackCount || currentPlaylist.songs.length || 0) }}
+    {{ Number(currentPlaylist.totalMusicas || currentPlaylist.quantidadeMusicas || currentPlaylist.trackCount || currentPlaylist.songs.length || 0) === 1 ? 'música' : 'músicas' }}
+  </span>
+  <span v-if="totalDuration">• {{ totalDuration }}</span>
+</div>
           </template>
         </div>
       </div>
@@ -260,9 +265,6 @@
             </button>
 
             <div v-show="showOptions" class="options-dropdown">
-              <div class="option-item" @click="sharePlaylist">
-                <i class="fa fa-share-alt"></i> Compartilhar
-              </div>
               <div class="option-item" @click="startEdit">
                 <i class="fa fa-pencil"></i> Editar
               </div>
@@ -343,7 +345,6 @@
               <div :class="{ active: isSongCurrentlyPlaying(song) }">{{ song.title }}</div>
               <small>{{ song.artist }}</small>
               <span class="song-source-badge">
-                <i :class="getSourceIcon(song.source)"></i>
               </span>
             </div>
           </div>
@@ -583,60 +584,96 @@ export default {
         this.playerIsPlaying
     },
 
-    playSong(index) {
-      if (!this.currentPlaylist?.songs[index]) return
+   playSong(index) {
+  if (!this.currentPlaylist?.songs[index]) {
+    console.error('❌ Índice inválido:', index)
+    return
+  }
 
-      const selected = this.currentPlaylist.songs[index]
-      const selectedUrl = selected.preview || selected.url || selected.link || ''
+  const selected = this.currentPlaylist.songs[index]
 
-      if (!selectedUrl) {
-        this.showToast({
-          message: 'Nenhuma prévia disponível para esta música',
-          type: 'warning'
-        })
-        return
-      }
+  // 🔥 DEBUG: Log completo da música selecionada
+  console.log('🎵 playSong - música selecionada:', {
+    index,
+    id: selected.id,
+    title: selected.title,
+    artist: selected.artist,
+    preview: selected.preview,
+    url: selected.url,
+    link: selected.link,
+    source: selected.source
+  })
 
-      if (this.isSongCurrentlyPlaying(selected)) {
-        window.dispatchEvent(new CustomEvent('player-toggle-play'))
-        return
-      }
+  const selectedUrl = selected.preview || selected.url || selected.link || ''
 
-      const queue = this.currentPlaylist.songs
-        .map(s => ({
-          id: s.id,
-          title: s.title,
-          artist: s.artist,
-          album: s.album,
-          cover: s.cover || '/default-cover.png',
-          url: s.preview || s.url || s.link || '',
-          duration: this.parseDurationToSeconds(s.duration),
-          source: s.source || 'local'
-        }))
-        .filter(s => s.url)
+  if (!selectedUrl) {
+    console.error('❌ SEM URL DE ÁUDIO:', selected)
+    this.showToast({
+      message: `Nenhuma prévia disponível para "${selected.title}"`,
+      type: 'warning'
+    })
+    return
+  }
 
-      const selectedQueueIndex = queue.findIndex(s =>
-        String(s.id) === String(selected.id) &&
-        (s.source || 'local') === (selected.source || 'local')
-      )
+  console.log('✅ URL do áudio:', selectedUrl.substring(0, 60) + '...')
 
-      if (selectedQueueIndex === -1) {
-        this.showToast({
-          message: 'Nenhuma prévia disponível para esta música',
-          type: 'warning'
-        })
-        return
-      }
+  if (this.isSongCurrentlyPlaying(selected)) {
+    window.dispatchEvent(new CustomEvent('player-toggle-play'))
+    return
+  }
 
-      window.dispatchEvent(new CustomEvent('play-song', {
-        detail: {
-          song: queue[selectedQueueIndex],
-          playlist: queue,
-          index: selectedQueueIndex,
-          context: 'playlist'
-        }
-      }))
-    },
+  const queue = this.currentPlaylist.songs
+    .map(s => ({
+      id: s.id,
+      title: s.title,
+      artist: s.artist,
+      album: s.album,
+      cover: s.cover || '/default-cover.png',
+      url: s.preview || s.url || s.link || '',
+      duration: this.parseDurationToSeconds(s.duration),
+      source: s.source || 'local'
+    }))
+    .filter(s => s.url)
+
+  console.log('🎵 Queue filtrada (com URL):', queue.length, 'de', this.currentPlaylist.songs.length)
+
+  if (queue.length === 0) {
+    this.showToast({
+      message: 'Nenhuma música com prévia disponível nesta playlist',
+      type: 'warning'
+    })
+    return
+  }
+
+  const selectedQueueIndex = queue.findIndex(s =>
+    String(s.id) === String(selected.id) &&
+    (s.source || 'local') === (selected.source || 'local')
+  )
+
+  if (selectedQueueIndex === -1) {
+    console.error('❌ Música não encontrada na queue filtrada')
+    this.showToast({
+      message: 'Nenhuma prévia disponível para esta música',
+      type: 'warning'
+    })
+    return
+  }
+
+  console.log('🎵 Disparando evento play-song:', {
+    song: queue[selectedQueueIndex].title,
+    queueLength: queue.length,
+    index: selectedQueueIndex
+  })
+
+  window.dispatchEvent(new CustomEvent('play-song', {
+    detail: {
+      song: queue[selectedQueueIndex],
+      playlist: queue,
+      index: selectedQueueIndex,
+      context: 'playlist'
+    }
+  }))
+},
 
     playAll() {
       if (!this.currentPlaylist?.songs.length) {
@@ -810,35 +847,67 @@ export default {
       }
     },
 
-    async loadPlaylists() {
-      const token = localStorage.getItem("token")
-      const res = await fetch(`http://localhost:3002/playlists`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+   async loadPlaylists() {
+  const token = localStorage.getItem("token")
+  const res = await fetch(`http://localhost:3002/playlists`, {
+    headers: { Authorization: `Bearer ${token}` }
+  })
 
-      const data = await res.json()
-      const safeArray = Array.isArray(data) ? data : []
-      const user = JSON.parse(localStorage.getItem('usuario') || '{}')
-      const currentId = this.currentPlaylist?.id
+  const data = await res.json()
+  const safeArray = Array.isArray(data) ? data : []
+  const user = JSON.parse(localStorage.getItem('usuario') || '{}')
+  const currentId = this.currentPlaylist?.id
 
-      this.playlists = safeArray.map(p => ({
-        id: p._id || p.id,
-        title: p.nome || p.title,
-        description: p.descricao || '',
-        image: this.normalizePlaylistImage(p.capa),
-        isPublic: p.publica,
-        isFavorita: false,
-        songs: Array.isArray(p.musicas)
-          ? p.musicas.map(m => this.normalizeSong(m)).filter(Boolean)
-          : [],
-        authorName: user.nome || 'Você'
-      }))
+  this.playlists = safeArray.map(p => {
+    // 🔥 DEBUG: Ver estrutura da playlist vinda do backend
+    console.log('📦 Playlist do backend:', p.nome, '- músicas:', p.musicas?.length)
 
-      if (currentId) {
-        const updated = this.playlists.find(p => String(p.id) === String(currentId))
-        if (updated) this.currentPlaylist = updated
-      }
-    },
+    // Mapear músicas garantindo que o campo link seja preservado
+    const mappedSongs = Array.isArray(p.musicas)
+      ? p.musicas.map(m => {
+          // Se a música veio do backend com campo link, garantir que está no objeto
+          const song = this.normalizeSong(m)
+          if (m.link && !song.preview) {
+            song.preview = m.link
+          }
+          return song
+        }).filter(Boolean)
+      : []
+
+    console.log('🎵 Músicas mapeadas:', mappedSongs.map(s => ({
+      title: s.title,
+      hasPreview: !!s.preview,
+      preview: s.preview?.substring(0, 50) + '...'
+    })))
+
+// 🔥 NOVO: Calcular total de músicas considerando local + externa
+const totalMusicas = p.totalMusicas || 
+                     p.quantidadeMusicas || 
+                     (Array.isArray(p.musicas) ? p.musicas.length : 0) +
+                     (Array.isArray(p.musicasExternas) ? p.musicasExternas.length : 0)
+
+return {
+  id: p._id || p.id,
+  title: p.nome || p.title,
+  description: p.descricao || '',
+  image: this.normalizePlaylistImage(p.capa),
+  isPublic: p.publica,
+  isFavorita: false,
+  songs: mappedSongs,
+  authorName: user.nome || 'Você',
+  // 🔥 NOVO: Adicionar totalMusicas para uso no template
+  totalMusicas: totalMusicas,
+  quantidadeMusicas: totalMusicas, // compatibilidade
+  // 🔥 NOVO: Duração total se disponível
+  totalDuration: p.duracaoTotal || p.totalDuration || null
+}
+  })
+
+  if (currentId) {
+    const updated = this.playlists.find(p => String(p.id) === String(currentId))
+    if (updated) this.currentPlaylist = updated
+  }
+},
 
     async loadFavoritas() {
       try {
@@ -1139,44 +1208,40 @@ export default {
       )
     },
 
-    normalizeSong(song) {
-      if (!song) return null
+   normalizeSong(song) {
+  if (!song) return null
 
-      return {
-        id: String(song._id || song.id || song.musicaId),
-        title: song.title || song.nome || song.titulo || 'Sem título',
-        artist:
-          song.artist ||
-          song.artista ||
-          song?.dadosMusica?.artista ||
-          (song.cantores?.map(c => c.nome).join(', ')) ||
-          'Desconhecido',
-        album:
-          song.album ||
-          song.albuns?.[0]?.nome ||
-          song?.dadosMusica?.album ||
-          'Sem álbum',
-        duration: this.formatDuration(
-          this.parseDuration(
-            song.duration ||
-            song.duracao ||
-            song?.dadosMusica?.duration
-          )
-        ),
-        cover:
-          song.cover ||
-          song.foto ||
-          song?.dadosMusica?.capa ||
-          '',
-        preview:
-          song.preview ||
-          song.link ||
-          song.url ||
-          song?.dadosMusica?.previewUrl ||
-          '',
-        source: song.source || 'local'
-      }
-    },
+  // 🔥 DEBUG: Log para ver o que está chegando
+  console.log('🎵 normalizeSong input:', {
+    id: song._id || song.id,
+    nome: song.nome || song.title,
+    link: song.link,
+    foto: song.foto,
+    source: song.source
+  })
+
+  const normalized = {
+    id: String(song._id || song.id || song.musicaId),
+    title: song.title || song.nome || song.titulo || 'Sem título',
+    artist: song.artist || song.artista || song?.dadosMusica?.artista ||
+      (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
+    album: song.album || song.albuns?.[0]?.nome || song?.dadosMusica?.album || 'Sem álbum',
+    duration: this.formatDuration(this.parseDuration(song.duration || song.duracao || song?.dadosMusica?.duration)),
+    cover: song.cover || song.foto || song?.dadosMusica?.capa || '/default-cover.png',
+    // 🔥 CORREÇÃO: Garantir que link das músicas locais seja preservado
+    preview: song.preview || song.link || song.url || song?.dadosMusica?.previewUrl || '',
+    source: song.source || 'local'
+  }
+
+  console.log('🎵 normalizeSong output:', {
+    id: normalized.id,
+    title: normalized.title,
+    preview: normalized.preview ? '✅ tem URL' : '❌ SEM URL',
+    source: normalized.source
+  })
+
+  return normalized
+},
 
     parseDuration(durationStr) {
       if (!durationStr) return 30

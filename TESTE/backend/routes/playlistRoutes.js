@@ -4,17 +4,17 @@ const controller = require('../controllers/playlistController')
 const { requireAuth } = require('../middleware/auth')
 
 // CRUD básico
-router.get('/', authMiddleware, controller.getAll)
-router.post('/', authMiddleware, controller.create)
-router.get('/:id', authMiddleware, controller.getById)
-router.put('/:id', authMiddleware, controller.update)
-router.delete('/:id', authMiddleware, controller.remove)
+router.get('/', requireAuth, controller.getAll)
+router.post('/', requireAuth, controller.create)
+router.get('/:id', requireAuth, controller.getById)
+router.put('/:id', requireAuth, controller.update)
+router.delete('/:id', requireAuth, controller.remove)
 
-// Músicas na playlist - POST e DELETE com body para source/dadosMusica
-router.post('/:id/musicas/:musicaId', authMiddleware, controller.addMusica)
-router.delete('/:id/musicas/:musicaId', authMiddleware, controller.removeMusica)
+// músicas
+router.post('/:id/musicas/:musicaId', requireAuth, controller.addMusica)
+router.delete('/:id/musicas/:musicaId', requireAuth, controller.removeMusica)
 
-// Favoritar
-router.post('/:id/favoritar', authMiddleware, controller.toggleFavorita)
+// favoritar
+router.post('/:id/favoritar', requireAuth, controller.toggleFavorita)
 
 module.exports = router

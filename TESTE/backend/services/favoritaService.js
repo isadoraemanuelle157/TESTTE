@@ -229,6 +229,10 @@ const getFavoritasByUser = async (usuarioId) => {
   const externasFormatadas = externasSpotify.map(f => {
     const tipo = f.tipoItem || 'musica'
     
+     const trackCount = f.dadosItem?.trackCount || 
+                       f.dadosItem?.totalTracks || 
+                       f.dadosItem?.tracks?.total || 
+                       null
     return {
       _id: f._id,
       usuario: f.usuario,
@@ -265,7 +269,9 @@ const getFavoritasByUser = async (usuarioId) => {
         foto: f.dadosItem.capa
       } : null,
       createdAt: f.createdAt,
-      tipoItem: tipo
+      tipoItem: tipo,
+        trackCount: trackCount,
+      totalDuration: f.dadosItem?.duration || null
     }
   })
 

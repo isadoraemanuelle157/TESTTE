@@ -15,7 +15,7 @@
       <p class="delete-modal-text">
         Tem certeza que deseja excluir <strong>"{{ deleteTargetTitle }}"</strong>?
       </p>
-      <p class="delete-modal-warning">Esta ação não pode ser desfeita.</p>
+   <p class="delete-modal-warning"><i class="fa-solid fa-triangle-exclamation"></i> Esta ação não pode ser desfeita.</p>
       <div class="delete-modal-actions">
         <button class="btn-cancel" @click="cancelDelete">
           <span>Cancelar</span>
@@ -44,7 +44,7 @@
     <Transition name="fade">
       <div v-if="showLoginOverlay" class="login-overlay" @click.self="showLoginOverlay = false">
         <div class="login-modal">
-          <div class="login-icon">🔒</div>
+        <div class="login-icon"><i class="fa-solid fa-lock" style="font-size: 64px; color: var(--primary-light);"></i></div>
           <h2>Limite Atingido</h2>
           <p>Você usou {{ chatLimit.used }} de {{ chatLimit.limit }} mensagens gratuitas.</p>
           <p class="login-sub">Faça login para continuar usando o chat ilimitado!</p>
@@ -56,7 +56,7 @@
               Criar Conta
             </button>
           </div>
-          <button class="btn-close" @click="showLoginOverlay = false">✕</button>
+          <button class="btn-close" @click="showLoginOverlay = false"><i class="fa-solid fa-xmark"></i></button>
         </div>
       </div>
     </Transition>
@@ -65,10 +65,10 @@
     <Transition name="fade">
       <div v-if="showFullPlayer" class="full-player-overlay" @click.self="showFullPlayer = false">
         <div class="full-player">
-          <button class="close-full-player" @click="showFullPlayer = false">✕</button>
+  <button class="close-full-player" @click="showFullPlayer = false"><i class="fa-solid fa-xmark"></i></button>
           <div class="full-player-content">
             <div class="full-cover" :style="{ background: currentTrack?.color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
-              <span class="full-cover-emoji">{{ currentTrack?.emoji || '🎵' }}</span>
+  <span class="full-cover-emoji"><i class="fa-solid fa-music" style="font-size: 100px;"></i></span>
               <img v-if="currentTrack?.cover" :src="currentTrack.cover" :alt="currentTrack.title" class="full-cover-img" @error="handleImgError">
             </div>
             <div class="full-track-info">
@@ -84,14 +84,14 @@
               <span class="time-duration">{{ formatDuration(duration) }}</span>
             </div>
             <div class="full-controls">
-              <button @click="prevTrack" :disabled="!canPrev">⏮</button>
+            <button @click="prevTrack" :disabled="!canPrev"><i class="fa-solid fa-backward-step"></i></button>
               <button class="main-control" @click="togglePlay">
-                {{ isPlaying ? '⏸' : '▶️' }}
-              </button>
-              <button @click="nextTrack" :disabled="!canNext">⏭</button>
+    <i :class="isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i>
+  </button>
+             <button @click="nextTrack" :disabled="!canNext"><i class="fa-solid fa-forward-step"></i></button>
             </div>
             <div class="full-volume">
-              <span>🔊</span>
+<span><i class="fa-solid fa-volume-high"></i></span>
               <input type="range" min="0" max="1" step="0.01" v-model="volume" @input="updateVolume">
             </div>
           </div>
@@ -104,18 +104,18 @@
       <!-- Sidebar -->
       <aside class="sidebar" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
         <div class="logo">
-          <div class="logo-icon">🎵</div>
+       <div class="logo-icon"><i class="fa-solid fa-music" style="font-size: 24px; color: white;"></i></div>
           <h1>MusicAI</h1>
-          <button class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
-            {{ sidebarCollapsed ? '→' : '←' }}
-          </button>
+     <button class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
+    <i :class="sidebarCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left'"></i>
+  </button>
         </div>
 
         <!-- Botão Novo Chat -->
-        <button v-if="isAuthenticated" class="new-chat-btn" @click="createNewChat">
-          <span>➕</span>
-          <span class="new-chat-label">Novo Chat</span>
-        </button>
+ <button v-if="isAuthenticated" class="new-chat-btn" @click="createNewChat">
+    <span><i class="fa-solid fa-plus" style="font-size: 18px;"></i></span>
+    <span class="new-chat-label">Novo Chat</span>
+  </button>
 
         <nav class="nav-menu">
           <div
@@ -125,7 +125,7 @@
             :class="{ active: activeNav === item.id }"
             @click="handleNavClick(item)"
           >
-            <span class="nav-icon">{{ item.icon }}</span>
+             <span class="nav-icon"><i :class="item.icon" style="font-size: 20px;"></i></span>
             <span class="nav-label">{{ item.label }}</span>
             <span v-if="item.id === 'favorites' && favorites.size > 0" class="nav-badge">{{ favorites.size }}</span>
           </div>
@@ -142,12 +142,12 @@
               :class="{ active: currentChatId === chat.id }"
               @click="loadChat(chat.id)"
             >
-              <span class="chat-icon">💬</span>
+             <span class="chat-icon"><i class="fa-solid fa-comment" style="font-size: 16px;"></i></span>
               <div class="chat-info">
                 <span class="chat-title">{{ chat.title }}</span>
                 <span class="chat-date">{{ formatDate(chat.updatedAt) }}</span>
               </div>
-              <button class="chat-delete" @click.stop="openDeleteModal(chat.id)" title="Excluir conversa">🗑️</button>
+            <button class="chat-delete" @click.stop="openDeleteModal(chat.id)" title="Excluir conversa"><i class="fa-solid fa-trash" style="font-size: 14px;"></i></button>
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@
             <div class="np-cover">
               <img v-if="currentTrack.cover" :src="currentTrack.cover" :alt="currentTrack.title" @error="handleImgError">
               <div v-else class="cover-placeholder-mini" :style="{ background: currentTrack.color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }">
-                <span>{{ currentTrack.emoji || currentTrack.title?.charAt(0) || '🎵' }}</span>
+  <span><i class="fa-solid fa-music" style="font-size: 20px;"></i></span>
               </div>
             </div>
             <div class="np-info">
@@ -228,11 +228,11 @@
             </div>
           </div>
           <div class="np-controls">
-            <button @click.stop="prevTrack">⏮</button>
-            <button class="play-pause" @click.stop="togglePlay">
-              {{ isPlaying ? '⏸' : '▶️' }}
-            </button>
-            <button @click.stop="nextTrack">⏭</button>
+<button @click.stop="prevTrack"><i class="fa-solid fa-backward-step"></i></button>
+  <button class="play-pause" @click.stop="togglePlay">
+    <i :class="isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i>
+  </button>
+  <button @click.stop="nextTrack"><i class="fa-solid fa-forward-step"></i></button>
           </div>
           <div class="np-progress-mini">
             <div class="np-progress-bar">
@@ -247,44 +247,20 @@
         <!-- Header -->
         <header class="chat-header">
           <div class="header-info">
-            <div class="ai-avatar">
-              <span>🤖</span>
-              <div class="status-indicator" :class="{ offline: !isOnline }"></div>
-            </div>
+     <div class="ai-avatar">
+    <span><i class="fa-solid fa-robot" style="font-size: 24px; color: white;"></i></span>
+    <div class="status-indicator" :class="{ offline: !isOnline }"></div>
+  </div>
             <div class="header-text">
               <h2>Assistente Musical</h2>
               <p>{{ isTyping ? 'Digitando...' : isOnline ? (isAuthenticated ? 'Online • Pronto para ajudar' : `Online • ${chatLimit.remaining} mensagens restantes`) : 'Offline' }}</p>
             </div>
           </div>
           <div class="header-actions">
-            <button class="icon-btn" @click="clearChat" title="Limpar conversa">🗑️</button>
-            <button class="icon-btn" @click="showSettings = !showSettings" title="Configurações">⚙️</button>
-            <button v-if="!isAuthenticated" class="icon-btn login-btn" @click="redirectToLogin" title="Login">👤</button>
-            <button v-else class="icon-btn logout-btn" @click="logout" title="Sair">🚪</button>
+       <button class="icon-btn" @click="openClearChatModal" title="Limpar conversa"><i class="fa-solid fa-trash-can"></i></button>
+ <button v-if="!isAuthenticated" class="icon-btn login-btn" @click="redirectToLogin" title="Login"><i class="fa-solid fa-user"></i></button>
           </div>
         </header>
-
-        <!-- Settings Panel -->
-        <Transition name="slide-down">
-          <div v-if="showSettings" class="settings-panel">
-            <div class="setting-item">
-              <span>Modo Escuro</span>
-              <button class="toggle-btn active">🌙</button>
-            </div>
-            <div class="setting-item">
-              <span>Notificações</span>
-              <button class="toggle-btn active">🔔</button>
-            </div>
-            <div class="setting-item">
-              <span>Qualidade do Áudio</span>
-              <select v-model="audioQuality">
-                <option value="low">Econômica</option>
-                <option value="medium">Padrão</option>
-                <option value="high">Alta</option>
-              </select>
-            </div>
-          </div>
-        </Transition>
 
         <!-- Mensagens -->
         <div class="chat-container" ref="chatContainer">
@@ -296,9 +272,9 @@
               :class="message.type"
             >
               <div class="message-bubble">
-                <div class="message-avatar" v-if="message.type === 'ai'">
-                  <span>🎵</span>
-                </div>
+             <div class="message-avatar" v-if="message.type === 'ai'">
+    <span><i class="fa-solid fa-music" style="font-size: 20px;"></i></span>
+  </div>
                 <div v-else class="message-avatar user-avatar">
                   <span>{{ userInitials }}</span>
                 </div>
@@ -309,7 +285,7 @@
                   <!-- Card de Resultados de Letra -->
                   <div v-if="message.lyricResults && message.lyricResults.length > 0" class="lyric-results-card">
                     <div class="lyric-header">
-                      <span class="lyric-badge">🔍 Resultados da busca</span>
+                     <span class="lyric-badge"><i class="fa-solid fa-magnifying-glass"></i> Resultados da busca</span>
                       <span class="lyric-query">"{{ message.lyricQuery }}"</span>
                     </div>
                     <div class="lyric-songs">
@@ -323,7 +299,7 @@
                         <div class="lyric-cover">
                           <img v-if="song.albumArt" :src="song.albumArt" :alt="song.title" @error="handleImgError">
                           <div v-else class="cover-placeholder" :style="{ background: getRandomGradient(index) }">
-                            <span>{{ song.title?.charAt(0) || '🎵' }}</span>
+                          <span><i class="fa-solid fa-music" style="font-size: 24px;"></i></span>
                           </div>
                         </div>
                         <div class="lyric-meta">
@@ -333,7 +309,7 @@
                             "{{ song.lyrics.substring(0, 80) }}..."
                           </div>
                         </div>
-                        <button class="lyric-play-btn" @click.stop="playTrackFromLyrics(song)">▶️</button>
+ <button class="lyric-play-btn" @click.stop="playTrackFromLyrics(song)"><i class="fa-solid fa-play" style="font-size: 16px;"></i></button>
                       </div>
                     </div>
                   </div>
@@ -345,12 +321,9 @@
                         <span class="rec-genre">{{ message.recommendations.genre }}</span>
                         <span class="rec-badge">{{ message.recommendations.tracks.length }} músicas</span>
                       </div>
-                      <button
-                        class="play-all-btn"
-                        @click="playAll(message.recommendations.tracks)"
-                      >
-                        ▶️ Tocar todas
-                      </button>
+<button class="play-all-btn" @click="playAll(message.recommendations.tracks)">
+    <i class="fa-solid fa-play" style="margin-right: 8px;"></i> Tocar todas
+  </button>
                     </div>
                    
                     <div class="tracks-list">
@@ -362,16 +335,16 @@
                         @click="playTrack(track)"
                       >
                         <div class="track-number">
-                          <span v-if="currentTrack?.id === track.id && isPlaying">🎵</span>
-                          <span v-else>{{ index + 1 }}</span>
+                         <span v-if="currentTrack?.id === track.id && isPlaying"><i class="fa-solid fa-music" style="color: var(--primary-light);"></i></span>
+  <span v-else>{{ index + 1 }}</span>
                         </div>
                         <div class="track-cover">
                           <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
                           <div v-else class="cover-art" :style="{ background: track.color }">
-                            <span>{{ track.emoji }}</span>
+                            <span><i class="fa-solid fa-music"></i></span>
                           </div>
                           <div class="play-overlay">
-                            <span>{{ currentTrack?.id === track.id && isPlaying ? '⏸' : '▶️' }}</span>
+                            <span><i :class="currentTrack?.id === track.id && isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i></span>
                           </div>
                         </div>
                         <div class="track-meta">
@@ -385,11 +358,11 @@
                             @click.stop="toggleFavorite(track)"
                             :class="{ active: isFavorite(track) }"
                           >
-                            {{ isFavorite(track) ? '❤️' : '🤍' }}
+<i :class="isFavorite(track) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
                           </button>
-                          <button class="action-btn" @click.stop="addToPlaylist(track)">
-                            ➕
-                          </button>
+<button class="action-btn" @click.stop="addToPlaylist(track)">
+    <i class="fa-solid fa-plus"></i>
+  </button>
                         </div>
                       </div>
                     </div>
@@ -418,7 +391,7 @@
                           @click="askAboutAlbum(album)"
                         >
                           <div class="album-cover" :style="{ background: album.color }">
-                            <span>{{ album.emoji }}</span>
+                       <span><i class="fa-solid fa-compact-disc" style="font-size: 40px;"></i></span>
                           </div>
                           <div class="album-info">
                             <h4>{{ album.name }}</h4>
@@ -455,7 +428,7 @@
               class="quick-chip"
               @click="handleQuickQuestion(question)"
             >
-              <span class="chip-icon">{{ question.icon }}</span>
+               <span class="chip-icon"><i :class="question.icon" style="font-size: 18px;"></i></span>
               <span>{{ question.text }}</span>
             </button>
           </div>
@@ -464,10 +437,10 @@
         <!-- Área de Input -->
         <div class="input-wrapper">
           <div v-if="!isAuthenticated && chatLimit.remaining === 0" class="input-blocked">
-            <p>🔒 Limite de mensagens atingido. <button @click="redirectToLogin">Faça login</button> para continuar.</p>
+           <p><i class="fa-solid fa-lock" style="margin-right: 6px;"></i> Limite de mensagens atingido. <button @click="redirectToLogin">Faça login</button> para continuar.</p>
           </div>
           <div v-else class="input-container">
-            <button class="input-action" title="Anexar" @click="showAttachMenu = !showAttachMenu">📎</button>
+            <button class="input-action" title="Anexar" @click="showAttachMenu = !showAttachMenu"><i class="fa-solid fa-paperclip" style="font-size: 20px;"></i></button>
             <input
               v-model="inputMessage"
               @keyup.enter="sendMessage"
@@ -477,28 +450,23 @@
               ref="inputRef"
               :disabled="isTyping || (!isAuthenticated && chatLimit.remaining === 0)"
             />
-            <button
-              v-if="inputMessage"
-              class="input-action clear"
-              @click="inputMessage = ''"
-              title="Limpar"
-            >✕</button>
+<button v-if="inputMessage" class="input-action clear" @click="inputMessage = ''" title="Limpar"><i class="fa-solid fa-xmark" style="font-size: 16px;"></i></button>
             <button
               class="send-btn"
               :class="{ active: canSend, loading: isTyping }"
               @click="sendMessage"
               :disabled="!canSend || isTyping || (!isAuthenticated && chatLimit.remaining === 0)"
             >
-              <span v-if="!isTyping">➤</span>
-              <span v-else class="spinner">⟳</span>
+ <span v-if="!isTyping"><i class="fa-solid fa-paper-plane"></i></span>
+ <span v-else class="spinner"><i class="fa-solid fa-spinner fa-spin"></i></span>
             </button>
           </div>
           <p class="input-hint">
-            <span class="hint-tag" @click="inputMessage = 'quem canta '" title="Buscar artista">🎤 Artista</span>
-            <span class="hint-tag" @click="inputMessage = 'letra de '" title="Buscar letra">📝 Letra</span>
-            <span class="hint-tag" @click="inputMessage = 'álbum '" title="Buscar álbum">💿 Álbum</span>
-            <span class="hint-tag" @click="inputMessage = 'quando lançou '" title="Data de lançamento">📅 Lançamento</span>
-            <span class="hint-tag" @click="inputMessage = 'curiosidade '" title="Curiosidades">💡 Curiosidade</span>
+      <span class="hint-tag" @click="inputMessage = 'quem canta '" title="Buscar artista"><i class="fa-solid fa-microphone" style="margin-right: 4px;"></i> Artista</span>
+ <span class="hint-tag" @click="inputMessage = 'letra de '" title="Buscar letra"><i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Letra</span>
+ <span class="hint-tag" @click="inputMessage = 'álbum '" title="Buscar álbum"><i class="fa-solid fa-compact-disc" style="margin-right: 4px;"></i> Álbum</span>
+<span class="hint-tag" @click="inputMessage = 'quando lançou '" title="Data de lançamento"><i class="fa-solid fa-calendar" style="margin-right: 4px;"></i> Lançamento</span>
+ <span class="hint-tag" @click="inputMessage = 'curiosidade '" title="Curiosidades"><i class="fa-solid fa-lightbulb" style="margin-right: 4px;"></i> Curiosidade</span>
             <span class="hint-tag" @click="inputMessage = 'pop'">Pop</span>
             <span class="hint-tag" @click="inputMessage = 'rock'">Rock</span>
           </p>
@@ -512,6 +480,33 @@
         <span>{{ toast.message }}</span>
       </div>
     </Transition>
+
+     <Transition name="modal-scale">
+    <div v-if="showClearChatModal" class="delete-modal-overlay" @click.self="cancelClearChat">
+      <div class="delete-modal">
+        <div class="delete-modal-icon" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--warning);">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+          </svg>
+        </div>
+        <h3 class="delete-modal-title">Limpar Conversa</h3>
+        <p class="delete-modal-text">
+          Deseja limpar toda a conversa atual?
+        </p>
+        <p class="delete-modal-warning"><i class="fa-solid fa-triangle-exclamation"></i> Esta ação não pode ser desfeita.</p>
+        <div class="delete-modal-actions">
+          <button class="btn-cancel" @click="cancelClearChat">
+            <span>Cancelar</span>
+          </button>
+          <button class="btn-confirm-delete" @click="confirmClearChat" style="background: linear-gradient(135deg, #d97706, var(--warning));">
+            <span>Limpar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
 
     <!-- Audio Element -->
     <audio
@@ -537,7 +532,7 @@ const messages = ref([
   {
     id: Date.now(),
     type: 'ai',
-    content: `Olá! 🎵 Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música! 🎧`,
+    content: `Olá! Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música! 🎧`,
     timestamp: new Date(),
     recommendations: null,
     lyricResults: null
@@ -554,10 +549,8 @@ const isAuthenticated = ref(false)
 const chatLimit = ref({ limit: 5, used: 0, remaining: 5 })
 const showLoginOverlay = ref(false)
 const showFullPlayer = ref(false)
-const showSettings = ref(false)
 const sidebarCollapsed = ref(false)
 const isOnline = ref(true)
-const audioQuality = ref('medium')
 const showAttachMenu = ref(false)
 const showDeleteModal = ref(false)
 const deleteTargetId = ref(null)
@@ -584,25 +577,25 @@ const userName = ref('')
 
 // ============ DADOS ============
 const navItems = [
-  { id: 'chat', icon: '💬', label: 'Chat' },
-  { id: 'library', icon: '📚', label: 'Biblioteca' },
-  { id: 'favorites', icon: '❤️', label: 'Favoritos' },
-  { id: 'playlists', icon: '🎧', label: 'Playlists' },
-  { id: 'history', icon: '🕐', label: 'Histórico' }
+ { id: 'chat', icon: 'fa-solid fa-comments', label: 'Chat' },
+  { id: 'library', icon: 'fa-solid fa-book', label: 'Biblioteca' },
+  { id: 'favorites', icon: 'fa-solid fa-heart', label: 'Favoritos' },
+  { id: 'playlists', icon: 'fa-solid fa-headphones', label: 'Playlists' },
+  { id: 'history', icon: 'fa-solid fa-clock-rotate-left', label: 'Histórico' }
 ]
 
 const availableGenres = ['Pop', 'Rock', 'Jazz', 'Hip Hop', 'Eletrônica', 'Indie', 'R&B', 'Clássica']
 
-const quickQuestions = [
-  { icon: '🎸', text: 'Rock clássico dos anos 80', genre: 'rock', mood: 'nostalgic', type: 'genre' },
-  { icon: '🎤', text: 'Pop atual para festa', genre: 'pop', mood: 'happy', type: 'genre' },
-  { icon: '🎹', text: 'Eletrônica para treinar', genre: 'electronic', mood: 'workout', type: 'genre' },
-  { icon: '🎺', text: 'Jazz suave para relaxar', genre: 'jazz', mood: 'relax', type: 'genre' },
-  { icon: '🎧', text: 'Hip-hop moderno', genre: 'hiphop', mood: 'focus', type: 'genre' },
-  { icon: '🌙', text: 'Indie para estudar', genre: 'indie', mood: 'study', type: 'genre' },
-  { icon: '❤️', text: 'Músicas românticas', genre: 'rnb', mood: 'romantic', type: 'genre' },
-  { icon: '🎻', text: 'Clássica tranquila', genre: 'classical', mood: 'calm', type: 'genre' }
-]
+ const quickQuestions = [
+    { icon: 'fa-solid fa-guitar', text: 'Rock clássico dos anos 80', genre: 'rock', mood: 'nostalgic', type: 'genre' },
+    { icon: 'fa-solid fa-microphone-lines', text: 'Pop atual para festa', genre: 'pop', mood: 'happy', type: 'genre' },
+    { icon: 'fa-solid fa-keyboard', text: 'Eletrônica para treinar', genre: 'electronic', mood: 'workout', type: 'genre' },
+    { icon: 'fa-solid fa-trumpet', text: 'Jazz suave para relaxar', genre: 'jazz', mood: 'relax', type: 'genre' },
+    { icon: 'fa-solid fa-headphones', text: 'Hip-hop moderno', genre: 'hiphop', mood: 'focus', type: 'genre' },
+    { icon: 'fa-solid fa-moon', text: 'Indie para estudar', genre: 'indie', mood: 'study', type: 'genre' },
+    { icon: 'fa-solid fa-heart', text: 'Músicas românticas', genre: 'rnb', mood: 'romantic', type: 'genre' },
+    { icon: 'fa-solid fa-violin', text: 'Clássica tranquila', genre: 'classical', mood: 'calm', type: 'genre' }
+  ]
 
 const genreSearchMap = {
   'rock': 'rock', 'pop': 'pop', 'jazz': 'jazz', 'hip hop': 'hip hop',
@@ -678,6 +671,16 @@ const userInitials = computed(() => {
 const canPrev = computed(() => currentTrackIndex.value > 0)
 const canNext = computed(() => currentTrackIndex.value < currentPlaylist.value.length - 1)
 
+const favoritesList = computed(() => {
+  const savedFavs = JSON.parse(localStorage.getItem('favorites_data') || '[]')
+  return Array.from(favorites.value).map(id => {
+    return savedFavs.find(f => f.id === id)
+  }).filter(Boolean)
+})
+
+const libraryTracks = ref([])
+const playHistory = ref([])
+const userPlaylists = ref([])
 // ============ CHAT HISTORY ============
 function loadSavedChats() {
   if (!isAuthenticated.value) {
@@ -707,7 +710,7 @@ function createNewChat() {
   messages.value = [{
     id: Date.now(),
     type: 'ai',
-    content: `Olá! 🎵 Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música! 🎧`,
+    content: `Olá! Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música!`,
     timestamp: new Date(),
     recommendations: null,
     lyricResults: null
@@ -780,8 +783,16 @@ const confirmDelete = async () => {
   saveChats()
 
   if (currentChatId.value === deleteTargetId.value) {
+    // LIMPAR COMPLETAMENTE o chat atual
     currentChatId.value = null
-    createNewChat()
+    messages.value = [{
+      id: Date.now(),
+      type: 'ai',
+      content: `Olá! Sou seu assistente musical pessoal. Posso te ajudar com:\n\n• **Encontrar músicas** por trecho de letra\n• **Descobrir artistas** e suas histórias\n• **Buscar álbuns** e discografias\n• **Dúvidas sobre músicas**: quem canta, quando lançou, curiosidades\n• **Recomendações** por gênero ou humor\n• **Criar playlists** personalizadas\n\nMe pergunte qualquer coisa sobre música!`,
+      timestamp: new Date(),
+      recommendations: null,
+      lyricResults: null
+    }]
   }
 
   showToastFn('Conversa excluída', 'info')
@@ -1033,9 +1044,9 @@ async function generateArtistResponse(query) {
     const allTracks = await searchRealMusic(artist, 'track', 8)
     const albums = await searchRelatedAlbums(artist, 4)
     const responses = [
-      `**${artist}** é um artista incrível! 🎤 Aqui estão algumas informações e músicas dele(a):`,
-      `Descobrindo **${artist}**! 🌟 Veja o que encontrei sobre esse talento:`,
-      `**${artist}** tem uma discografia fantástica! 🎵 Confira:`
+  `**${artist}** é um artista incrível! Aqui estão algumas informações e músicas dele(a):`,
+      `Descobrindo **${artist}**! Veja o que encontrei sobre esse talento:`,
+    `**${artist}** tem uma discografia fantástica! Confira:`,
     ]
     return {
       content: responses[Math.floor(Math.random() * responses.length)],
@@ -1052,7 +1063,7 @@ async function generateArtistResponse(query) {
   const generalTracks = await searchRealMusic(query, 'track', 6)
   if (generalTracks.length > 0) {
     return {
-      content: `Encontrei artistas relacionados a **"${query}"**. Aqui estão as principais músicas: 🎧`,
+ content: `Encontrei artistas relacionados a **"${query}"**. Aqui estão as principais músicas:`,
       recommendations: {
         genre: 'Resultados da busca',
         tracks: generalTracks,
@@ -1064,7 +1075,7 @@ async function generateArtistResponse(query) {
     }
   }
   return {
-    content: `Não encontrei informações específicas sobre **"${query}"**. Tente me perguntar de outra forma, como:\n\n• "Quem canta [nome da música]"\n• "Músicas de [nome do artista]"\n• "Álbuns de [artista]"\n• Ou simplesmente diga um gênero que gosta! 🎵`,
+  content: `Não encontrei informações específicas sobre **"${query}"**. Tente me perguntar de outra forma, como:\n\n• "Quem canta [nome da música]"\n• "Músicas de [nome do artista]"\n• "Álbuns de [artista]"\n• Ou simplesmente diga um gênero que gosta!`,
     recommendations: null,
     lyricResults: null
   }
@@ -1074,7 +1085,7 @@ async function generateLyricsResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 6)
   if (tracks.length > 0) {
     return {
-      content: `Aqui estão músicas relacionadas a **"${query}"**! 📝 Se você está procurando a letra completa, posso te ajudar a encontrar a música certa para ouvir:`,
+ content: `Aqui estão músicas relacionadas a **"${query}"**! Se você está procurando a letra completa, posso te ajudar a encontrar a música certa para ouvir:`,
       recommendations: {
         genre: 'Letras e Músicas',
         tracks: tracks,
@@ -1086,7 +1097,7 @@ async function generateLyricsResponse(query) {
     }
   }
   return {
-    content: `Não encontrei músicas com **"${query}"** no título. Tente:\n\n• Digitar trechos mais longos da letra\n• Buscar pelo nome do artista\n• Ou perguntar por gênero musical 🎵`,
+content: `Não encontrei músicas com **"${query}"** no título. Tente:\n\n• Digitar trechos mais longos da letra\n• Buscar pelo nome do artista\n• Ou perguntar por gênero musical`,
     recommendations: null,
     lyricResults: null
   }
@@ -1098,7 +1109,7 @@ async function generateAlbumResponse(query) {
   if (tracks.length > 0 || albums.length > 0) {
     const artistName = tracks[0]?.artist || query
     return {
-      content: `**${artistName}** tem uma discografia incrível! 💿 Aqui estão álbuns e músicas encontrados:`,
+ content: `**${artistName}** tem uma discografia incrível! Aqui estão álbuns e músicas encontrados:`,
       recommendations: {
         genre: `Discografia: ${artistName}`,
         tracks: tracks.slice(0, 6),
@@ -1127,7 +1138,7 @@ async function generateReleaseResponse(query) {
     const track = tracks[0]
     const releaseYear = track.releaseDate ? track.releaseDate.split('-')[0] : 'ano desconhecido'
     return {
-      content: `**${track.title}** de **${track.artist}** foi lançada em **${releaseYear}**! 📅\n\nAqui estão mais informações e músicas relacionadas:`,
+ content: `**${track.title}** de **${track.artist}** foi lançada em **${releaseYear}**!\n\nAqui estão mais informações e músicas relacionadas:`,
       recommendations: {
         genre: `Lançamentos: ${track.artist}`,
         tracks: tracks.slice(0, 6),
@@ -1139,7 +1150,7 @@ async function generateReleaseResponse(query) {
     }
   }
   return {
-    content: `Não encontrei informações de lançamento para **"${query}"**. Tente me perguntar sobre o artista ou música específica! 🎵`,
+ content: `Não encontrei informações de lançamento para **"${query}"**. Tente me perguntar sobre o artista ou música específica!`,
     recommendations: null,
     lyricResults: null
   }
@@ -1150,9 +1161,9 @@ async function generateTriviaResponse(query) {
   if (tracks.length > 0) {
     const track = tracks[0]
     const trivias = [
-      `**${track.title}** de **${track.artist}** é um clássico! 💡 Aqui estão mais músicas desse artista para você explorar:`,
-      `**${track.artist}** é conhecido por hits incríveis como **${track.title}**! 🌟 Confira mais:`,
-      `A música **${track.title}** faz parte do repertório de **${track.artist}**! 🎵 Veja mais curiosidades musicais:`
+ `**${track.title}** de **${track.artist}** é um clássico! Aqui estão mais músicas desse artista para você explorar:`,
+`**${track.artist}** é conhecido por hits incríveis como **${track.title}**! Confira mais:`,
+     `A música **${track.title}** faz parte do repertório de **${track.artist}**! Veja mais curiosidades musicais:`
     ]
     return {
       content: trivias[Math.floor(Math.random() * trivias.length)],
@@ -1167,7 +1178,7 @@ async function generateTriviaResponse(query) {
     }
   }
   return {
-    content: `Não encontrei curiosidades sobre **"${query}"**. Tente perguntar sobre um artista ou música específica! 💡`,
+ content: `Não encontrei curiosidades sobre **"${query}"**. Tente perguntar sobre um artista ou música específica!`,
     recommendations: null,
     lyricResults: null
   }
@@ -1184,7 +1195,7 @@ async function generateSimilarResponse(query) {
     )
     const allResults = [...tracks.slice(0, 3), ...filteredSimilar.slice(0, 3)]
     return {
-      content: `Se você gosta de **${baseArtist}**, vai adorar essas recomendações! 🎧 Artistas e músicas no mesmo estilo:`,
+ content: `Se você gosta de **${baseArtist}**, vai adorar essas recomendações! Artistas e músicas no mesmo estilo:`,
       recommendations: {
         genre: `Similares a: ${baseArtist}`,
         tracks: allResults,
@@ -1196,7 +1207,7 @@ async function generateSimilarResponse(query) {
     }
   }
   return {
-    content: `Não encontrei artistas similares a **"${query}"**. Tente me dizer um artista ou música que você gosta! 🎵`,
+content: `Não encontrei artistas similares a **"${query}"**. Tente me dizer um artista ou música que você gosta!`,
     recommendations: null,
     lyricResults: null
   }
@@ -1212,13 +1223,13 @@ async function generateGenreResponse(searchQuery, genre) {
   }
   if (finalTracks.length === 0) {
     return {
-      content: `Não consegui encontrar músicas de **${genre || searchQuery}** no momento. O serviço de música pode estar indisponível. Tente novamente mais tarde ou me diga outro gênero/artista! 🎵`,
+ content: `Não consegui encontrar músicas de **${genre || searchQuery}** no momento. O serviço de música pode estar indisponível. Tente novamente mais tarde ou me diga outro gênero/artista!`,
       recommendations: null,
       lyricResults: null
     }
   }
   const responses = [
-    `Baseado no seu pedido, encontrei essas músicas de **${genre || searchQuery}**! 🎶`,
+  `Baseado no seu pedido, encontrei essas músicas de **${genre || searchQuery}**!`,
     `Aqui está uma seleção especial de **${genre || searchQuery}** para você:`,
     `Encontrei essas gems de **${genre || searchQuery}** que combinam com você!`,
     `Perfeito! Essas tracks de **${genre || searchQuery}** vão te surpreender:`,
@@ -1241,7 +1252,7 @@ async function generateTrackSearchResponse(query) {
   const tracks = await searchRealMusic(query, 'track', 6)
   if (tracks.length > 0) {
     return {
-      content: `Encontrei essas músicas para **"${query}"**! 🎵 Clique para ouvir:`,
+ content: `Encontrei essas músicas para **"${query}"**! Clique para ouvir:`,
       recommendations: {
         genre: `Busca: ${query}`,
         tracks: tracks,
@@ -1253,7 +1264,7 @@ async function generateTrackSearchResponse(query) {
     }
   }
   return {
-    content: `Não encontrei músicas para **"${query}"**. Tente:\n\n• Digitar o nome exato da música\n• Buscar pelo artista\n• Ou perguntar por gênero musical 🎧`,
+ content: `Não encontrei músicas para **"${query}"**. Tente:\n\n• Digitar o nome exato da música\n• Buscar pelo artista\n• Ou perguntar por gênero musical`,
     recommendations: null,
     lyricResults: null
   }
@@ -1264,7 +1275,7 @@ async function generateGeneralResponse(query) {
   if (artistTracks.length > 0) {
     const artists = [...new Set(artistTracks.map(t => t.artist))]
     return {
-      content: `Encontrei resultados para **"${query}"**! 🎵 Aqui estão músicas e artistas relacionados:`,
+   content: `Encontrei resultados para **"${query}"**! Aqui estão músicas e artistas relacionados:`,
       recommendations: {
         genre: `Resultados: ${query}`,
         tracks: artistTracks,
@@ -1276,7 +1287,7 @@ async function generateGeneralResponse(query) {
     }
   }
     return {
-    content: `Posso te ajudar de várias formas! 🎧\n\n• **Dúvidas**: "Quem canta [música]?", "Quando lançou [álbum]?"\n• **Letras**: "Letra de [música]"\n• **Artistas**: "Biografia de [artista]"\n• **Curiosidades**: "Curiosidade sobre [música]"\n• **Gêneros**: "Quero ouvir [gênero]"\n\nComo posso te ajudar? 🎵`,
+ content: `Posso te ajudar de várias formas!\n\n• **Dúvidas**: "Quem canta [música]?", "Quando lançou [álbum]?"\n• **Letras**: "Letra de [música]"\n• **Artistas**: "Biografia de [artista]"\n• **Curiosidades**: "Curiosidade sobre [música]"\n• **Gêneros**: "Quero ouvir [gênero]"\n\nComo posso te ajudar?`,
     recommendations: null,
     lyricResults: null
   }
@@ -1361,11 +1372,15 @@ const searchByLyrics = async (query) => {
 
 const getEmojiForGenre = (genreOrArtist) => {
   const text = (genreOrArtist || '').toLowerCase()
-  const emojiMap = {
-    'rock': '🎸', 'pop': '🎤', 'jazz': '🎺', 'hip hop': '🎧', 'rap': '🎤',
-    'eletrônica': '🎹', 'electronic': '🎹', 'indie': '🌙', 'r&b': '❤️',
-    'rnb': '❤️', 'clássica': '🎻', 'classical': '🎻', 'sertanejo': '🤠',
-    'funk': '🔥', 'samba': '🥁', 'pagode': '🪕', 'mpb': '🎵', 'gospel': '✝️'
+const emojiMap = {
+    'rock': 'fa-solid fa-guitar', 'pop': 'fa-solid fa-microphone-lines', 'jazz': 'fa-solid fa-trumpet',
+    'hip hop': 'fa-solid fa-headphones', 'rap': 'fa-solid fa-microphone',
+    'eletrônica': 'fa-solid fa-keyboard', 'electronic': 'fa-solid fa-keyboard',
+    'indie': 'fa-solid fa-moon', 'r&b': 'fa-solid fa-heart',
+    'rnb': 'fa-solid fa-heart', 'clássica': 'fa-solid fa-violin',
+    'classical': 'fa-solid fa-violin', 'sertanejo': 'fa-solid fa-hat-cowboy',
+    'funk': 'fa-solid fa-fire', 'samba': 'fa-solid fa-drum',
+    'pagode': 'fa-solid fa-guitar', 'mpb': 'fa-solid fa-music', 'gospel': 'fa-solid fa-cross'
   }
   for (const [key, emoji] of Object.entries(emojiMap)) {
     if (text.includes(key)) return emoji
@@ -1420,8 +1435,7 @@ const sendMessage = async () => {
         }
       } else {
         response = {
-          content: `Não encontrei músicas com esse trecho exato. Tente digitar palavras-chave diferentes ou me diga o **artista/gênero** que lembra. 🎵\n\nVocê pode tentar buscar por:\n• Nome do artista\n• Gênero musical\n• Humor (feliz, triste, relaxante)`,
-          recommendations: null,
+          content: `Não encontrei músicas com esse trecho exato. Tente digitar palavras-chave diferentes ou me diga o **artista/gênero** que lembra.\n\nVocê pode tentar buscar por:\n• Nome do artista\n• Gênero musical\n• Humor (feliz, triste, relaxante)`,
           lyricResults: null
         }
       }
@@ -1464,84 +1478,13 @@ const selectGenre = (genre) => {
 
 const handleNavClick = (item) => {
   activeNav.value = item.id
-  if (item.id === 'favorites') {
-    showFavorites()
-  } else if (item.id === 'library') {
-    showLibrary()
-  } else if (item.id === 'history') {
-    showHistory()
-  } else if (item.id === 'playlists') {
-    showPlaylists()
+  currentView.value = item.id
+  
+  if (item.id === 'chat') {
+    // Volta para o chat normal
+    return
   }
-}
-
-const showFavorites = async () => {
-  const savedFavs = JSON.parse(localStorage.getItem('favorites_data') || '[]')
-  const favTracks = Array.from(favorites.value).map(id => {
-    return savedFavs.find(f => f.id === id)
-  }).filter(Boolean)
-  if (favTracks.length > 0) {
-    messages.value.push({
-      id: Date.now(),
-      type: 'ai',
-      content: `Aqui estão suas **${favTracks.length}** músicas favoritas: ❤️`,
-      timestamp: new Date(),
-      recommendations: {
-        genre: 'Favoritos',
-        tracks: favTracks,
-        artists: [],
-        albums: []
-      }
-    })
-  } else {
-    messages.value.push({
-      id: Date.now(),
-      type: 'ai',
-      content: 'Você ainda não tem músicas favoritas. Clique no coração ❤️ nas músicas para adicioná-las aqui!',
-      timestamp: new Date(),
-      recommendations: null
-    })
-  }
-  scrollToBottom()
-}
-
-const showLibrary = async () => {
-  const allTracks = await searchRealMusic('popular', 'track', 8)
-  messages.value.push({
-    id: Date.now(),
-    type: 'ai',
-    content: `Sua biblioteca contém **${allTracks.length}** músicas populares do catálogo:`,
-    timestamp: new Date(),
-    recommendations: {
-      genre: 'Biblioteca',
-      tracks: allTracks,
-      artists: [],
-      albums: []
-    }
-  })
-  scrollToBottom()
-}
-
-const showHistory = () => {
-  messages.value.push({
-    id: Date.now(),
-    type: 'ai',
-    content: '🕐 **Histórico de reprodução**\n\nAqui você verá todas as músicas que já tocou. Continue explorando para preencher seu histórico!',
-    timestamp: new Date(),
-    recommendations: null
-  })
-  scrollToBottom()
-}
-
-const showPlaylists = () => {
-  messages.value.push({
-    id: Date.now(),
-    type: 'ai',
-    content: '🎧 **Suas Playlists**\n\nVocê pode criar playlists personalizadas adicionando músicas pelo botão ➕. Comece a explorar músicas para criar sua primeira playlist!',
-    timestamp: new Date(),
-    recommendations: null
-  })
-  scrollToBottom()
+  // As outras views são renderizadas condicionalmente no template
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1716,7 +1659,7 @@ const toggleFavorite = (track) => {
     showToastFn('Removido dos favoritos', 'info')
   } else {
     favorites.value.add(track.id)
-    showToastFn('Adicionado aos favoritos ❤️', 'success')
+  showToastFn('Adicionado aos favoritos', 'success')
   }
   const savedFavs = JSON.parse(localStorage.getItem('favorites_data') || '[]')
   const existingIndex = savedFavs.findIndex(f => f.id === track.id)
@@ -1757,12 +1700,24 @@ const askAboutAlbum = (album) => {
   sendMessage()
 }
 
-const clearChat = () => {
-  if (confirm('Deseja limpar toda a conversa?')) {
+ // Adicionar no estado reativo (com os outros refs):
+  const showClearChatModal = ref(false)
+
+  // Nova função para abrir o modal:
+  const openClearChatModal = () => {
+    showClearChatModal.value = true
+  }
+
+  const cancelClearChat = () => {
+    showClearChatModal.value = false
+  }
+
+  const confirmClearChat = () => {
+    showClearChatModal.value = false
     messages.value = [{
       id: Date.now(),
       type: 'ai',
-      content: 'Conversa limpa! 🎵 Como posso te ajudar agora?',
+      content: 'Conversa limpa! Como posso te ajudar agora?',
       timestamp: new Date(),
       recommendations: null,
       lyricResults: null
@@ -1770,7 +1725,24 @@ const clearChat = () => {
     currentChatId.value = null
     showToastFn('Chat limpo com sucesso', 'success')
   }
-}
+
+const currentView = ref('chat')  // 'chat' | 'favorites' | 'library' | 'history' | 'playlists'
+
+watch(currentView, async (newView) => {
+  if (newView === 'library') {
+    libraryTracks.value = await searchRealMusic('popular', 'track', 20)
+  }
+  // Favorites já é computed
+  // History pode ser carregado de localStorage
+  if (newView === 'history') {
+    const stored = localStorage.getItem('play_history')
+    playHistory.value = stored ? JSON.parse(stored) : []
+  }
+  if (newView === 'playlists') {
+    const stored = localStorage.getItem('user_playlists')
+    userPlaylists.value = stored ? JSON.parse(stored) : []
+  }
+})
 
 const formatMessage = (text) => {
   if (!text) return ''
@@ -2629,6 +2601,94 @@ body {
   border-color: transparent;
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+}
+
+/* Ajustes para ícones Font Awesome */
+.nav-icon i,
+.chat-icon i,
+.chip-icon i,
+.message-avatar i,
+.ai-avatar i,
+.logo-icon i,
+.full-cover-emoji i,
+.lyric-badge i,
+.hint-tag i,
+.input-action i,
+.send-btn i,
+.action-btn i,
+.lyric-play-btn i,
+.play-all-btn i,
+.full-controls button i,
+.np-controls button i,
+.delete-modal-warning i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.full-controls button i {
+  font-size: 28px;
+}
+
+.full-controls .main-control i {
+  font-size: 28px;
+}
+
+.np-controls button i {
+  font-size: 20px;
+}
+
+.np-controls .play-pause i {
+  font-size: 16px;
+}
+
+/* Ajuste para o spinner */
+.spinner i {
+  animation: spin 1s linear infinite;
+}
+
+/* Garantir que ícones herdem cores corretamente */
+.message-wrapper.user .message-avatar i {
+  color: white;
+}
+
+.cover-art i,
+.cover-placeholder i,
+.cover-placeholder-mini i,
+.album-cover i {
+  color: white;
+}
+
+/* Ajuste para o full player */
+.full-cover-emoji i {
+  color: white;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+/* Ajuste para track number playing */
+.track-number i {
+  color: var(--primary-light);
+}
+
+/* Ajuste para play overlay */
+.play-overlay i {
+  color: white;
+  font-size: 24px;
+}
+
+/* Ajuste para o login icon */
+.login-icon i {
+  color: var(--primary-light);
+}
+
+/* Ajuste para o status indicator (manter animação) */
+.status-indicator {
+  animation: pulse 2s infinite;
+}
+
+/* Ajuste para o toggle btn com ícone */
+.toggle-btn i {
+  font-size: 16px;
 }
 
 /* Limit Widget */
@@ -3704,7 +3764,84 @@ body {
   background: var(--bg-glass);
   flex-shrink: 0;
 }
+.view-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+}
 
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  max-width: 300px;
+}
+
+/* Playlists Grid */
+.playlists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 24px;
+}
+
+.playlist-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.playlist-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+}
+
+.playlist-cover {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.playlist-card h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.playlist-card p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* History date */
+.history-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  display: block;
+}
 .quick-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -4148,20 +4285,25 @@ body {
   font-weight: 600;
 }
 
-.delete-modal-warning {
-  font-size: 13px;
-  color: var(--error);
-  font-weight: 500;
-  margin-bottom: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
+ .delete-modal-warning {
+    font-size: 13px;
+    color: var(--error);
+    font-weight: 500;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
 
-.delete-modal-warning::before {
-  content: '⚠️';
-}
+  .delete-modal-warning i {
+    font-size: 16px;
+  }
+
+  .delete-modal-warning::before {
+    content: '';
+    display: none;
+  }
 
 .delete-modal-actions {
   display: flex;

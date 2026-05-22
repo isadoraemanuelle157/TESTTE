@@ -14,12 +14,17 @@ function optionalAuth(req, res, next) {
 
   if (!authHeader) return next()
 
-  const token = authHeader.split(' ')[1]
+const token = authHeader?.startsWith('Bearer ')
+  ? authHeader.split(' ')[1]
+  : null
   if (!token) return next()
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-    req.user = decoded
+ req.user = {
+  ...decoded,
+  id: decoded.id || decoded._id
+}
     req.isLogged = true
     req.isAuthenticated = true
     next()
@@ -51,7 +56,10 @@ function requireAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-    req.user = decoded
+  req.user = {
+  ...decoded,
+  id: decoded.id || decoded._id
+}
     req.isLogged = true
     req.isAuthenticated = true
     next()

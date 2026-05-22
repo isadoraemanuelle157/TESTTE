@@ -25,6 +25,11 @@ const create = async (req, res) => {
 // LISTAR
 const getAll = async (req, res) => {
   try {
+    // ✅ Verifica se usuário está autenticado
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+    
     const userId = req.user.id
     const playlists = await playlistService.getPlaylists(userId)
     res.json(playlists)

@@ -25,6 +25,8 @@ try {
 const PORT = process.env.PORT || 3002
 
 const { DEEZER_API_URL } = require('./config/spotify')
+// ADICIONAR no topo do server.js:
+const { SPOTIFY_API_URL } = require('./config/spotify')
 
 // ============================================
 // 🛡️ MIDDLEWARES
@@ -89,7 +91,6 @@ const chatRoutes = safeRequire('./routes/chatRoutes')
 // ============================================
 app.use('/usuarios', usuarioRoutes)                                                                                            
 app.use('/generos', generoRoutes) 
-app.use('/musicas', musicaRoutes)
 app.use('/cantores', cantorRoutes)
 app.use('/albuns', albumRoutes)
 app.use('/playlists', playlistRoutes)
@@ -230,6 +231,35 @@ const MOODS = [
 ]
 
 // ============================================
+// 🔍 BUSCA DE MÚSICAS LOCAIS (ADICIONAR AQUI)
+// ============================================
+app.get('/musicas/search', optionalAuth, async (req, res) => {
+  try {
+    const { q } = req.query
+    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+
+    if (!dbConnected) return res.json([])
+
+    const Musica = require('./models/Musica')
+    
+    const musicas = await Musica.find({
+      $or: [
+        { nome: { $regex: q, $options: 'i' } },
+        { 'cantores.nome': { $regex: q, $options: 'i' } },
+        { 'albuns.nome': { $regex: q, $options: 'i' } }
+      ]
+    })
+    .populate('cantores', 'nome')
+    .populate('albuns', 'nome')
+    .limit(20)
+
+    res.json(musicas)
+  } catch (error) {
+    console.error('❌ Erro busca músicas:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar músicas' })
+  }
+})
+// ============================================
 // 🎵 ÁUDIO DA MÚSICA
 // ============================================
 app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
@@ -340,7 +370,7 @@ app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
   }
 })
 
-
+app.use('/musicas', musicaRoutes)
 // ============================================
 // 💚 HEALTH CHECK
 // ============================================

@@ -73,14 +73,29 @@ const getPlaylists = async (userId) => {
         musicaId: m.musicaId
       }))
     ]
+// 🔥 NOVO: Calcular total de músicas corretamente (local + externa)
+const totalMusicasLocal = Array.isArray(obj.musicas) ? obj.musicas.length : 0
+const totalMusicasExterna = Array.isArray(obj.musicasExternas) ? obj.musicasExternas.length : 0
+const totalMusicas = totalMusicasLocal + totalMusicasExterna
 
-    return {
-      ...obj,
-      totalMusicas: (obj.musicas?.length || 0) + (obj.musicasExternas?.length || 0),
-      capa: obj.capa || (obj.musicas?.[0]?.foto || '/default-playlist.png'),
-      privacidade: obj.publica ? 'Pública' : 'Privada',
-      musicas: todasMusicas  // array unificado para o front
-    }
+// 🔥 NOVO: Calcular duração total se possível
+const duracaoTotal = obj.duracaoTotal || 
+                     obj.totalDuration || 
+                     (todasMusicas.reduce((acc, m) => acc + (m.duracao || m.duration || 0), 0)) || 
+                     null
+
+return {
+  ...obj,
+  // 🔥 CORREÇÃO: Usar o total calculado em vez de só local
+  totalMusicas: totalMusicas,
+  quantidadeMusicas: totalMusicas, // 🔥 NOVO: campo alternativo para compatibilidade
+  capa: obj.capa || (obj.musicas?.[0]?.foto || '/default-playlist.png'),
+  privacidade: obj.publica ? 'Pública' : 'Privada',
+  musicas: todasMusicas,
+  // 🔥 NOVO: Adicionar duração total
+  duracaoTotal: duracaoTotal,
+  totalDuration: duracaoTotal
+}
   })
 }
 
@@ -134,10 +149,22 @@ const getPlaylistById = async (id) => {
     }))
   ]
 
-  return {
-    ...obj,
-    musicas: todasMusicas
-  }
+// 🔥 NOVO: Calcular total de músicas corretamente
+const totalMusicasLocal = Array.isArray(obj.musicas) ? obj.musicas.length : 0
+const totalMusicasExterna = Array.isArray(obj.musicasExternas) ? obj.musicasExternas.length : 0
+const totalMusicas = totalMusicasLocal + totalMusicasExterna
+
+return {
+  ...obj,
+  musicas: todasMusicas,
+  // 🔥 NOVO: Adicionar contadores
+  totalMusicas: totalMusicas,
+  quantidadeMusicas: totalMusicas,
+  trackCount: totalMusicas,
+  // 🔥 NOVO: Duração total
+  duracaoTotal: obj.duracaoTotal || null,
+  totalDuration: obj.duracaoTotal || null
+}
 }
 
 // 🔥 ATUALIZAR
