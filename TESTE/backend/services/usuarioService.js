@@ -1,3 +1,5 @@
+
+const mongoose = require('mongoose')
 const Usuario = require('../models/Usuario')
 const Follow = require('../models/Follow')
 const PrivacidadeAtividade = require('../models/PrivacidadeAtividade')

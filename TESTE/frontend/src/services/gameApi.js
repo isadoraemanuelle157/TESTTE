@@ -68,7 +68,7 @@ answerQuestion: (payload) => apiClient.post('/answer', payload),
   // Recompensas e loja
   claimDailyReward: (dia) => apiClient.post('/rewards/daily/claim', { dia }),
   claimAchievement: (conquistaId) => apiClient.post('/achievements/claim', { conquistaId }),
-  buyItem: (itemId) => apiClient.post('/shop/buy', { itemId })
+buyItem: (payload) => apiClient.post('/shop/buy', payload)
 }
 
 export default gameApi

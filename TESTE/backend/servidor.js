@@ -1,5 +1,3 @@
-require('dotenv').config()
-
 const express = require('express')
 const cors = require('cors')
 const axios = require('axios')
@@ -24,9 +22,7 @@ try {
 // ============================================
 const PORT = process.env.PORT || 3002
 
-const { DEEZER_API_URL } = require('./config/spotify')
-// ADICIONAR no topo do server.js:
-const { SPOTIFY_API_URL } = require('./config/spotify')
+const { DEEZER_API_URL, SPOTIFY_API_URL } = require('./config/spotify')
 
 // ============================================
 // 🛡️ MIDDLEWARES
@@ -49,7 +45,7 @@ function safeRequire(path) {
   try {
     return require(path)
   } catch (err) {
-    console.warn(`⚠️ Rota não encontrada: ${path}`)
+    console.warn(`⚠️ Rota não encontrada: ${path} — ${err.message}`)
     return express.Router()
   }
 }
@@ -76,12 +72,12 @@ const followRoutes = safeRequire('./routes/followRoutes')
 const historicoRoutes = safeRequire('./routes/historicoRoutes')
 const notificacaoRoutes = safeRequire('./routes/notificacaoRoutes')
 const privacidadeRoutes = safeRequire('./routes/privacidadeAtividadeRoutes')
-const matchRoutes = safeRequire('./routes/matchMusicalRoutes')                                                               
+const matchRoutes = safeRequire('./routes/matchMusicalRoutes')
 const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
 const deezerRoutes = safeRequire('./routes/deezerRoutes')
 const locaisRoutes = safeRequire('./routes/locaisRoutes')
-const spotifyRoutes = require('./routes/spotifyRoutes')
-const geniusRoutes = require('./routes/geniusRoutes')
+const spotifyRoutes = safeRequire('./routes/spotifyRoutes')
+const geniusRoutes = safeRequire('./routes/geniusRoutes')
 const gameRoutes = safeRequire('./routes/gameRoutes')
 const suporteRoutes = safeRequire('./routes/suporteRoutes')
 const chatRoutes = safeRequire('./routes/chatRoutes')
@@ -90,9 +86,9 @@ const karaokeRoutes = safeRequire('./routes/karaokeRoutes')
 // ============================================
 // 📌 ROTAS APP
 // ============================================
-app.use('/usuarios', usuarioRoutes)                                                                                            
-app.use('/musicas', musicaRoutes)                                                                                            
-app.use('/generos', generoRoutes) 
+app.use('/usuarios', usuarioRoutes)
+app.use('/musicas', musicaRoutes)
+app.use('/generos', generoRoutes)
 app.use('/cantores', cantorRoutes)
 app.use('/albuns', albumRoutes)
 app.use('/playlists', playlistRoutes)
@@ -103,7 +99,7 @@ app.use('/curtidas', requireAuth, curtidaRoutes)     // 🔒 Protegido
 app.use('/favoritas', requireAuth, favoritaRoutes)   // 🔒 Protegido
 app.use('/historico', requireAuth, historicoRoutes)  // 🔒 Protegido
 app.use('/chats', requireAuth, chatRoutes)
-app.use('/notificacoes', notificacaoRoutes)                                                                                                                                  
+app.use('/notificacoes', notificacaoRoutes)
 app.use('/privacidade', privacidadeRoutes)
 app.use('/matches', matchRoutes)
 app.use('/deezer', deezerRoutes)
@@ -117,14 +113,10 @@ app.post('/chat/message', checkChatLimit, async (req, res) => {
   try {
     const { message, context } = req.body
     
-    // Aqui integraria com OpenAI/Claude/etc
-    // Por enquanto, simula resposta inteligente
-    
     const isLyricSearch = detectLyricSearch(message)
     let response
     
     if (isLyricSearch) {
-      // Buscar no Genius
       const geniusResults = await searchGenius(message)
       response = {
         type: 'lyric_search',
@@ -140,7 +132,7 @@ app.post('/chat/message', checkChatLimit, async (req, res) => {
 
     res.json({
       ...response,
-      chatInfo: req.chatInfo // Informações do limite
+      chatInfo: req.chatInfo
     })
 
   } catch (error) {
@@ -210,24 +202,21 @@ const MOODS = [
     description: 'Energia alta',
     gradient: 'linear-gradient(135deg,#ff512f,#dd2476)'
   },
-
   {
     name: 'Chill',
     icon: 'fa-solid fa-cloud-sun',
     description: 'Relaxar',
     gradient: 'linear-gradient(135deg,#667eea,#764ba2)'
   },
-
   {
     name: 'Treino',
-    icon: 'fa-solid fa-dumbbell', 
+    icon: 'fa-solid fa-dumbbell',
     description: 'Academia',
     gradient: 'linear-gradient(135deg,#11998e,#38ef7d)'
   },
-
   {
     name: 'Focus',
-     icon: 'fa-solid fa-brain',
+    icon: 'fa-solid fa-brain',
     description: 'Concentração',
     gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)'
   }
@@ -263,14 +252,15 @@ app.post('/spotify/refresh-token', requireAuth, async (req, res) => {
 
   } catch (error) {
     console.error('[SPOTIFY] Refresh token error:', error.response?.data || error.message)
-    res.status(401).json({ 
+    res.status(401).json({
       error: 'TOKEN_REFRESH_FAILED',
       message: 'Não foi possível renovar o token do Spotify. Faça login novamente.'
     })
   }
 })
+
 // ============================================
-// 🔍 BUSCA DE MÚSICAS LOCAIS (ADICIONAR AQUI)
+// 🔍 BUSCA DE MÚSICAS LOCAIS
 // ============================================
 app.get('/musicas/search', optionalAuth, async (req, res) => {
   try {
@@ -279,7 +269,7 @@ app.get('/musicas/search', optionalAuth, async (req, res) => {
 
     if (!dbConnected) return res.json([])
 
-   const Musica = safeRequire('./models/Musica')
+    const Musica = safeRequire('./models/Musica')
     
     const musicas = await Musica.find({
       $or: [
@@ -298,6 +288,7 @@ app.get('/musicas/search', optionalAuth, async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar músicas' })
   }
 })
+
 // ============================================
 // 🎵 ÁUDIO DA MÚSICA
 // ============================================
@@ -307,9 +298,7 @@ app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
     const query = id
     const isAuthenticated = !!(req.user && req.user.id)
 
-    // =========================
     // COM LOGIN -> SPOTIFY PRIMEIRO
-    // =========================
     if (isAuthenticated) {
       try {
         const spotifyResponse = await spotifyRequest({
@@ -340,9 +329,7 @@ app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
       }
     }
 
-    // =========================
     // SEM LOGIN -> DEEZER PRIMEIRO
-    // =========================
     try {
       const deezerResponse = await axios.get(`${DEEZER_API_URL}/search`, {
         params: {
@@ -366,7 +353,7 @@ app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
       console.log('⚠️ Deezer preview falhou')
     }
 
-    // fallback final: se logado e Spotify ainda não tentou ou falhou sem preview
+    // fallback final
     if (!isAuthenticated) {
       try {
         const spotifyResponse = await spotifyRequest({
@@ -453,9 +440,9 @@ app.listen(PORT, () => {
   console.log('GET /spotify/vibes')
 
   console.log('📍 Locais:')
-console.log('GET /locais')
-console.log('GET /locais/search')
-console.log('GET /locais/:nome/musicas')
+  console.log('GET /locais')
+  console.log('GET /locais/search')
+  console.log('GET /locais/:nome/musicas')
 
   console.log('')
   console.log('🎧 Deezer:')
@@ -470,18 +457,18 @@ console.log('GET /locais/:nome/musicas')
   console.log('GET /health')
 
   console.log('')
-console.log('🎮 Jogo Musical:')
-console.log('GET  /game/modes')
-console.log('GET  /game/modes/:modo/difficulties')
-console.log('POST /game/start')
-console.log('POST /game/answer')
-console.log('GET  /game/leaderboard')
-console.log('GET  /game/rewards/daily')
-console.log('POST /game/rewards/daily/claim')
-console.log('GET  /game/shop')
-console.log('POST /game/shop/buy')
-console.log('GET  /game/achievements')
-console.log('POST /game/achievements/claim')
-console.log('GET  /game/stats')
-console.log('GET  /game/activities/live')
+  console.log('🎮 Jogo Musical:')
+  console.log('GET  /game/modes')
+  console.log('GET  /game/modes/:modo/difficulties')
+  console.log('POST /game/start')
+  console.log('POST /game/answer')
+  console.log('GET  /game/leaderboard')
+  console.log('GET  /game/rewards/daily')
+  console.log('POST /game/rewards/daily/claim')
+  console.log('GET  /game/shop')
+  console.log('POST /game/shop/buy')
+  console.log('GET  /game/achievements')
+  console.log('POST /game/achievements/claim')
+  console.log('GET  /game/stats')
+  console.log('GET  /game/activities/live')
 })

@@ -3,9 +3,16 @@ const followService = require('../services/followService')
 const seguir = async (req, res) => {
   try {
     const seguidor_id = req.user.id
-    const { seguindo_id, tipo } = req.body
+    const { seguindo_id, tipo, artistData } = req.body 
 
-    const resultado = await followService.seguir(seguidor_id, seguindo_id, tipo)
+    let resultado
+    
+    // ✅ CORRIGIDO: Se vier artistData e tipo for 'cantor', importa primeiro
+    if (artistData && tipo === 'cantor') {
+      resultado = await followService.seguirArtistaExterno(seguidor_id, artistData)
+    } else {
+      resultado = await followService.seguir(seguidor_id, seguindo_id, tipo)
+    }
 
     res.json({
       message: resultado.solicitado

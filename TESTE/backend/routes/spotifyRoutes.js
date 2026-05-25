@@ -5,9 +5,15 @@ const requireSpotifyAuth = require('../middleware/requireSpotifyAuth')
 const spotifyController = require('../controllers/spotifyController')
 
 // ============================================
-// 🔓 ROTAS PÚBLICAS (previews 30s - app token)
+// 🔓 ROTAS PÚBLICAS (não precisam de login)
 // ============================================
-router.get('/search', requireAuth, spotifyController.search)
+router.get('/artists/popular', spotifyController.getPopularArtists)  // ✅ REMOVIDO requireAuth
+router.get('/vibes', spotifyController.getVibes)                      // ✅ REMOVIDO requireAuth
+
+// ============================================
+// 🔓 ROTAS PÚBLICAS COM PREVIEW (app token)
+// ============================================
+router.get('/search', spotifyController.search)  // ✅ REMOVIDO requireAuth (ou mantenha se quiser)
 
 // ============================================
 // 🔒 ROTAS QUE REQUEREM SPOTIFY CONECTADO (user token = full tracks)
@@ -25,13 +31,7 @@ router.get('/playlist/:id', requireAuth, requireSpotifyAuth, spotifyController.g
 // ============================================
 router.get('/auth', requireAuth, spotifyController.initiateAuth)
 router.get('/callback', spotifyController.callback)
-router.post('/refresh', requireAuth, spotifyController.refreshUserToken)  // ✅ Usa controller
+router.post('/refresh', requireAuth, spotifyController.refreshUserToken)
 router.get('/status', requireAuth, spotifyController.getSpotifyStatus)
-
-// ============================================
-// 📊 POPULAR / VIBES
-// ============================================
-router.get('/artists/popular', requireAuth, spotifyController.getPopularArtists)
-router.get('/vibes', requireAuth, spotifyController.getVibes)
 
 module.exports = router

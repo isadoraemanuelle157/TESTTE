@@ -75,9 +75,9 @@ const getById = async (req, res) => {
 const update = async (req, res) => {
   try {
     const isOwner = String(req.user?.id) === String(req.params.id)
-    const isOnboardingUpdate = req.body.onboardingCompleto !== undefined
-    
-    if (!isOwner && !isOnboardingUpdate) {
+    const isAdmin = req.user?.role === 'admin'
+
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
     }
 
@@ -95,6 +95,7 @@ const update = async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }
+
 
 const remove = async (req, res) => {
   try {
@@ -286,6 +287,17 @@ const recuperarSenha = async (req, res) => {
     })
   }
 }
+
+const RECURSOS_VALIDOS = [
+  'curtidas',
+  'playlists',
+  'atividades',
+  'seguidores',
+  'seguindo',
+  'estatisticas',
+  'mixes',
+  'tudo'
+]
 
 module.exports = {
   create,

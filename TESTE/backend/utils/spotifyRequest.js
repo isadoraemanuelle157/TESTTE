@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 async function respectRateLimit() {
   const now = Date.now()
   const timeSinceLastRequest = now - lastRequestTime
- const minDelay = 4000 
+ const minDelay = 200 
   
   if (timeSinceLastRequest < minDelay) {
     const wait = minDelay - timeSinceLastRequest
@@ -104,6 +104,12 @@ async function spotifyRequest(config, retries = 3, userToken = null) {
       return response
 
     } catch (error) {
+
+           if (error.response?.status === 403 && userToken) {
+        error.isUserTokenExpired = true
+        throw error
+      }
+
       const status = error.response?.status
 
       // Se for 403 com userToken, pode ser que o token do usuário expirou
@@ -127,12 +133,12 @@ async function spotifyRequest(config, retries = 3, userToken = null) {
           10
         )
 
- const delay = Math.min(retryAfter, 3) * 1000
+ const delay = Math.min(retryAfter, 60) * 1000
 
   console.warn(`🚫 Spotify Rate Limit → aguardando ${delay}ms`)
 
   // ✅ AJUSTE 2: Aumentar retries de 3 para 5
-  if (attempt >= 5) {  // antes era >= retries (3)
+  if (attempt >= retries) {  // antes era >= retries (3)
     error.isRateLimit = true
     throw error
   }
@@ -181,10 +187,7 @@ async function spotifyRequest(config, retries = 3, userToken = null) {
       // erro comum
       throw error
     }
-     if (error.response?.status === 403 && userToken) {
-        error.isUserTokenExpired = true
-        throw error
-      }
+
   }
 
   throw new Error('Spotify max retries exceeded')

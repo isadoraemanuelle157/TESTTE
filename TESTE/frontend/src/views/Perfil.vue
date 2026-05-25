@@ -126,11 +126,15 @@
             </p>
 
             <!-- Gêneros favoritos -->
-            <div class="user-genres" v-if="usuario.generos && usuario.generos.length">
-              <span v-for="genre in usuario.generos.slice(0, 4)" :key="genre" class="genre-tag">
-                {{ genre }}
-              </span>
-            </div>
+<div class="user-genres" v-if="usuarioGenerosList.length">
+  <span
+    v-for="genre in usuarioGenerosList.slice(0, 4)"
+    :key="genre"
+    class="genre-tag"
+  >
+    {{ genre }}
+  </span>
+</div>
            
             <div class="user-stats">
               <div class="stat-item" @click="activeTab = 'likes'">
@@ -1407,7 +1411,13 @@ export default {
       hoveredRow: null,
       hasStory: false,
       storyProgress: 0,
-      defaultAvatar: null,
+      defaultAvatar: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
+    <rect width="100%" height="100%" fill="#334155"/>
+    <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
+      font-size="42" font-family="Arial" fill="#fff">U</text>
+  </svg>
+`),
      
       avatarTabs: [
         { id: 'initials', label: 'Iniciais', icon: 'fa fa-font' },
@@ -1550,6 +1560,24 @@ activityResources: [
   },
 
   computed: {
+    usuarioGenerosList() {
+  const generos = this.usuario?.generos
+
+  if (Array.isArray(generos)) {
+    return generos
+      .map(g => typeof g === 'string' ? g : g?.nome)
+      .filter(Boolean)
+  }
+
+  if (Array.isArray(generos?.todos)) {
+    return generos.todos
+      .map(g => typeof g === 'string' ? g : g?.nome)
+      .filter(Boolean)
+  }
+
+  return []
+},
+
     filteredOverviewMusicas() {
   return this.filteredMusicas.slice(0, 5)
 },
@@ -2263,10 +2291,12 @@ handleGeneratedOptionError(event) {
           }
         }
        
-        this.tabs[1].count = this.estatisticas.musicasCurtidas
-        this.tabs[2].count = this.estatisticas.playlists
-        this.tabs[4].count = this.estatisticas.seguidores
-        this.tabs[5].count = this.estatisticas.favoritos
+this.setTabCount('likes', this.estatisticas.musicasCurtidas || 0)
+this.setTabCount('playlists', this.estatisticas.playlists || 0)
+this.setTabCount('followers', this.estatisticas.seguidores || 0)
+this.setTabCount('following', this.estatisticas.seguindo || 0)
+this.setTabCount('favorites', this.favoritos?.length || 0)
+
       } else {
         this.$router.push('/login')
       }
@@ -2531,39 +2561,27 @@ selectFunAvatar(avatar) {
   }
 },
    
- async onAvatarSelect(avatarUrl) {
-  try {
-    if (!this.showEditModal) {
-      this.openEditModal()
-      await this.$nextTick()
-    }
-
-    this.editForm.avatar = avatarUrl || null
-
-    await this.updateProfileMediaField(
-      'avatar',
-      avatarUrl || null,
-      "Avatar atualizado",
-      "Sua foto de perfil foi atualizada com sucesso"
-    )
-
-    this.closeAvatarSelector()
-  } catch (error) {
-    this.showToast({
-      title: "Erro",
-      message: "Não foi possível atualizar o avatar",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
+async onAvatarSelect(avatarUrl) {
+  if (!this.showEditModal) {
+    this.openEditModal()
+    await this.$nextTick()
   }
+
+  this.editForm.avatar = avatarUrl || null
+  this.closeAvatarSelector()
+
+  this.showToast({
+    title: "Avatar selecionado",
+    message: "Clique em salvar alterações para confirmar",
+    type: "success",
+    icon: "fa fa-check-circle"
+  })
 },
 
- handleAvatarError() {
-  this.usuario.avatar = null
-  if (this.showEditModal) {
-    this.editForm.avatar = null
+handleAvatarError(event) {
+  if (event?.target) {
+    event.target.style.display = 'none'
   }
-  this.persistUsuario(this.usuario)
 },
 
     async handleCoverChange(event) {
@@ -2977,7 +2995,7 @@ carregarHistorico() {
       }
     },
 
-   openEditModal() {
+openEditModal() {
   this.editForm = {
     nome: this.usuario.nome || '',
     username: this.usuario.username || '',
@@ -2987,8 +3005,11 @@ carregarHistorico() {
     cover: this.usuario.cover || null,
     localizacao: this.usuario.localizacao || '',
     website: this.usuario.website || '',
-    generos: [...(this.usuario.generos || [])],
-    perfilPrivado: !!this.usuario.perfilPrivado
+    generos: [...(this.usuario.generos?.todos || this.usuario.generos || [])].map(g =>
+      typeof g === 'string' ? g : g?.nome
+    ).filter(Boolean),
+    perfilPrivado: !!this.usuario.perfilPrivado,
+    mostrarAtividade: this.usuario.mostrarAtividade !== false
   }
 
   this.formErrors = {}
@@ -3058,12 +3079,16 @@ carregarHistorico() {
           throw new Error("Usuário não identificado")
         }
 
-      const payload = {
+ const payload = {
   nome: this.editForm.nome,
   username: this.editForm.username,
   bio: this.editForm.bio,
   email: this.editForm.email,
-  localizacao: this.editForm.localizacao
+  localizacao: this.editForm.localizacao,
+  website: this.editForm.website ?? '',
+  generos: this.editForm.generos ?? [],
+  perfilPrivado: !!this.editForm.perfilPrivado,
+  mostrarAtividade: this.editForm.mostrarAtividade !== false
 }
 
 if (this.editForm.avatar !== this.usuario.avatar) {
@@ -3304,43 +3329,42 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       }
     },
 
-    playMusic(musica) {
-      this.currentPlayingId = musica.id
-     
-      const playerSong = {
-        id: musica.id,
-        title: musica.nome,
-        artist: musica.cantores?.length
-          ? musica.cantores
-              .filter(c => c && c.nome)
-              .map(c => c.nome)
-              .join(', ')
-          : 'Artista desconhecido',
-        cover: musica.cover,
-        url: musica.preview || musica.url,
-        duration: musica.duration || 30,
-        type: 'profile'
-      }
-     
-      window.dispatchEvent(new CustomEvent('play-song', {
-        detail: {
-          song: playerSong,
-          playlist: this.musicasFavoritas.map(m => ({
-            id: m.id,
-            title: m.nome,
-            artist: m.cantores && m.cantores.length
-              ? m.cantores.map(c => c.nome).join(', ')
-              : 'Artista desconhecido',
-            cover: m.cover,
-            url: m.preview || m.url,
-            duration: m.duration || 30,
-            type: 'profile'
-          })),
-          index: this.musicasFavoritas.findIndex(m => m.id === musica.id),
-          context: 'perfil'
-        }
-      }))
-    },
+playMusic(musica) {
+  this.currentPlayingId = musica.id || musica._id
+
+  const playerSong = {
+    id: musica.id || musica._id,
+    title: musica.title || musica.nome || 'Música',
+    artist: musica.artist || (
+      Array.isArray(musica.cantores)
+        ? musica.cantores.filter(c => c && c.nome).map(c => c.nome).join(', ')
+        : 'Artista desconhecido'
+    ),
+    cover: musica.cover || musica.foto || '',
+    url: musica.preview || musica.url || musica.link || '',
+    duration: musica.duration || musica.duracao || 30,
+    type: 'profile'
+  }
+
+  const playlist = this.musicasFavoritas.map(m => ({
+    id: m.id || m._id,
+    title: m.title || m.nome || 'Música',
+    artist: m.artist || 'Artista desconhecido',
+    cover: m.cover || m.foto || '',
+    url: m.preview || m.url || m.link || '',
+    duration: m.duration || m.duracao || 30,
+    type: 'profile'
+  }))
+
+  window.dispatchEvent(new CustomEvent('play-song', {
+    detail: {
+      song: playerSong,
+      playlist,
+      index: playlist.findIndex(m => m.id === playerSong.id),
+      context: 'perfil'
+    }
+  }))
+},
 
     shufflePlay() {
       if (this.musicasFavoritas.length === 0) return
@@ -3391,7 +3415,7 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
           title: "Removida dos curtidos 💔",
           message: `"${musica.nome}" foi removida da sua coleção`,
           type: "info",
-          icon: "fa fa-heart-broken"
+          icon: "fa fa-heart-o"
         })
 
       } catch (error) {

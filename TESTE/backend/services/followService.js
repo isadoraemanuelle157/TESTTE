@@ -98,9 +98,12 @@ const desseguir = async (seguidor_id, seguindo_id, tipo) => {
     await Usuario.findByIdAndUpdate(seguidor_id, {
       $pull: { seguindo: seguindo_id }
     })
-
     await Cantor.findByIdAndUpdate(seguindo_id, {
       $pull: { seguidores: seguidor_id }
+    })
+  } else if (tipo.toLowerCase() === 'usuario') {
+    await Usuario.findByIdAndUpdate(seguidor_id, {
+      $pull: { seguindoUsuarios: seguindo_id }
     })
   }
 
@@ -170,8 +173,40 @@ const aceitarSolicitacao = async (usuarioLogadoId, solicitanteId) => {
   return follow
 }
 
+// ✅ CORRIGIDO: Agora retorna o follow com o _id do Cantor criado/importado
+const seguirArtistaExterno = async (seguidor_id, artistData) => {
+  const { id, name, picture, pictureMedium, pictureBig, source, nbFan } = artistData
+  
+  // Procura se já existe por externalId + source
+  let cantor = await Cantor.findOne({ 
+    'externo.externalId': String(id),
+    source: source
+  })
+  
+  if (!cantor) {
+    // Cria novo cantor importado
+    cantor = await Cantor.create({
+      nome: name,
+      foto: picture || pictureMedium || '',
+      source: source,  // 'deezer' ou 'spotify'
+      externo: {
+        externalId: String(id),
+        pictureMedium: pictureMedium || picture || '',
+        pictureBig: pictureBig || picture || '',
+        nbFan: nbFan || 0
+      },
+      generos: [],
+      seguidoresBase: 0
+    })
+  }
+  
+  // ✅ CORRIGIDO: Agora usa o _id (ObjectId) do Cantor criado/importado
+  return seguir(seguidor_id, cantor._id.toString(), 'cantor')
+}
+
 module.exports = {
   seguir,
+  seguirArtistaExterno,
   desseguir,
   getSeguidores,
   getSeguindo,

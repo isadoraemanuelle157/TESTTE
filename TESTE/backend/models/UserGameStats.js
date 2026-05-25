@@ -68,13 +68,15 @@ const UserGameStatsSchema = new mongoose.Schema({
   },
   
   // Itens da loja
-  inventario: [{
-    itemId: String,
-    nome: String,
-    icon: String,
-    comprado: { type: Boolean, default: true },
-    dataCompra: { type: Date, default: Date.now }
-  }],
+inventario: [{
+  itemId: String,
+  nome: String,
+  icon: String,
+  tipo: { type: String, default: 'geral' },  // ← ADICIONAR
+  comprado: { type: Boolean, default: true },
+  ativo: { type: Boolean, default: true },   // ← ADICIONAR
+  dataCompra: { type: Date, default: Date.now }
+}],
   
   // Nível do jogador
   nivel: {
@@ -103,5 +105,26 @@ UserGameStatsSchema.methods.adicionarXP = function(xpGanho) {
     xpProximo: this.nivel.xpProximoNivel
   }
 }
+
+UserGameStatsSchema.pre('save', function(next) {
+  const modos = ['guess-song', 'guess-artist', 'complete-lyric', 'music-trivia'];
+  const dificuldades = ['easy', 'medium', 'hard'];
+  
+  if (!this.progresso) this.progresso = {};
+  
+  modos.forEach(modo => {
+    if (!this.progresso[modo]) this.progresso[modo] = {};
+    dificuldades.forEach(diff => {
+      if (!this.progresso[modo][diff]) {
+        this.progresso[modo][diff] = { 
+          completado: false, 
+          melhorPontuacao: 0, 
+          bloqueado: diff !== 'easy' 
+        };
+      }
+    });
+  });
+  next();
+});
 
 module.exports = mongoose.model('UserGameStats', UserGameStatsSchema)

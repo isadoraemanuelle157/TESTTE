@@ -539,7 +539,7 @@
             </div>
 
             <!-- FEEDBACK -->
-            <div v-if="showAnswer" class="answer-feedback" :class="{ 'correct': selectedAnswer === correctAnswerIndex }">
+            <div v-if="showAnswer && !gameCompleted" class="answer-feedback" :class="{ 'correct': selectedAnswer === correctAnswerIndex }">
               <div class="feedback-icon">
                 <i :class="selectedAnswer === correctAnswerIndex ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-xmark'"></i>
               </div>
@@ -665,15 +665,20 @@
                  <h4>{{ item.nome }}</h4>
     <p>{{ item.descricao }}</p>
               </div>
-              <button
-                class="btn-buy"
-                :class="{ 'owned': item.possuido, 'affordable': totalCoins >= item.preco && !item.possuido }"
-                @click="buyItem(item)"
-                 :disabled="item.possuido || totalCoins < item.preco"
-              >
-                <span v-if="item.possuido">Adquirido</span>
-                <span v-else><i class="fa-solid fa-coins"></i> {{ item.preco }}</span>
-              </button>
+<button
+  class="btn-buy"
+  :class="{ 
+    'owned': item.possuido, 
+    'affordable': totalCoins >= item.preco && !item.possuido,
+    'equipped': item.equipado
+  }"
+  @click="item.possuido ? toggleEquipItem(item) : buyItem(item)"
+  :disabled="!item.possuido && totalCoins < item.preco"
+>
+  <span v-if="item.possuido && item.equipado">✓ Equipado</span>
+  <span v-else-if="item.possuido">Equipar</span>
+  <span v-else><i class="fa-solid fa-coins"></i> {{ item.preco }}</span>
+</button>
             </div>
           </div>
         </div>
@@ -1089,6 +1094,14 @@ export default {
   },
 
   computed: {
+    accuracy() {
+  if (this.totalQuestions === 0) return 0;
+  // Só conta perguntas respondidas, não o total do jogo
+  const answered = this.currentQuestionNum - 1; // perguntas já respondidas
+  if (answered === 0) return 0;
+  return Math.round((this.correctAnswers / answered) * 100);
+},
+
    top1() {
     return this.serverLeaderboard?.[0] || null;
   },
@@ -1186,6 +1199,156 @@ async mounted() {
   },
  
   methods: {
+  async buyItem(item) {
+  if (item.possuido) {
+    this.showNotification('Item já possuído!', 'warning');
+    return;
+  }
+  if (this.totalCoins < item.preco) {
+    this.showNotification('Moedas insuficientes!', 'error');
+    return;
+  }
+  
+  const token = localStorage.getItem('token');
+  
+  // Modo offline
+  if (!token) {
+    try {
+      const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      if (offlineInventory.some(i => i.itemId === item.id)) {
+        this.showNotification('Item já possuído!', 'warning');
+        return;
+      }
+      
+      offlineInventory.push({
+        itemId: item.id,
+        nome: item.nome,
+        icon: item.icon,
+        tipo: item.tipo || 'geral',
+        comprado: true,
+        ativo: true,
+        dataCompra: new Date().toISOString()
+      });
+      
+      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+      this.totalCoins -= item.preco;
+      localStorage.setItem('soundup_coins', this.totalCoins);
+      
+      // Atualiza lista local
+      const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
+      if (itemIndex >= 0) {
+        this.serverShopItems[itemIndex].possuido = true;
+        this.serverShopItems[itemIndex].equipado = true;
+        this.serverShopItems[itemIndex].podeComprar = false;
+      }
+      
+      this.showNotification(`🛒 ${item.nome} comprado e ativado!`, 'success');
+    } catch (error) {
+      console.error('Erro compra offline:', error);
+      this.showNotification('Erro ao comprar item', 'error');
+    }
+    return;
+  }
+  
+  // Modo online
+  try {
+    const res = await gameApi.buyItem({ itemId: item.id });
+    
+    if (res.data.success) {
+      this.totalCoins = res.data.moedasRestantes;
+      
+      // Recarrega shop do servidor
+      const shopRes = await gameApi.getShop();
+      this.serverShopItems = shopRes.data.items.map(i => ({
+        ...i,
+        equipado: i.ativo || false
+      }));
+      
+      this.showNotification(`🛒 ${item.nome} comprado!`, 'success');
+    } else {
+      throw new Error(res.data.error || 'Erro desconhecido');
+    }
+  } catch (error) {
+    console.error('Erro ao comprar:', error);
+    const msg = error.response?.data?.error || error.message || 'Erro ao comprar item';
+    this.showNotification(msg, 'error');
+  }
+},
+
+// ⚡ NOVO: Equipar/Desequipar item
+async toggleEquipItem(item) {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    // Modo offline — toggle no localStorage
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    const invItem = offlineInventory.find(i => i.itemId === item.id);
+    if (invItem) {
+      // Se for avatar/tema, desativa outros do mesmo tipo
+      if (['avatar', 'tema'].includes(invItem.tipo)) {
+        offlineInventory.forEach(i => {
+          if (i.tipo === invItem.tipo && i.itemId !== item.id) {
+            i.ativo = false;
+          }
+        });
+      }
+      invItem.ativo = !invItem.ativo;
+      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+      
+      // Atualiza UI
+      const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
+      if (itemIndex >= 0) {
+        this.serverShopItems[itemIndex].equipado = invItem.ativo;
+        // Desmarca outros do mesmo tipo
+        if (['avatar', 'tema'].includes(invItem.tipo)) {
+          this.serverShopItems.forEach((si, idx) => {
+            if (si.tipo === invItem.tipo && si.id !== item.id) {
+              this.serverShopItems[idx].equipado = false;
+            }
+          });
+        }
+      }
+    }
+    return;
+  }
+  
+  // Modo online
+  try {
+    if (item.equipado) {
+      await gameApi.unequipItem(item.id);
+    } else {
+      await gameApi.equipItem(item.id);
+    }
+    
+    // Recarrega shop
+    const shopRes = await gameApi.getShop();
+    this.serverShopItems = shopRes.data.items.map(i => ({
+      ...i,
+      equipado: i.ativo || false
+    }));
+  } catch (error) {
+    console.error('Erro ao equipar:', error);
+  }
+},
+
+   loadOfflineInventory() {
+  const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+  const offlineCoins = parseInt(localStorage.getItem('soundup_coins') || '0');
+  
+  if (offlineInventory.length > 0 && this.serverShopItems.length > 0) {
+    this.serverShopItems = this.serverShopItems.map(item => {
+      const invItem = offlineInventory.find(i => i.itemId === item.id);
+      const owned = !!invItem;
+      
+      return {
+        ...item,
+        possuido: owned,
+        equipado: owned ? invItem.ativo : false,  // ← NOVO
+        podeComprar: !owned && offlineCoins >= item.preco
+      };
+    });
+  }
+},
     formatModeName(mode) {
     const names = {
       'guess-song': '🎵 Adivinhe a Música',
@@ -1251,7 +1414,8 @@ async mounted() {
     // Só carrega dados protegidos se estiver logado
     if (!isLoggedIn) {
       console.log('Usuário não logado - modo offline')
-      this.loadOfflineData()
+      this.loadOfflineData();
+      this.loadOfflineInventory();
       return
     }
 
@@ -1439,7 +1603,11 @@ async selectAnswer(index) {
             }
             await this.loadServerData();
         }
-
+// ⚡ Garante que o timer pare mesmo em erro
+if (this.timerInterval) {
+  clearInterval(this.timerInterval);
+  this.timerInterval = null;
+}
     } catch (error) {
         console.error('Erro ao enviar resposta:', error);
         this.processOfflineAnswer(index);
@@ -1452,28 +1620,43 @@ processOfflineAnswer(index) {
   
   if (isCorrect) {
     this.correctAnswers++;
-    const pts = 100 * (this.currentDifficulty?.multiplier || 1);
-    const coins = 10 * (this.currentDifficulty?.multiplier || 1);
-    this.score += Math.floor(pts);
-    this.sessionCoins += Math.floor(coins);
-    this.totalCoins += Math.floor(coins);
-    this.lastPointsGained = Math.floor(pts);
-    this.lastCoinsGained = Math.floor(coins);
+    // ⚡ RECOMPENSA DESDE A PRIMEIRA PERGUNTA
+    const basePoints = 100;
+    const baseCoins = 10;
+    const multiplier = this.currentDifficulty?.multiplier || 1;
+    
+    // Bônus por streak (acertos seguidos)
+    const streakBonus = Math.min(this.correctAnswers, 5); // max 5x streak
+    const pts = Math.floor((basePoints + (streakBonus * 10)) * multiplier);
+    const coins = Math.floor((baseCoins + (streakBonus * 2)) * multiplier);
+    
+    this.score += pts;
+    this.sessionCoins += coins;
+    this.totalCoins += coins;
+    this.lastPointsGained = pts;
+    this.lastCoinsGained = coins;
+    
+    // Efeito visual de moedas ganhas
+    this.showCoinAnimation(coins);
   } else {
     this.lastPointsGained = 0;
     this.lastCoinsGained = 0;
   }
-  
 },
     
- async nextQuestion() {
+async nextQuestion() {
+  // ⚡ LIMPA estados ANTES de tudo
+  this.selectedAnswer = null;
+  this.showAnswer = false;
+  this.cleanupAudio();
+  
   if (this.gameCompleted) return;
   
   // Incrementa número da pergunta
   this.currentQuestionNum++;
   
   // Verifica se completou o jogo
-if (this.currentQuestionNum > this.totalQuestions) {
+  if (this.currentQuestionNum > this.totalQuestions) {
   const levels = ['easy', 'medium', 'hard'];
   const currentIdx = levels.indexOf(this.currentDifficulty?.level);
   const precision = Math.round((this.correctAnswers / this.totalQuestions) * 100);
@@ -1565,18 +1748,46 @@ if (this.currentQuestionNum > this.totalQuestions) {
   }
 },
     
-    async buyItem(item) {
-      if (item.possuido || this.totalCoins < item.preco) return;
-      try {
-        const res = await gameApi.buyItem(item.id);
-        this.totalCoins = res.data.moedasRestantes;
-        const shopRes = await gameApi.getShop();
-        this.serverShopItems = shopRes.data.items;
-        alert(`🛒 ${item.nome} comprado!`);
-      } catch (error) {
-        alert(error.response?.data?.error || 'Erro');
-      }
-    },
+  async buyItem(item) {
+  if (item.possuido || this.totalCoins < item.preco) return;
+  const token = localStorage.getItem('token');
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    if (offlineInventory.some(i => i.itemId === item.id)) {
+      alert('Item já possuído!');
+      return;
+    }
+    offlineInventory.push({
+      itemId: item.id,
+      nome: item.nome,
+      icon: item.icon,
+      tipo: item.tipo || 'geral',
+      comprado: true,
+      ativo: true,
+      dataCompra: new Date().toISOString()
+    });
+    localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+    this.totalCoins -= item.preco;
+    localStorage.setItem('soundup_coins', this.totalCoins);
+    const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
+    if (itemIndex >= 0) {
+      this.serverShopItems[itemIndex].possuido = true;
+      this.serverShopItems[itemIndex].podeComprar = false;
+    }
+    alert(`🛒 ${item.nome} comprado!`);
+    return;
+  }
+  try {
+const res = await gameApi.buyItem({ itemId: item.id });
+    this.totalCoins = res.data.moedasRestantes;
+    const shopRes = await gameApi.getShop();
+    this.serverShopItems = shopRes.data.items;
+    alert(`🛒 ${item.nome} comprado!`);
+  } catch (error) {
+    console.error('Erro ao comprar:', error);
+    alert(error.response?.data?.error || 'Erro ao comprar item');
+  }
+},
     
 async advanceToNextLevel() {
   // ⚡ Usa nextDifficulty diretamente — não depende mais de completionResult
@@ -1681,10 +1892,75 @@ async advanceToNextLevel() {
        this.loadNextOfflineQuestion();
     },
 
-    loadNextOfflineQuestion() {
+   loadNextOfflineQuestion() {
   const mode = this.currentGame?.id || 'guess-song';
-  const tracks = OFFLINE_TRACKS[mode] || OFFLINE_TRACKS.guessSong;
   
+  if (mode === 'complete-lyric') {
+    const tracks = OFFLINE_TRACKS.completeLyric;
+    if (tracks.length > 0) {
+      const usedInSession = JSON.parse(sessionStorage.getItem('soundup_used_lyrics') || '[]');
+      const available = tracks.filter(t => !usedInSession.includes(t.id));
+      let randomTrack;
+      if (available.length > 0) {
+        randomTrack = available[Math.floor(Math.random() * available.length)];
+      } else {
+        sessionStorage.removeItem('soundup_used_lyrics');
+        randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+      }
+      usedInSession.push(randomTrack.id);
+      sessionStorage.setItem('soundup_used_lyrics', JSON.stringify(usedInSession));
+      
+      const words = randomTrack.title.split(' ');
+      const maskCount = this.currentDifficulty?.level === 'easy' 
+        ? Math.max(1, Math.floor(words.length * 0.3))
+        : this.currentDifficulty?.level === 'medium'
+        ? Math.max(1, Math.floor(words.length * 0.6))
+        : Math.max(1, words.length - 1);
+      
+      const indicesToMask = [];
+      const allIndices = words.map((_, i) => i).sort(() => Math.random() - 0.5);
+      for (let i = 0; i < maskCount && i < allIndices.length; i++) {
+        indicesToMask.push(allIndices[i]);
+      }
+      
+      const tituloMascarado = words.map((word, idx) => ({
+        texto: word,
+        oculto: indicesToMask.includes(idx)
+      }));
+      
+      const wrongTracks = tracks
+        .filter(t => t.id !== randomTrack.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      
+      const options = [
+        { texto: randomTrack.title, correta: true },
+        ...wrongTracks.map(t => ({ texto: t.title, correta: false }))
+      ].sort(() => Math.random() - 0.5);
+      
+      this.currentTrack = {
+        modo: 'complete-lyric',
+        musica: {
+          titulo: randomTrack.title,
+          artista: randomTrack.artist?.name,
+          album: randomTrack.album?.title,
+          capa: randomTrack.album?.cover_medium,
+          previewUrl: randomTrack.preview,
+          ano: randomTrack.release_date?.split('-')[0]
+        },
+        tituloMascarado,
+        opcoes: options,
+        respostaCorreta: options.findIndex(o => o.correta)
+      };
+      
+      this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
+      this.correctAnswerIndex = this.currentTrack.respostaCorreta;
+      this.isLoading = false;
+    }
+    return;
+  }
+  
+  const tracks = OFFLINE_TRACKS[mode] || OFFLINE_TRACKS.guessSong;
   if (tracks.length > 0) {
     const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
     this.currentTrack = this.normalizeQuestion({
@@ -1789,11 +2065,16 @@ getCorrectAnswerText() {
     // Completa o jogo e mostra tela de conclusão
 async completeGame() {
   this.gameCompleted = true;
-  this.showAnswer = false;        // ← ADICIONAR: limpa o feedback
-  this.selectedAnswer = null;     // ← ADICIONAR: reseta seleção
-  this.cleanupAudio();            // ← ADICIONAR: garante que áudio para
+  this.showAnswer = false;
+  this.selectedAnswer = null;
+  this.cleanupAudio();
   this.markDifficultyCompleted();
   
+  // ⚡ LIMPA timer se estiver rodando
+  if (this.timerInterval) {
+    clearInterval(this.timerInterval);
+    this.timerInterval = null;
+  }
   // Finaliza no servidor se tiver sessão real (não demo)
   if (this.sessionId && !this.sessionId.toString().startsWith('demo-')) {
     try {
@@ -1802,7 +2083,10 @@ async completeGame() {
       console.log('Sessão já finalizada ou erro:', e.message);
     }
   }
-      const accuracy = Math.round((this.correctAnswers / this.totalQuestions) * 100);
+ const answeredCount = this.currentQuestionNum - 1; // quantas foram respondidas
+const accuracy = answeredCount > 0 
+  ? Math.round((this.correctAnswers / answeredCount) * 100) 
+  : 0;
       this.accuracy = Math.round((this.accuracy + accuracy) / 2) || accuracy;
      
       const completionBonus = this.correctAnswers === this.totalQuestions ? 1000 :
@@ -1865,9 +2149,9 @@ const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}
 const modeProgress = savedProgress[this.selectedMode?.id] || {};
 
 this.serverDifficulties = [
-  { level: 'easy', name: 'Fácil', icon: '🌱', multiplier: 1, timeLimit: 30, description: '30s por pergunta', completed: modeProgress.easy?.completed || false, locked: false, bestScore: modeProgress.easy?.bestScore || 0 },
-  { level: 'medium', name: 'Médio', icon: '🔥', multiplier: 1.5, timeLimit: 20, description: '20s por pergunta', completed: modeProgress.medium?.completed || false, locked: !(modeProgress.easy?.completed), bestScore: modeProgress.medium?.bestScore || 0 },
-  { level: 'hard', name: 'Difícil', icon: '💀', multiplier: 2.5, timeLimit: 15, description: '15s por pergunta', completed: modeProgress.hard?.completed || false, locked: !(modeProgress.medium?.completed), bestScore: modeProgress.hard?.bestScore || 0 }
+  { level: 'easy', name: 'Fácil', iconClass: 'fa-solid fa-seedling', multiplier: 1, timeLimit: 30, description: '30s por pergunta', completed: modeProgress.easy?.completed || false, locked: false, bestScore: modeProgress.easy?.bestScore || 0 },
+  { level: 'medium', name: 'Médio', iconClass: 'fa-solid fa-fire', multiplier: 1.5, timeLimit: 20, description: '20s por pergunta', completed: modeProgress.medium?.completed || false, locked: !(modeProgress.easy?.completed), bestScore: modeProgress.medium?.bestScore || 0 },
+  { level: 'hard', name: 'Difícil', iconClass: 'fa-solid fa-skull', multiplier: 2.5, timeLimit: 15, description: '15s por pergunta', completed: modeProgress.hard?.completed || false, locked: !(modeProgress.medium?.completed), bestScore: modeProgress.hard?.bestScore || 0 }
 ]
     return
   }
@@ -3699,7 +3983,27 @@ body {
   transition: all 0.3s;
   text-align: left;
 }
+.btn-buy.equipped {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+  cursor: pointer;
+}
 
+.btn-buy.equipped:hover {
+  background: #059669;
+}
+
+.shop-item.owned {
+  opacity: 0.7;
+  border-color: var(--success);
+}
+
+.shop-item.owned.equipped {
+  opacity: 1;
+  border-color: var(--success);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
 .answer-btn:hover:not(:disabled) {
   background: rgba(99, 102, 241, 0.1);
   border-color: var(--primary);

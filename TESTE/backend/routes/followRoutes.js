@@ -2,16 +2,34 @@ const express = require('express')
 const router = express.Router()
 
 const followController = require('../controllers/followController')
-const { requireAuth } = require('../middleware/auth')
+const { requireAuth } = require('../middleware/auth')  // ← já importa aqui
 
-router.post('/seguir', authMiddleware, followController.seguir)
+// ❌ MUDAR DE:
+// router.post('/seguir', authMiddleware, followController.seguir)
+// ✅ PARA:
+router.post('/seguir', requireAuth, followController.seguir)
+
+// ❌ MUDAR DE:
+// router.delete('/desseguir', authMiddleware, followController.desseguir)
+// ✅ PARA:
+router.delete('/desseguir', requireAuth, followController.desseguir)
+
 router.get('/seguindo/:id', followController.seguindoPorId)
-router.delete('/desseguir', authMiddleware, followController.desseguir)
-
 router.get('/seguidores/:id', followController.seguidores)
-router.get('/usuario/seguindo', authMiddleware, followController.seguindo)
-router.get('/verificar', authMiddleware, followController.verificar)
 
-router.post('/aceitar', authMiddleware, followController.aceitarSolicitacao)
+// ❌ MUDAR DE:
+// router.get('/usuario/seguindo', authMiddleware, followController.seguindo)
+// ✅ PARA:
+router.get('/usuario/seguindo', requireAuth, followController.seguindo)
+
+// ❌ MUDAR DE:
+// router.get('/verificar', authMiddleware, followController.verificar)
+// ✅ PARA:
+router.get('/verificar', requireAuth, followController.verificar)
+
+// ❌ MUDAR DE:
+// router.post('/aceitar', authMiddleware, followController.aceitarSolicitacao)
+// ✅ PARA:
+router.post('/aceitar', requireAuth, followController.aceitarSolicitacao)
 
 module.exports = router

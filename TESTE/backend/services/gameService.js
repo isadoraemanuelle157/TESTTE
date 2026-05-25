@@ -52,14 +52,14 @@ const getOrCreateUserStats = async (userId) => {
   if (!stats) {
     stats = new UserGameStats({
       usuario: userId,
-      conquistas: [
-        { id: 'first_win', titulo: 'Primeira Vitória', descricao: 'Complete seu primeiro jogo', icon: '🏆', moedas: 50 },
-        { id: 'streak_3', titulo: 'Sequência de Fogo', descricao: 'Acerte 3 perguntas seguidas', icon: '🔥', moedas: 100 },
-        { id: 'streak_5', titulo: 'Imparável', descricao: 'Acerte 5 perguntas seguidas', icon: '⚡', moedas: 200 },
-        { id: 'perfect_game', titulo: 'Perfeição', descricao: 'Acerte todas as perguntas', icon: '💎', moedas: 500 },
-        { id: 'collector', titulo: 'Colecionador', descricao: 'Compre 3 itens na loja', icon: '🛍️', moedas: 150 },
-        { id: 'daily_7', titulo: 'Dedicado', descricao: 'Resgate recompensas por 7 dias', icon: '📅', moedas: 300 }
-      ]
+conquistas: [
+  { id: 'first_win', titulo: 'Primeira Vitória', descricao: 'Complete seu primeiro jogo', iconClass: 'fa-solid fa-trophy', moedas: 50 },
+  { id: 'streak_3', titulo: 'Sequência de Fogo', descricao: 'Acerte 3 perguntas seguidas', iconClass: 'fa-solid fa-fire', moedas: 100 },
+  { id: 'streak_5', titulo: 'Imparável', descricao: 'Acerte 5 perguntas seguidas', iconClass: 'fa-solid fa-bolt', moedas: 200 },
+  { id: 'perfect_game', titulo: 'Perfeição', descricao: 'Acerte todas as perguntas', iconClass: 'fa-solid fa-gem', moedas: 500 },
+  { id: 'collector', titulo: 'Colecionador', descricao: 'Compre 3 itens na loja', iconClass: 'fa-solid fa-bag-shopping', moedas: 150 },
+  { id: 'daily_7', titulo: 'Dedicado', descricao: 'Resgate recompensas por 7 dias', iconClass: 'fa-solid fa-calendar-check', moedas: 300 }
+]
     })
     await stats.save()
   }
@@ -142,54 +142,143 @@ const gerarPerguntaGuessSong = async (dificuldade) => {
   }
 }
 
-const gerarPerguntaCompleteLyric = async (dificuldade) => {
-  const queries = ['hit song', 'famous lyrics', 'popular music']
-  const query = queries[Math.floor(Math.random() * queries.length)]
-  
-  const tracks = await buscarMusicasDeezer(query, 30)
-  const validTracks = tracks.filter(t => t.title.split(' ').length >= 2)
-  
-  if (validTracks.length === 0) {
-    return getStaticQuestion('complete-lyric', dificuldade)
+// ============================================
+// 🎲 GERAR PERGUNTAS COMPLETE A MÚSICA (MELHORADO)
+// ============================================
+
+const LYRIC_POOL = {
+  easy: [
+    { titulo: "Let It Be", artista: "The Beatles", album: "Let It Be", ano: 1970, capa: "https://e-cdns-images.dzcdn.net/images/cover/1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-1.dzcdn.net/stream/c-1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u-1.mp3" },
+    { titulo: "Hey Jude", artista: "The Beatles", album: "Hey Jude", ano: 1968, capa: "https://e-cdns-images.dzcdn.net/images/cover/2v2v2v2v2v2v2v2v2v2v2v2v2v2v2v2v/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-2.dzcdn.net/stream/c-2v2v2v2v2v2v2v2v2v2v2v2v2v2v2v2v-2.mp3" },
+    { titulo: "Imagine", artista: "John Lennon", album: "Imagine", ano: 1971, capa: "https://e-cdns-images.dzcdn.net/images/cover/6z6z6z6z6z6z6z6z6z6z6z6z6z6z6z6z/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-6.dzcdn.net/stream/c-6z6z6z6z6z6z6z6z6z6z6z6z6z6z6z6z-3.mp3" },
+    { titulo: "Billie Jean", artista: "Michael Jackson", album: "Thriller", ano: 1983, capa: "https://e-cdns-images.dzcdn.net/images/cover/7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-7.dzcdn.net/stream/c-7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a7a-1.mp3" },
+    { titulo: "Like a Prayer", artista: "Madonna", album: "Like a Prayer", ano: 1989, capa: "https://e-cdns-images.dzcdn.net/images/cover/8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-8.dzcdn.net/stream/c-8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b8b-2.mp3" },
+    { titulo: "Wonderwall", artista: "Oasis", album: "(What's the Story) Morning Glory?", ano: 1995, capa: "https://e-cdns-images.dzcdn.net/images/cover/0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-0.dzcdn.net/stream/c-0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d-1.mp3" },
+    { titulo: "Smells Like Teen Spirit", artista: "Nirvana", album: "Nevermind", ano: 1991, capa: "https://e-cdns-images.dzcdn.net/images/cover/9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-9.dzcdn.net/stream/c-9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c-3.mp3" },
+    { titulo: "Hotel California", artista: "Eagles", album: "Hotel California", ano: 1976, capa: "https://e-cdns-images.dzcdn.net/images/cover/4x4x4x4x4x4x4x4x4x4x4x4x4x4x4x4x/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-4.dzcdn.net/stream/c-4x4x4x4x4x4x4x4x4x4x4x4x4x4x4x4x-1.mp3" },
+    { titulo: "Sweet Child O' Mine", artista: "Guns N' Roses", album: "Appetite for Destruction", ano: 1987, capa: "https://e-cdns-images.dzcdn.net/images/cover/5y5y5y5y5y5y5y5y5y5y5y5y5y5y5y5y/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-5.dzcdn.net/stream/c-5y5y5y5y5y5y5y5y5y5y5y5y5y5y5y5y-2.mp3" },
+    { titulo: "Bohemian Rhapsody", artista: "Queen", album: "A Night at the Opera", ano: 1975, capa: "https://e-cdns-images.dzcdn.net/images/cover/3w3w3w3w3w3w3w3w3w3w3w3w3w3w3w3w/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-3.dzcdn.net/stream/c-3w3w3w3w3w3w3w3w3w3w3w3w3w3w3w3w-3.mp3" }
+  ],
+  medium: [
+    { titulo: "Stairway to Heaven", artista: "Led Zeppelin", album: "Led Zeppelin IV", ano: 1971, capa: "https://e-cdns-images.dzcdn.net/images/cover/11/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-11.dzcdn.net/stream/c-11-1.mp3" },
+    { titulo: "Comfortably Numb", artista: "Pink Floyd", album: "The Wall", ano: 1979, capa: "https://e-cdns-images.dzcdn.net/images/cover/22/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-22.dzcdn.net/stream/c-22-2.mp3" },
+    { titulo: "Black Dog", artista: "Led Zeppelin", album: "Led Zeppelin IV", ano: 1971, capa: "https://e-cdns-images.dzcdn.net/images/cover/33/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-33.dzcdn.net/stream/c-33-3.mp3" },
+    { titulo: "Wish You Were Here", artista: "Pink Floyd", album: "Wish You Were Here", ano: 1975, capa: "https://e-cdns-images.dzcdn.net/images/cover/44/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-44.dzcdn.net/stream/c-44-1.mp3" },
+    { titulo: "Paint It Black", artista: "The Rolling Stones", album: "Aftermath", ano: 1966, capa: "https://e-cdns-images.dzcdn.net/images/cover/55/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-55.dzcdn.net/stream/c-55-2.mp3" },
+    { titulo: "Born to Run", artista: "Bruce Springsteen", album: "Born to Run", ano: 1975, capa: "https://e-cdns-images.dzcdn.net/images/cover/66/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-66.dzcdn.net/stream/c-66-3.mp3" },
+    { titulo: "London Calling", artista: "The Clash", album: "London Calling", ano: 1979, capa: "https://e-cdns-images.dzcdn.net/images/cover/77/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-77.dzcdn.net/stream/c-77-1.mp3" },
+    { titulo: "Anarchy in the UK", artista: "Sex Pistols", album: "Never Mind the Bollocks", ano: 1977, capa: "https://e-cdns-images.dzcdn.net/images/cover/88/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-88.dzcdn.net/stream/c-88-2.mp3" },
+    { titulo: "Heart of Glass", artista: "Blondie", album: "Parallel Lines", ano: 1978, capa: "https://e-cdns-images.dzcdn.net/images/cover/99/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-99.dzcdn.net/stream/c-99-3.mp3" },
+    { titulo: "Riders on the Storm", artista: "The Doors", album: "L.A. Woman", ano: 1971, capa: "https://e-cdns-images.dzcdn.net/images/cover/aa/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-aa.dzcdn.net/stream/c-aa-1.mp3" }
+  ],
+  hard: [
+    { titulo: "A Day in the Life", artista: "The Beatles", album: "Sgt. Pepper's", ano: 1967, capa: "https://e-cdns-images.dzcdn.net/images/cover/bb/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-bb.dzcdn.net/stream/c-bb-2.mp3" },
+    { titulo: "Sympathy for the Devil", artista: "The Rolling Stones", album: "Beggars Banquet", ano: 1968, capa: "https://e-cdns-images.dzcdn.net/images/cover/cc/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-cc.dzcdn.net/stream/c-cc-3.mp3" },
+    { titulo: "The Sound of Silence", artista: "Simon & Garfunkel", album: "Sounds of Silence", ano: 1966, capa: "https://e-cdns-images.dzcdn.net/images/cover/dd/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-dd.dzcdn.net/stream/c-dd-1.mp3" },
+    { titulo: "House of the Rising Sun", artista: "The Animals", album: "The Animals", ano: 1964, capa: "https://e-cdns-images.dzcdn.net/images/cover/ee/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-ee.dzcdn.net/stream/c-ee-2.mp3" },
+    { titulo: "Gimme Shelter", artista: "The Rolling Stones", album: "Let It Bleed", ano: 1969, capa: "https://e-cdns-images.dzcdn.net/images/cover/ff/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-ff.dzcdn.net/stream/c-ff-3.mp3" },
+    { titulo: "Fortunate Son", artista: "Creedence Clearwater Revival", album: "Willy and the Poor Boys", ano: 1969, capa: "https://e-cdns-images.dzcdn.net/images/cover/gg/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-gg.dzcdn.net/stream/c-gg-1.mp3" },
+    { titulo: "Whole Lotta Love", artista: "Led Zeppelin", album: "Led Zeppelin II", ano: 1969, capa: "https://e-cdns-images.dzcdn.net/images/cover/hh/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-hh.dzcdn.net/stream/c-hh-2.mp3" },
+    { titulo: "While My Guitar Gently Weeps", artista: "The Beatles", album: "The White Album", ano: 1968, capa: "https://e-cdns-images.dzcdn.net/images/cover/ii/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-ii.dzcdn.net/stream/c-ii-3.mp3" },
+    { titulo: "All Along the Watchtower", artista: "Jimi Hendrix", album: "Electric Ladyland", ano: 1968, capa: "https://e-cdns-images.dzcdn.net/images/cover/jj/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-jj.dzcdn.net/stream/c-jj-1.mp3" },
+    { titulo: "Light My Fire", artista: "The Doors", album: "The Doors", ano: 1967, capa: "https://e-cdns-images.dzcdn.net/images/cover/kk/250x250-000000-80-0-0.jpg", preview: "https://cdns-preview-kk.dzcdn.net/stream/c-kk-2.mp3" }
+  ]
+};
+
+const usedLyricQuestions = new Map();
+
+const getUsedLyricQuestions = (sessionId) => {
+  if (!sessionId || sessionId.toString().startsWith('demo-')) return new Set();
+  const cached = usedLyricQuestions.get(sessionId);
+  return cached ? cached.questions : new Set();
+};
+
+const markLyricQuestionUsed = (sessionId, questionId) => {
+  if (!sessionId || sessionId.toString().startsWith('demo-')) return;
+  const existing = usedLyricQuestions.get(sessionId);
+  if (existing) {
+    existing.questions.add(questionId);
+  } else {
+    usedLyricQuestions.set(sessionId, {
+      questions: new Set([questionId]),
+      timestamp: Date.now()
+    });
   }
-  
-  const track = validTracks[Math.floor(Math.random() * validTracks.length)]
-  const words = track.title.split(' ')
-  
-  // Mascara palavras baseado na dificuldade
-  const maskCount = dificuldade === 'easy' ? 1 : dificuldade === 'medium' ? Math.ceil(words.length / 2) : words.length - 1
-  
+};
+
+const gerarOpcoesEnganosas = (tituloCorreto, dificuldade) => {
+  const pool = LYRIC_POOL[dificuldade] || LYRIC_POOL.easy;
+  const outrosTitulos = pool
+    .filter(t => t.titulo !== tituloCorreto)
+    .map(t => t.titulo)
+    .sort(() => Math.random() - 0.5);
+  const selecionados = outrosTitulos.slice(0, 3);
+  while (selecionados.length < 3) {
+    const base = outrosTitulos[Math.floor(Math.random() * outrosTitulos.length)] || tituloCorreto;
+    const variacoes = [
+      base + " (Live)",
+      "The " + base,
+      base.replace(/\s/g, ""),
+      base.split(" ").reverse().join(" ")
+    ];
+    const nova = variacoes[Math.floor(Math.random() * variacoes.length)];
+    if (nova !== tituloCorreto && !selecionados.includes(nova)) {
+      selecionados.push(nova);
+    }
+  }
+  return selecionados;
+};
+
+const gerarPerguntaCompleteLyric = async (dificuldade, sessionId = null) => {
+  const pool = LYRIC_POOL[dificuldade] || LYRIC_POOL.easy;
+  const usedQuestions = getUsedLyricQuestions(sessionId);
+  let available = pool.filter(q => !usedQuestions.has(q.titulo));
+  if (available.length === 0) {
+    available = pool;
+    if (sessionId) usedLyricQuestions.delete(sessionId);
+  }
+  const track = available[Math.floor(Math.random() * available.length)];
+  markLyricQuestionUsed(sessionId, track.titulo);
+  const words = track.titulo.split(' ');
+  let maskCount;
+  if (dificuldade === 'easy') {
+    maskCount = Math.max(1, Math.floor(words.length * 0.3));
+  } else if (dificuldade === 'medium') {
+    maskCount = Math.max(1, Math.floor(words.length * 0.6));
+  } else {
+    maskCount = Math.max(1, words.length - 1);
+  }
+  const indicesToMask = [];
+  const allIndices = words.map((_, i) => i).sort(() => Math.random() - 0.5);
+  for (let i = 0; i < maskCount && i < allIndices.length; i++) {
+    indicesToMask.push(allIndices[i]);
+  }
   const tituloMascarado = words.map((word, idx) => ({
     texto: word,
-    oculto: idx >= words.length - maskCount
-  }))
-  
-  // Gera opções com títulos similares
-  const wrongTitles = validTracks
-    .filter(t => t.id !== track.id)
-    .slice(0, 3)
-    .map(t => t.title)
-  
+    oculto: indicesToMask.includes(idx)
+  }));
+  const wrongTitles = gerarOpcoesEnganosas(track.titulo, dificuldade);
   const options = [
-    { texto: track.title, correta: true },
+    { texto: track.titulo, correta: true },
     ...wrongTitles.map(t => ({ texto: t, correta: false }))
-  ].sort(() => Math.random() - 0.5)
-  
+  ].sort(() => Math.random() - 0.5);
   return {
     modo: 'complete-lyric',
     dificuldade,
     musica: {
-      titulo: track.title,
-      artista: track.artist?.name,
+      titulo: track.titulo,
+      artista: track.artista,
+      album: track.album,
       previewUrl: track.preview,
-      capa: track.album?.cover_medium,
-      deezerId: track.id
+      capa: track.capa,
+      ano: track.ano,
+      deezerId: null
     },
     tituloMascarado,
     opcoes: options,
     respostaCorreta: options.findIndex(o => o.correta)
-  }
-}
+  };
+};
 
 // ============================================
 // 🎲 GERAR PERGUNTAS DINÂMICAS (CORRIGIDO)
@@ -890,10 +979,11 @@ const responderPergunta = async (sessionId, respostaIndex, tempoResposta) => {
   const acertou = respostaIndex === perguntaAtual.respostaCorreta;
   
   const diffConfig = DIFICULTIES[session.dificuldade]
-  const pontosBase = 100
-  const bonusTempo = Math.max(0, diffConfig.tempo - tempoResposta) * 5
-  const pontosGanhos = acertou ? Math.floor((pontosBase + bonusTempo) * diffConfig.multiplicador) : 0
-  const moedasGanhas = acertou ? Math.floor(10 * diffConfig.multiplicador) : 0
+const pontosBase = 100
+const bonusTempo = Math.max(0, diffConfig.tempo - tempoResposta) * 5
+const streakBonus = Math.min(session.acertos + (acertou ? 1 : 0), 5) * 10 // bônus streak
+const pontosGanhos = acertou ? Math.floor((pontosBase + bonusTempo + streakBonus) * diffConfig.multiplicador) : 0
+const moedasGanhas = acertou ? Math.floor((10 + streakBonus) * diffConfig.multiplicador) : 0
   
   session.pontuacao += pontosGanhos
   session.moedasGanhas += moedasGanhas
@@ -1080,13 +1170,13 @@ const getLeaderboard = async (periodo = 'semana', limite = 50) => {
 // ============================================
 
 const RECOMPENSAS_DIARIAS = [
-  { dia: 1, moedas: 50, icon: '🎁' },
-  { dia: 2, moedas: 100, icon: '💰' },
-  { dia: 3, moedas: 150, icon: '💎' },
-  { dia: 4, moedas: 200, icon: '🔥' },
-  { dia: 5, moedas: 300, icon: '⭐' },
-  { dia: 6, moedas: 500, icon: '👑' },
-  { dia: 7, moedas: 1000, icon: '🏆' }
+  { dia: 1, moedas: 50, iconClass: 'fa-solid fa-gift' },
+  { dia: 2, moedas: 100, iconClass: 'fa-solid fa-sack-dollar' },
+  { dia: 3, moedas: 150, iconClass: 'fa-solid fa-gem' },
+  { dia: 4, moedas: 200, iconClass: 'fa-solid fa-fire' },
+  { dia: 5, moedas: 300, iconClass: 'fa-solid fa-star' },
+  { dia: 6, moedas: 500, iconClass: 'fa-solid fa-crown' },
+  { dia: 7, moedas: 1000, iconClass: 'fa-solid fa-trophy' }
 ]
 
 const getDailyRewards = async (userId) => {
@@ -1154,56 +1244,130 @@ const claimDailyReward = async (userId, dia) => {
 // ============================================
 
 const LOJA_ITENS = [
-  { id: 'avatar_gold', nome: 'Avatar Dourado', descricao: 'Avatar especial dourado', icon: '👤', preco: 500 },
-  { id: 'theme_dark', nome: 'Tema Noturno', descricao: 'Tema escuro exclusivo', icon: '🌙', preco: 300 },
-  { id: 'badge_pro', nome: 'Badge Pro', descricao: 'Badge de jogador pro', icon: '💎', preco: 1000 },
-  { id: 'vinyl_rare', nome: 'Vinil Raro', descricao: 'Vinil decorativo raro', icon: '💿', preco: 750 },
-  { id: 'emoji_set', nome: 'Pack de Emojis', descricao: 'Emojis musicais exclusivos', icon: '🎭', preco: 200 }
-]
+  { id: 'avatar_gold', nome: 'Avatar Dourado', descricao: 'Avatar especial dourado', icon: '👤', preco: 500, tipo: 'avatar' },
+  { id: 'theme_dark', nome: 'Tema Noturno', descricao: 'Tema escuro exclusivo', icon: '🌙', preco: 300, tipo: 'tema' },
+  { id: 'badge_pro', nome: 'Badge Pro', descricao: 'Badge de jogador pro', icon: '💎', preco: 1000, tipo: 'badge' },
+  { id: 'vinyl_rare', nome: 'Vinil Raro', descricao: 'Vinil decorativo raro', icon: '💿', preco: 750, tipo: 'decorativo' },
+  { id: 'emoji_set', nome: 'Pack de Emojis', descricao: 'Emojis musicais exclusivos', icon: '🎭', preco: 200, tipo: 'emoji' }
+];
 
 const getShopItems = async (userId) => {
-  const stats = await getOrCreateUserStats(userId)
-  const inventario = stats.inventario.map(i => i.itemId)
-  
+  const stats = await getOrCreateUserStats(userId);
+  const inventarioIds = stats.inventario.map(i => i.itemId);
   return LOJA_ITENS.map(item => ({
     ...item,
-    possuido: inventario.includes(item.id),
-    podeComprar: stats.estatisticas.totalMoedas >= item.preco && !inventario.includes(item.id)
-  }))
-}
+    possuido: inventarioIds.includes(item.id),
+    equipado: stats.inventario.find(i => i.itemId === item.id)?.ativo || false,  // ← NOVO
+    podeComprar: !inventarioIds.includes(item.id) && stats.estatisticas.totalMoedas >= item.preco
+  }));
+};
 
 const buyItem = async (userId, itemId) => {
-  const stats = await getOrCreateUserStats(userId)
-  const item = LOJA_ITENS.find(i => i.id === itemId)
-  
-  if (!item) throw new Error('Item não encontrado')
-  if (stats.inventario.some(i => i.itemId === itemId)) throw new Error('Item já possuído')
-  if (stats.estatisticas.totalMoedas < item.preco) throw new Error('Moedas insuficientes')
-  
-  stats.estatisticas.totalMoedas -= item.preco
-  stats.inventario.push({
-    itemId: item.id,
-    nome: item.nome,
-    icon: item.icon,
-    comprado: true,
-    dataCompra: new Date()
-  })
-  
-  // Verifica conquista de colecionador
-  const conquista = stats.conquistas.find(c => c.id === 'collector')
-  if (conquista && !conquista.desbloqueada && stats.inventario.length >= 3) {
-    conquista.desbloqueada = true
-    conquista.dataDesbloqueio = new Date()
+  try {
+    const stats = await getOrCreateUserStats(userId);
+    if (!stats) throw new Error('Erro ao carregar estatísticas do usuário');
+    
+    const item = LOJA_ITENS.find(i => i.id === itemId);
+    if (!item) throw new Error('Item não encontrado na loja');
+    
+    // Garante que inventário existe
+    if (!stats.inventario) stats.inventario = [];
+    
+    const jaPossui = stats.inventario.some(i => i.itemId === itemId);
+    if (jaPossui) throw new Error('Item já possuído');
+    
+    if (stats.estatisticas.totalMoedas < item.preco) {
+      throw new Error(`Moedas insuficientes. Você tem ${stats.estatisticas.totalMoedas}, precisa de ${item.preco}`);
+    }
+    
+    // Desconta moedas
+    stats.estatisticas.totalMoedas -= item.preco;
+    
+    // Adiciona ao inventário
+    const novoItem = {
+      itemId: item.id,
+      nome: item.nome,
+      icon: item.icon,
+      tipo: item.tipo || 'geral',
+      comprado: true,
+      ativo: true,
+      dataCompra: new Date()
+    };
+    stats.inventario.push(novoItem);
+    
+    // Aplica efeito
+    await aplicarEfeitoItem(stats, item);
+    
+    // Verifica conquista
+    const conquista = stats.conquistas.find(c => c.id === 'collector');
+    if (conquista && !conquista.desbloqueada && stats.inventario.length >= 3) {
+      conquista.desbloqueada = true;
+      conquista.dataDesbloqueio = new Date();
+    }
+    
+    await stats.save();
+    
+    return {
+      success: true,
+      item: { 
+        ...item, 
+        possuido: true, 
+        podeComprar: false, 
+        ativo: true,
+        equipado: true 
+      },
+      moedasRestantes: stats.estatisticas.totalMoedas,
+      inventario: stats.inventario,
+      comprado: true,
+      efeitoAplicado: item.tipo
+    };
+  } catch (error) {
+    console.error('Erro em buyItem:', error);
+    throw error;
   }
-  
-  await stats.save()
-  
-  return {
-    item,
-    moedasRestantes: stats.estatisticas.totalMoedas,
-    inventario: stats.inventario
+};
+
+// ⚡ NOVO MÉTODO: Aplica efeitos específicos por tipo de item
+const aplicarEfeitoItem = async (stats, item) => {
+  switch (item.tipo) {
+    case 'avatar':
+      // Desativa outros avatares, ativa o novo
+      stats.inventario.forEach(i => {
+        if (i.tipo === 'avatar' && i.itemId !== item.id) {
+          i.ativo = false;
+        }
+      });
+      break;
+      
+    case 'tema':
+      // Desativa outros temas, ativa o novo
+      stats.inventario.forEach(i => {
+        if (i.tipo === 'tema' && i.itemId !== item.id) {
+          i.ativo = false;
+        }
+      });
+      // ⚡ AQUI você pode salvar o tema ativo em um campo separado se quiser
+      // stats.temaAtivo = item.id;
+      break;
+      
+    case 'badge':
+      // Badges são acumulativos (não precisa desativar outros)
+      // Mas pode marcar como equipado se quiser mostrar no perfil
+      break;
+      
+    case 'decorativo':
+      // Itens decorativos podem ser acumulativos ou únicos
+      break;
+      
+    case 'emoji':
+      // Packs de emoji desbloqueiam novos emojis para uso
+      break;
+      
+    default:
+      // Tipo geral — nenhum efeito especial
+      break;
   }
-}
+};
 
 // ============================================
 // 🏆 CONQUISTAS
@@ -1320,6 +1484,63 @@ const generateFakeActivity = () => {
   }
 }
 
+// ============================================
+// 🔄 EQUIPAR/DESATIVAR ITENS
+// ============================================
+
+const equiparItem = async (userId, itemId) => {
+  const stats = await getOrCreateUserStats(userId);
+  const item = stats.inventario.find(i => i.itemId === itemId);
+  
+  if (!item) throw new Error('Item não encontrado no inventário');
+  if (!item.comprado) throw new Error('Item não foi comprado');
+  
+  // Se for avatar ou tema, desativa outros do mesmo tipo
+  if (['avatar', 'tema'].includes(item.tipo)) {
+    stats.inventario.forEach(i => {
+      if (i.tipo === item.tipo && i.itemId !== itemId) {
+        i.ativo = false;
+      }
+    });
+  }
+  
+  item.ativo = true;
+  await stats.save();
+  
+  return {
+    itemId: item.itemId,
+    nome: item.nome,
+    tipo: item.tipo,
+    ativo: true
+  };
+};
+
+const desativarItem = async (userId, itemId) => {
+  const stats = await getOrCreateUserStats(userId);
+  const item = stats.inventario.find(i => i.itemId === itemId);
+  
+  if (!item) throw new Error('Item não encontrado');
+  
+  item.ativo = false;
+  await stats.save();
+  
+  return {
+    itemId: item.itemId,
+    ativo: false
+  };
+};
+
+const getInventarioAtivo = async (userId) => {
+  const stats = await getOrCreateUserStats(userId);
+  return {
+    avatar: stats.inventario.find(i => i.tipo === 'avatar' && i.ativo),
+    tema: stats.inventario.find(i => i.tipo === 'tema' && i.ativo),
+    badges: stats.inventario.filter(i => i.tipo === 'badge' && i.ativo),
+    decorativos: stats.inventario.filter(i => i.tipo === 'decorativo' && i.ativo),
+    emojis: stats.inventario.filter(i => i.tipo === 'emoji' && i.ativo)
+  };
+};
+
 module.exports = {
   iniciarSessao,
   responderPergunta,
@@ -1329,10 +1550,14 @@ module.exports = {
   claimDailyReward,
   getShopItems,
   buyItem,
+  equiparItem,        // ← ADICIONAR
+  desativarItem,      // ← ADICIONAR
+  getInventarioAtivo, // ← ADICIONAR
   getAchievements,
   claimAchievement,
   getUserGameStats,
   getLiveActivities,
+  gerarPergunta,      // ← ADICIONAR (já existe mas não exportava)
   GAME_CONFIG,
   DIFICULTIES,
   LOJA_ITENS
