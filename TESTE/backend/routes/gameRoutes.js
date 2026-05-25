@@ -28,10 +28,10 @@ router.get('/shop', gameController.getShop)
 router.get('/modes/:modo/difficulties', requireAuth, gameController.getDifficulties)
 
 // Iniciar jogo
-router.post('/start', requireAuth, gameController.startGame)
+router.post('/start', optionalAuth, gameController.startGame)
 
 // Responder pergunta
-router.post('/answer', requireAuth, gameController.answerQuestion)
+router.post('/answer', optionalAuth, gameController.answerQuestion)
 
 // Recompensas diárias
 router.get('/rewards/daily', requireAuth, gameController.getDailyRewards)

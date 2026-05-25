@@ -36,6 +36,7 @@ import Privacidade from '@/components/Privacidade.vue'
 import Contato from '@/components/Contato.vue'
 import Ajuda from '@/components/Ajuda.vue'
 import Suporte from '@/components/Suporte.vue'
+import SpotifyConnected from '@/components/SpotifyConnected.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -239,6 +240,11 @@ const router = createRouter({
       path: '/suporte',
       name: 'suporte',
       component: Suporte,
+    },
+      {
+      path: '/spotify-connected',
+      name: 'SpotifyConnected',
+      component: SpotifyConnected,
     },
   ],
 })

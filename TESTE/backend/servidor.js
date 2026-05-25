@@ -80,23 +80,25 @@ const matchRoutes = safeRequire('./routes/matchMusicalRoutes')
 const generoRoutes = safeRequire('./routes/generosMusicaisRoutes')
 const deezerRoutes = safeRequire('./routes/deezerRoutes')
 const locaisRoutes = safeRequire('./routes/locaisRoutes')
-const spotifyRoutes = safeRequire('./routes/spotifyRoutes')
+const spotifyRoutes = require('./routes/spotifyRoutes')
 const geniusRoutes = require('./routes/geniusRoutes')
 const gameRoutes = safeRequire('./routes/gameRoutes')
 const suporteRoutes = safeRequire('./routes/suporteRoutes')
 const chatRoutes = safeRequire('./routes/chatRoutes')
+const karaokeRoutes = safeRequire('./routes/karaokeRoutes')
 
 // ============================================
 // 📌 ROTAS APP
 // ============================================
 app.use('/usuarios', usuarioRoutes)                                                                                            
+app.use('/musicas', musicaRoutes)                                                                                            
 app.use('/generos', generoRoutes) 
 app.use('/cantores', cantorRoutes)
 app.use('/albuns', albumRoutes)
 app.use('/playlists', playlistRoutes)
 app.use('/vibes', vibeRoutes)
 app.use('/follows', followRoutes)
-app.use('/spotify', requireAuth, spotifyRoutes)      // 🔒 Protegido
+app.use('/spotify', spotifyRoutes)
 app.use('/curtidas', requireAuth, curtidaRoutes)     // 🔒 Protegido
 app.use('/favoritas', requireAuth, favoritaRoutes)   // 🔒 Protegido
 app.use('/historico', requireAuth, historicoRoutes)  // 🔒 Protegido
@@ -109,6 +111,7 @@ app.use('/locais', locaisRoutes)
 app.use('/genius', geniusRoutes)
 app.use('/game', gameRoutes)
 app.use('/suporte', suporteRoutes)
+app.use('/api/karaoke', karaokeRoutes)
 
 app.post('/chat/message', checkChatLimit, async (req, res) => {
   try {
@@ -203,33 +206,69 @@ app.get('/deezer/search', async (req, res) => {
 const MOODS = [
   {
     name: 'Festa',
-    emoji: '🎉',
+    icon: 'fa-solid fa-champagne-glasses',
     description: 'Energia alta',
     gradient: 'linear-gradient(135deg,#ff512f,#dd2476)'
   },
 
   {
     name: 'Chill',
-    emoji: '🌈',
+    icon: 'fa-solid fa-cloud-sun',
     description: 'Relaxar',
     gradient: 'linear-gradient(135deg,#667eea,#764ba2)'
   },
 
   {
     name: 'Treino',
-    emoji: '💪',
+    icon: 'fa-solid fa-dumbbell', 
     description: 'Academia',
     gradient: 'linear-gradient(135deg,#11998e,#38ef7d)'
   },
 
   {
     name: 'Focus',
-    emoji: '🧠',
+     icon: 'fa-solid fa-brain',
     description: 'Concentração',
     gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)'
   }
 ]
 
+app.post('/spotify/refresh-token', requireAuth, async (req, res) => {
+  try {
+    const { refresh_token } = req.body || req.user?.spotifyRefreshToken
+    
+    if (!refresh_token) {
+      return res.status(400).json({ error: 'Refresh token não fornecido' })
+    }
+
+    const response = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refresh_token
+      }).toString(),
+      {
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+
+    res.json({
+      access_token: response.data.access_token,
+      expires_in: response.data.expires_in,
+      scope: response.data.scope
+    })
+
+  } catch (error) {
+    console.error('[SPOTIFY] Refresh token error:', error.response?.data || error.message)
+    res.status(401).json({ 
+      error: 'TOKEN_REFRESH_FAILED',
+      message: 'Não foi possível renovar o token do Spotify. Faça login novamente.'
+    })
+  }
+})
 // ============================================
 // 🔍 BUSCA DE MÚSICAS LOCAIS (ADICIONAR AQUI)
 // ============================================
@@ -240,7 +279,7 @@ app.get('/musicas/search', optionalAuth, async (req, res) => {
 
     if (!dbConnected) return res.json([])
 
-    const Musica = require('./models/Musica')
+   const Musica = safeRequire('./models/Musica')
     
     const musicas = await Musica.find({
       $or: [
@@ -370,7 +409,6 @@ app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
   }
 })
 
-app.use('/musicas', musicaRoutes)
 // ============================================
 // 💚 HEALTH CHECK
 // ============================================

@@ -10,6 +10,21 @@
         </div>
       </header>
 
+      <!-- Banner de Conectar Spotify (quando logado mas Spotify não conectado) -->
+<div v-if="isLogged && !spotifyConnected" class="spotify-connect-banner">
+  <div class="spotify-connect-content">
+    <i class="fa fa-spotify" style="color: #1db954; font-size: 24px;"></i>
+    <div class="spotify-connect-text">
+      <span class="spotify-connect-title">Conecte o Spotify</span>
+      <span class="spotify-connect-sub">Ouça músicas completas sem limites</span>
+    </div>
+    <button @click="connectSpotify" class="btn-connect-spotify">
+      <i class="fa fa-link"></i>
+      Conectar
+    </button>
+  </div>
+</div>
+
       <!-- Barra de Busca Principal -->
       <div class="search-main">
         <div class="search-box" :class="{ focused: isFocused }">
@@ -851,6 +866,12 @@ export default {
       showCategoriesDropdown: false,
       activeFilter: 'Todos',
       isLoading: false,
+       spotifyConnected: false,
+    spotifyTokenValid: false,
+     spotifyPlayer: null,
+    spotifyDeviceId: null,
+    isSpotifyPremium: false,
+    spotifyToken: null,
      
       activeCategoryTab: 'genres',
 
@@ -1210,7 +1231,7 @@ genreCategorySections() {
     }
   },
 
-mounted() {
+async mounted() {
   document.addEventListener('click', this.handleClickOutside)
   document.addEventListener('click', this.handleGenreDropdownClickOutside)
 
@@ -1219,26 +1240,24 @@ mounted() {
   const urlType = this.$route?.query?.type
 
   if (urlQuery) {
-    // Se veio do Dashboard via gênero
     this.searchQuery = urlQuery
     this.currentTopCategory = urlQuery
    
     if (urlType === 'genre') {
-      // Busca específica por gênero
-      this.searchAndGo(urlQuery)
+      await this.searchAndGo(urlQuery)
     } else {
-      // Busca normal
-      this.loadTopTracksByCategory(urlQuery)
-      this.performSearch()
+      await this.loadTopTracksByCategory(urlQuery)
+      await this.performSearch()
     }
   } else {
-    // Comportamento padrão
     const initialCategory = 'Brasil'
     this.currentTopCategory = initialCategory
-    this.loadInitialData(initialCategory)
+    await this.loadInitialData(initialCategory)
   }
+  
+  await this.initSpotifyPlayer()        // ← linha 1261 agora funciona
 
-        this.checkLoginStatus()
+  this.checkLoginStatus()
   this.loadLikedTracks()
   this.loadFavoritas()
   this.loadVibes()
@@ -1246,7 +1265,8 @@ mounted() {
   this.loadApiGenres()
   this.loadHistory()
   this.loadLocalizacoes()
-      this.loadRecentCategories()
+  this.loadRecentCategories()
+  this.checkSpotifyStatus()
 },
 
   beforeUnmount() {
@@ -1266,8 +1286,179 @@ watch: {
   }
 },
   methods: {
+ async initSpotifyPlayer() {
+  // Só inicializa se estiver logado e tiver Spotify conectado
+  if (!this.isLogged || !this.spotifyConnected) return
+
+  try {
+    // Pega token do Spotify do backend
+    const tokenRes = await fetch('http://localhost:3002/spotify/status', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    const status = await tokenRes.json()
     
-  // Dentro do objeto methods, adicione:
+    if (!status.connected || !status.tokenValid) return
+
+    // ✅ CORREÇÃO: NÃO carrega o script aqui! Ele já está no index.html
+    // Apenas aguarda o SDK estar pronto
+    if (!window.Spotify) {
+      await new Promise((resolve, reject) => {
+        // Se já estiver pronto
+        if (window.SpotifySDKReady) {
+          resolve()
+          return
+        }
+        
+        // Espera o evento do index.html
+        const handler = () => {
+          window.removeEventListener('spotify-sdk-ready', handler)
+          resolve()
+        }
+        window.addEventListener('spotify-sdk-ready', handler)
+        
+        // Timeout
+        setTimeout(() => {
+          window.removeEventListener('spotify-sdk-ready', handler)
+          if (window.Spotify) resolve()
+          else reject(new Error('Spotify SDK não carregado'))
+        }, 10000)
+      })
+    }
+
+    // Pega token atualizado do backend
+    const refreshRes = await fetch('http://localhost:3002/spotify/refresh', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    const refreshData = await refreshRes.json()
+    
+    if (!refreshData.success) {
+      console.warn('[SPOTIFY] Não foi possível refresh token')
+      return
+    }
+
+    // ✅ CORREÇÃO: Usa a função do spotifyPlayer.js ou inicializa diretamente
+    // Opção A: Se importou a função do spotifyPlayer.js:
+    // const { initSpotifyPlayer } = await import('@/utils/spotifyPlayer.js')
+    // const { player, deviceId } = await initSpotifyPlayer(async () => refreshData.access_token)
+    
+    // Opção B: Inicializa diretamente (mais simples):
+    this.spotifyPlayer = new window.Spotify.Player({
+      name: 'SoundUp Music',
+      getOAuthToken: cb => cb(refreshData.access_token || this.spotifyToken),
+      volume: this.volume / 100
+    })
+
+    this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+      console.log('[SPOTIFY] Player pronto:', device_id)
+      this.spotifyDeviceId = device_id
+      this.isSpotifyPremium = true
+    })
+
+    this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+      console.log('[SPOTIFY] Device offline:', device_id)
+    })
+
+    this.spotifyPlayer.addListener('player_state_changed', (state) => {
+      if (!state) return
+      this.syncSpotifyState(state)
+    })
+
+    this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+      console.error('[SPOTIFY] Init error:', message)
+    })
+
+    this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
+      console.error('[SPOTIFY] Auth error:', message)
+      this.isSpotifyPremium = false
+    })
+
+    this.spotifyPlayer.addListener('account_error', ({ message }) => {
+      console.error('[SPOTIFY] Account error:', message)
+      this.isSpotifyPremium = false
+      this.showToast('Spotify Premium necessário para streaming completo', 'warning')
+    })
+
+    await this.spotifyPlayer.connect()
+    
+  } catch (e) {
+    console.error('[SPOTIFY] Erro ao inicializar player:', e)
+  }
+},
+
+// ========== ADICIONAR método syncSpotifyState ==========
+syncSpotifyState(state) {
+  // Converte estado do Spotify para seu formato
+  this.isPlaying = !state.paused
+  this.currentTime = state.position / 1000
+  this.duration = state.duration / 1000
+  this.progressPercent = this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0
+  
+  if (state.track_window?.current_track) {
+    const track = state.track_window.current_track
+    this.currentTrack = {
+      id: track.id,
+      title: track.name,
+      artist: track.artists.map(a => a.name).join(', '),
+      cover: track.album.images?.[0]?.url,
+      duration: track.duration_ms / 1000,
+      source: 'spotify_full'
+    }
+  }
+},
+    async checkSpotifyStatus() {
+    if (!this.isLogged) return
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('http://localhost:3002/spotify/status', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      this.spotifyConnected = data.connected
+      this.spotifyTokenValid = data.tokenValid
+    } catch (err) {
+      console.error('Erro ao verificar Spotify:', err)
+    }
+  },
+  
+// Search.vue - método connectSpotify()
+async connectSpotify() {
+  try {
+    const token = localStorage.getItem('token')
+    
+    if (!token) {
+      this.showToast('Faça login primeiro', 'error')
+      this.$router.push('/login')
+      return
+    }
+
+    console.log('🔍 Enviando requisição com token:', !!token)
+
+    const res = await fetch('http://localhost:3002/spotify/auth', {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (!res.ok) {
+      const errorData = await res.json()
+      console.error('❌ Erro na resposta:', errorData)
+      this.showToast(errorData.error || 'Erro ao iniciar conexão', 'error')
+      return
+    }
+
+    const data = await res.json()
+    console.log('✅ Auth URL recebida:', !!data.authUrl)
+    
+    // Redireciona para o Spotify
+    window.location.href = data.authUrl
+    
+  } catch (err) {
+    console.error('❌ Erro completo:', err)
+    this.showToast('Erro ao iniciar conexão com Spotify', 'error')
+  }
+},
 
 getCategoryIconClass(category) {
   if (category === 'Brasil') return 'icon-brasil'
@@ -1327,19 +1518,52 @@ toggleGenreDropdown() {
   },
 
   // ===== PLAY TRACK COM VERIFICAÇÃO =====
- playTrack(track, context = 'search', index = 0) {
+async playTrack(track, context = 'search', index = 0) {
+  // Se for Spotify full track e tem player conectado
+  if (track._fullTrack && this.spotifyPlayer && this.spotifyDeviceId) {
+    try {
+      // Busca a track no Spotify para pegar o URI correto
+      const token = localStorage.getItem('token')
+      const res = await fetch(
+        `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(track.title)}&type=track`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      const data = await res.json()
+      
+      if (data.tracks?.items?.[0]) {
+        const spotifyTrack = data.tracks.items[0]
+        
+        // ✅ CORREÇÃO: Usa o deviceId do player SDK, não da API
+        await fetch(
+          `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${this.spotifyToken || await this.getSpotifyToken()}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              uris: [`spotify:track:${spotifyTrack.id}`]
+            })
+          }
+        )
+        return
+      }
+    } catch (e) {
+      console.error('[SPOTIFY] Erro ao tocar:', e)
+      // Fallback para preview
+    }
+  }
+
+  // Fallback: modo normal (preview Deezer ou seu player customizado)
   const playerSong = this.convertToPlayerFormat(track)
- 
-  // Monta playlist baseada no contexto
   let playlist = []
   if (context === 'top10') {
-    // Cria playlist com todas as músicas do top10
     playlist = this.chartTracks.slice(0, 10).map(t => this.convertToPlayerFormat(t))
   } else {
-    // Fallback: playlist com apenas a música atual
     playlist = [playerSong]
   }
- 
+
   window.dispatchEvent(new CustomEvent('play-song', {
     detail: {
       song: playerSong,
@@ -1348,6 +1572,24 @@ toggleGenreDropdown() {
       context: context
     }
   }))
+},
+
+async getSpotifyToken() {
+  try {
+    const res = await fetch('http://localhost:3002/spotify/refresh', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    const data = await res.json()
+    if (data.success) {
+      this.spotifyToken = data.access_token
+      return data.access_token
+    }
+    return null
+  } catch (e) {
+    console.error('Erro ao obter token Spotify:', e)
+    return null
+  }
 },
 
     async loadApiGenres() {
@@ -1401,79 +1643,89 @@ normalizeApiGenre(g) {
 },
 async loadLocalMusicas(localNome) {
   try {
-    this.isLoading = true    // ← ADICIONAR
-    this.hasSearched = true  // ← ADICIONAR (garantir)
-   
+    this.isLoading = true
+    this.hasSearched = true
+    
     const res = await fetch(`http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`)
     const data = await res.json()
-   
-if (data.results && Array.isArray(data.results)) {
-  // Converte TODOS os resultados para o formato searchResults
-  const allItems = data.results.map(r => {
-    if (r.type === 'track') {
-      return {
-        id: r.id,
-        title: r.title,
-        artist: { name: r.artist?.name || 'Artista desconhecido' },
-        album: {
-          title: r.album?.title || '',
-          cover: r.album?.cover_medium || r.cover || ''
-        },
-        cover: r.cover || r.album?.cover_medium,
-        preview: r.preview,
-        duration: r.duration,
-        type: 'track',
-        source: r.source,
-        localContext: r.localContext || localNome
-      }
-    }
-    if (r.type === 'artist') {
-      return {
-        id: r.id,
-        name: r.name,
-        picture: r.picture || r.picture_medium,
-        picture_medium: r.picture_medium,
-        nb_fan: r.nb_fan || 0,
-        type: 'artist',
-        source: r.source,
-        localContext: r.localContext || localNome
-      }
-    }
-    if (r.type === 'album') {
-      return {
-        id: r.id,
-        title: r.title,
-        artist: { name: r.artist?.name || 'Artista' },
-        cover: r.cover || r.cover_medium,
-        cover_medium: r.cover_medium,
-        type: 'album',
-        source: r.source,
-        localContext: r.localContext || localNome
-      }
-    }
-    return r
-  })
- 
- this.chartTracks = tracks
-      this.searchResults = allItems   // ← ADICIONAR
-      this.hasSearched = true         // ← GARANTIR
-     
+    
+    if (data.results && Array.isArray(data.results)) {
+      const allItems = data.results.map(r => {
+        if (r.type === 'track') {
+          return {
+            id: r.id,
+            title: r.title,
+            artist: { name: r.artist?.name || 'Artista desconhecido' },
+            album: {
+              title: r.album?.title || '',
+              cover: r.album?.cover_medium || r.cover || ''
+            },
+            cover: r.cover || r.album?.cover_medium,
+            preview: r.preview,
+            duration: r.duration,
+            type: 'track',
+            source: r.source,
+            localContext: r.localContext || localNome
+          }
+        }
+        if (r.type === 'artist') {
+          return {
+            id: r.id,
+            name: r.name,
+            picture: r.picture || r.picture_medium,
+            picture_medium: r.picture_medium,
+            nb_fan: r.nb_fan || 0,
+            type: 'artist',
+            source: r.source,
+            localContext: r.localContext || localNome
+          }
+        }
+        if (r.type === 'album') {
+          return {
+            id: r.id,
+            title: r.title,
+            artist: { name: r.artist?.name || 'Artista' },
+            cover: r.cover || r.cover_medium,
+            cover_medium: r.cover_medium,
+            type: 'album',
+            source: r.source,
+            localContext: r.localContext || localNome
+          }
+        }
+        return r
+      })
+      
+      // ✅ CORREÇÃO: Extrair apenas tracks para chartTracks
+      this.chartTracks = allItems
+        .filter(r => r.type === 'track')
+        .map(t => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          preview: t.preview,
+          duration: t.duration,
+          source: t.source
+        }))
+      
+      this.searchResults = allItems
+      this.hasSearched = true
+      
     } else {
       this.chartTracks = []
-      this.searchResults = []         // ← ADICIONAR
+      this.searchResults = []
       this.showToast(`Nenhum resultado encontrado para ${localNome}`, 'info')
     }
-   
+    
   } catch (err) {
     console.error('Erro ao carregar músicas do local:', err)
     this.chartTracks = []
-    this.searchResults = []           // ← ADICIONAR
+    this.searchResults = []
     this.showToast('Erro ao buscar músicas do local', 'error')
   } finally {
-    this.isLoading = false            // ← ADICIONAR/MOVER para cá
+    this.isLoading = false
   }
 },
-
 
 detectGenreCategory(name = '') {
   const value = String(name).toLowerCase().trim()
@@ -2028,46 +2280,36 @@ async toggleLikeTrack(track) {
 
 // Search.vue - método loadTopTracksByCategory
 async loadTopTracksByCategory(category = 'Brasil') {
-  try {
-    this.currentTopCategory = category || 'Brasil'
+    try {
+      this.currentTopCategory = category || 'Brasil'
 
-    if (this.isLogged) {
-      // ============================================
-      // COM LOGIN: tenta Spotify COM token
-      // ============================================
-      const token = localStorage.getItem('token')
-      
-      const res = await fetch(
-        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+      if (this.isLogged && this.spotifyConnected) {
+        // ✅ COM SPOTIFY CONECTADO: busca músicas completas
+        const token = localStorage.getItem('token')
+        
+        const res = await fetch(
+          `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
           }
-        }
-      )
+        )
 
-      // 🔥 MUDANÇA AQUI: Se 401, token expirou → trata como não logado
-      if (res.status === 401) {
-        console.log('⚠️ Token expirado, usando Deezer como fallback')
-        this.isLogged = false  // Atualiza estado local
-        // NÃO dá throw! Continua para o fallback Deezer abaixo
-      } else if (!res.ok) {
-        throw new Error(`Erro ${res.status}`)
-      } else {
-        const data = await res.json()
-        
-        this.chartTracks = data.tracks?.items?.map(t => ({
-          id: t.id,
-          title: t.name,
-          artist: { name: t.artists.map(a => a.name).join(', ') },
-          album: { cover_medium: t.album.images?.[0]?.url },
-          preview: t.preview_url,
-          source: 'spotify'
-        })) || []
-        
-        return  // Sucesso! Sai da função
+        if (res.ok) {
+          const data = await res.json()
+          this.chartTracks = data.tracks?.items?.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: { name: t.artists.map(a => a.name).join(', ') },
+            album: { cover_medium: t.album.images?.[0]?.url },
+            preview: t.preview_url, // Pode ser null, mas tem streaming via SDK
+            _fullTrack: true, // Flag para player saber
+            source: 'spotify_full'
+          })) || []
+          return
+        }
       }
-    }
 
     // ============================================
     // SEM LOGIN ou token inválido: Deezer (público)
@@ -2149,82 +2391,114 @@ async loadTopTracksByCategory(category = 'Brasil') {
     }
   },
 
-   async searchSpotifyAndLocal(query) {
-    this.isLoading = true
+async searchSpotifyAndLocal(query) {
+  this.isLoading = true
+  try {
+    const token = localStorage.getItem('token')
+    
+    // ============================================
+    // SPOTIFY (autenticado) - COM TRATAMENTO DE ERRO
+    // ============================================
+    let spotifyRes = { tracks: { items: [] }, artists: { items: [] }, albums: { items: [] } }
+    
     try {
-      const token = localStorage.getItem('token')
-      
-      // Spotify (autenticado)
-      const spotifyRes = await fetch(
+      const res = await fetch(
         `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album&limit=20&market=BR`,
         {
           headers: {
             Authorization: `Bearer ${token}`
           }
         }
-      ).then(r => r.json())
-
-      // Banco local (público)
-      const [localMusicas, localCantores, localAlbuns, localGeneros, localUsuarios] = await Promise.all([
-        fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`).then(r => r.json())
-      ])
-
-      let results = []
-
-      // SPOTIFY - MÚSICAS
-      if (spotifyRes.tracks?.items) {
-        results.push(...spotifyRes.tracks.items.map(t => ({
-          id: t.id,
-          title: t.name,
-          artist: { name: t.artists.map(a => a.name).join(', ') },
-          album: {
-            title: t.album?.name,
-            cover: t.album?.images?.[0]?.url,
-            cover_medium: t.album?.images?.[0]?.url
-          },
-          cover: t.album?.images?.[0]?.url,
-          preview: t.preview_url,
-          duration: Math.round(t.duration_ms / 1000),
-          type: 'track',
-          source: 'spotify',
-          ano: parseInt(t.album?.release_date?.substring(0, 4)) || null
-        })))
+      )
+      
+      // ✅ VERIFICA SE A RESPOSTA É OK ANTES DE FAZER JSON
+      if (res.ok) {
+        const contentType = res.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          spotifyRes = await res.json()
+        } else {
+          console.warn('[SPOTIFY] Resposta não é JSON:', contentType)
+        }
+      } else {
+        // Se der erro (401, 403, 500), loga mas não quebra
+        const errorText = await res.text()
+        console.warn(`[SPOTIFY] Erro ${res.status}:`, errorText.substring(0, 200))
       }
+    } catch (spotifyErr) {
+      console.warn('[SPOTIFY] Falha na requisição:', spotifyErr.message)
+      // Continua com spotifyRes vazio
+    }
 
-      // SPOTIFY - ARTISTAS
-      if (spotifyRes.artists?.items) {
-        results.push(...spotifyRes.artists.items.map(a => ({
-          id: a.id,
-          name: a.name,
-          picture: a.images?.[0]?.url,
-          picture_medium: a.images?.[0]?.url,
-          picture_big: a.images?.[0]?.url,
-          nb_fan: a.followers?.total || 0,
-          type: 'artist',
-          source: 'spotify'
-        })))
-      }
+    // Banco local (público)
+    const [localMusicas, localCantores, localAlbuns, localGeneros, localUsuarios] = await Promise.all([
+      fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+      // ✅ COM TOKEN NO HEADER
+      fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }).then(async r => {
+        if (r.status === 401) return []
+        return r.ok ? r.json() : []
+      }).catch(() => [])
+    ])
+.catch(() => [])
 
-      // SPOTIFY - ÁLBUNS
-      if (spotifyRes.albums?.items) {
-        results.push(...spotifyRes.albums.items.map(al => ({
-          id: al.id,
-          title: al.name,
-          artist: { name: al.artists.map(a => a.name).join(', ') },
-          cover: al.images?.[0]?.url,
-          cover_medium: al.images?.[0]?.url,
-          cover_big: al.images?.[1]?.url,
-          type: 'album',
-          source: 'spotify',
-          ano: parseInt(al.release_date?.substring(0, 4)) || null
-        })))
-      }
+    let results = []
 
-       const matchedApiGenres = (this.apiGenres || []).filter(g =>
+    // SPOTIFY - MÚSICAS
+if (spotifyRes.tracks?.items) {
+  results.push(...spotifyRes.tracks.items.map(t => ({
+    id: t.id,
+    title: t.name,
+    artist: { name: t.artists.map(a => a.name).join(', ') },
+    album: {
+      title: t.album?.name,
+      cover: t.album?.images?.[0]?.url,
+      cover_medium: t.album?.images?.[0]?.url
+    },
+    cover: t.album?.images?.[0]?.url,
+    preview: t.preview_url,  // pode ser null - o player vai tratar
+    duration: Math.round(t.duration_ms / 1000),
+    type: 'track',
+    source: 'spotify',
+    ano: parseInt(t.album?.release_date?.substring(0, 4)) || null,
+    _fullTrack: true  // ← FLAG: indica que é Spotify full (sem preview)
+  })))
+}
+
+    // SPOTIFY - ARTISTAS
+    if (spotifyRes.artists?.items) {
+      results.push(...spotifyRes.artists.items.map(a => ({
+        id: a.id,
+        name: a.name,
+        picture: a.images?.[0]?.url,
+        picture_medium: a.images?.[0]?.url,
+        picture_big: a.images?.[0]?.url,
+        nb_fan: a.followers?.total || 0,
+        type: 'artist',
+        source: 'spotify'
+      })))
+    }
+
+    // SPOTIFY - ÁLBUNS
+    if (spotifyRes.albums?.items) {
+      results.push(...spotifyRes.albums.items.map(al => ({
+        id: al.id,
+        title: al.name,
+        artist: { name: al.artists.map(a => a.name).join(', ') },
+        cover: al.images?.[0]?.url,
+        cover_medium: al.images?.[0]?.url,
+        cover_big: al.images?.[1]?.url,
+        type: 'album',
+        source: 'spotify',
+        ano: parseInt(al.release_date?.substring(0, 4)) || null
+      })))
+    }
+
+    // GÊNEROS API (Deezer)
+    const matchedApiGenres = (this.apiGenres || []).filter(g =>
       g.name?.toLowerCase().includes(query.toLowerCase())
     )
    
@@ -2240,11 +2514,11 @@ async loadTopTracksByCategory(category = 'Brasil') {
       })))
     }
 
-const matchedLocais = this.localizacoes.filter(loc =>
+    // LOCAIS
+    const matchedLocais = this.localizacoes.filter(loc =>
       loc.toLowerCase().includes(query.toLowerCase())
     )
 
-    // Para CADA local encontrado, busca as músicas/artistas/álbuns reais
     for (const localNome of matchedLocais) {
       try {
         const localRes = await fetch(
@@ -2252,7 +2526,6 @@ const matchedLocais = this.localizacoes.filter(loc =>
         ).then(r => r.json())
        
         if (localRes.results && Array.isArray(localRes.results) && localRes.results.length > 0) {
-          // Adiciona os resultados reais (tracks, artists, albums) com contexto do local
           results.push(...localRes.results.map(r => {
             if (r.type === 'track') {
               return {
@@ -2298,7 +2571,6 @@ const matchedLocais = this.localizacoes.filter(loc =>
             return r
           }))
 
-          // Adiciona também um card do próprio local para aparecer na seção "Locais"
           results.push({
             id: `local-${localNome}`,
             name: localNome,
@@ -2309,7 +2581,6 @@ const matchedLocais = this.localizacoes.filter(loc =>
             resultCount: localRes.total || localRes.results.length
           })
         } else {
-          // Local encontrado mas sem resultados da API - mostra card do local mesmo assim
           results.push({
             id: `local-${localNome}`,
             name: localNome,
@@ -2322,7 +2593,6 @@ const matchedLocais = this.localizacoes.filter(loc =>
         }
       } catch (err) {
         console.warn(`Erro ao buscar músicas de ${localNome}:`, err)
-        // Mesmo com erro, adiciona o card do local
         results.push({
           id: `local-${localNome}`,
           name: localNome,
@@ -2335,15 +2605,15 @@ const matchedLocais = this.localizacoes.filter(loc =>
       }
     }
 
-      this.searchResults = results
+    this.searchResults = results
 
-    } catch (err) {
-      console.error('Erro na busca Spotify:', err)
-      this.searchResults = []
-    } finally {
-      this.isLoading = false
-    }
-  },
+  } catch (err) {
+    console.error('Erro na busca Spotify:', err)
+    this.searchResults = []
+  } finally {
+    this.isLoading = false
+  }
+},
 
 async searchDeezerAndLocal(query) {
   this.isLoading = true
@@ -3091,9 +3361,6 @@ handleClickOutside(event) {
         console.error("Erro ao salvar histórico:", err)
       }
     },
-    toggleGenreDropdown() {
-      this.showGenreDropdown = !this.showGenreDropdown
-    },
 
     closeGenreDropdown() {
       this.showGenreDropdown = false
@@ -3210,16 +3477,26 @@ async searchAndGo(term) {
     },
 
 convertToPlayerFormat(track) {
+  // 🔥 GARANTIR URL VÁLIDA
+  let url = track.preview || track.link || track.url || ''
+  
+  // Se for Spotify e não tiver preview, marca como full track
+  const isSpotifyFull = track.source === 'spotify' && (!url || url === 'null')
+  if (isSpotifyFull) {
+    url = ''  // audio element não vai tentar tocar
+  }
+  
   return {
     id: track.id,
     title: track.title || this.getResultTitle(track),
     artist: track.artist?.name || 'Artista desconhecido',
     cover: this.getBestImage(track) || track.album?.cover_medium,
-    url: track.preview || track.link || '',
-    preview: track.preview || track.link || '',  // ← ADICIONAR preview
+    url: url,
+    preview: track.preview || track.link || '',
     duration: track.duration || 30,
     type: track.type || 'search',
-    source: track.source || 'deezer'  // ← ADICIONAR source
+    source: track.source || 'deezer',
+    _fullTrack: isSpotifyFull || track._fullTrack || false  // ← propaga a flag
   }
 },
     // ===== TOAST =====
@@ -4992,7 +5269,60 @@ html, body, #app {
 .view-all:hover {
   color: #1db954;
 }
+.spotify-connect-banner {
+  background: linear-gradient(90deg, rgba(29,185,84,0.1) 0%, rgba(25,20,20,0.8) 100%);
+  border: 1px solid rgba(29,185,84,0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
 
+.spotify-connect-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.spotify-connect-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.spotify-connect-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.spotify-connect-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.btn-connect-spotify {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  border: none;
+  border-radius: 20px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-connect-spotify:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(29,185,84,0.4);
+}
 /* ===== TOP TRACKS - LISTA TIPO SPOTIFY ===== */
 .top-tracks {
   display: flex;

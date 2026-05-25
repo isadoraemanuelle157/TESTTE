@@ -50,6 +50,23 @@ const startGame = async (req, res) => {
       return res.status(400).json({ error: 'Modo e dificuldade são obrigatórios' })
     }
     
+    // Se não tiver usuário autenticado, retorna pergunta demo/offline
+    if (!req.user || !req.user.id) {
+      const { gerarPergunta } = require('../services/gameService')
+      const pergunta = await gerarPergunta(modo, dificuldade)
+      
+      return res.json({
+        sessionId: 'demo-' + Date.now(),
+        pergunta,
+        config: {
+          tempoLimite: 30,
+          totalPerguntas: 10,
+          perguntaAtual: 1
+        },
+        demo: true
+      })
+    }
+    
     const result = await gameService.iniciarSessao(req.user.id, modo, dificuldade)
     
     res.json(result)
@@ -64,24 +81,69 @@ const startGame = async (req, res) => {
 
 const answerQuestion = async (req, res) => {
   try {
-    const { sessionId, respostaIndex, tempoResposta } = req.body
+    const { sessionId, respostaIndex, tempoResposta, perguntaAtual, respostaCorreta, pontuacaoAtual, perguntaNum, totalPerguntas, modo, dificuldade } = req.body;
     
     if (sessionId === undefined || respostaIndex === undefined) {
-      return res.status(400).json({ error: 'sessionId e respostaIndex são obrigatórios' })
+      return res.status(400).json({ error: 'sessionId e respostaIndex são obrigatórios' });
+    }
+    
+    // Modo demo - resposta local sem salvar no banco
+    if (sessionId && sessionId.toString().startsWith('demo-')) {
+      const { gerarPergunta, DIFICULTIES } = require('../services/gameService');
+      
+      // Verifica se a resposta está correta
+      let isCorrect = false;
+      if (respostaCorreta !== undefined && respostaCorreta !== null) {
+        isCorrect = parseInt(respostaIndex) === parseInt(respostaCorreta);
+      } else if (perguntaAtual?.respostaCorreta !== undefined) {
+        isCorrect = parseInt(respostaIndex) === parseInt(perguntaAtual.respostaCorreta);
+      } else {
+        isCorrect = Math.random() > 0.5;
+      }
+      
+      const diffConfig = DIFICULTIES[dificuldade || 'easy'] || { multiplicador: 1, tempo: 30 };
+      const pontosBase = 100;
+      const bonusTempo = Math.max(0, diffConfig.tempo - (parseInt(tempoResposta) || 0)) * 5;
+      const pontosGanhos = isCorrect ? Math.floor((pontosBase + bonusTempo) * diffConfig.multiplicador) : 0;
+      const moedasGanhas = isCorrect ? Math.floor(10 * diffConfig.multiplicador) : 0;
+      
+      const perguntaAtualNum = parseInt(perguntaNum) || parseInt(req.body.perguntaAtual) || 1;
+      const totalPerguntasNum = parseInt(totalPerguntas) || 10;
+      const pontuacaoAtualNum = parseInt(pontuacaoAtual) || 0;
+      
+      // Só gera próxima pergunta se não for a última
+      let proximaPergunta = null;
+      if (perguntaAtualNum < totalPerguntasNum) {
+        proximaPergunta = await gerarPergunta(modo || 'guess-song', dificuldade || 'easy', sessionId);
+      }
+      
+      return res.json({
+        acertou: isCorrect,
+        pontosGanhos,
+        moedasGanhas,
+        pontuacaoTotal: pontuacaoAtualNum + pontosGanhos,
+        progresso: `${perguntaAtualNum}/${totalPerguntasNum}`,
+        proximaPergunta,
+        config: {
+          tempoLimite: diffConfig.tempo,
+          perguntaAtual: perguntaAtualNum + 1
+        },
+        demo: true,
+        completado: perguntaAtualNum >= totalPerguntasNum
+      });
     }
     
     const result = await gameService.responderPergunta(
       sessionId,
       parseInt(respostaIndex),
       parseInt(tempoResposta) || 0
-    )
+    );
     
-    res.json(result)
+    res.json(result);
   } catch (error) {
-    res.status(400).json({ error: error.message })
+    res.status(400).json({ error: error.message });
   }
-}
-
+};
 // ============================================
 // 📊 LEADERBOARD
 // ============================================
@@ -165,7 +227,18 @@ const buyItem = async (req, res) => {
 const getAchievements = async (req, res) => {
   try {
     const achievements = await gameService.getAchievements(req.user.id)
-    res.json({ achievements })
+    // Garante que cada conquista tem os campos que o frontend espera
+    const mappedAchievements = achievements.map(a => ({
+      ...a,
+      desbloqueada: a.desbloqueada || false,
+      resgatada: a.resgatada || false,
+      claimable: (a.desbloqueada || false) && !(a.resgatada || false),
+      iconClass: a.iconClass || 'fa-solid fa-medal',
+      titulo: a.titulo || a.title,
+      descricao: a.descricao || a.description,
+      moedas: a.moedas || a.coins || 0
+    }))
+    res.json({ achievements: mappedAchievements })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

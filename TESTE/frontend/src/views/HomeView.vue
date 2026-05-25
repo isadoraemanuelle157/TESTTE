@@ -140,18 +140,6 @@
         </div>
       </div>
 
-      <!-- PLAYER EMBEDDED -->
-      <div class="embedded-player" v-if="currentTrack">
-        <audio
-          ref="audioPlayer"
-          :src="currentTrack.preview"
-          @timeupdate="updateProgress"
-          @ended="onTrackEnded"
-          @loadedmetadata="onLoadedMetadata"
-          autoplay
-        ></audio>
-      </div>
-
       <!-- SEÇÃO: Tocadas Recentemente -->
       <section class="section" v-if="recentlyPlayed.length > 0">
         <div class="section-header">
@@ -662,10 +650,9 @@ categories: [
       ]
     }
   },
-
 mounted() {
-  window.addEventListener('player-update', this.handlePlayerUpdate)
-  window.addEventListener('player-state-changed', this.handlePlayerStateChange)
+    window.addEventListener('player-update', this.handlePlayerUpdate)
+    window.addEventListener('player-state-changed', this.handlePlayerStateChange)
   
   // Carregar histórico do localStorage
   const savedRecent = localStorage.getItem('recentlyPlayed')
@@ -680,18 +667,18 @@ mounted() {
   this.loadAllApiData()
 },
 
-  beforeDestroy() {
-        window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
-    if (this.$refs.audioPlayer) {
-      this.$refs.audioPlayer.pause()
-    }
+beforeDestroy() {
+    window.removeEventListener('player-update', this.handlePlayerUpdate)
+    window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
+    window.removeEventListener('player-paused', this.handleExternalPause)
+    
     if (this.toast.timer) {
       clearInterval(this.toast.timer)
     }
   },
 
   methods: {
-        handlePlayerStateChange(e) {
+   handlePlayerStateChange(e) {
       const { track, isPlaying, currentTime, duration, progress } = e.detail || {}
       if (!track) return
 
@@ -699,20 +686,28 @@ mounted() {
       this.isPlayerActive = true
       this.isPlaying = isPlaying
 
-      // Atualiza HERO
+      // Atualiza HERO com dados do MusicPlayer
       this.heroTitle = track.title
       this.heroArtist = track.artist
       this.heroDescription = isPlaying ? '▶ Reproduzindo agora' : '⏸ Pausado'
       this.heroHighlight = this.formatTime(currentTime) + ' / ' + this.formatTime(duration)
       this.heroBadge = 'Tocando Agora'
 
-      // Atualiza vinyl
+      // Atualiza vinyl com a música atual do player
       this.currentRandomSong = {
         id: track.id,
         title: track.title,
         artist: track.artist,
         cover: track.cover,
         duration: duration || track.duration
+      }
+      
+      // Atualiza currentTrack para sincronizar cards ativos
+      this.currentTrack = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        cover: track.cover
       }
 
       this.currentTime = currentTime || 0
@@ -941,54 +936,51 @@ async loadChartTracks() {
       }
     },
 
-playHeroSong() {
-  // Se o player global está ativo, envia comando de toggle (play/pause)
-  if (this.isPlayerActive) {
-    window.dispatchEvent(new CustomEvent('player-toggle-play'))
-    return
-  }
+  playHeroSong() {
+      // Se o MusicPlayer global está ativo e tocando a mesma música do hero
+      if (this.isPlayerActive && this.playerTrack) {
+        window.dispatchEvent(new CustomEvent('player-toggle-play'))
+        return
+      }
+      
+      // Se tem uma música aleatória selecionada no hero, toca ela
+      if (this.currentRandomSong) {
+        const track = this.currentRandomSong
+        this.addToRecentlyPlayed(track)
+        
+        // Envia para o MusicPlayer
+        window.dispatchEvent(new CustomEvent('play-song', {
+          detail: {
+            song: track,
+            playlist: [track],
+            index: 0,
+            context: 'hero'
+          }
+        }))
+      }
+    },
 
-  // Se não tem música no hero, não faz nada
-  if (!this.currentRandomSong) return
-  
-  // Se está tocando a música do hero, pausa
-  if (this.isPlaying && this.isCurrentTrack(this.currentRandomSong)) {
-    this.pauseTrack()
-  } else {
-    // Senão, toca a música do hero
-    this.addToRecentlyPlayed(this.currentRandomSong)
-    this.playTrack(this.currentRandomSong, 'hero', 0)
-  }
-},
+   prevHeroSong() {
+      if (this.isPlayerActive) {
+        window.dispatchEvent(new CustomEvent('player-prev-track'))
+        return
+      }
+      // Fallback quando não há player ativo
+      if (this.recentlyPlayed.length < 2) {
+        this.showToast('Histórico', 'Nenhuma música anterior', 'info', 'fa fa-info-circle')
+        return
+      }
+      const prevTrack = this.recentlyPlayed[1]
+      this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== prevTrack.id)
+      this.playTrack(prevTrack, 'recent', 0)
+    },
 
-    prevHeroSong() {
-  if (this.isPlayerActive) {
-    window.dispatchEvent(new CustomEvent('player-prev-track'))
-    return
-  }
-
-  // Volta para a música anterior do histórico
-  if (this.recentlyPlayed.length < 2) {
-    this.showToast('Histórico', 'Nenhuma música anterior no histórico', 'info', 'fa fa-info-circle')
-    return
-  }
-
-  // Pega a segunda música do histórico (a anterior à atual)
-  const prevTrack = this.recentlyPlayed[1]
-  
-  // Remove a atual do topo e coloca a anterior como atual
-  this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== prevTrack.id)
-  
-  // Toca a música anterior
-  this.playTrack(prevTrack, 'recent', 0)
-  this.showToast('Voltando', `Tocando: ${prevTrack.title}`, 'info', 'fa fa-step-backward')
-},
-
-    skipHeroSong() {
-         if (this.isPlayerActive) {
+ skipHeroSong() {
+      if (this.isPlayerActive) {
         window.dispatchEvent(new CustomEvent('player-next-track'))
         return
       }
+      // Se não há player ativo, apenas sorteia nova música no hero
       this.selectRandomHeroSong()
       this.showToast('Nova Música', 'Nova descoberta selecionada', 'info', 'fa fa-music')
     },
@@ -1001,65 +993,40 @@ playHeroSong() {
     },
 
     // ============ AUDIO PLAYER ============
-
-    updateProgress() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        this.currentTime = audio.currentTime
-        this.duration = audio.duration || 30
-        this.progressPercent = (this.currentTime / this.duration) * 100
-      }
-    },
-
-    onLoadedMetadata() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        this.duration = audio.duration || 30
-      }
-    },
-
-    onTrackEnded() {
-      this.isPlaying = false
-      this.progressPercent = 0
-      this.currentTime = 0
-      this.showToast('Preview Finalizado', 'A música terminou', 'info', 'fa fa-info-circle')
-    },
-
-    pauseTrack() {
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.pause()
-        this.isPlaying = false
-      }
+pauseTrack() {
+      // Sempre delega para o MusicPlayer global
+      window.dispatchEvent(new CustomEvent('player-toggle-play'))
     },
 
     // ============ PLAYBACK METHODS ============
 
 async playTrack(track, context, index) {
-  if (this.isCurrentTrack(track) && this.isPlaying) {
-    this.pauseTrack()
-    return
-  }
-
-  this.currentTrack = track
-  const playerTrack = this.convertTrackForPlayer(track)
- 
-  // SEMPRE adiciona ao histórico - ESSENCIAL
-  this.addToRecentlyPlayed(playerTrack)
- 
-let playlist = []
-if (context === 'chart') {
-  playlist = this.chartTracks.map(t => this.convertTrackForPlayer(t))
-} else if (context === 'recommended') {
-  playlist = this.recommendedTracks.map(t => this.convertTrackForPlayer(t))
-} else if (context === 'recent') {
-  playlist = this.recentlyPlayed
-} else if (context === 'top10') {        // ← ADICIONAR ESTE BLOCO
-  playlist = this.chartTracks.slice(0, 10).map(t => this.convertTrackForPlayer(t))
-} else {
-  playlist = [playerTrack]
-}
-     
+      const playerTrack = this.convertTrackForPlayer(track)
+      
+      // Se já está tocando esta track, toggle play/pause
+      if (this.isCurrentTrack(track) && this.isPlaying) {
+        this.pauseTrack()
+        return
+      }
+      
+      this.currentTrack = track
+      this.addToRecentlyPlayed(playerTrack)
+      
+      // Monta a playlist baseada no contexto
+      let playlist = []
+      if (context === 'chart') {
+        playlist = this.chartTracks.map(t => this.convertTrackForPlayer(t))
+      } else if (context === 'recommended') {
+        playlist = this.recommendedTracks.map(t => this.convertTrackForPlayer(t))
+      } else if (context === 'recent') {
+        playlist = this.recentlyPlayed
+      } else if (context === 'top10') {
+        playlist = this.chartTracks.slice(0, 10).map(t => this.convertTrackForPlayer(t))
+      } else {
+        playlist = [playerTrack]
+      }
+      
+      // Envia para o MusicPlayer global
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerTrack,
@@ -1068,20 +1035,6 @@ if (context === 'chart') {
           context: context
         }
       }))
-     
-      this.$nextTick(() => {
-        const audio = this.$refs.audioPlayer
-        if (audio) {
-          audio.src = playerTrack.preview
-          audio.play().then(() => {
-            this.isPlaying = true
-            this.showToast('Tocando Agora', playerTrack.title, 'success', 'fa fa-play-circle')
-          }).catch(err => {
-            console.error('Erro ao tocar:', err)
-            this.showToast('Erro', 'Não foi possível tocar a música', 'error', 'fa fa-exclamation-circle')
-          })
-        }
-      })
     },
 
     async playArtistTopTrack(artist) {
@@ -2997,17 +2950,6 @@ addToRecentlyPlayed(track) {
   }
 }
 
-/* Embedded Player (hidden) */
-.embedded-player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
-}
 /* ========== ESTILO DO BANNER INFORMATIVO ========== */
 .info-banner-top {
   background: linear-gradient(135deg, rgba(29, 185, 84, 0.15) 0%, rgba(29, 185, 84, 0.05) 100%);

@@ -217,13 +217,14 @@
         <p>Selecione o nível de desafio para {{ selectedMode?.name }}</p>
        
         <div class="difficulty-options">
-          <button
-            v-for="diff in serverDifficulties"
-            :key="diff.level"
-            class="difficulty-btn"
-            :class="[diff.level, { 'completed': diff.completed }]"
-    :disabled="diff.locked"
-          >
+      <button
+  v-for="diff in serverDifficulties"
+  :key="diff.level"
+  class="difficulty-btn"
+  :class="[diff.level, { 'completed': diff.completed }]"
+  :disabled="diff.locked"
+  @click="startGameWithDifficulty(diff)"
+>
             <div class="diff-icon"><i :class="diff.iconClass || 'fa-solid fa-star'"></i></div>
             <div class="diff-info">
               <strong>{{ diff.name }}</strong>
@@ -309,16 +310,26 @@
               </div>
 
               <div class="completion-actions">
-                <button 
-                  v-if="canAdvanceLevel" 
-                  class="btn-advance" 
-                  @click="advanceToNextLevel"
-                >
-                  <span>Próximo Nível: {{ nextDifficulty?.name }}</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
+              <button 
+  v-if="canAdvanceLevel" 
+  class="btn-advance" 
+  @click="advanceToNextLevel"
+  type="button"
+>
+  <span>Próximo Nível: {{ nextDifficulty?.name }}</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M5 12h14M12 5l7 7-7 7"/>
+  </svg>
+</button>
+
+<!-- ⚡ Mostra mensagem quando NÃO desbloqueou o próximo nível -->
+<div 
+  v-else-if="nextDifficulty && currentDifficulty?.level !== 'hard'" 
+  class="unlock-hint"
+>
+  <i class="fa-solid fa-lock"></i>
+  Acerte pelo menos <strong>70%</strong> para desbloquear o nível <strong>{{ nextDifficulty?.name }}</strong>
+</div>
                 
                 <button class="btn-restart" @click="restartSameLevel">
                   <span>Jogar Novamente</span>
@@ -678,41 +689,39 @@
 
       <div class="leaderboard-container">
 <div class="podium">
-  <div class="podium-place second" v-if="top2">
+  <div class="podium-place second" v-if="top2 && top2.usuario">
     <div class="podium-avatar">
-      <img :src="top2.usuario?.avatar || 'https://i.pravatar.cc/150?img=12'" alt="2º lugar">
+      <img :src="top2.usuario?.avatar || `https://i.pravatar.cc/150?img=12`" alt="2º lugar">
       <div class="place-badge">2</div>
     </div>
     <div class="podium-info">
       <h4>{{ top2.usuario?.nome || 'Anônimo' }}</h4>
-      <span class="podium-score">{{ top2.pontuacao?.toLocaleString() || 0 }} pts</span>
+      <span class="podium-score">{{ (top2.pontuacao || 0).toLocaleString() }} pts</span>
     </div>
-    <div class="podium-base"></div>
+   
   </div>
 
-  <div class="podium-place first" v-if="top1">
+  <div class="podium-place first" v-if="top1 && top1.usuario">
     <div class="crown"><i class="fa-solid fa-crown"></i></div>
     <div class="podium-avatar">
-      <img :src="top1.usuario?.avatar || 'https://i.pravatar.cc/150?img=11'" alt="1º lugar">
+      <img :src="top1.usuario?.avatar || `https://i.pravatar.cc/150?img=11`" alt="1º lugar">
       <div class="place-badge">1</div>
     </div>
     <div class="podium-info">
       <h4>{{ top1.usuario?.nome || 'Anônimo' }}</h4>
-      <span class="podium-score">{{ top1.pontuacao?.toLocaleString() || 0 }} pts</span>
+      <span class="podium-score">{{ (top1.pontuacao || 0).toLocaleString() }} pts</span>
     </div>
-    <div class="podium-base"></div>
   </div>
 
-  <div class="podium-place third" v-if="top3">
+  <div class="podium-place third" v-if="top3 && top3.usuario">
     <div class="podium-avatar">
-      <img :src="top3.usuario?.avatar || 'https://i.pravatar.cc/150?img=5'" alt="3º lugar">
+      <img :src="top3.usuario?.avatar || `https://i.pravatar.cc/150?img=5`" alt="3º lugar">
       <div class="place-badge">3</div>
     </div>
     <div class="podium-info">
       <h4>{{ top3.usuario?.nome || 'Anônimo' }}</h4>
-      <span class="podium-score">{{ top3.pontuacao?.toLocaleString() || 0 }} pts</span>
+      <span class="podium-score">{{ (top3.pontuacao || 0).toLocaleString() }} pts</span>
     </div>
-    <div class="podium-base"></div>
   </div>
 </div>
 
@@ -723,18 +732,22 @@
     class="leaderboard-item"
     :class="{ 'highlight': index === 0 }"
   >
-    <span class="rank">{{ player.posicao || index + 4 }}</span>
+    <span class="rank">{{ player.posicao || (index + 4) }}</span>
     <img
-      :src="player.usuario?.avatar || `https://i.pravatar.cc/150?img=${index + 6}`"
+      :src="player.usuario?.avatar || `https://i.pravatar.cc/150?img=${(index + 6) % 70}`"
       :alt="player.usuario?.nome || 'Anônimo'"
       class="player-avatar"
     >
-    <span class="player-name">{{ player.usuario?.nome || 'Anônimo' }}</span>
-    <span class="player-status">{{ player.modo }} - {{ player.dificuldade }}</span>
-    <span class="player-score">{{ player.pontuacao?.toLocaleString() || 0 }}</span>
+    <div class="player-info">
+      <span class="player-name">{{ player.usuario?.nome || 'Anônimo' }}</span>
+      <span class="player-mode">{{ formatModeName(player.modo) }} • {{ formatDifficulty(player.dificuldade) }}</span>
+    </div>
+    <span class="player-score">{{ (player.pontuacao || 0).toLocaleString() }} pts</span>
     <span class="player-trend up"><i class="fa-solid fa-arrow-trend-up"></i></span>
   </div>
 </div>
+
+
 
         </div>
     </section>
@@ -1001,6 +1014,7 @@ export default {
       gameCompleted: false,
       completedDifficulties: [],
       usedTriviaIndices: [],
+      nextQuestionData: null,
      
       cardStyles: [
         { transform: 'translateY(0px) rotate(-5deg)' },
@@ -1075,18 +1089,18 @@ export default {
   },
 
   computed: {
-    top1() {
-  return this.serverLeaderboard?.[0] || null
-},
-top2() {
-  return this.serverLeaderboard?.[1] || null
-},
-top3() {
-  return this.serverLeaderboard?.[2] || null
-},
-restLeaderboard() {
-  return this.serverLeaderboard?.slice(3) || []
-},
+   top1() {
+    return this.serverLeaderboard?.[0] || null;
+  },
+  top2() {
+    return this.serverLeaderboard?.[1] || null;
+  },
+  top3() {
+    return this.serverLeaderboard?.[2] || null;
+  },
+  restLeaderboard() {
+    return this.serverLeaderboard?.slice(3) || [];
+  },
 
    canClaimDaily() {
       return this.serverDailyRewards.some(d => d.disponivel && !d.claimed);
@@ -1109,21 +1123,44 @@ restLeaderboard() {
     },
    
     // Verifica se pode avançar para próximo nível
-    canAdvanceLevel() {
-      if (!this.currentDifficulty) return false;
-      const levels = ['easy', 'medium', 'hard', 'expert'];
-      const currentIndex = levels.indexOf(this.currentDifficulty.level);
-      return currentIndex < levels.length - 1;
-    },
-   
-    // Próximo nível de dificuldade
-    nextDifficulty() {
-      if (!this.canAdvanceLevel) return null;
-      const levels = ['easy', 'medium', 'hard', 'expert'];
-      const currentIndex = levels.indexOf(this.currentDifficulty.level);
-      const nextLevel = levels[currentIndex + 1];
-      return this.serverDifficulties.find(d => d.level === nextLevel);
-    },
+canAdvanceLevel() {
+  if (!this.currentDifficulty) return false;
+  const levels = ['easy', 'medium', 'hard'];
+  const currentIndex = levels.indexOf(this.currentDifficulty.level);
+  if (currentIndex < 0 || currentIndex >= levels.length - 1) return false;
+  
+  // ⚡ NOVO: precisão mínima de 70% para liberar próximo nível
+  const precision = this.totalQuestions > 0 
+    ? Math.round((this.correctAnswers / this.totalQuestions) * 100) 
+    : 0;
+  return precision >= 70;
+},
+
+nextDifficulty() {
+  if (!this.currentDifficulty) return null;
+  const levels = ['easy', 'medium', 'hard'];
+  const currentIndex = levels.indexOf(this.currentDifficulty.level);
+  if (currentIndex < 0 || currentIndex >= levels.length - 1) return null;
+  const nextLevel = levels[currentIndex + 1];
+  
+  // ⚡ Sempre retorna um objeto válido (mesmo se não estiver em serverDifficulties)
+  const found = this.serverDifficulties.find(d => d.level === nextLevel);
+  if (found) return found;
+  
+  const names = { easy: 'Fácil', medium: 'Médio', hard: 'Difícil' };
+  const times = { easy: 30, medium: 20, hard: 15 };
+  const mults = { easy: 1, medium: 1.5, hard: 2.5 };
+  return {
+    level: nextLevel,
+    name: names[nextLevel],
+    timeLimit: times[nextLevel],
+    multiplier: mults[nextLevel],
+    description: `${times[nextLevel]}s por pergunta`,
+    completed: false,
+    locked: false,
+    bestScore: 0
+  };
+},
    
     // Título com palavras mascaradas para Complete a Música
    maskedTitle() {
@@ -1149,6 +1186,25 @@ async mounted() {
   },
  
   methods: {
+    formatModeName(mode) {
+    const names = {
+      'guess-song': '🎵 Adivinhe a Música',
+      'guess-artist': '🎤 Adivinhe o Artista',
+      'complete-lyric': '📝 Complete a Música',
+      'music-trivia': '🎸 Quiz Musical'
+    };
+    return names[mode] || mode;
+  },
+
+   formatDifficulty(diff) {
+    const names = {
+      'easy': 'Fácil',
+      'medium': 'Médio',
+      'hard': 'Difícil'
+    };
+    return names[diff] || diff;
+  },
+
     normalizeQuestion(pergunta) {
   if (!pergunta) return null
 
@@ -1274,106 +1330,201 @@ async loadDifficulties(modoId) {
   }
 },
     
-    async startGameWithDifficulty(difficulty) {
-      this.currentDifficulty = difficulty;
-      this.showDifficultyModal = false;
-      this.currentGame = this.selectedMode;
-      this.resetGame();
-      
-      try {
-        const res = await gameApi.startGame(this.selectedMode.id, difficulty.level);
-        this.sessionId = res.data.sessionId;
-        this.currentTrack = res.data.pergunta;
-        this.totalQuestions = res.data.config.totalPerguntas;
-        this.currentQuestionNum = res.data.config.perguntaAtual;
-        this.currentOptions = this.currentTrack.opcoes.map(o => o.texto);
-        this.correctAnswerIndex = this.currentTrack.respostaCorreta;
-        this.isLoading = false;
-        
-        setTimeout(() => {
-          const gameSection = document.getElementById('game-demo');
-          if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-        
-      } catch (error) {
-        console.error('Erro ao iniciar jogo:', error);
-        this.useOfflineMode();
-      }
-    },
+async startGameWithDifficulty(difficulty) {
+  if (difficulty.locked) return;
+  
+  this.currentDifficulty = difficulty;
+  this.showDifficultyModal = false;
+  this.currentGame = this.selectedMode;
+  this.resetGame();
+  
+  // Verifica se está logado
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    // Modo offline - inicia direto sem API
+    this.isOfflineMode = true;
+    this.isLoading = false;
+    this.loadNextOfflineQuestion();
     
-    async selectAnswer(index) {
-      if (this.showAnswer) return;
-      
-      this.selectedAnswer = index;
-      this.showAnswer = true;
-      this.cleanupAudio();
-      
-      try {
-        const res = await gameApi.answerQuestion(
-          this.sessionId,
-          index,
-          Math.floor(this.answerTime)
-        );
-        
+    setTimeout(() => {
+      const gameSection = document.getElementById('game-demo');
+      if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    return;
+  }
+  
+  // Modo online com API
+   // Modo online com API
+  try {
+    const res = await gameApi.startGame(this.selectedMode.id, difficulty.level);
+    this.sessionId = res.data.sessionId;
+    this.currentTrack = this.normalizeQuestion(res.data.pergunta);
+    this.totalQuestions = res.data.config.totalPerguntas || 10;
+    this.currentQuestionNum = res.data.config.perguntaAtual || 1;
+    this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
+    this.correctAnswerIndex = this.currentTrack.respostaCorreta;
+    this.isLoading = false;
+    this.isOfflineMode = !!res.data.demo; // Marca como offline se for demo
+    
+    setTimeout(() => {
+      const gameSection = document.getElementById('game-demo');
+      if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+    
+  } catch (error) {
+    console.error('Erro ao iniciar jogo:', error);
+    // Fallback para offline
+    this.useOfflineMode();
+  }
+},
+    
+async selectAnswer(index) {
+  if (this.showAnswer) return;
+
+  this.selectedAnswer = index;
+  this.showAnswer = true;
+  this.cleanupAudio();
+  
+  // ⚡ PARA o timer ao selecionar resposta
+  if (this.timerInterval) {
+    clearInterval(this.timerInterval);
+    this.timerInterval = null;
+  }
+  
+    // Modo offline/demo — processa localmente
+    if (this.isOfflineMode || !this.sessionId || this.sessionId.toString().startsWith('demo-')) {
+        this.processOfflineAnswer(index);
+        return;
+    }
+
+    // Modo online — envia para API
+ const answerPayload = {
+  sessionId: this.sessionId,
+  respostaIndex: index,
+  tempoResposta: Math.floor(this.answerTime),
+  // ⚡ NOVO: envia dados para demo mode funcionar corretamente
+  perguntaAtual: this.currentTrack,
+  respostaCorreta: this.correctAnswerIndex,
+  pontuacaoAtual: this.score,
+  perguntaNum: this.currentQuestionNum,
+  totalPerguntas: this.totalQuestions,
+  modo: this.currentGame?.id,
+  dificuldade: this.currentDifficulty?.level
+};
+
+    try {
+        const res = await gameApi.answerQuestion(answerPayload);
         const data = res.data;
-        
+
         if (data.acertou) {
-          this.correctAnswers++;
-          this.lastPointsGained = data.pontosGanhos;
-          this.lastCoinsGained = data.moedasGanhas;
-          this.score = data.pontuacaoTotal;
-          this.sessionCoins += data.moedasGanhas;
-          this.totalCoins += data.moedasGanhas;
+            this.correctAnswers++;
+            this.lastPointsGained = data.pontosGanhos || 0;
+            this.lastCoinsGained = data.moedasGanhas || 0;
+            this.score = data.pontuacaoTotal || this.score;
+            this.sessionCoins += data.moedasGanhas || 0;
+            this.totalCoins += data.moedasGanhas || 0;
         }
-        
+
+        if (data.proximaPergunta) {
+            this.nextQuestionData = data.proximaPergunta;
+        }
+
         if (data.completado) {
-          this.completionResult = data;
-          this.gameCompleted = true;
-          if (data.subiuNivel) {
-            this.showLevelUp = true;
-            this.levelUpRewards = { coins: data.moedasGanhas, xp: data.xp };
-          }
-          await this.loadServerData();
+            this.completionResult = data;
+            this.gameCompleted = true;
+            if (data.subiuNivel) {
+                this.showLevelUp = true;
+                this.levelUpRewards = { coins: data.moedasGanhas || 0, xp: data.xp || 0 };
+            }
+            await this.loadServerData();
         }
-        
-      } catch (error) {
+
+    } catch (error) {
         console.error('Erro ao enviar resposta:', error);
-        // Fallback local
-        if (index === this.correctAnswerIndex) {
-          this.correctAnswers++;
-          const pts = 100 * (this.currentDifficulty?.multiplier || 1);
-          const coins = 10 * (this.currentDifficulty?.multiplier || 1);
-          this.score += Math.floor(pts);
-          this.sessionCoins += Math.floor(coins);
-          this.totalCoins += Math.floor(coins);
-          this.lastPointsGained = Math.floor(pts);
-          this.lastCoinsGained = Math.floor(coins);
-        }
-      }
-    },
+        this.processOfflineAnswer(index);
+    }
+},
+
+// NOVO MÉTODO: Processa resposta no modo offline
+processOfflineAnswer(index) {
+  const isCorrect = index === this.correctAnswerIndex;
+  
+  if (isCorrect) {
+    this.correctAnswers++;
+    const pts = 100 * (this.currentDifficulty?.multiplier || 1);
+    const coins = 10 * (this.currentDifficulty?.multiplier || 1);
+    this.score += Math.floor(pts);
+    this.sessionCoins += Math.floor(coins);
+    this.totalCoins += Math.floor(coins);
+    this.lastPointsGained = Math.floor(pts);
+    this.lastCoinsGained = Math.floor(coins);
+  } else {
+    this.lastPointsGained = 0;
+    this.lastCoinsGained = 0;
+  }
+  
+},
     
-    async nextQuestion() {
-      if (this.gameCompleted) return;
-      
-      if (this.completionResult?.proximaPergunta) {
-        this.currentTrack = this.completionResult.proximaPergunta;
-        this.currentOptions = this.currentTrack.opcoes.map(o => o.texto);
-        this.correctAnswerIndex = this.currentTrack.respostaCorreta;
-        this.currentQuestionNum++;
-      } else {
-        this.currentQuestionNum++;
-        if (this.currentQuestionNum > this.totalQuestions) {
-          this.completeGame();
-          return;
-        }
-      }
-      
-      this.selectedAnswer = null;
-      this.showAnswer = false;
-      this.timerWidth = 100;
-      this.answerTime = 0;
-      this.startTimer();
-    },
+ async nextQuestion() {
+  if (this.gameCompleted) return;
+  
+  // Incrementa número da pergunta
+  this.currentQuestionNum++;
+  
+  // Verifica se completou o jogo
+if (this.currentQuestionNum > this.totalQuestions) {
+  const levels = ['easy', 'medium', 'hard'];
+  const currentIdx = levels.indexOf(this.currentDifficulty?.level);
+  const precision = Math.round((this.correctAnswers / this.totalQuestions) * 100);
+  
+  // ⚡ Sempre define nivelDesbloqueado se houver próximo nível teórico
+  // A regra de 70% agora é só no computed canAdvanceLevel (UI)
+  const nextLevel = (currentIdx >= 0 && currentIdx < levels.length - 1)
+    ? levels[currentIdx + 1]
+    : null;
+
+  this.completionResult = {
+    nivelDesbloqueado: precision >= 70 ? nextLevel : null,
+    proximoNivelTeorico: nextLevel,
+    pontuacao: this.score,
+    moedasGanhas: this.sessionCoins,
+    acertos: this.correctAnswers,
+    precisao: precision
+  };
+  
+  this.completeGame();
+  return;
+}
+  
+  // Modo offline/demo: carrega próxima pergunta das tracks locais
+  if (this.isOfflineMode || !this.sessionId || this.sessionId.toString().startsWith('demo-')) {
+    this.loadNextOfflineQuestion();
+    this.selectedAnswer = null;
+    this.showAnswer = false;
+    this.timerWidth = 100;
+    this.answerTime = 0;
+    this.startTimer();
+    return;
+  }
+  
+  // Modo online: usa próxima pergunta da API
+  if (this.nextQuestionData) {
+    this.currentTrack = this.normalizeQuestion(this.nextQuestionData);
+    this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
+    this.correctAnswerIndex = this.currentTrack.respostaCorreta;
+    this.nextQuestionData = null;
+  } else {
+    // Fallback: tenta carregar do servidor ou offline
+    this.loadNextOfflineQuestion();
+  }
+  
+  this.selectedAnswer = null;
+  this.showAnswer = false;
+  this.timerWidth = 100;
+  this.answerTime = 0;
+  this.startTimer();
+},
     
     async claimDailyReward(day) {
       if (!day.disponivel || day.claimed) return;
@@ -1388,18 +1539,31 @@ async loadDifficulties(modoId) {
       }
     },
     
-    async claimAchievement(achievement) {
-      if (!achievement.claimable || achievement.resgatada) return;
-      try {
-        const res = await gameApi.claimAchievement(achievement.id);
-        this.totalCoins = res.data.moedasTotais;
-        const achievementsRes = await gameApi.getAchievements();
-        this.serverAchievements = achievementsRes.data.achievements;
-        alert(`🏆 +${res.data.moedasGanhas} moedas!`);
-      } catch (error) {
-        console.error(error);
-      }
-    },
+ async claimAchievement(achievement) {
+  // Só permite resgatar se estiver desbloqueada e não resgatada
+  if (!achievement.desbloqueada || achievement.resgatada) return;
+  
+  // Se não estiver logado, mostra alerta
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Faça login para resgatar conquistas!');
+    return;
+  }
+  
+  try {
+    const res = await gameApi.claimAchievement(achievement.id);
+    this.totalCoins = res.data.moedasTotais;
+    
+    // Recarrega conquistas do servidor
+    const achievementsRes = await gameApi.getAchievements();
+    this.serverAchievements = achievementsRes.data.achievements;
+    
+    alert(`🏆 +${res.data.moedasGanhas} moedas!`);
+  } catch (error) {
+    console.error('Erro ao resgatar conquista:', error);
+    alert(error.response?.data?.error || 'Erro ao resgatar conquista');
+  }
+},
     
     async buyItem(item) {
       if (item.possuido || this.totalCoins < item.preco) return;
@@ -1414,12 +1578,35 @@ async loadDifficulties(modoId) {
       }
     },
     
-    async advanceToNextLevel() {
-      if (!this.completionResult?.nivelDesbloqueado) return;
-      const nextLevel = this.completionResult.nivelDesbloqueado;
-      const diff = this.serverDifficulties.find(d => d.level === nextLevel);
-      if (diff) await this.startGameWithDifficulty(diff);
-    },
+async advanceToNextLevel() {
+  // ⚡ Usa nextDifficulty diretamente — não depende mais de completionResult
+  const next = this.nextDifficulty;
+  if (!next) {
+    console.warn('Nenhum próximo nível disponível');
+    return;
+  }
+  
+  // Procura na lista de dificuldades; se não achar, usa o objeto retornado
+  let diff = this.serverDifficulties.find(d => d.level === next.level);
+  if (!diff) {
+    this.serverDifficulties.push(next);
+    diff = next;
+  }
+  
+  // Desbloqueia e marca como não completado
+  diff.locked = false;
+  diff.completed = false;
+  
+  // Persiste progresso offline
+  const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
+  if (!savedProgress[this.currentGame.id]) savedProgress[this.currentGame.id] = {};
+  if (!savedProgress[this.currentGame.id][next.level]) {
+    savedProgress[this.currentGame.id][next.level] = { completed: false, bestScore: 0 };
+  }
+  localStorage.setItem('soundup_progress', JSON.stringify(savedProgress));
+  
+  await this.startGameWithDifficulty(diff);
+},
 
     handleScroll() {
       this.isScrolled = window.scrollY > 50;
@@ -1491,8 +1678,52 @@ async loadDifficulties(modoId) {
     useOfflineMode() {
       this.isOfflineMode = true;
       this.loadError = false;
-      this.initializeOfflineTracks();
+       this.loadNextOfflineQuestion();
     },
+
+    loadNextOfflineQuestion() {
+  const mode = this.currentGame?.id || 'guess-song';
+  const tracks = OFFLINE_TRACKS[mode] || OFFLINE_TRACKS.guessSong;
+  
+  if (tracks.length > 0) {
+    const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
+    this.currentTrack = this.normalizeQuestion({
+      musica: {
+        titulo: randomTrack.title,
+        artista: randomTrack.artist?.name,
+        album: randomTrack.album?.title,
+        capa: randomTrack.album?.cover_medium,
+        previewUrl: randomTrack.preview,
+        ano: randomTrack.release_date?.split('-')[0]
+      },
+      opcoes: this.generateOptions(randomTrack, tracks),
+      respostaCorreta: 0
+    });
+    this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
+    this.correctAnswerIndex = 0;
+    this.isLoading = false;
+  }
+},
+
+generateOptions(correctTrack, allTracks) {
+  const wrong = allTracks
+    .filter(t => t.id !== correctTrack.id)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 3);
+  
+  const options = [
+    { texto: correctTrack.title, correta: true },
+    ...wrong.map(t => ({ texto: t.title, correta: false }))
+  ].sort(() => Math.random() - 0.5);
+  
+  return options;
+},
+
+markDifficultyCompleted() {
+  if (!this.currentDifficulty) return;
+  const diff = this.serverDifficulties.find(d => d.level === this.currentDifficulty.level);
+  if (diff) diff.completed = true;
+},
    
     toggleAudio() {
       if (!this.currentTrack?.preview) {
@@ -1547,19 +1778,30 @@ async loadDifficulties(modoId) {
    
     
     // Retorna o texto da resposta correta para o feedback
-    getCorrectAnswerText() {
-      if (this.currentGame.id === 'complete-lyric') {
-        return this.currentTrack?.musica?.titulo;
-      }
-      return this.currentOptions[this.correctAnswerIndex];
-    },
-
+getCorrectAnswerText() {
+  if (this.currentGame?.id === 'complete-lyric') {
+    return this.currentTrack?.musica?.titulo || this.currentTrack?.title || '?';
+  }
+  if (!this.currentOptions || this.currentOptions.length === 0) return '?';
+  return this.currentOptions[this.correctAnswerIndex] || '?';
+},
 
     // Completa o jogo e mostra tela de conclusão
-    completeGame() {
-      this.gameCompleted = true;
-      this.markDifficultyCompleted();
-      
+async completeGame() {
+  this.gameCompleted = true;
+  this.showAnswer = false;        // ← ADICIONAR: limpa o feedback
+  this.selectedAnswer = null;     // ← ADICIONAR: reseta seleção
+  this.cleanupAudio();            // ← ADICIONAR: garante que áudio para
+  this.markDifficultyCompleted();
+  
+  // Finaliza no servidor se tiver sessão real (não demo)
+  if (this.sessionId && !this.sessionId.toString().startsWith('demo-')) {
+    try {
+      await gameApi.answerQuestion(this.sessionId, -1, 0);
+    } catch (e) {
+      console.log('Sessão já finalizada ou erro:', e.message);
+    }
+  }
       const accuracy = Math.round((this.correctAnswers / this.totalQuestions) * 100);
       this.accuracy = Math.round((this.accuracy + accuracy) / 2) || accuracy;
      
@@ -1573,12 +1815,25 @@ async loadDifficulties(modoId) {
       localStorage.setItem('soundup_coins', this.totalCoins);
       localStorage.setItem('soundup_score', this.totalScore);
       localStorage.setItem('soundup_accuracy', this.accuracy);
+      const precision = Math.round((this.correctAnswers / this.totalQuestions) * 100);
+if (precision >= 70) {
+  const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
+  if (!savedProgress[this.currentGame.id]) savedProgress[this.currentGame.id] = {};
+  savedProgress[this.currentGame.id][this.currentDifficulty.level] = {
+    completed: true,
+    bestScore: Math.max(
+      savedProgress[this.currentGame.id][this.currentDifficulty.level]?.bestScore || 0,
+      this.score
+    )
+  };
+  localStorage.setItem('soundup_progress', JSON.stringify(savedProgress));
+}
     },
 
     // Recomeça no mesmo nível
     restartSameLevel() {
       this.resetGame();
-      this.initializeGameTracks();
+     this.useOfflineMode();
     },
 
     // Sai para o menu
@@ -1605,11 +1860,15 @@ async selectMode(mode) {
     this.selectedMode = mode
     this.showDifficultyModal = true
     // Usa dificuldades padrão offline
-    this.serverDifficulties = [
-      { level: 'easy', name: 'Fácil', icon: '🌱', multiplier: 1, timeLimit: 30, description: '30s por pergunta', completed: false, locked: false, bestScore: 0 },
-      { level: 'medium', name: 'Médio', icon: '🔥', multiplier: 1.5, timeLimit: 20, description: '20s por pergunta', completed: false, locked: true, bestScore: 0 },
-      { level: 'hard', name: 'Difícil', icon: '💀', multiplier: 2.5, timeLimit: 15, description: '15s por pergunta', completed: false, locked: true, bestScore: 0 }
-    ]
+// ← ADICIONAR: carregar progresso offline do localStorage
+const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
+const modeProgress = savedProgress[this.selectedMode?.id] || {};
+
+this.serverDifficulties = [
+  { level: 'easy', name: 'Fácil', icon: '🌱', multiplier: 1, timeLimit: 30, description: '30s por pergunta', completed: modeProgress.easy?.completed || false, locked: false, bestScore: modeProgress.easy?.bestScore || 0 },
+  { level: 'medium', name: 'Médio', icon: '🔥', multiplier: 1.5, timeLimit: 20, description: '20s por pergunta', completed: modeProgress.medium?.completed || false, locked: !(modeProgress.easy?.completed), bestScore: modeProgress.medium?.bestScore || 0 },
+  { level: 'hard', name: 'Difícil', icon: '💀', multiplier: 2.5, timeLimit: 15, description: '15s por pergunta', completed: modeProgress.hard?.completed || false, locked: !(modeProgress.medium?.completed), bestScore: modeProgress.hard?.bestScore || 0 }
+]
     return
   }
   
@@ -3970,6 +4229,7 @@ body {
   gap: 2rem;
   margin-bottom: 4rem;
   padding: 2rem;
+  min-height: 300px;
 }
 
 .podium-place {
@@ -3977,19 +4237,24 @@ body {
   flex-direction: column;
   align-items: center;
   position: relative;
+  flex: 1;
+  max-width: 200px;
 }
 
 .podium-place.first {
   order: 2;
   transform: translateY(-20px);
+  z-index: 3;
 }
 
 .podium-place.second {
   order: 1;
+  z-index: 2;
 }
 
 .podium-place.third {
   order: 3;
+  z-index: 1;
 }
 
 .crown {
@@ -4098,6 +4363,7 @@ body {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border);
   transition: background 0.3s;
+  gap: 1rem;
 }
 
 .leaderboard-item:hover {
@@ -4113,26 +4379,34 @@ body {
   font-weight: 800;
   color: var(--text-muted);
   font-size: 1.125rem;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .player-avatar {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  margin-right: 1rem;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .player-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0; /* importante para ellipsis */
 }
 
 .player-name {
-  display: block;
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
 .player-status {
   font-size: 0.875rem;
   color: var(--success);
@@ -4142,15 +4416,25 @@ body {
   text-align: right;
 }
 
+.player-mode {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .player-score {
-  display: block;
   font-weight: 700;
   font-size: 1.125rem;
   color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .player-trend {
   font-size: 0.875rem;
+  flex-shrink: 0;
 }
 
 .player-trend.up { color: var(--success); }

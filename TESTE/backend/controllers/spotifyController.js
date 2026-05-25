@@ -1,6 +1,16 @@
+const axios = require('axios')
 const { spotifyRequest } = require('../utils/spotifyRequest')
-const { SPOTIFY_API_URL } = require('../config/spotify')
+const { 
+  SPOTIFY_API_URL, 
+  SPOTIFY_CLIENT_ID, 
+  SPOTIFY_CLIENT_SECRET,
+  SPOTIFY_ACCOUNTS_URL,
+  SPOTIFY_REDIRECT_URI,
+  SPOTIFY_SCOPES,
+  FRONTEND_URL  // ← ADICIONAR AQUI
+} = require('../config/spotify')
 const { getCache, setCache } = require('../utils/cache')
+const Usuario = require('../models/Usuario')
 
 // ================= CACHE CONFIG =================
 const CACHE_TTL = {
@@ -11,7 +21,6 @@ const CACHE_TTL = {
 popular: 1000 * 60 * 60 * 24,
   vibes: 1000 * 60 * 60 * 6      // 6 horas
 }
-
 // ================= FALLBACK DATA (dados estáticos) =================
 // Quando o Spotify bloqueia (429), usamos esses dados reais
 const FALLBACK_ARTISTS = [
@@ -379,5 +388,249 @@ exports.getPlaylist = async (req, res) => {
   } catch (error) {
     console.error('❌ Playlist error:', error.message)
     res.status(500).json({ error: 'Erro playlist', details: error.message })
+  }
+}
+
+// ================= OAUTH: INITIATE AUTH =================
+exports.initiateAuth = async (req, res) => {
+  try {
+    // Pega o token JWT do header Authorization
+    const authHeader = req.headers.authorization
+    const appToken = authHeader?.replace('Bearer ', '')
+    
+    console.log('🔍 initiateAuth - appToken presente:', !!appToken)
+
+    if (!appToken) {
+      return res.status(401).json({ error: 'Token do app necessário. Faça login primeiro.' })
+    }
+
+    // Codifica o appToken no state (base64) para recuperar no callback
+    const stateData = JSON.stringify({
+      random: Math.random().toString(),
+      appToken: appToken  // ← ISSO É CRÍTICO
+    })
+    const state = Buffer.from(stateData).toString('base64')
+
+    const params = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: SPOTIFY_REDIRECT_URI,
+      scope: SPOTIFY_SCOPES,
+      state: state,
+      show_dialog: 'true'
+    })
+
+    const authUrl = `${SPOTIFY_ACCOUNTS_URL}?${params.toString()}`
+
+    console.log('✅ Auth URL gerada:', authUrl.substring(0, 80) + '...')
+
+    res.json({ authUrl, state })
+  } catch (error) {
+    console.error('❌ Initiate auth error:', error)
+    res.status(500).json({ error: 'Erro ao iniciar autenticação Spotify' })
+  }
+}
+
+// ================= OAUTH: CALLBACK =================
+exports.callback = async (req, res) => {
+  try {
+    const { code, state, error: spotifyError } = req.query
+
+    console.log('🔍 Callback recebido:', { code: !!code, state: !!state, error: spotifyError })
+
+    // Decodifica o state para pegar o appToken
+    let appToken = null
+    try {
+      if (state) {
+        const stateData = JSON.parse(Buffer.from(state, 'base64').toString())
+        appToken = stateData.appToken
+        console.log('✅ AppToken decodificado do state:', !!appToken)
+      }
+    } catch (e) {
+      console.error('❌ Erro ao decodificar state:', e.message)
+    }
+
+    // FALLBACK: tenta pegar do query param
+    if (!appToken) {
+      appToken = req.query.app_token
+      console.log('⚠️ Usando app_token do query param:', !!appToken)
+    }
+
+    if (spotifyError) {
+      console.error('❌ Spotify retornou erro:', spotifyError)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent(spotifyError)}`)
+    }
+
+    if (!code) {
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Code não fornecido')}`)
+    }
+
+    if (!appToken) {
+      console.error('❌ appToken está NULO')
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Token do app não encontrado. Faça login novamente.')}`)
+    }
+
+    // Troca code por tokens do Spotify
+    let tokenResponse
+    try {
+      tokenResponse = await axios.post(
+        'https://accounts.spotify.com/api/token',
+        new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: SPOTIFY_REDIRECT_URI,
+          client_id: SPOTIFY_CLIENT_ID,
+          client_secret: SPOTIFY_CLIENT_SECRET
+        }).toString(),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }
+      )
+    } catch (err) {
+      console.error('❌ Erro ao trocar code por token:', err.response?.data || err.message)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Erro ao autenticar com Spotify')}`)
+    }
+
+    const { access_token, refresh_token, expires_in } = tokenResponse.data
+
+    // Decodifica token do app para pegar userId
+    const jwt = require('jsonwebtoken')
+    let decoded
+    try {
+      decoded = jwt.verify(appToken, process.env.JWT_SECRET)
+      console.log('✅ JWT decodificado:', { id: decoded.id, _id: decoded._id, userId: decoded.userId })
+    } catch (e) {
+      console.error('❌ JWT inválido:', e.message)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Token do app inválido ou expirado')}`)
+    }
+    
+    // ✅ CORREÇÃO: Pegar o ID de todas as possíveis propriedades
+    const userId = decoded.id || decoded._id || decoded.userId || decoded.sub
+    
+    if (!userId) {
+      console.error('❌ userId não encontrado no JWT. Payload:', decoded)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('ID do usuário não encontrado no token')}`)
+    }
+
+    console.log('🔍 Buscando usuário:', userId)
+
+    // Salva tokens no usuário
+    const user = await Usuario.findById(userId)
+    
+    if (!user) {
+      console.error('❌ Usuário não encontrado no banco:', userId)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Usuário não encontrado. Faça login novamente.')}`)
+    }
+
+    console.log('✅ Usuário encontrado:', user.email || user.nome)
+
+    user.spotifyAccessToken = access_token
+    user.spotifyRefreshToken = refresh_token
+    user.spotifyTokenExpiresAt = new Date(Date.now() + expires_in * 1000)
+    user.spotifyConnected = true
+    await user.save()
+
+    console.log('✅ Spotify conectado com sucesso para:', userId)
+    res.redirect(`${FRONTEND_URL}/spotify-connected?success=true`)
+
+  } catch (error) {
+    console.error('❌ Spotify callback error GERAL:', error.message, error.stack)
+    res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Erro interno: ' + error.message)}`)
+  }
+}
+// ================= OAUTH: REFRESH TOKEN MANUAL =================
+exports.refreshUserToken = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id
+    const user = await Usuario.findById(userId)
+    
+    if (!user || !user.spotifyRefreshToken) {
+      return res.status(403).json({ error: 'Spotify não conectado' })
+    }
+    
+    const response = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: user.spotifyRefreshToken
+      }).toString(),
+      {
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+    
+    await user.updateSpotifyTokens(
+      response.data.access_token,
+      user.spotifyRefreshToken,
+      response.data.expires_in
+    )
+    
+    res.json({ success: true, expires_in: response.data.expires_in })
+  } catch (error) {
+    console.error('❌ Refresh error:', error.response?.data || error.message)
+    res.status(500).json({ error: 'Erro ao renovar token' })
+  }
+}
+
+// ================= BUSCA COM STREAMING URL =================
+exports.searchFullTracks = async (req, res) => {
+  try {
+    const { q, type = 'track', market = 'BR' } = req.query
+    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+
+    // ✅ USA O TOKEN DO USUÁRIO do middleware requireSpotifyAuth
+    const userToken = req.spotifyUserToken
+    
+    if (!userToken) {
+      return res.status(403).json({ 
+        error: 'Spotify não conectado',
+        message: 'Conecte sua conta Spotify para buscar músicas completas'
+      })
+    }
+
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: { q, type, limit: 20, market }
+    }, 3, userToken) // ✅ Passa userToken aqui
+
+    const data = response.data
+    if (data.tracks?.items) {
+      data.tracks.items = data.tracks.items.map(track => ({
+        ...track,
+        _fullTrack: true,
+        _source: 'spotify_full'
+      }))
+    }
+
+    res.json(data)
+  } catch (error) {
+    if (error.isUserTokenExpired) {
+      return res.status(401).json({ 
+        error: 'Token Spotify expirado',
+        needsReconnect: true 
+      })
+    }
+    console.error('❌ Full tracks search:', error.message)
+    res.status(500).json({ error: 'Erro na busca', details: error.message })
+  }
+}
+
+
+// ================= VERIFICAR STATUS DO SPOTIFY =================
+exports.getSpotifyStatus = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id
+    const user = await Usuario.findById(userId).select('spotifyConnected spotifyTokenExpiresAt')
+    
+    res.json({
+      connected: user?.spotifyConnected || false,
+      tokenValid: user?.isSpotifyTokenValid() || false
+    })
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao verificar status' })
   }
 }

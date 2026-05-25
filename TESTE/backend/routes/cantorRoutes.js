@@ -6,11 +6,11 @@ const { requireAuth } = require('../middleware/auth')
     // Rotas
     router.post('/', cantorController.create)           // Criar
     router.get('/', cantorController.list)              // Listar todos
+    router.get('/search', cantorController.search)
 router.get('/nome/:nome', cantorController.getByNome)
-router.get('/search', cantorController.search)
 
-router.patch('/:id/seguir', authMiddleware, cantorController.seguir)
-router.patch('/:id/deixar-seguir', authMiddleware, cantorController.deixarSeguir)
+router.patch('/:id/seguir', requireAuth, cantorController.seguir)         // ✅ requireAuth
+router.patch('/:id/deixar-seguir', requireAuth, cantorController.deixarSeguir)
 
 router.get('/:id/shows', cantorController.getShowsByCantor)
 router.get('/:id', cantorController.getById)

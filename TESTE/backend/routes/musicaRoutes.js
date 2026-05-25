@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const { requireAuth } = require('../middleware/auth')
+const Musica = require('../models/Musica')
 const musicaController = require('../controllers/musicaController')
 const curtidaController = require('../controllers/curtidaController')
 

@@ -63,8 +63,7 @@ export const gameApi = {
   
   // Jogo
   startGame: (modo, dificuldade) => apiClient.post('/start', { modo, dificuldade }),
-  answerQuestion: (sessionId, respostaIndex, tempoResposta) => 
-    apiClient.post('/answer', { sessionId, respostaIndex, tempoResposta }),
+answerQuestion: (payload) => apiClient.post('/answer', payload),
   
   // Recompensas e loja
   claimDailyReward: (dia) => apiClient.post('/rewards/daily/claim', { dia }),
