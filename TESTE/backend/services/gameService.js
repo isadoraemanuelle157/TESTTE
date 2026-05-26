@@ -9,6 +9,9 @@ const DEEZER_API_URL = 'https://api.deezer.com'
 // 🎮 CONFIGURAÇÕES DO JOGO
 // ============================================
 
+const REWARD_COOLDOWN_MS = 8 * 60 * 60 * 1000; // 8 horas
+const REWARD_RESET_MS = 16 * 60 * 60 * 1000;   // 16 horas
+
 const GAME_CONFIG = {
   'guess-song': {
     nome: 'Adivinhe a Música',
@@ -981,7 +984,8 @@ const responderPergunta = async (sessionId, respostaIndex, tempoResposta) => {
   const diffConfig = DIFICULTIES[session.dificuldade]
 const pontosBase = 100
 const bonusTempo = Math.max(0, diffConfig.tempo - tempoResposta) * 5
-const streakBonus = Math.min(session.acertos + (acertou ? 1 : 0), 5) * 10 // bônus streak
+const streakAtual = acertou ? session.acertos + 1 : 0;
+const streakBonus = Math.min(streakAtual, 5) * 10;
 const pontosGanhos = acertou ? Math.floor((pontosBase + bonusTempo + streakBonus) * diffConfig.multiplicador) : 0
 const moedasGanhas = acertou ? Math.floor((10 + streakBonus) * diffConfig.multiplicador) : 0
   
@@ -1034,11 +1038,18 @@ const finalizarSessao = async (session) => {
   stats.estatisticas.totalAcertos += session.acertos
   stats.estatisticas.totalErros += session.erros
   
-  const precisao = Math.round((session.acertos / session.totalPerguntas) * 100)
-  const precisaoAnterior = stats.estatisticas.precisaoMedia
+const totalRespondidas = session.acertos + session.erros;
+const precisao = totalRespondidas > 0 ? Math.round((session.acertos / totalRespondidas) * 100) : 0;
+
+const totalPartidas = stats.estatisticas.totalPartidas;
+if (totalPartidas === 1) {
+  stats.estatisticas.precisaoMedia = precisao;
+} else {
+  const precisaoAnterior = stats.estatisticas.precisaoMedia || 0;
   stats.estatisticas.precisaoMedia = Math.round(
-    (precisaoAnterior * (stats.estatisticas.totalPartidas - 1) + precisao) / stats.estatisticas.totalPartidas
-  )
+    ((precisaoAnterior * (totalPartidas - 1)) + precisao) / totalPartidas
+  );
+}
   
   // Verifica sequência
   if (session.acertos === session.totalPerguntas) {
@@ -1086,25 +1097,45 @@ if (precisao >= 70) {
   const nivelResult = stats.adicionarXP(xpGanho)
   
   // Verifica conquistas
-  const conquistasDesbloqueadas = []
-  
-  if (stats.estatisticas.totalPartidas === 1) {
-    const conquista = stats.conquistas.find(c => c.id === 'first_win')
-    if (conquista && !conquista.desbloqueada) {
-      conquista.desbloqueada = true
-      conquista.dataDesbloqueio = new Date()
-      conquistasDesbloqueadas.push(conquista)
-    }
-  }
-  
-  if (session.acertos === session.totalPerguntas) {
-    const conquista = stats.conquistas.find(c => c.id === 'perfect_game')
-    if (conquista && !conquista.desbloqueada) {
-      conquista.desbloqueada = true
-      conquista.dataDesbloqueio = new Date()
-      conquistasDesbloqueadas.push(conquista)
-    }
-  }
+const conquistasDesbloqueadas = [];
+
+// 1. first_win — completou 1 partida
+if (stats.estatisticas.totalPartidas >= 1) {
+  const c = stats.conquistas.find(c => c.id === 'first_win');
+  if (c && !c.desbloqueada) { c.desbloqueada = true; c.dataDesbloqueio = new Date(); conquistasDesbloqueadas.push(c); }
+}
+
+// 2. streak_3 — 3 acertos na mesma sessão
+if (session.acertos >= 3) {
+  const c = stats.conquistas.find(c => c.id === 'streak_3');
+  if (c && !c.desbloqueada) { c.desbloqueada = true; c.dataDesbloqueio = new Date(); conquistasDesbloqueadas.push(c); }
+}
+
+// 3. streak_5 — 5 acertos na mesma sessão
+if (session.acertos >= 5) {
+  const c = stats.conquistas.find(c => c.id === 'streak_5');
+  if (c && !c.desbloqueada) { c.desbloqueada = true; c.dataDesbloqueio = new Date(); conquistasDesbloqueadas.push(c); }
+}
+
+// 4. perfect_game — acertou todas
+if (session.acertos === session.totalPerguntas) {
+  const c = stats.conquistas.find(c => c.id === 'perfect_game');
+  if (c && !c.desbloqueada) { c.desbloqueada = true; c.dataDesbloqueio = new Date(); conquistasDesbloqueadas.push(c); }
+}
+
+// 5. collector — comprou 3 itens
+const inventarioCount = stats.inventario ? stats.inventario.length : 0;
+if (inventarioCount >= 3) {
+  const c = stats.conquistas.find(c => c.id === 'collector');
+  if (c && !c.desbloqueada) { c.desbloqueada = true; c.dataDesbloqueio = new Date(); conquistasDesbloqueadas.push(c); }
+}
+
+// 6. daily_7 — 7 dias de recompensas
+const diasUnicos = new Set((stats.recompensasDiarias?.historico || []).map(h => h.dia)).size;
+if (diasUnicos >= 7) {
+  const c = stats.conquistas.find(c => c.id === 'daily_7');
+  if (c && !c.desbloqueada) { c.desbloqueada = true; c.dataDesbloqueio = new Date(); conquistasDesbloqueadas.push(c); }
+}
   
   await stats.save()
   await session.save()
@@ -1185,14 +1216,15 @@ const getDailyRewards = async (userId) => {
   
   const agora = new Date()
   const ultima = recompensas.ultimaReivindicacao
-  const podeReivindicar = !ultima || (agora - new Date(ultima)) >= 24 * 60 * 60 * 1000
-  
-  // Reset se perdeu um dia
-  if (ultima && (agora - new Date(ultima)) >= 48 * 60 * 60 * 1000) {
-    recompensas.diaAtual = 0
-    recompensas.historico = []
-  }
-  
+ const podeReivindicar = !ultima || (agora - new Date(ultima)) >= REWARD_COOLDOWN_MS;
+
+// Troque 48*60*60*1000 por REWARD_RESET_MS
+// Troque a verificação de 24h:
+if (ultima && (agora - new Date(ultima)) < REWARD_COOLDOWN_MS) {
+  const tempoRestante = REWARD_COOLDOWN_MS - (agora - new Date(ultima));
+  const horasRestantes = Math.ceil(tempoRestante / (60 * 60 * 1000));
+  throw new Error(`Recompensa já reivindicada. Volte em ${horasRestantes}h.`);
+}
   const dias = RECOMPENSAS_DIARIAS.map(r => ({
     ...r,
     reivindicado: recompensas.historico.some(h => h.dia === r.dia && h.reivindicado),

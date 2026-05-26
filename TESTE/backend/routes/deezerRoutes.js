@@ -104,11 +104,48 @@ router.get('/album/:id/tracks', async (req, res) => {
 router.get('/chart/0/artists', async (req, res) => {
   try {
     const { limit = 10 } = req.query
+    
+    // Busca o chart de artistas
     const response = await axios.get(`${DEEZER_API_URL}/chart/0/artists`, {
       params: { limit },
       timeout: 5000
     })
-    res.json(response.data)
+
+    const chartData = response.data
+
+    // 🔥 Enriquece cada artista com nb_fan real buscando detalhes
+    if (chartData.data && Array.isArray(chartData.data)) {
+      const enrichedArtists = await Promise.allSettled(
+        chartData.data.map(async (artist) => {
+          try {
+            // Se já tem nb_fan válido, usa ele
+            if (artist.nb_fan && artist.nb_fan > 0) {
+              return artist
+            }
+
+            // Senão, busca detalhes do artista
+            const detailRes = await axios.get(
+              `${DEEZER_API_URL}/artist/${artist.id}`,
+              { timeout: 3000 }
+            )
+            
+            return {
+              ...artist,
+              nb_fan: detailRes.data.nb_fan || artist.nb_fan || 0
+            }
+          } catch (err) {
+            // Se falhar a busca de detalhes, retorna o artista original
+            return artist
+          }
+        })
+      )
+
+      chartData.data = enrichedArtists
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value)
+    }
+
+    res.json(chartData)
   } catch (error) {
     console.error('❌ Deezer chart artists error:', error.message)
     res.status(500).json({ error: 'Erro ao buscar chart de artistas do Deezer' })

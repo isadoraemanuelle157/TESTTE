@@ -1,4 +1,4 @@
-<template>
+    <template>
   <div id="app" class="rhythm-quest">
     <!-- Background Effects -->
     <div class="ambient-bg">
@@ -82,9 +82,9 @@
           <div class="ticker-content">
             <div class="ticker-track" :style="{ animationPlayState: isPaused ? 'paused' : 'running' }">
               <div v-for="(activity, index) in [...activities, ...activities]" :key="index" class="ticker-item">
-                <img 
-  :src="activity.avatar" 
-  :alt="activity.user" 
+                <img
+  :src="activity.avatar"
+  :alt="activity.user"
   class="ticker-avatar"
   @error="$event.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(activity.user) + '&background=6366f1&color=fff'"
 >
@@ -293,7 +293,7 @@
               <div class="trophy"><i class="fa-solid fa-trophy"></i></div>
               <h2>Desafio Completado!</h2>
               <p>Você completou o nível {{ currentDifficulty?.name }}</p>
-              
+             
               <div class="completion-stats">
                 <div class="comp-stat">
                   <span class="comp-label">Pontuação</span>
@@ -310,9 +310,9 @@
               </div>
 
               <div class="completion-actions">
-              <button 
-  v-if="canAdvanceLevel" 
-  class="btn-advance" 
+              <button
+  v-if="canAdvanceLevel"
+  class="btn-advance"
   @click="advanceToNextLevel"
   type="button"
 >
@@ -323,21 +323,21 @@
 </button>
 
 <!-- ⚡ Mostra mensagem quando NÃO desbloqueou o próximo nível -->
-<div 
-  v-else-if="nextDifficulty && currentDifficulty?.level !== 'hard'" 
+<div
+  v-else-if="nextDifficulty && currentDifficulty?.level !== 'hard'"
   class="unlock-hint"
 >
   <i class="fa-solid fa-lock"></i>
   Acerte pelo menos <strong>70%</strong> para desbloquear o nível <strong>{{ nextDifficulty?.name }}</strong>
 </div>
-                
+               
                 <button class="btn-restart" @click="restartSameLevel">
                   <span>Jogar Novamente</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                   </svg>
                 </button>
-                
+               
                 <button class="btn-menu" @click="exitToMenu">
                   <span>Menu Principal</span>
                 </button>
@@ -424,10 +424,10 @@
                 </div>
 
                 <!-- Preview apenas em Easy e Medium -->
-                <button 
+                <button
                   v-if="showArtistPreviewButton"
-                  class="btn-play-voice" 
-                  @click="toggleAudio" 
+                  class="btn-play-voice"
+                  @click="toggleAudio"
                   :class="{ 'playing': isAudioPlaying }"
                 >
                   <svg v-if="!isAudioPlaying" viewBox="0 0 24 24" fill="currentColor">
@@ -435,7 +435,7 @@
                   </svg>
                   <span v-else>Ouvindo...</span>
                 </button>
-                
+               
                 <p v-else class="no-preview-hint">
                   <i class="fa-solid fa-music"></i> Modo Difícil: Sem preview de áudio!
                 </p>
@@ -658,7 +658,7 @@
           <h3>Loja de Recompensas</h3>
           <p>Use suas moedas para desbloquear itens exclusivos</p>
           <div class="shop-items">
-            <div v-for="(item, idx) in serverShopItems" :key="idx" 
+            <div v-for="(item, idx) in serverShopItems" :key="idx"
             class="shop-item" :class="{ 'owned': item.possuido }">
               <div class="item-icon"><i :class="item.iconClass || 'fa-solid fa-box-open'"></i></div>
               <div class="item-info">
@@ -667,8 +667,8 @@
               </div>
 <button
   class="btn-buy"
-  :class="{ 
-    'owned': item.possuido, 
+  :class="{
+    'owned': item.possuido,
     'affordable': totalCoins >= item.preco && !item.possuido,
     'equipped': item.equipado
   }"
@@ -791,7 +791,7 @@ const OFFLINE_TRACKS = {
     { id: 9, title: "Stay", artist: { name: "The Kid LAROI & Justin Bieber", id: 8 }, album: { title: "F*CK LOVE 3", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-9.dzcdn.net/stream/c-9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i-4.mp3", release_date: "2021-07-09" },
     { id: 10, title: "Heat Waves", artist: { name: "Glass Animals", id: 9 }, album: { title: "Dreamland", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-0.dzcdn.net/stream/c-0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j-1.mp3", release_date: "2020-06-29" }
   ],
-  
+ 
   // Artistas variados para "Adivinhe o Artista"
   guessArtist: [
     { id: 11, title: "Can't Feel My Face", artist: { name: "The Weeknd", id: 1, picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a/250x250-000000-80-0-0.jpg" }, album: { title: "Beauty Behind the Madness", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-1.dzcdn.net/stream/c-1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a-2.mp3", release_date: "2015-08-28" },
@@ -805,7 +805,7 @@ const OFFLINE_TRACKS = {
     { id: 19, title: "Peaches", artist: { name: "Justin Bieber", id: 13, picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q/250x250-000000-80-0-0.jpg" }, album: { title: "Justice", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/9r9r9r9r9r9r9r9r9r9r9r9r9r9r9r9r/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-9.dzcdn.net/stream/c-9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q-1.mp3", release_date: "2021-03-19" },
     { id: 20, title: "Drivers License", artist: { name: "Olivia Rodrigo", id: 14, picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s/250x250-000000-80-0-0.jpg" }, album: { title: "SOUR", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/0t0t0t0t0t0t0t0t0t0t0t0t0t0t0t0t/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-0.dzcdn.net/stream/c-0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s-2.mp3", release_date: "2021-01-08" }
   ],
-  
+ 
   // Títulos curtos para "Complete a Música"
   completeLyric: [
     { id: 21, title: "Let It Be", artist: { name: "The Beatles", id: 15 }, album: { title: "Let It Be", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-1.dzcdn.net/stream/c-1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u-1.mp3", release_date: "1970-03-06" },
@@ -819,7 +819,7 @@ const OFFLINE_TRACKS = {
     { id: 29, title: "Smells Like Teen Spirit", artist: { name: "Nirvana", id: 22 }, album: { title: "Nevermind", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-9.dzcdn.net/stream/c-9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c-3.mp3", release_date: "1991-09-24" },
     { id: 30, title: "Wonderwall", artist: { name: "Oasis", id: 23 }, album: { title: "(What's the Story) Morning Glory?", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-0.dzcdn.net/stream/c-0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d-1.mp3", release_date: "1995-10-30" }
   ],
-  
+ 
   // Músicas clássicas para "Quiz Musical"
   musicTrivia: [
     { id: 31, title: "Thriller", artist: { name: "Michael Jackson", id: 20 }, album: { title: "Thriller", cover_small: "https://e-cdns-images.dzcdn.net/images/cover/1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e/56x56-000000-80-0-0.jpg" }, preview: "https://cdns-preview-1.dzcdn.net/stream/c-1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e-1.mp3", release_date: "1982-11-30" },
@@ -1034,7 +1034,7 @@ export default {
         { user: 'Lucas_Pop', song: 'As It Was', time: '8m', avatar: 'https://i.pravatar.cc/150?img=3' },
         { user: 'Julia_Indie', song: 'Heat Waves', time: '12m', avatar: 'https://i.pravatar.cc/150?img=4' }
       ],
-    
+   
       gameModes: [
         {
           id: 'guess-song',
@@ -1094,14 +1094,13 @@ export default {
   },
 
   computed: {
-    accuracy() {
-  if (this.totalQuestions === 0) return 0;
-  // Só conta perguntas respondidas, não o total do jogo
-  const answered = this.currentQuestionNum - 1; // perguntas já respondidas
-  if (answered === 0) return 0;
-  return Math.round((this.correctAnswers / answered) * 100);
+accuracy() {
+  if (this.currentGame && this.currentQuestionNum > 1) {
+    const answered = this.currentQuestionNum - 1;
+    return answered > 0 ? Math.round((this.correctAnswers / answered) * 100) : 0;
+  }
+  return parseInt(localStorage.getItem('soundup_accuracy') || '0');
 },
-
    top1() {
     return this.serverLeaderboard?.[0] || null;
   },
@@ -1131,7 +1130,7 @@ export default {
    
     // Preview apenas em Easy e Medium para Adivinhe o Artista
     showArtistPreviewButton() {
-      return this.currentGame?.id === 'guess-artist' && 
+      return this.currentGame?.id === 'guess-artist' &&
              ['easy', 'medium'].includes(this.currentDifficulty?.level);
     },
    
@@ -1141,10 +1140,10 @@ canAdvanceLevel() {
   const levels = ['easy', 'medium', 'hard'];
   const currentIndex = levels.indexOf(this.currentDifficulty.level);
   if (currentIndex < 0 || currentIndex >= levels.length - 1) return false;
-  
+ 
   // ⚡ NOVO: precisão mínima de 70% para liberar próximo nível
-  const precision = this.totalQuestions > 0 
-    ? Math.round((this.correctAnswers / this.totalQuestions) * 100) 
+  const precision = this.totalQuestions > 0
+    ? Math.round((this.correctAnswers / this.totalQuestions) * 100)
     : 0;
   return precision >= 70;
 },
@@ -1155,11 +1154,11 @@ nextDifficulty() {
   const currentIndex = levels.indexOf(this.currentDifficulty.level);
   if (currentIndex < 0 || currentIndex >= levels.length - 1) return null;
   const nextLevel = levels[currentIndex + 1];
-  
+ 
   // ⚡ Sempre retorna um objeto válido (mesmo se não estiver em serverDifficulties)
   const found = this.serverDifficulties.find(d => d.level === nextLevel);
   if (found) return found;
-  
+ 
   const names = { easy: 'Fácil', medium: 'Médio', hard: 'Difícil' };
   const times = { easy: 30, medium: 20, hard: 15 };
   const mults = { easy: 1, medium: 1.5, hard: 2.5 };
@@ -1208,9 +1207,9 @@ async mounted() {
     this.showNotification('Moedas insuficientes!', 'error');
     return;
   }
-  
+ 
   const token = localStorage.getItem('token');
-  
+ 
   // Modo offline
   if (!token) {
     try {
@@ -1219,7 +1218,7 @@ async mounted() {
         this.showNotification('Item já possuído!', 'warning');
         return;
       }
-      
+     
       offlineInventory.push({
         itemId: item.id,
         nome: item.nome,
@@ -1229,11 +1228,11 @@ async mounted() {
         ativo: true,
         dataCompra: new Date().toISOString()
       });
-      
+     
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
       this.totalCoins -= item.preco;
       localStorage.setItem('soundup_coins', this.totalCoins);
-      
+     
       // Atualiza lista local
       const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
       if (itemIndex >= 0) {
@@ -1241,7 +1240,7 @@ async mounted() {
         this.serverShopItems[itemIndex].equipado = true;
         this.serverShopItems[itemIndex].podeComprar = false;
       }
-      
+     
       this.showNotification(`🛒 ${item.nome} comprado e ativado!`, 'success');
     } catch (error) {
       console.error('Erro compra offline:', error);
@@ -1249,21 +1248,21 @@ async mounted() {
     }
     return;
   }
-  
+ 
   // Modo online
   try {
     const res = await gameApi.buyItem({ itemId: item.id });
-    
+   
     if (res.data.success) {
       this.totalCoins = res.data.moedasRestantes;
-      
+     
       // Recarrega shop do servidor
       const shopRes = await gameApi.getShop();
       this.serverShopItems = shopRes.data.items.map(i => ({
         ...i,
         equipado: i.ativo || false
       }));
-      
+     
       this.showNotification(`🛒 ${item.nome} comprado!`, 'success');
     } else {
       throw new Error(res.data.error || 'Erro desconhecido');
@@ -1278,7 +1277,7 @@ async mounted() {
 // ⚡ NOVO: Equipar/Desequipar item
 async toggleEquipItem(item) {
   const token = localStorage.getItem('token');
-  
+ 
   if (!token) {
     // Modo offline — toggle no localStorage
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
@@ -1294,7 +1293,7 @@ async toggleEquipItem(item) {
       }
       invItem.ativo = !invItem.ativo;
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
-      
+     
       // Atualiza UI
       const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
       if (itemIndex >= 0) {
@@ -1311,7 +1310,7 @@ async toggleEquipItem(item) {
     }
     return;
   }
-  
+ 
   // Modo online
   try {
     if (item.equipado) {
@@ -1319,7 +1318,7 @@ async toggleEquipItem(item) {
     } else {
       await gameApi.equipItem(item.id);
     }
-    
+   
     // Recarrega shop
     const shopRes = await gameApi.getShop();
     this.serverShopItems = shopRes.data.items.map(i => ({
@@ -1334,12 +1333,12 @@ async toggleEquipItem(item) {
    loadOfflineInventory() {
   const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
   const offlineCoins = parseInt(localStorage.getItem('soundup_coins') || '0');
-  
+ 
   if (offlineInventory.length > 0 && this.serverShopItems.length > 0) {
     this.serverShopItems = this.serverShopItems.map(item => {
       const invItem = offlineInventory.find(i => i.itemId === item.id);
       const owned = !!invItem;
-      
+     
       return {
         ...item,
         possuido: owned,
@@ -1474,7 +1473,7 @@ loadOfflineData() {
   this.serverDailyRewards = []
   this.serverShopItems = []
 },
-    
+   
 async loadDifficulties(modoId) {
   try {
     const res = await gameApi.getDifficulties(modoId)
@@ -1493,31 +1492,31 @@ async loadDifficulties(modoId) {
     console.error('Erro ao carregar dificuldades:', error)
   }
 },
-    
+   
 async startGameWithDifficulty(difficulty) {
   if (difficulty.locked) return;
-  
+ 
   this.currentDifficulty = difficulty;
   this.showDifficultyModal = false;
   this.currentGame = this.selectedMode;
   this.resetGame();
-  
+ 
   // Verifica se está logado
   const token = localStorage.getItem('token');
-  
+ 
   if (!token) {
     // Modo offline - inicia direto sem API
     this.isOfflineMode = true;
     this.isLoading = false;
     this.loadNextOfflineQuestion();
-    
+   
     setTimeout(() => {
       const gameSection = document.getElementById('game-demo');
       if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
     }, 100);
     return;
   }
-  
+ 
   // Modo online com API
    // Modo online com API
   try {
@@ -1530,32 +1529,32 @@ async startGameWithDifficulty(difficulty) {
     this.correctAnswerIndex = this.currentTrack.respostaCorreta;
     this.isLoading = false;
     this.isOfflineMode = !!res.data.demo; // Marca como offline se for demo
-    
+   
     setTimeout(() => {
       const gameSection = document.getElementById('game-demo');
       if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
     }, 100);
-    
+   
   } catch (error) {
     console.error('Erro ao iniciar jogo:', error);
     // Fallback para offline
     this.useOfflineMode();
   }
 },
-    
+   
 async selectAnswer(index) {
   if (this.showAnswer) return;
 
   this.selectedAnswer = index;
   this.showAnswer = true;
   this.cleanupAudio();
-  
+ 
   // ⚡ PARA o timer ao selecionar resposta
   if (this.timerInterval) {
     clearInterval(this.timerInterval);
     this.timerInterval = null;
   }
-  
+ 
     // Modo offline/demo — processa localmente
     if (this.isOfflineMode || !this.sessionId || this.sessionId.toString().startsWith('demo-')) {
         this.processOfflineAnswer(index);
@@ -1617,25 +1616,25 @@ if (this.timerInterval) {
 // NOVO MÉTODO: Processa resposta no modo offline
 processOfflineAnswer(index) {
   const isCorrect = index === this.correctAnswerIndex;
-  
+ 
   if (isCorrect) {
     this.correctAnswers++;
     // ⚡ RECOMPENSA DESDE A PRIMEIRA PERGUNTA
     const basePoints = 100;
     const baseCoins = 10;
     const multiplier = this.currentDifficulty?.multiplier || 1;
-    
+   
     // Bônus por streak (acertos seguidos)
     const streakBonus = Math.min(this.correctAnswers, 5); // max 5x streak
     const pts = Math.floor((basePoints + (streakBonus * 10)) * multiplier);
     const coins = Math.floor((baseCoins + (streakBonus * 2)) * multiplier);
-    
+   
     this.score += pts;
     this.sessionCoins += coins;
     this.totalCoins += coins;
     this.lastPointsGained = pts;
     this.lastCoinsGained = coins;
-    
+   
     // Efeito visual de moedas ganhas
     this.showCoinAnimation(coins);
   } else {
@@ -1643,24 +1642,24 @@ processOfflineAnswer(index) {
     this.lastCoinsGained = 0;
   }
 },
-    
+   
 async nextQuestion() {
   // ⚡ LIMPA estados ANTES de tudo
   this.selectedAnswer = null;
   this.showAnswer = false;
   this.cleanupAudio();
-  
+ 
   if (this.gameCompleted) return;
-  
+ 
   // Incrementa número da pergunta
   this.currentQuestionNum++;
-  
+ 
   // Verifica se completou o jogo
   if (this.currentQuestionNum > this.totalQuestions) {
   const levels = ['easy', 'medium', 'hard'];
   const currentIdx = levels.indexOf(this.currentDifficulty?.level);
   const precision = Math.round((this.correctAnswers / this.totalQuestions) * 100);
-  
+ 
   // ⚡ Sempre define nivelDesbloqueado se houver próximo nível teórico
   // A regra de 70% agora é só no computed canAdvanceLevel (UI)
   const nextLevel = (currentIdx >= 0 && currentIdx < levels.length - 1)
@@ -1675,11 +1674,11 @@ async nextQuestion() {
     acertos: this.correctAnswers,
     precisao: precision
   };
-  
+ 
   this.completeGame();
   return;
 }
-  
+ 
   // Modo offline/demo: carrega próxima pergunta das tracks locais
   if (this.isOfflineMode || !this.sessionId || this.sessionId.toString().startsWith('demo-')) {
     this.loadNextOfflineQuestion();
@@ -1690,7 +1689,7 @@ async nextQuestion() {
     this.startTimer();
     return;
   }
-  
+ 
   // Modo online: usa próxima pergunta da API
   if (this.nextQuestionData) {
     this.currentTrack = this.normalizeQuestion(this.nextQuestionData);
@@ -1701,14 +1700,14 @@ async nextQuestion() {
     // Fallback: tenta carregar do servidor ou offline
     this.loadNextOfflineQuestion();
   }
-  
+ 
   this.selectedAnswer = null;
   this.showAnswer = false;
   this.timerWidth = 100;
   this.answerTime = 0;
   this.startTimer();
 },
-    
+   
     async claimDailyReward(day) {
       if (!day.disponivel || day.claimed) return;
       try {
@@ -1721,33 +1720,33 @@ async nextQuestion() {
         alert(error.response?.data?.error || 'Erro');
       }
     },
-    
+   
  async claimAchievement(achievement) {
   // Só permite resgatar se estiver desbloqueada e não resgatada
   if (!achievement.desbloqueada || achievement.resgatada) return;
-  
+ 
   // Se não estiver logado, mostra alerta
   const token = localStorage.getItem('token');
   if (!token) {
     alert('Faça login para resgatar conquistas!');
     return;
   }
-  
+ 
   try {
     const res = await gameApi.claimAchievement(achievement.id);
     this.totalCoins = res.data.moedasTotais;
-    
+   
     // Recarrega conquistas do servidor
     const achievementsRes = await gameApi.getAchievements();
     this.serverAchievements = achievementsRes.data.achievements;
-    
+   
     alert(`🏆 +${res.data.moedasGanhas} moedas!`);
   } catch (error) {
     console.error('Erro ao resgatar conquista:', error);
     alert(error.response?.data?.error || 'Erro ao resgatar conquista');
   }
 },
-    
+   
   async buyItem(item) {
   if (item.possuido || this.totalCoins < item.preco) return;
   const token = localStorage.getItem('token');
@@ -1788,7 +1787,7 @@ const res = await gameApi.buyItem({ itemId: item.id });
     alert(error.response?.data?.error || 'Erro ao comprar item');
   }
 },
-    
+   
 async advanceToNextLevel() {
   // ⚡ Usa nextDifficulty diretamente — não depende mais de completionResult
   const next = this.nextDifficulty;
@@ -1796,18 +1795,18 @@ async advanceToNextLevel() {
     console.warn('Nenhum próximo nível disponível');
     return;
   }
-  
+ 
   // Procura na lista de dificuldades; se não achar, usa o objeto retornado
   let diff = this.serverDifficulties.find(d => d.level === next.level);
   if (!diff) {
     this.serverDifficulties.push(next);
     diff = next;
   }
-  
+ 
   // Desbloqueia e marca como não completado
   diff.locked = false;
   diff.completed = false;
-  
+ 
   // Persiste progresso offline
   const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
   if (!savedProgress[this.currentGame.id]) savedProgress[this.currentGame.id] = {};
@@ -1815,7 +1814,7 @@ async advanceToNextLevel() {
     savedProgress[this.currentGame.id][next.level] = { completed: false, bestScore: 0 };
   }
   localStorage.setItem('soundup_progress', JSON.stringify(savedProgress));
-  
+ 
   await this.startGameWithDifficulty(diff);
 },
 
@@ -1842,20 +1841,20 @@ async advanceToNextLevel() {
         try {
           const proxy = CORS_PROXIES[this.currentProxyIndex];
           const url = `${proxy}${encodeURIComponent(`${DEEZER_API}${endpoint}`)}`;
-          
+         
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
-          
+         
           const response = await fetch(url, { signal: controller.signal });
           clearTimeout(timeoutId);
-          
+         
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          
+         
           const data = await response.json();
           return data.contents ? JSON.parse(data.contents) : data;
         } catch (error) {
           console.warn(`Tentativa ${i + 1} falhou:`, error.message);
-          
+         
           if (i < retries - 1) {
             this.getNextProxy();
             await new Promise(r => setTimeout(r, 1000));
@@ -1894,7 +1893,7 @@ async advanceToNextLevel() {
 
    loadNextOfflineQuestion() {
   const mode = this.currentGame?.id || 'guess-song';
-  
+ 
   if (mode === 'complete-lyric') {
     const tracks = OFFLINE_TRACKS.completeLyric;
     if (tracks.length > 0) {
@@ -1909,35 +1908,35 @@ async advanceToNextLevel() {
       }
       usedInSession.push(randomTrack.id);
       sessionStorage.setItem('soundup_used_lyrics', JSON.stringify(usedInSession));
-      
+     
       const words = randomTrack.title.split(' ');
-      const maskCount = this.currentDifficulty?.level === 'easy' 
+      const maskCount = this.currentDifficulty?.level === 'easy'
         ? Math.max(1, Math.floor(words.length * 0.3))
         : this.currentDifficulty?.level === 'medium'
         ? Math.max(1, Math.floor(words.length * 0.6))
         : Math.max(1, words.length - 1);
-      
+     
       const indicesToMask = [];
       const allIndices = words.map((_, i) => i).sort(() => Math.random() - 0.5);
       for (let i = 0; i < maskCount && i < allIndices.length; i++) {
         indicesToMask.push(allIndices[i]);
       }
-      
+     
       const tituloMascarado = words.map((word, idx) => ({
         texto: word,
         oculto: indicesToMask.includes(idx)
       }));
-      
+     
       const wrongTracks = tracks
         .filter(t => t.id !== randomTrack.id)
         .sort(() => Math.random() - 0.5)
         .slice(0, 3);
-      
+     
       const options = [
         { texto: randomTrack.title, correta: true },
         ...wrongTracks.map(t => ({ texto: t.title, correta: false }))
       ].sort(() => Math.random() - 0.5);
-      
+     
       this.currentTrack = {
         modo: 'complete-lyric',
         musica: {
@@ -1952,14 +1951,14 @@ async advanceToNextLevel() {
         opcoes: options,
         respostaCorreta: options.findIndex(o => o.correta)
       };
-      
+     
       this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
       this.correctAnswerIndex = this.currentTrack.respostaCorreta;
       this.isLoading = false;
     }
     return;
   }
-  
+ 
   const tracks = OFFLINE_TRACKS[mode] || OFFLINE_TRACKS.guessSong;
   if (tracks.length > 0) {
     const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
@@ -1986,12 +1985,12 @@ generateOptions(correctTrack, allTracks) {
     .filter(t => t.id !== correctTrack.id)
     .sort(() => Math.random() - 0.5)
     .slice(0, 3);
-  
+ 
   const options = [
     { texto: correctTrack.title, correta: true },
     ...wrong.map(t => ({ texto: t.title, correta: false }))
   ].sort(() => Math.random() - 0.5);
-  
+ 
   return options;
 },
 
@@ -2052,7 +2051,7 @@ markDifficultyCompleted() {
       }, 100);
     },
    
-    
+   
     // Retorna o texto da resposta correta para o feedback
 getCorrectAnswerText() {
   if (this.currentGame?.id === 'complete-lyric') {
@@ -2069,12 +2068,13 @@ async completeGame() {
   this.selectedAnswer = null;
   this.cleanupAudio();
   this.markDifficultyCompleted();
-  
+
   // ⚡ LIMPA timer se estiver rodando
   if (this.timerInterval) {
     clearInterval(this.timerInterval);
     this.timerInterval = null;
   }
+
   // Finaliza no servidor se tiver sessão real (não demo)
   if (this.sessionId && !this.sessionId.toString().startsWith('demo-')) {
     try {
@@ -2083,36 +2083,47 @@ async completeGame() {
       console.log('Sessão já finalizada ou erro:', e.message);
     }
   }
- const answeredCount = this.currentQuestionNum - 1; // quantas foram respondidas
-const accuracy = answeredCount > 0 
-  ? Math.round((this.correctAnswers / answeredCount) * 100) 
-  : 0;
-      this.accuracy = Math.round((this.accuracy + accuracy) / 2) || accuracy;
-     
-      const completionBonus = this.correctAnswers === this.totalQuestions ? 1000 :
-                             this.correctAnswers >= this.totalQuestions / 2 ? 500 : 100;
-     
-      this.totalCoins += completionBonus;
-      this.sessionCoins += completionBonus;
-      
-      // Salva progresso
-      localStorage.setItem('soundup_coins', this.totalCoins);
-      localStorage.setItem('soundup_score', this.totalScore);
-      localStorage.setItem('soundup_accuracy', this.accuracy);
-      const precision = Math.round((this.correctAnswers / this.totalQuestions) * 100);
-if (precision >= 70) {
-  const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
-  if (!savedProgress[this.currentGame.id]) savedProgress[this.currentGame.id] = {};
-  savedProgress[this.currentGame.id][this.currentDifficulty.level] = {
-    completed: true,
-    bestScore: Math.max(
-      savedProgress[this.currentGame.id][this.currentDifficulty.level]?.bestScore || 0,
-      this.score
-    )
-  };
-  localStorage.setItem('soundup_progress', JSON.stringify(savedProgress));
-}
-    },
+
+  // ─── CÁLCULO DA PRECISÃO ───
+  const answeredCount = this.currentQuestionNum - 1;
+  const precision = answeredCount > 0
+    ? Math.round((this.correctAnswers / answeredCount) * 100)
+    : 0;
+
+  // ─── ATUALIZA ESTATÍSTICAS GLOBAIS ───
+  const prevAccuracy = parseInt(localStorage.getItem('soundup_accuracy') || '0');
+  const totalGames = parseInt(localStorage.getItem('soundup_total_games') || '0');
+
+  this.accuracy = totalGames === 0
+    ? precision
+    : Math.round(((prevAccuracy * totalGames) + precision) / (totalGames + 1));
+
+  localStorage.setItem('soundup_accuracy', this.accuracy);
+  localStorage.setItem('soundup_total_games', totalGames + 1);
+
+  // ─── SALVA MOEDAS E PONTUAÇÃO ───
+  localStorage.setItem('soundup_coins', this.totalCoins);
+  localStorage.setItem('soundup_score', this.totalScore);
+
+  // ─── DESBLOQUEIA PRÓXIMA DIFICULDADE (se 70%+) ───
+  if (precision >= 70 && this.currentGame && this.currentDifficulty) {
+    const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
+   
+    if (!savedProgress[this.currentGame.id]) {
+      savedProgress[this.currentGame.id] = {};
+    }
+   
+    const currentLevel = this.currentDifficulty.level;
+    const prevBest = savedProgress[this.currentGame.id][currentLevel]?.bestScore || 0;
+   
+    savedProgress[this.currentGame.id][currentLevel] = {
+      completed: true,
+      bestScore: Math.max(prevBest, this.score)
+    };
+   
+    localStorage.setItem('soundup_progress', JSON.stringify(savedProgress));
+  }
+},
 
     // Recomeça no mesmo nível
     restartSameLevel() {
@@ -2138,7 +2149,7 @@ if (precision >= 70) {
 async selectMode(mode) {
   // Verifica se usuário está logado para modos que precisam de auth
   const token = localStorage.getItem('token')
-  
+ 
   if (!token) {
     // Modo demo/offline - não carrega dificuldades do servidor
     this.selectedMode = mode
@@ -2155,7 +2166,7 @@ this.serverDifficulties = [
 ]
     return
   }
-  
+ 
   this.selectedMode = mode
   await this.loadDifficulties(mode.id)
   this.showDifficultyModal = true
@@ -4842,7 +4853,7 @@ body {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .completion-stats {
     grid-template-columns: 1fr;
   }
@@ -4914,7 +4925,7 @@ body {
   .rewards-track {
     overflow-x: scroll;
   }
-  
+ 
   .title-display {
     font-size: 1.25rem;
   }

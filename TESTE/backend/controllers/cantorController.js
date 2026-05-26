@@ -68,6 +68,13 @@ const getByNome = async (req, res) => {
 // ATUALIZAR CANTOR
 const update = async (req, res) => {
   try {
+    // 🔥 Garante que musicas seja sempre array de strings/IDs
+    if (req.body.musicas) {
+      req.body.musicas = req.body.musicas.map(m => 
+        typeof m === 'object' ? m._id : m
+      ).filter(Boolean)
+    }
+
     const cantor = await cantorService.updateCantor(req.params.id, req.body)
 
     if (!cantor) {

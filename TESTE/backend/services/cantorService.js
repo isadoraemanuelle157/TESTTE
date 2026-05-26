@@ -130,7 +130,7 @@ const getCantores = async () => {
 const getCantorById = async (id) => {
   return await Cantor.findById(id)
     .populate('generos', '_id nome')
-    .populate('musicas', '_id nome')
+    .populate('musicas', '_id nome foto duracao humor')
 .populate({
   path: 'albuns',
   select: '_id nome descricao foto musicas',
@@ -169,8 +169,12 @@ const payload = {
   decada: getDecada(data.ano ?? cantorAntigo.ano)
 }
 
-  const musicasAntigas = (cantorAntigo.musicas || []).map(m => m.toString())
-  const musicasNovas = payload.musicas.map(m => m.toString())
+const musicasAntigas = (cantorAntigo.musicas || []).map(m => 
+  m._id ? m._id.toString() : m.toString()
+)
+const musicasNovas = payload.musicas.map(m => 
+  typeof m === 'object' ? m._id?.toString() : m.toString()
+).filter(Boolean)
   
   const generosAntigos = (cantorAntigo.generos || []).map(g => g.toString())
 const generosNovos = payload.generos.map(g => g.toString())
