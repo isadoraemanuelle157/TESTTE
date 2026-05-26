@@ -524,6 +524,11 @@ export default {
     window.addEventListener('player-state-changed', this.handlePlayerStateChange)
 
     this.syncPlaylistWithRoute()
+
+    const playlistId = this.$route.query.id || this.$route.params.id
+  if (playlistId) {
+    this.carregarPlaylist(playlistId)
+  }
   },
 
   beforeUnmount() {

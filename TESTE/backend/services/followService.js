@@ -8,10 +8,14 @@ const seguir = async (seguidor_id, seguindo_id, tipo) => {
   const tipoFormatado = tipo.toLowerCase()
   const tipoRef = tipoFormatado === 'cantor' ? 'Cantor' : 'Usuario'
 
-  if (String(seguidor_id) === String(seguindo_id)) {
+  // ✅ Garante que IDs são strings para comparação
+  const seguidorIdStr = String(seguidor_id)
+  const seguindoIdStr = String(seguindo_id)
+
+  if (seguidorIdStr === seguindoIdStr) {
     throw new Error('Não pode seguir a si mesmo')
   }
-
+  
   if (tipoFormatado === 'cantor') {
     const existe = await Follow.findOne({ seguidor_id, seguindo_id, tipo: tipoFormatado })
     if (existe) return { follow: existe, direto: true, solicitado: false }

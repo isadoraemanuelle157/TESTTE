@@ -2,12 +2,41 @@ const followService = require('../services/followService')
 
 const seguir = async (req, res) => {
   try {
+    // ✅ VALIDAÇÃO CRÍTICA: Verifica se req.user existe
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        error: 'Usuário não autenticado',
+        detail: 'Token JWT inválido ou não fornecido'
+      })
+    }
+
     const seguidor_id = req.user.id
-    const { seguindo_id, tipo, artistData } = req.body 
+    const { seguindo_id, tipo, artistData } = req.body
+
+    // ✅ VALIDAÇÃO: Campos obrigatórios no body
+    if (!seguindo_id) {
+      return res.status(400).json({ 
+        error: 'seguindo_id é obrigatório no body',
+        detail: 'Envie: { seguindo_id: "id_do_usuario", tipo: "usuario" }'
+      })
+    }
+
+    if (!tipo) {
+      return res.status(400).json({ 
+        error: 'tipo é obrigatório no body',
+        detail: 'Envie: { seguindo_id: "id", tipo: "usuario" ou "cantor" }'
+      })
+    }
+
+    if (!['usuario', 'cantor'].includes(tipo.toLowerCase())) {
+      return res.status(400).json({ 
+        error: 'tipo inválido',
+        detail: 'tipo deve ser "usuario" ou "cantor"'
+      })
+    }
 
     let resultado
     
-    // ✅ CORRIGIDO: Se vier artistData e tipo for 'cantor', importa primeiro
     if (artistData && tipo === 'cantor') {
       resultado = await followService.seguirArtistaExterno(seguidor_id, artistData)
     } else {
@@ -25,7 +54,7 @@ const seguir = async (req, res) => {
 
     if (error.code === 11000) {
       return res.status(400).json({
-        message: 'Erro de duplicidade no banco',
+        message: 'Você já segue este usuário',
         keyPattern: error.keyPattern,
         keyValue: error.keyValue
       })
@@ -37,8 +66,16 @@ const seguir = async (req, res) => {
 
 const desseguir = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
     const seguidor_id = req.user.id
     const { seguindo_id, tipo } = req.body
+
+    if (!seguindo_id || !tipo) {
+      return res.status(400).json({ error: 'seguindo_id e tipo são obrigatórios' })
+    }
 
     await followService.desseguir(seguidor_id, seguindo_id, tipo)
 
@@ -60,6 +97,10 @@ const seguidores = async (req, res) => {
 
 const seguindo = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
     const usuario_id = req.user.id
     const { tipo } = req.query
 
@@ -92,8 +133,16 @@ const total = async (req, res) => {
 
 const verificar = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
     const seguidor_id = req.user.id
     const { seguindo_id, tipo } = req.query
+
+    if (!seguindo_id || !tipo) {
+      return res.status(400).json({ error: 'seguindo_id e tipo são obrigatórios na query' })
+    }
 
     const seguindo = await followService.verificar(seguidor_id, seguindo_id, tipo)
     res.json({ seguindo })
@@ -104,6 +153,10 @@ const verificar = async (req, res) => {
 
 const aceitarSolicitacao = async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
     const follow = await followService.aceitarSolicitacao(
       req.user.id,
       req.body.solicitanteId

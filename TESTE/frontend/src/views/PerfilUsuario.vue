@@ -271,15 +271,18 @@
               
               <!-- Conteúdo normal quando pode ver -->
               <div v-if="canViewActivities" class="playlist-grid">
-                <div
-                  v-for="playlist in playlistsPublicas.slice(0, 3)"
+              <div
+                v-for="playlist in playlistsPublicas.slice(0, 3)"
                   :key="playlist._id"
                   class="playlist-card"
                   @click="openPlaylist(playlist)"
                 >
-                  <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                  <img :src="playlist.cover || playlist.capa || blackCover" :alt="playlist.nome" />
+                  <div v-if="playlist.privada" class="playlist-private-badge">
+  <i class="fa fa-lock"></i>
+</div>
                   <h4>{{ playlist.nome }}</h4>
-                  <p>{{ playlist.totalMusicas }} músicas</p>
+                  <p>{{ playlist.totalMusicas || playlist.musicas?.length || 0 }} músicas</p>
                 </div>
               </div>
 
@@ -293,46 +296,6 @@
                 <div class="blur-overlay">
                   <i class="fa fa-lock"></i>
                   <span>Conteúdo privado</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Atividades - Sempre aparece mas bloqueada se não puder ver -->
-            <div class="content-section full-width" :class="{ 'blurred-section': !canViewActivities, 'compact-section': !canViewActivities }">
-              <div class="section-header">
-                <h3><i class="fa fa-pulse"></i> Atividade Recente</h3>
-                <i v-if="!canViewActivities" class="fa fa-lock lock-icon"></i>
-              </div>
-              
-              <!-- Conteúdo normal quando pode ver -->
-              <div v-if="canViewActivities" class="activity-list">
-                <div
-                  v-for="atividade in atividadesRecentes.slice(0, 5)"
-                  :key="atividade.id"
-                  class="activity-item"
-                >
-                  <div class="activity-icon" :class="atividade.tipo">
-                    <i :class="getActivityIcon(atividade.tipo)"></i>
-                  </div>
-                  <div class="activity-content">
-                    <p class="activity-text" v-html="atividade.texto"></p>
-                    <span class="activity-time">{{ timeAgo(atividade.data) }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Conteúdo bloqueado quando não pode ver -->
-              <div v-else class="blurred-content activity-blur">
-                <div class="blur-activity" v-for="n in 3" :key="n">
-                  <div class="blur-activity-icon"></div>
-                  <div class="blur-activity-content">
-                    <p class="blur-text">████████████████████</p>
-                    <span class="blur-text">██ horas atrás</span>
-                  </div>
-                </div>
-                <div class="blur-overlay">
-                  <i class="fa fa-lock"></i>
-                  <span>Atividades privadas</span>
                 </div>
               </div>
             </div>
@@ -385,7 +348,10 @@
               @click="openPlaylist(playlist)"
             >
               <div class="playlist-cover-large">
-                <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                <img :src="playlist.cover || playlist.capa || blackCover" :alt="playlist.nome" />
+                <div v-if="playlist.privada" class="playlist-private-badge large">
+  <i class="fa fa-lock"></i>
+</div>
                 <div class="playlist-overlay">
                   <button class="btn-play-playlist-large">
                     <i class="fa fa-play"></i>
@@ -396,8 +362,7 @@
                 <h4>{{ playlist.nome }}</h4>
                 <p>{{ playlist.descricao || 'Sem descrição' }}</p>
                 <div class="playlist-meta-large">
-                  <span><i class="fa fa-music"></i> {{ playlist.musicas?.length || 0 }} músicas</span>
-                  <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
+                  <span><i class="fa fa-music"></i> {{ playlist.totalMusicas || playlist.musicas?.length || 0 }} músicas</span>
                 </div>
               </div>
             </div>
@@ -413,11 +378,16 @@
               class="user-card"
               @click="goToProfile(user)"
             >
-              <div class="user-avatar-wrapper">
-                <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
-              </div>
-              <h4>{{ user.nome }}</h4>
-              <p>@{{ user.username }}</p>
+   <div class="user-avatar-wrapper">
+  <img
+    :src="user.avatar || user.foto || defaultAvatar"
+    :alt="user.nome || user.username"
+    class="user-avatar-large"
+    @error="$event.target.src = defaultAvatar"
+  />
+</div>
+<h4>{{ user.nome || user.username }}</h4>
+<p>@{{ user.username }}</p>
               <button
                 v-if="!isOwnProfile && String(user._id) !== String(loggedUserId)"
                 class="btn-follow-small"
@@ -442,12 +412,16 @@
               class="user-card"
               @click="goToProfile(item)"
             >
-              <div class="user-avatar-wrapper">
-                <img :src="item.avatar || item.foto || defaultAvatar" class="user-avatar-large" />
-              </div>
-              <h4>{{ item.nome }}</h4>
-              <p v-if="item.tipo === 'usuario'">@{{ item.username }}</p>
-              <p v-else class="cantor-label">Cantor</p>
+   <div class="user-avatar-wrapper">
+  <img 
+    :src="item.avatar || item.foto || defaultAvatar" 
+    class="user-avatar-large"
+    @error="$event.target.src = defaultAvatar"
+  />
+</div>
+<h4>{{ item.nome || item.username || 'Usuário' }}</h4>
+<p v-if="item.tipo === 'usuario'">@{{ item.username }}</p>
+<p v-else class="cantor-label">{{ item.nome || 'Cantor' }}</p>
             </div>
           </div>
           <div class="empty-state large" v-else>
@@ -463,6 +437,58 @@
         <p>Este usuário desativou a visualização de atividades e playlists.</p>
       </div>
     </div>
+
+    <!-- MODAL PLAYLIST -->
+<transition name="fade">
+  <div
+    v-if="showPlaylistModal && selectedPlaylist"
+    class="playlist-modal-overlay"
+    @click.self="showPlaylistModal = false"
+  >
+    <div class="playlist-modal">
+
+      <button
+        class="playlist-modal-close"
+        @click="showPlaylistModal = false"
+      >
+        <i class="fa fa-times"></i>
+      </button>
+
+      <img
+        :src="selectedPlaylist.cover || selectedPlaylist.capa || blackCover"
+        class="playlist-modal-cover"
+      />
+
+      <h2>{{ selectedPlaylist.nome }}</h2>
+
+      <p>
+        {{ selectedPlaylist.totalMusicas || selectedPlaylist.musicas?.length || 0 }}
+        músicas
+      </p>
+
+      <div class="playlist-modal-list">
+        <div
+          v-for="(musica, index) in selectedPlaylist.musicas || []"
+          :key="musica.id || index"
+          class="playlist-modal-song"
+          @click="playMusic(musica)"
+        >
+          <span>{{ index + 1 }}</span>
+
+          <img
+            :src="musica.cover || blackCover"
+          />
+
+          <div>
+            <h4>{{ musica.nome }}</h4>
+            <p>{{ musica.artist }}</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</transition>
 
     <!-- Toast -->
     <transition name="toast">
@@ -528,6 +554,9 @@ export default {
   seguindo: true,
   estatisticas: true
 },
+showPlaylistModal: false,
+selectedPlaylist: null,
+blackCover: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiMwMDAiLz48L3N2Zz4=',
 solicitacaoPendente: false,
 
     }
@@ -948,6 +977,7 @@ async carregarPerfil() {
     )
 
     this.musicasFavoritas = Array.isArray(res.data) ? res.data : []
+     this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
     this.permissions.curtidas = true
   } catch (error) {
     if (error.response?.status === 403) {
@@ -1007,6 +1037,10 @@ async carregarPerfil() {
 },
 
 async toggleFollow() {
+    if (String(this.userId) === String(this.loggedUserId)) {
+    this.showToast('Você não pode seguir a si mesmo', 'error')
+    return
+  }
   try {
     const token = localStorage.getItem('token')
 
@@ -1080,9 +1114,18 @@ async toggleFollow() {
       }))
     },
     
-    openPlaylist(playlist) {
-      this.$router.push(`/playlist/${playlist._id}`)
-    },
+openPlaylist(playlist) {
+
+  // ✅ PRIVADA
+  if (playlist.privada) {
+    this.showToast('Esta playlist é privada', 'error')
+    return
+  }
+
+  // ✅ ABRIR MODAL
+  this.selectedPlaylist = playlist
+  this.showPlaylistModal = true
+},
     
     goToProfile(item) {
       const id = item._id || item.id
@@ -2096,7 +2139,97 @@ async toggleFollow() {
   overflow: hidden;
   min-height: 400px;
 }
+.playlist-private-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+}
 
+.playlist-private-badge.large {
+  width: 40px;
+  height: 40px;
+}
+.playlist-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.playlist-modal {
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #0f172a;
+  border-radius: 24px;
+  padding: 24px;
+  position: relative;
+}
+
+.playlist-modal-cover {
+  width: 100%;
+  aspect-ratio: 16/8;
+  object-fit: cover;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.playlist-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  cursor: pointer;
+}
+
+.playlist-modal-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.playlist-modal-song {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.playlist-modal-song:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.playlist-modal-song img {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+}
 .locked-mock-content {
   filter: blur(8px) grayscale(0.6);
   opacity: 0.4;
