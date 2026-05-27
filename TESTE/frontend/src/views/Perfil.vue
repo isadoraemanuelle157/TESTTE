@@ -1576,7 +1576,6 @@ activityResources: [
   { key: 'atividades', label: 'Atividades', icon: 'fa fa-pulse' },
   { key: 'seguidores', label: 'Seguidores', icon: 'fa fa-users' },
   { key: 'seguindo', label: 'Seguindo', icon: 'fa fa-user-plus' },
-  { key: 'estatisticas', label: 'Estatísticas', icon: 'fa fa-bar-chart' },
   { key: 'tudo', label: 'Tudo', icon: 'fa fa-lock' }
 ],
    

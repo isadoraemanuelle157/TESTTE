@@ -3,6 +3,11 @@ const mongoose = require('mongoose')
 const Usuario = require('../models/Usuario')
 const Follow = require('../models/Follow')
 const PrivacidadeAtividade = require('../models/PrivacidadeAtividade')
+const Bloqueio = require('../models/Bloqueio')
+const Denuncia = require('../models/Denuncia')
+const Curtida = require('../models/Curtida')
+const CurtidaExterna = require('../models/CurtidaExterna')
+
 const bcrypt = require('bcrypt')
 const axios = require('axios')
 
@@ -137,6 +142,12 @@ const normalizarVibes = (vibesInput = []) => {
 const canAccessProfile = async (targetUserId, viewerId) => {
   const user = await Usuario.findById(targetUserId, 'perfilPrivado')
   if (!user) return false
+
+  if (viewerId) {
+    const blockRelation = await getBlockRelation(viewerId, targetUserId)
+    if (blockRelation.blocked) return false
+  }
+
   if (!user.perfilPrivado) return true
   if (!viewerId) return false
   if (sameId(targetUserId, viewerId)) return true
@@ -149,6 +160,7 @@ const canAccessProfile = async (targetUserId, viewerId) => {
 
   return !!follow
 }
+
 
 const hasPendingFollowRequest = async (targetUserId, viewerId) => {
   if (!viewerId) return false
@@ -270,6 +282,32 @@ const getUserById = async (id, currentUserId) => {
 
   const formatted = formatUser(user)
   const isOwner = sameId(formatted.id, currentUserId)
+
+    if (!isOwner && currentUserId) {
+    const blockRelation = await getBlockRelation(currentUserId, id)
+
+    if (blockRelation.blocked) {
+      return {
+        id: formatted.id,
+        nome: formatted.nome,
+        username: formatted.username,
+        avatar: formatted.avatar,
+        cover: formatted.cover || null,
+        bio: '',
+        membroDesde: formatted.membroDesde || null,
+        perfilPrivado: false,
+        onboardingCompleto: formatted.onboardingCompleto || false,
+        generos: { todos: [], locais: [], externos: [] },
+        artistasFavoritos: { todos: [], locais: [], externos: [] },
+        vibesFavoritas: { todos: [], locais: [], externas: [] },
+        acessoLiberado: false,
+        solicitacaoPendente: false,
+        perfilBloqueado: true,
+        bloqueadoPorMim: blockRelation.blockedByMe,
+        meBloqueou: blockRelation.blockedMe
+      }
+    }
+  }
 
   const montarResposta = async (completo = false) => {
     if (!completo) {
@@ -415,16 +453,20 @@ const searchUsers = async (query) => {
 }
 
 const getUserStats = async (userId) => {
-  const Curtida = require('../models/Curtida')
   const Playlist = require('../models/Playlist')
 
-  const [musicasCurtidas, playlists] = await Promise.all([
+  const [curtidasLocais, curtidasExternas, playlists] = await Promise.all([
     Curtida.countDocuments({ usuario: userId }),
+    CurtidaExterna.countDocuments({ usuario: userId }),
     Playlist.countDocuments({ usuario: userId, privacidade: 'Pública' })
   ])
 
-  return { musicasCurtidas, playlists }
+  return {
+    musicasCurtidas: curtidasLocais + curtidasExternas,
+    playlists
+  }
 }
+
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/api/token'
@@ -965,6 +1007,242 @@ const recuperarSenha = async (email, novaSenha) => {
   return true
 }
 
+const getBlockRelation = async (viewerId, targetUserId) => {
+  if (!viewerId || !targetUserId || sameId(viewerId, targetUserId)) {
+    return {
+      blocked: false,
+      blockedByMe: false,
+      blockedMe: false
+    }
+  }
+
+  const [blockedByMe, blockedMe] = await Promise.all([
+    Bloqueio.findOne({
+      bloqueador: viewerId,
+      bloqueado: targetUserId
+    }).lean(),
+    Bloqueio.findOne({
+      bloqueador: targetUserId,
+      bloqueado: viewerId
+    }).lean()
+  ])
+
+  return {
+    blocked: !!(blockedByMe || blockedMe),
+    blockedByMe: !!blockedByMe,
+    blockedMe: !!blockedMe
+  }
+}
+
+const getPublicFollowers = async (targetUserId, viewerId) => {
+  const podeAcessar = await canAccessProfile(targetUserId, viewerId)
+  if (!podeAcessar) {
+    const err = new Error('Perfil privado')
+    err.code = 'PROFILE_PRIVATE'
+    throw err
+  }
+
+  const bloqueado = await isResourceBlocked(targetUserId, viewerId, 'seguidores')
+  if (bloqueado) {
+    const err = new Error('Seguidores ocultos para você')
+    err.code = 'FOLLOWERS_BLOCKED'
+    throw err
+  }
+
+  const followingViewer = viewerId
+    ? await Follow.find({
+        seguidor_id: viewerId,
+        tipo: 'usuario'
+      }).select('seguindo_id').lean()
+    : []
+
+  const followingViewerSet = new Set(
+    followingViewer.map(item => String(item.seguindo_id))
+  )
+
+  const followers = await Follow.find({
+    seguindo_id: targetUserId,
+    tipo: 'usuario'
+  })
+    .populate('seguidor_id', 'nome username avatar')
+    .sort({ createdAt: -1 })
+    .lean()
+
+  return followers
+    .map(item => {
+      const user = item.seguidor_id
+      if (!user) return null
+
+      return {
+        _id: user._id,
+        id: user._id,
+        nome: user.nome,
+        username: user.username,
+        avatar: user.avatar || null,
+        tipo: 'usuario',
+        isFollowing: followingViewerSet.has(String(user._id))
+      }
+    })
+    .filter(Boolean)
+}
+
+const getPublicFollowing = async (targetUserId, viewerId) => {
+  const podeAcessar = await canAccessProfile(targetUserId, viewerId)
+  if (!podeAcessar) {
+    const err = new Error('Perfil privado')
+    err.code = 'PROFILE_PRIVATE'
+    throw err
+  }
+
+  const bloqueado = await isResourceBlocked(targetUserId, viewerId, 'seguindo')
+  if (bloqueado) {
+    const err = new Error('Seguindo oculto para você')
+    err.code = 'FOLLOWING_BLOCKED'
+    throw err
+  }
+
+  const [seguindoUsuarios, seguindoCantores] = await Promise.all([
+    Follow.find({
+      seguidor_id: targetUserId,
+      tipo: 'usuario'
+    })
+      .populate('seguindo_id', 'nome username avatar')
+      .sort({ createdAt: -1 })
+      .lean(),
+
+    Follow.find({
+      seguidor_id: targetUserId,
+      tipo: 'cantor'
+    })
+      .populate('seguindo_id', 'nome foto avatar')
+      .sort({ createdAt: -1 })
+      .lean()
+  ])
+
+  const usuarios = seguindoUsuarios
+    .map(item => {
+      const user = item.seguindo_id
+      if (!user) return null
+
+      return {
+        _id: user._id,
+        id: user._id,
+        nome: user.nome,
+        username: user.username,
+        avatar: user.avatar || null,
+        tipo: 'usuario'
+      }
+    })
+    .filter(Boolean)
+
+  const cantores = seguindoCantores
+    .map(item => {
+      const cantor = item.seguindo_id
+      if (!cantor) return null
+
+      return {
+        _id: cantor._id,
+        id: cantor._id,
+        nome: cantor.nome,
+        avatar: cantor.foto || cantor.avatar || null,
+        foto: cantor.foto || cantor.avatar || null,
+        tipo: 'cantor'
+      }
+    })
+    .filter(Boolean)
+
+  return [...usuarios, ...cantores]
+}
+
+const blockUser = async (actorId, targetUserId) => {
+  if (sameId(actorId, targetUserId)) {
+    throw new Error('Você não pode bloquear a si mesmo')
+  }
+
+  await Bloqueio.findOneAndUpdate(
+    {
+      bloqueador: actorId,
+      bloqueado: targetUserId
+    },
+    {
+      $setOnInsert: {
+        bloqueador: actorId,
+        bloqueado: targetUserId
+      }
+    },
+    {
+      upsert: true,
+      new: true
+    }
+  )
+
+  await Promise.all([
+    Follow.deleteMany({
+      tipo: 'usuario',
+      $or: [
+        { seguidor_id: actorId, seguindo_id: targetUserId },
+        { seguidor_id: targetUserId, seguindo_id: actorId }
+      ]
+    }),
+    PrivacidadeAtividade.deleteMany({
+      $or: [
+        { usuarioDono: actorId, usuarioBloqueado: targetUserId },
+        { usuarioDono: targetUserId, usuarioBloqueado: actorId }
+      ]
+    }),
+    Usuario.updateOne(
+      { _id: actorId },
+      { $pull: { solicitacoesSeguir: { usuario: targetUserId } } }
+    ),
+    Usuario.updateOne(
+      { _id: targetUserId },
+      { $pull: { solicitacoesSeguir: { usuario: actorId } } }
+    )
+  ])
+
+  return {
+    blocked: true,
+    blockedByMe: true,
+    blockedMe: false
+  }
+}
+
+const unblockUser = async (actorId, targetUserId) => {
+  await Bloqueio.findOneAndDelete({
+    bloqueador: actorId,
+    bloqueado: targetUserId
+  })
+
+  return {
+    blocked: false,
+    blockedByMe: false,
+    blockedMe: false
+  }
+}
+
+const getBlockStatus = async (actorId, targetUserId) => {
+  return getBlockRelation(actorId, targetUserId)
+}
+
+const reportUser = async (denuncianteId, denunciadoId, motivo, chat = null) => {
+  if (sameId(denuncianteId, denunciadoId)) {
+    throw new Error('Você não pode denunciar a si mesmo')
+  }
+
+  if (!motivo || !String(motivo).trim()) {
+    throw new Error('Motivo da denúncia é obrigatório')
+  }
+
+  const denuncia = await Denuncia.create({
+    denunciante: denuncianteId,
+    denunciado: denunciadoId,
+    chat,
+    motivo: String(motivo).trim()
+  })
+
+  return denuncia
+}
+
 // ============================================
 // EXPORTS ATUALIZADOS
 // ============================================
@@ -974,5 +1252,11 @@ module.exports = {
   updateUser, deleteUser, searchUsers,
   generateDefaultAvatar, getUserStats,
   canAccessProfile, hasPendingFollowRequest, isResourceBlocked,
-  getUserMixes, recuperarSenha  // 🎯 NOVO
+  getUserMixes, recuperarSenha,   getPublicFollowers,
+  getPublicFollowing,
+  blockUser,
+  unblockUser,
+  getBlockStatus,
+  reportUser
+  // 🎯 NOVO
 }
