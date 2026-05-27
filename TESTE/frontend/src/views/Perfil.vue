@@ -637,10 +637,7 @@
                 <span class="count-badge">{{ formatNumber(filteredHistorico.length) }} reproduções</span>
               </div>
               <div class="header-actions">
-          <button class="btn-shuffle" @click="shuffleHistory" :disabled="filteredHistorico.length === 0">
-                  <i class="fa fa-random"></i> <span>Aleatório</span>
-                </button>
-           <button class="btn-clear" @click="confirmClearHistory" v-if="historicoCompleto.length > 0 && isOwnProfile">
+          <button class="btn-clear" @click="confirmClearHistory" v-if="historicoReproducao.length > 0 && isOwnProfile">
                   <i class="fa fa-trash-o"></i> Limpar histórico
                 </button>
               </div>
@@ -652,22 +649,27 @@
                 :key="groupIndex"
                 class="history-group"
               >
-                <div class="history-date-header">
-                  <div class="date-icon">
-                    <i class="fa fa-calendar-o"></i>
-                  </div>
-                  <div class="date-info">
-                    <span class="date-label">{{ group.date }}</span>
-                    <span class="date-count">{{ group.items.length }} {{ group.items.length === 1 ? 'música' : 'músicas' }}</span>
-                  </div>
-                  <button class="btn-play-date" @click="playDateGroup(group.items)">
-                    <i class="fa fa-play"></i>
-                  </button>
-                </div>
+<div class="history-date-header">
+  <div class="date-icon">
+    <i class="fa fa-calendar-o"></i>
+  </div>
+  <div class="date-info">
+    <span class="date-label">{{ group.date }}</span>
+    <span class="date-count">{{ group.items.length }} {{ group.items.length === 1 ? 'música' : 'músicas' }}</span>
+  </div>
+  <div class="date-actions">
+    <button class="btn-toggle-date" @click.stop="toggleDateGroup(groupIndex)" :title="isDateExpanded(groupIndex) ? 'Minimizar' : 'Expandir'">
+      <i :class="isDateExpanded(groupIndex) ? 'fa fa-chevron-up' : 'fa fa-chevron-down'"></i>
+    </button>
+    <button class="btn-play-date" @click="playDateGroup(group.items)">
+      <i class="fa fa-play"></i>
+    </button>
+  </div>
+</div>
                
-                <div class="history-items">
-                  <div
-                    v-for="(music, idx) in group.items"
+             <div class="history-items" v-show="isDateExpanded(groupIndex)">
+  <div
+    v-for="(music, idx) in group.items"
                     :key="`${groupIndex}-${music.id}-${idx}`"
                     class="history-item-detailed"
                     :class="{ 'playing': currentPlayingId === music.id }"
@@ -685,17 +687,25 @@
                       <p>{{ music.artist }}</p>
                     </div>
                     <div class="history-meta">
-                      <span class="history-time">
-                        <i class="fa fa-clock-o"></i> {{ music.hora }}
-                      </span>
+ <span class="history-time">
+  <i class="fa fa-clock-o"></i> {{ formatTimeFromDate(music.dataReproducao) }}
+</span>
                     </div>
                     <div class="history-actions">
-                      <button class="btn-like-sm" @click.stop="toggleLike(music)" :class="{ 'active': music.curtido }">
-                        <i :class="music.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                      </button>
-                      <button class="btn-more-sm" @click.stop="showMusicOptions(music)">
-                        <i class="fa fa-ellipsis-v"></i>
-                      </button>
+<button 
+  class="btn-like-sm" 
+  @click.stop="curtirDoHistorico(music)" 
+  :class="{ 'active': music.curtido }"
+>
+  <i :class="music.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+</button>
+  <button 
+  class="btn-more-sm" 
+  @click.stop="removerDoHistorico(music, groupIndex, idx)" 
+  title="Remover do histórico"
+>
+  <i class="fa fa-trash-o"></i>
+</button>
                     </div>
                   </div>
                 </div>
@@ -1470,10 +1480,11 @@ export default {
       openedPlaylist: null,
       showAvatarSelector: false,
       activeAvatarTab: 'initials',
+      expandedDates: {},
       isDragging: false,
       hoveredRow: null,
-       _shuffledHistory: null,
-    _shuffledIndex: 0,
+      historicoReproducao: [],
+loadingHistory: false,
       hasStory: false,
       storyProgress: 0,
        blackPlaceholder: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
@@ -1574,8 +1585,6 @@ activityResources: [
       playlistsRecentes: [],
       todasPlaylists: [],
       minhasPlaylists: [],
-      historicoRecente: [],
-      historicoCompleto: [],
       artistasFavoritos: [],
       favoritos: [],
       favoritosRecentes: [],
@@ -1644,17 +1653,6 @@ activityResources: [
       toastTimeout: null
     }
   },
-
-  watch: {
-  activeFilter() {
-    this._shuffledHistory = null
-    this._shuffledIndex = 0
-  },
-  selectedGenres() {
-    this._shuffledHistory = null
-    this._shuffledIndex = 0
-  }
-},
 
   computed: {
 usuarioGenerosList() {
@@ -1853,7 +1851,7 @@ isNewMember() {
 },
 
 filteredHistorico() {
-  let historico = [...this.historicoCompleto]
+  let historico = [...this.historicoReproducao]  // ← MUDAR: era historicoCompleto
 
   historico = historico.filter(item => this.matchesActivePeriod(this.getItemDate(item)))
   historico = historico.filter(item => this.matchesSelectedGenres(item))
@@ -1870,7 +1868,7 @@ filteredFavoritos() {
   return this.sortByDate(favoritos)
 },
 
-   groupedHistory() {
+ groupedHistory() {
   const groups = {}
 
   this.filteredHistorico.forEach(item => {
@@ -1901,26 +1899,43 @@ filteredFavoritos() {
     }
   },
 
- mounted() {
+  // ADICIONAR watcher ou no método que carrega a tab history:
+watch: {
+  activeTab(newVal) {
+    if (newVal === 'history') {
+      this.carregarHistorico()
+    }
+  }
+},
+
+mounted() {
   setTimeout(() => {
     this.loading = false
   }, 800)
 
-this.carregarUsuarioLogado()
-this.loadCustomAvatarOptions()
-this.generateArtisticAvatars()
-this.generateFunAvatars()
+  this.carregarUsuarioLogado()
+  this.loadCustomAvatarOptions()
+  this.generateArtisticAvatars()
+  this.generateFunAvatars()
 
-this.carregarHistorico()
+  // 🔥 ORDEM CORRETA: curtidas primeiro, depois histórico (precisa dos curtidos)
+  this.carregarCurtidas().then(() => {
+    this.carregarHistorico()  // agora tem os curtidos disponíveis para sincronizar
+  })
+  
   this.carregarDados()
-  this.carregarCurtidas()
   this.carregarFavoritos()
   this.carregarArtistas()
   this.carregarAtividades()
   this.carregarFollows()
 
+  // Event listeners...
   this.onPlaylistUpdated = () => this.carregarDados()
-  this.onLikesUpdated = () => this.carregarCurtidas()
+  this.onLikesUpdated = () => {
+    this.carregarCurtidas().then(() => {
+      this.carregarHistorico()  // re-sincroniza curtidos no histórico
+    })
+  }
   this.onFavoritesUpdated = () => this.carregarFavoritos()
   this.onPerfilUpdated = () => {
     this.carregarUsuarioLogado()
@@ -1934,8 +1949,11 @@ this.carregarHistorico()
   window.addEventListener('perfil-updated', this.onPerfilUpdated)
   window.addEventListener('focus', this.handleFocus)
   window.addEventListener('storage', this.handleStorage)
+  
+  // 🔥 REMOVER este listener duplicado de focus — já está no handleFocus
+  // window.addEventListener('focus', () => { ... })  ← REMOVER
 
-   this.onPlaySong = (e) => {
+  this.onPlaySong = (e) => {
     const song = e.detail?.song
     if (song) {
       this.adicionarAoHistorico(song)
@@ -1958,6 +1976,185 @@ this.carregarHistorico()
   },
 
   methods: {
+    formatTimeFromDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+},
+
+ async carregarHistorico() {
+  this.loadingHistory = true
+  try {
+    const token = localStorage.getItem('token')
+    
+    // Fallback: array vazio se não logado
+    if (!token) {
+      this.historicoReproducao = []
+      return
+    }
+    
+    // Busca do backend
+    const res = await fetch('http://localhost:3002/historico/reproducao', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('Erro ao carregar histórico:', res.status, errText)
+      throw new Error('Erro ao carregar histórico')
+    }
+    
+    const data = await res.json()
+    
+    // Cria Set de IDs curtidos para lookup rápido
+    const curtidosIds = new Set(this.musicasFavoritas.map(m => String(m.id)))
+    
+    this.historicoReproducao = data.map(h => ({
+      id: h.musicaId || h.id || h._id,
+      title: h.titulo || h.title || 'Música',
+      artist: h.artista || h.artist || 'Artista desconhecido',
+      cover: h.capa || h.cover || '',
+      source: h.source || 'local',
+      // 🔥 PADRONIZAR CAMPO DE DATA: usar createdAt como principal
+      dataReproducao: h.createdAt || h.dataReproducao || h.data || new Date().toISOString(),
+      tempoOuvido: h.tempoOuvido || 0,
+      reproduzidaAteOFim: h.reproduzidaAteOFim || false,
+      // 🔥 SINCRONIZAR CURTIDA com base nas curtidas carregadas
+      curtido: curtidosIds.has(String(h.musicaId || h.id || h._id))
+    }))
+    
+  } catch (err) {
+    console.error('Erro ao carregar histórico:', err)
+    this.historicoReproducao = []
+  } finally {
+    this.loadingHistory = false
+  }
+},
+
+    isDateExpanded(groupIndex) {
+  // Por padrão, expanded = true (mostra tudo). Se explicitamente false, esconde.
+  return this.expandedDates[groupIndex] !== false
+},
+
+toggleDateGroup(groupIndex) {
+  this.expandedDates = {
+    ...this.expandedDates,
+    [groupIndex]: !this.isDateExpanded(groupIndex)
+  }
+},
+
+async curtirDoHistorico(music) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast({ title: "Erro", message: "Você precisa estar logado", type: "error", icon: "fa fa-exclamation-circle" })
+      return
+    }
+
+    // 🔥 CORREÇÃO: IDs externos (Deezer/Spotify) não são ObjectId válidos.
+    // Usar endpoint /curtidas/externas para músicas externas.
+// ✅ DEPOIS (correto):
+const source = music.source || 'local'
+const isExternal = source !== 'local'
+
+// SEMPRE usa a mesma rota /curtidas/:id, mas envia source + dadosMusica no body
+const endpoint = `http://localhost:3002/curtidas/${music.id}`
+
+const body = {
+  source: source
+}
+
+if (isExternal) {
+  body.dadosMusica = {
+    id: String(music.id),           // ID externo obrigatório
+    titulo: music.title || music.nome || 'Música',
+    artista: music.artist || 'Artista desconhecido',
+    capa: music.cover || '',
+    previewUrl: music.url || '',
+    duration: music.duration || 30
+  }
+}
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    const data = await res.json()
+    music.curtido = data.liked
+
+      try {
+    const historico = JSON.parse(localStorage.getItem('historico') || '[]')
+    const idx = historico.findIndex(h => String(h.id) === String(music.id))
+    if (idx !== -1) {
+      historico[idx].curtido = data.liked
+      localStorage.setItem('historico', JSON.stringify(historico))
+    }
+  } catch (e) { /* ignore */ }
+
+    this.showToast({
+      title: data.liked ? "Curtida! ❤️" : "Removida",
+      message: `"${music.title || music.nome}" ${data.liked ? 'adicionada aos curtidos' : 'removida dos curtidos'}`,
+      type: data.liked ? "success" : "info",
+      icon: data.liked ? "fa fa-heart" : "fa fa-heart-o"
+    })
+
+    if (data.liked) {
+      window.dispatchEvent(new CustomEvent('likes-updated'))
+    }
+
+  } catch (error) {
+    console.error("Erro ao curtir do histórico:", error)
+    this.showToast({ title: "Erro", message: "Não foi possível curtir a música", type: "error", icon: "fa fa-exclamation-circle" })
+  }
+},
+
+async removerDoHistorico(music, groupIndex, idx) {
+  try {
+    const token = localStorage.getItem('token')
+    
+    // Remove do backend
+    await fetch(`http://localhost:3002/historico/reproducao/${music.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    // Remove do estado visual
+    const group = this.groupedHistory[groupIndex]
+    if (group) {
+      group.items.splice(idx, 1)
+    }
+
+    // Atualiza o array principal
+    this.historicoReproducao = this.historicoReproducao.filter(h => h.id !== music.id)
+
+    this.showToast({
+      title: "Removido do histórico",
+      message: `"${music.title || music.nome}" removida`,
+      type: "info",
+      icon: "fa fa-trash-o"
+    })
+
+  } catch (error) {
+    console.error("Erro ao remover do histórico:", error)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível remover do histórico",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
+
    shuffleHistory() {
   if (this.filteredHistorico.length === 0) return
 
@@ -2161,42 +2358,20 @@ this.carregarHistorico()
   }
 },
 
-    adicionarAoHistorico(song) {
+adicionarAoHistorico(song) {
   try {
-    const historico = JSON.parse(localStorage.getItem('historico') || '[]')
-    
-    const novoItem = {
-      id: song.id,
-      title: song.title || song.nome,
-      artist: song.artist || 'Artista desconhecido',
-      cover: song.cover || song.foto || 'https://via.placeholder.com/80',
-      data: new Date().toISOString(),
-      genero: song.genero || null,
-      curtido: song.curtido || false
-    }
-    
-    // Evita duplicatas consecutivas
-    if (historico.length > 0 && historico[0].id === novoItem.id) {
-      return
-    }
-    
-    // Adiciona no início e limita a 100 itens
-    historico.unshift(novoItem)
-    const historicoLimitado = historico.slice(0, 100)
-    
-    localStorage.setItem('historico', JSON.stringify(historicoLimitado))
-    
-    // Recarrega o histórico na tela
+    // Não salva mais no localStorage — deixa o backend gerenciar
+    // Apenas recarrega da API para refletir a nova reprodução
     this.carregarHistorico()
-    
   } catch (error) {
     console.error('Erro ao adicionar ao histórico:', error)
   }
 },
 
 getItemDate(item) {
-  // Tenta vários campos de data possíveis
-  const dateStr = (
+  // Prioridade para o campo padronizado do histórico
+  return (
+    item?.dataReproducao ||  // ← CAMPO PADRONIZADO DO HISTÓRICO
     item?.dataCurtida ||
     item?.dataFavoritado ||
     item?.createdAt ||
@@ -2204,10 +2379,8 @@ getItemDate(item) {
     item?.adicionadoEm ||
     item?.data ||
     item?.membroDesde ||
-    new Date().toISOString()  // ← Fallback para data atual
+    new Date().toISOString()
   )
-  
-  return dateStr
 },
 
 parseValidDate(value) {
@@ -3095,11 +3268,12 @@ abrirFavorito(item) {
   }))
 },
 
-    handleFocus() {
-      this.carregarCurtidas()
-      this.carregarDados()
-      this.carregarFavoritos()
-    },
+handleFocus() {
+  this.carregarCurtidas()
+  this.carregarDados()
+  this.carregarFavoritos()
+  this.carregarHistorico()  // ← ADICIONAR/CONFIRMAR
+},
 
    handleStorage(e) {
   if (e.key === 'usuario_perfil') {
@@ -3188,37 +3362,6 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
   } catch (error) {
     console.error("Erro ao carregar curtidas:", error)
     this.musicasFavoritas = []
-  }
-},
-    
-carregarHistorico() {
-  try {
-    const historico = JSON.parse(localStorage.getItem('historico') || '[]')
-
-    this.historicoCompleto = historico.map((item, index) => {
-      const dataItem = item.data || item.createdAt || new Date()
-
-      return {
-        id: item.id || index,
-        title: item.title || item.nome || 'Música',
-        artist: item.artist || 'Artista desconhecido',
-        cover: item.cover || 'https://via.placeholder.com/80',
-        hora: new Date(dataItem).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        data: dataItem,
-        genero: item.genero || null,
-        generos: item.generos || (item.genero ? [item.genero] : []),
-        curtido: !!item.curtido
-      }
-    })
-
-    this.historicoRecente = this.historicoCompleto.slice(0, 10)
-  } catch (error) {
-    console.error('Erro ao carregar histórico:', error)
-    this.historicoCompleto = []
-    this.historicoRecente = []
   }
 },
 
@@ -3793,11 +3936,12 @@ playMusic(musica) {
         ? musica.cantores.filter(c => c && c.nome).map(c => c.nome).join(', ')
         : 'Artista desconhecido'
     ),
-    cover: musica.cover || musica.foto || '',
-    url: musica.preview || musica.url || musica.link || '',
-    duration: musica.duration || musica.duracao || 30,
-    type: 'profile'
-  }
+     cover: musica.cover || musica.foto || '',
+  url: musica.preview || musica.url || musica.link || '',
+  duration: musica.duration || musica.duracao || 30,
+  source: musica.source || 'local',   // ← ADICIONAR
+  type: 'profile'
+}
 
   const playlist = this.musicasFavoritas.map(m => ({
     id: m.id || m._id,
@@ -4077,17 +4221,31 @@ openPlaylist(playlist) {
       })
     },
     
-    executeClearHistory() {
-      this.historicoCompleto = []
-      this.historicoRecente = []
-      localStorage.removeItem('historico')
-      this.showToast({
-        title: "Histórico limpo 🗑️",
-        message: "Seu histórico de reprodução foi completamente apagado",
-        type: "success",
-        icon: "fa fa-trash"
-      })
-    },
+   async executeClearHistory() {
+  try {
+    const token = localStorage.getItem('token')
+    await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    this.historicoReproducao = []
+    this.showToast({
+      title: "Histórico limpo 🗑️",
+      message: "Seu histórico de reprodução foi completamente apagado",
+      type: "success",
+      icon: "fa fa-trash"
+    })
+  } catch (error) {
+    console.error('Erro ao limpar histórico:', error)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível limpar o histórico",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
 
 goToArtist(artista) {
   // 🔥 CORREÇÃO: Verificar se é artista externo ou local
@@ -4212,8 +4370,6 @@ goToArtist(artista) {
     },
 
 toggleSort() {
-  this._shuffledHistory = null
-  this._shuffledIndex = 0
   this.sortDesc = !this.sortDesc
 },
 
@@ -6809,7 +6965,31 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.date-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
+.btn-toggle-date {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-toggle-date:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+}
 .playlist-info-large p {
   font-size: 14px;
   color: #64748b;

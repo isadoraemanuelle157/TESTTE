@@ -1294,6 +1294,31 @@ export default {
   },
 
   methods: {
+    async registrarHistoricoLocal(track) {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        musicaId: track.id,
+        titulo: track.title,
+        artista: track.artist,
+        capa: track.cover,
+        source: track.source,
+        tipo: 'musica'
+      })
+    })
+  } catch (err) {
+    console.error('Erro ao registrar histórico:', err)
+  }
+},
+
     // ===== NOVO: Redireciona para playlist do local =====
     goToLocalPlaylist(locNome) {
       this.$router.push({
@@ -1548,8 +1573,16 @@ export default {
       } else {
         playlist = [playerSong]
       }
+// 🔥 NOVO: Registrar no histórico antes de tocar
+this.registrarHistoricoLocal({
+  id: track.id,
+  title: track.title || this.getResultTitle(track),
+  artist: track.artist?.name || 'Desconhecido',
+  cover: this.getBestImage(track),
+  source: track.source || 'deezer'
+})
 
-      window.dispatchEvent(new CustomEvent('play-song', {
+window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
           playlist: playlist,

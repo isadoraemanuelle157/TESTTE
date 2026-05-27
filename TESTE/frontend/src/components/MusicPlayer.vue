@@ -381,15 +381,37 @@ export default {
         isCurrent: index === this.currentIndex
       }))
     },
-    isExternalTrack() {
-      if (!this.currentTrack) return false
-      const source = (this.currentTrack.source || 'local').toLowerCase()
-      return source !== 'local'
-    },
-    currentTrackSource() {
-      if (!this.currentTrack) return 'local'
-      return (this.currentTrack.source || 'local').toLowerCase()
-    }
+isExternalTrack() {
+  if (!this.currentTrack) return false
+
+  // Se tiver source explícito
+  const source = (this.currentTrack.source || '').toLowerCase()
+
+  if (source && source !== 'local') {
+    return true
+  }
+
+  // Detecta IDs externos automaticamente
+  const id = String(this.currentTrack.id || '')
+
+  // Mongo ObjectId = 24 caracteres hexadecimais
+  const isMongoId = /^[a-f\d]{24}$/i.test(id)
+
+  return !isMongoId
+},
+currentTrackSource() {
+  if (!this.currentTrack) return 'local'
+
+  const source = (this.currentTrack.source || '').toLowerCase()
+
+  if (source) return source
+
+  // fallback automático
+  const id = String(this.currentTrack.id || '')
+  const isMongoId = /^[a-f\d]{24}$/i.test(id)
+
+  return isMongoId ? 'local' : 'spotify'
+}
   },
 
   mounted() {
@@ -431,7 +453,59 @@ export default {
   // ✅ METHODS: TODOS os métodos devem estar AQUI DENTRO
   // ═══════════════════════════════════════════════════════
   methods: {
-   
+ async registrarHistorico(track, extraData = {}) {
+  if (!track) {
+    console.warn('⚠️ registrarHistorico chamado sem track')
+    return
+  }
+  
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.warn('⚠️ Sem token, histórico não registrado')
+      return
+    }
+    
+    // 🔥 GARANTIR que musicaId não está vazio
+    const musicaId = String(track.id || track._id || track.musicaId || '')
+    if (!musicaId || musicaId === 'undefined' || musicaId === 'null') {
+      console.error('❌ ID da música inválido:', track)
+      return
+    }
+    
+    const body = {
+      musicaId: musicaId,
+      titulo: track.title || track.nome || track.titulo || 'Sem título',
+      artista: track.artist || track.artista || 'Desconhecido',
+      capa: track.cover || track.capa || track.foto || '',
+      source: (track.source || 'local').toLowerCase(),
+      tipo: track.type || 'musica',
+      ...extraData
+    }
+    
+    console.log('📤 Enviando histórico:', body)  // 🔥 LOG para debug
+    
+    const res = await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+    
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('❌ Erro ao registrar histórico:', res.status, errText)
+    } else {
+      const data = await res.json()
+      console.log('✅ Histórico registrado:', data)  // 🔥 LOG de sucesso
+    }
+    
+  } catch (err) {
+    console.error('❌ Erro ao registrar histórico:', err)
+  }
+},
     goToCreatePlaylist() {
       this.closePlaylistModal()
       this.$router?.push('/playlist').catch(() => {})
@@ -871,6 +945,7 @@ export default {
       this._trackStartTime = Date.now()
       this._totalListenedTime = 0
       this.loadAndPlay()
+    this.registrarHistorico(this.currentTrack)
       if (this.isShuffled) this.generateShuffledOrder()
     },
 
@@ -982,23 +1057,50 @@ export default {
       if (this.currentTrack && this._trackStartTime && !append) {
         this.notifyTrackEnded(false)
       }
-      if (playlist && Array.isArray(playlist) && playlist.length > 0) {
-        if (append) {
-          this.queue = [...this.queue, ...playlist]
-        } else {
-          this.queue = [...playlist]
-          this.currentIndex = (index !== undefined) ? index : 0
-        }
-      } else if (song) {
-        if (append) {
-          this.queue.push(song)
-          this.showToast('Adicionado à fila', 'success')
-          return
-        } else {
-          this.queue = [song]
-          this.currentIndex = 0
-        }
-      }
+const normalizedSong = song ? {
+    id: song.id || song._id || song.musicaId || '',
+    title: song.title || song.nome || song.titulo || 'Sem título',
+    artist: song.artist || song.artista || 'Desconhecido',
+    cover: song.cover || song.capa || song.foto || '',
+    url: song.url || song.preview || song.previewUrl || song.link || '',
+    duration: song.duration || song.duracao || 30,
+    source: song.source || 'local',
+    type: song.type || 'musica',
+    album: song.album || '',
+    genero: song.genero || song.generos?.[0] || null
+  } : null
+
+  if (playlist && Array.isArray(playlist) && playlist.length > 0) {
+    // 🔥 Normalizar TODAS as músicas da playlist
+    const normalizedPlaylist = playlist.map(track => ({
+      id: track.id || track._id || track.musicaId || '',
+      title: track.title || track.nome || track.titulo || 'Sem título',
+      artist: track.artist || track.artista || 'Desconhecido',
+      cover: track.cover || track.capa || track.foto || '',
+      url: track.url || track.preview || track.previewUrl || track.link || '',
+      duration: track.duration || track.duracao || 30,
+      source: track.source || 'local',
+      type: track.type || 'musica',
+      album: track.album || '',
+      genero: track.genero || track.generos?.[0] || null
+    }))
+
+    if (append) {
+      this.queue = [...this.queue, ...normalizedPlaylist]
+    } else {
+      this.queue = [...normalizedPlaylist]
+      this.currentIndex = (index !== undefined) ? index : 0
+    }
+  } else if (normalizedSong) {
+    if (append) {
+      this.queue.push(normalizedSong)
+      this.showToast('Adicionado à fila', 'success')
+      return
+    } else {
+      this.queue = [normalizedSong]
+      this.currentIndex = 0
+    }
+  }
       this.hasTrack = true
       this._trackStartTime = Date.now()
       this._totalListenedTime = 0
@@ -1019,7 +1121,9 @@ export default {
       this.$nextTick(() => {
         this.checkLikeStatus()
         this.checkFavoriteStatus()
+        // 🔥 REGISTRAR HISTÓRICO — só registra quando realmente começa a tocar
       })
+      this.queue = [song]
     },
 
     // ═══════════════════════════════════════════════════════
@@ -1066,15 +1170,24 @@ export default {
         console.log('⏳ Áudio não pronto, aguardando canplay...')
         return
       }
-      try {
-        this.isLoading = true
-        this.playPromise = audio.play()
-        await this.playPromise
-        console.log('✅ Tocando com sucesso!')
-        this.isPlaying = true
-        this.isLoading = false
-        if (!this._trackStartTime) this._trackStartTime = Date.now()
-      } catch (err) {
+       try {
+    this.isLoading = true
+    this.playPromise = audio.play()
+    await this.playPromise
+    console.log('✅ Tocando com sucesso!')
+    this.isPlaying = true
+    this.isLoading = false
+    if (!this._trackStartTime) this._trackStartTime = Date.now()
+    
+    // 🔥 REGISTRAR HISTÓRICO AO COMEÇAR A TOCAR
+    if (this.currentTrack) {
+      this.registrarHistorico(this.currentTrack, {
+        tempoOuvido: 0,
+        reproduzidaAteOFim: false
+      })
+    }
+    
+  } catch (err) {
         console.error('❌ Erro ao tocar:', err.name, err.message)
         this.isPlaying = false
         this.isLoading = false
@@ -1199,6 +1312,14 @@ export default {
           timestamp: Date.now()
         }
       }))
+        // 🔥 REGISTRAR HISTÓRICO ao finalizar música
+      if (this.currentTrack && listenedDuration > 10000) {
+        this.registrarHistorico(this.currentTrack, {
+          tempoOuvido: listenedDuration,
+          reproduzidaAteOFim: naturallyEnded
+        })
+      }
+      
       this._trackStartTime = null
       this._totalListenedTime = 0
     },
@@ -1243,6 +1364,7 @@ export default {
           this._trackStartTime = Date.now()
           this._totalListenedTime = 0
           this.loadAndPlay()
+          this.registrarHistorico(this.currentTrack)
           return
         }
       }
@@ -1251,6 +1373,7 @@ export default {
         this._trackStartTime = Date.now()
         this._totalListenedTime = 0
         this.loadAndPlay()
+  this.registrarHistorico(this.currentTrack)
         this.$nextTick(() => {
           this.checkLikeStatus()
           this.checkFavoriteStatus()
@@ -1271,10 +1394,8 @@ export default {
           this._trackStartTime = Date.now()
           this._totalListenedTime = 0
           this.loadAndPlay()
-          this.$nextTick(() => {
-            this.checkLikeStatus()
-            this.checkFavoriteStatus()
-          })
+          this.registrarHistorico(this.currentTrack)
+
           return
         } else {
           this.generateShuffledOrder()
@@ -1282,6 +1403,7 @@ export default {
           this._trackStartTime = Date.now()
           this._totalListenedTime = 0
           this.loadAndPlay()
+           this.registrarHistorico(this.currentTrack)
           return
         }
       }
@@ -1296,10 +1418,7 @@ export default {
         this._totalListenedTime = 0
         this.loadAndPlay()
       }
-      this.$nextTick(() => {
-        this.checkLikeStatus()
-        this.checkFavoriteStatus()
-      })
+   this.registrarHistorico(this.currentTrack)
     },
 
     toggleMute() {
