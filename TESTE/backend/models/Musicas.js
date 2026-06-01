@@ -14,39 +14,43 @@ const musicaSchema = new mongoose.Schema({
   letra: { type: String, required: true, trim: true },
   link: { type: String, required: true, trim: true },
 
+  // 🔥 ANO AGORA É OPCIONAL
   ano: { 
     type: Number,
     min: 1920,
-    max: 2020
+    max: 2020,
+    default: null  // <-- ADICIONAR
   },
 
   decada: { type: String },
 
   generos: {
-  type: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Genero'
-  }],
-  required: true,
-  validate: v => v.length > 0
-},
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Genero'
+    }],
+    required: true,
+    validate: v => v.length > 0
+  },
 
   albuns: {
     type: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Album'
     }],
-    default: []
+    default: []  // <-- JÁ ESTAVA OK (opcional)
   },
 
- cantores: {
-  type: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Cantor'
-  }],
-  required: true,
-  validate: v => v.length > 0
-},
+  // 🔥 CANTORES AGORA É OPCIONAL (para criar música antes de vincular)
+  cantores: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Cantor'
+    }],
+    // 🔥 REMOVIDO: required: true,
+    // 🔥 REMOVIDO: validate: v => v.length > 0
+    default: []  // <-- ADICIONAR
+  },
 
 }, {
   timestamps: true

@@ -1,6 +1,16 @@
+const axios = require('axios')
 const { spotifyRequest } = require('../utils/spotifyRequest')
-const { SPOTIFY_API_URL } = require('../config/spotify')
+const { 
+  SPOTIFY_API_URL, 
+  SPOTIFY_CLIENT_ID, 
+  SPOTIFY_CLIENT_SECRET,
+  SPOTIFY_ACCOUNTS_URL,
+  SPOTIFY_REDIRECT_URI,
+  SPOTIFY_SCOPES,
+  FRONTEND_URL  // ← ADICIONAR AQUI
+} = require('../config/spotify')
 const { getCache, setCache } = require('../utils/cache')
+const Usuario = require('../models/Usuario')
 
 // ================= CACHE CONFIG =================
 const CACHE_TTL = {
@@ -11,7 +21,6 @@ const CACHE_TTL = {
 popular: 1000 * 60 * 60 * 24,
   vibes: 1000 * 60 * 60 * 6      // 6 horas
 }
-
 // ================= FALLBACK DATA (dados estáticos) =================
 // Quando o Spotify bloqueia (429), usamos esses dados reais
 const FALLBACK_ARTISTS = [
@@ -225,125 +234,177 @@ exports.getAlbum = async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar álbum', details: error.message })
   }
 }
-
-// ================= POPULAR ARTISTS =================
-
 // ================= POPULAR ARTISTS =================
 exports.getPopularArtists = async (req, res) => {
   const { limit = 45, market = 'BR' } = req.query
-
   const cacheKey = `spotify_popular_artists_${market}_${limit}`
 
-  let spotifyFailed = false
-  let groups = []
+  // ✅ CACHE PRIMEIRO - retorna imediatamente se tiver
+  const cached = getCache(cacheKey)
+  if (cached) {
+    console.log('📦 Cache hit - retornando imediatamente')
+    setImmediate(() => atualizarCacheArtistas(cacheKey, market, limit))
+    return res.json(cached)
+  }
 
   try {
-
-    // 1. VERIFICA CACHE PRIMEIRO
-    const cached = getCache(cacheKey)
-
-    if (cached) {
-      console.log('📦 Cache hit')
-      return res.json(cached)
-    }
-
-    
-    // ✅ CORREÇÃO: Gêneros que existem no FALLBACK_ARTISTS
-   const generos = [
+    const generos = [
       'brazilian funk', 'sertanejo', 'pagode', 'samba', 'mpb',
-      'brazilian rock', 'pop', 'hip hop', 'rap',
-      'gospel'
+      'brazilian rock', 'pop', 'hip hop', 'rap', 'gospel'
     ]
     
-    let rateLimitDetected = false
+    let searchResults = [] // Guarda {id, name, genre, popularity} do search
+    let spotifyFailed = false
+    const batchSize = 3
 
-    for (const genero of generos) {
-      // ✅ CORREÇÃO: Se já deu rate limit, usa fallback para TODOS os gêneros restantes
-      if (rateLimitDetected) {
-        const fallback = FALLBACK_ARTISTS.find(f => f.genre === genero)
-        if (fallback) {
-          groups.push(fallback)
-          console.log(`📦 Fallback aplicado para: ${genero}`)
-        }
-        continue
-      }
+    // === PASSO 1: Busca search de todos os gêneros em paralelo ===
+    for (let i = 0; i < generos.length; i += batchSize) {
+      const batch = generos.slice(i, i + batchSize)
       
-      try {
-        const response = await spotifyRequest({
-          method: 'GET',
-          url: `${SPOTIFY_API_URL}/search`,
-          params: { q: `genre:"${genero}"`, type: 'artist', limit: 1, market }
+      const results = await Promise.allSettled(
+        batch.map(async (genero) => {
+          try {
+            const response = await spotifyRequest({
+              method: 'GET',
+              url: `${SPOTIFY_API_URL}/search`,
+              params: { q: `genre:"${genero}"`, type: 'artist', limit: 3, market }
+            })
+            const artists = response.data?.artists?.items || []
+            if (artists.length === 0) return null
+            
+            const best = artists.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0]
+            return {
+              genre: genero,
+              id: best.id,
+              name: best.name,
+              popularity: best.popularity || 0,
+              images: best.images || []
+            }
+          } catch (err) {
+            if (err.isRateLimit || err.response?.status === 429) spotifyFailed = true
+            return null
+          }
         })
+      )
+      
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) searchResults.push(r.value)
+      })
+    }
 
-        const artists = response.data?.artists?.items || []
-        
-        if (artists.length > 0) {
-          groups.push({
-            genre: genero,
-            artists: artists.map(artist => ({
-              id: artist.id,
-              name: artist.name,
-              images: artist.images,
-              popularity: artist.popularity,
-              followers: artist.followers,
-              genres: artist.genres
-            }))
+    // === PASSO 2: Busca followers REAIS em batch (até 50 IDs por request) ===
+    const artistIds = searchResults.map(r => r.id)
+    let realFollowersMap = new Map() // id -> followers
+    
+    if (artistIds.length > 0) {
+      // Spotify permite até 50 IDs por request no endpoint /artists
+      const idsBatchSize = 50
+      for (let i = 0; i < artistIds.length; i += idsBatchSize) {
+        const batchIds = artistIds.slice(i, i + idsBatchSize).join(',')
+        try {
+          const response = await spotifyRequest({
+            method: 'GET',
+            url: `${SPOTIFY_API_URL}/artists`,
+            params: { ids: batchIds }
           })
-        }
-      } catch (err) {
-        if (err.isRateLimit || err.response?.status === 429) {
-          console.error(`🚫 Rate limit no gênero (${genero})! Usando fallback.`)
-          rateLimitDetected = true
-          spotifyFailed = true
           
-          // ✅ CORREÇÃO: Adiciona fallback do gênero atual imediatamente
-          const fallback = FALLBACK_ARTISTS.find(f => f.genre === genero)
-          if (fallback) {
-            groups.push(fallback)
-          }
-        } else {
-          // ✅ CORREÇÃO: Para erros NÃO-429, também adiciona fallback e continua
-          console.warn(`⚠️ Erro no gênero ${genero}: ${err.message}. Usando fallback.`)
-          const fallback = FALLBACK_ARTISTS.find(f => f.genre === genero)
-          if (fallback) {
-            groups.push(fallback)
-          }
+          const artistsDetails = response.data?.artists || []
+          artistsDetails.forEach(a => {
+            if (a && a.id) {
+              realFollowersMap.set(a.id, a.followers?.total || 0)
+            }
+          })
+        } catch (err) {
+          console.warn('⚠️ Erro ao buscar detalhes batch:', err.message)
         }
-        // ✅ REMOVIDO: Não dá continue aqui, o loop já vai para o próximo gênero
       }
     }
 
-    // ✅ CORREÇÃO: Se nenhum grupo foi carregado, usa fallback completo
+    // === PASSO 3: Monta groups com followers reais (ou fallback) ===
+    let groups = []
+    
+    searchResults.forEach(sr => {
+      let followers = realFollowersMap.get(sr.id) || 0
+      
+      // Se ainda vier 0, tenta fallback pelo nome
+      if (followers === 0) {
+        const fallbackGenre = FALLBACK_ARTISTS.find(f => f.genre === sr.genre)
+        const fallbackArtist = fallbackGenre?.artists.find(fa => 
+          fa.name.toLowerCase() === sr.name.toLowerCase()
+        )
+        if (fallbackArtist?.followers?.total) {
+          followers = fallbackArtist.followers.total
+          console.log(`📦 Fallback followers para ${sr.name}: ${followers}`)
+        }
+      }
+
+      groups.push({
+        genre: sr.genre,
+        artists: [{
+          id: sr.id,
+          name: sr.name,
+          images: sr.images,
+          popularity: sr.popularity,
+          nb_fan: followers,
+          fans: followers,
+          original_nb_fan: followers,
+          followers: { total: followers },
+          genres: [sr.genre]
+        }]
+      })
+    })
+
+    // Se não conseguiu nada do Spotify, usa fallback total
     const finalGroups = groups.length === 0 ? FALLBACK_ARTISTS : groups
     
+    const allArtistsFlat = finalGroups.flatMap(g => 
+      (g.artists || []).map(a => ({
+        id: a.id,
+        name: a.name,
+        images: a.images,
+        popularity: a.popularity,
+        nb_fan: a.nb_fan || a.followers?.total || 0,
+        fans: a.fans || a.followers?.total || 0,
+        original_nb_fan: a.original_nb_fan || a.nb_fan || a.followers?.total || 0,
+        followers: a.followers || { total: 0 },
+        genres: a.genres,
+        genreGroup: g.genre
+      }))
+    )
+
     const result = {
       groups: finalGroups,
+      artists: allArtistsFlat,
       totalGroups: finalGroups.length,
-      totalArtists: finalGroups.reduce((sum, g) => sum + g.artists.length, 0),
+      totalArtists: allArtistsFlat.length,
       fromCache: false,
       usedFallback: groups.length === 0 || spotifyFailed
     }
 
-    // Salva no cache por 2 horas (mesmo que seja fallback!)
-setCache(cacheKey, result, CACHE_TTL.popular)
-    
+    setCache(cacheKey, result, CACHE_TTL.popular)
     console.log(`✅ Popular artists: ${result.totalArtists} artistas (${spotifyFailed ? 'com fallback' : 'Spotify'})`)
     res.json(result)
 
   } catch (error) {
     console.error('❌ Popular artists error:', error.message)
-    // ÚLTIMO RECURSO: retorna fallback mesmo em erro total
     const fallbackResult = {
       groups: FALLBACK_ARTISTS,
+      artists: FALLBACK_ARTISTS.flatMap(g => 
+        (g.artists || []).map(a => ({
+          id: a.id, name: a.name, images: a.images, popularity: a.popularity,
+          nb_fan: a.followers?.total || 0, fans: a.followers?.total || 0,
+          original_nb_fan: a.followers?.total || 0,
+          followers: a.followers || { total: 0 },
+          genres: a.genres, genreGroup: g.genre
+        }))
+      ),
       totalGroups: FALLBACK_ARTISTS.length,
       totalArtists: FALLBACK_ARTISTS.reduce((sum, g) => sum + g.artists.length, 0),
-      fromCache: false,
-      usedFallback: true
+      fromCache: false, usedFallback: true
     }
     res.status(200).json(fallbackResult)
   }
 }
-
 // ================= VIBES (CACHE + FALLBACK ESTÁTICO) =================
 exports.getVibes = async (req, res) => {
   const cacheKey = 'spotify_vibes'
@@ -379,5 +440,249 @@ exports.getPlaylist = async (req, res) => {
   } catch (error) {
     console.error('❌ Playlist error:', error.message)
     res.status(500).json({ error: 'Erro playlist', details: error.message })
+  }
+}
+
+// ================= OAUTH: INITIATE AUTH =================
+exports.initiateAuth = async (req, res) => {
+  try {
+    // Pega o token JWT do header Authorization
+    const authHeader = req.headers.authorization
+    const appToken = authHeader?.replace('Bearer ', '')
+    
+    console.log('🔍 initiateAuth - appToken presente:', !!appToken)
+
+    if (!appToken) {
+      return res.status(401).json({ error: 'Token do app necessário. Faça login primeiro.' })
+    }
+
+    // Codifica o appToken no state (base64) para recuperar no callback
+    const stateData = JSON.stringify({
+      random: Math.random().toString(),
+      appToken: appToken  // ← ISSO É CRÍTICO
+    })
+    const state = Buffer.from(stateData).toString('base64')
+
+    const params = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      response_type: 'code',
+      redirect_uri: SPOTIFY_REDIRECT_URI,
+      scope: SPOTIFY_SCOPES,
+      state: state,
+      show_dialog: 'true'
+    })
+
+    const authUrl = `${SPOTIFY_ACCOUNTS_URL}?${params.toString()}`
+
+    console.log('✅ Auth URL gerada:', authUrl.substring(0, 80) + '...')
+
+    res.json({ authUrl, state })
+  } catch (error) {
+    console.error('❌ Initiate auth error:', error)
+    res.status(500).json({ error: 'Erro ao iniciar autenticação Spotify' })
+  }
+}
+
+// ================= OAUTH: CALLBACK =================
+exports.callback = async (req, res) => {
+  try {
+    const { code, state, error: spotifyError } = req.query
+
+    console.log('🔍 Callback recebido:', { code: !!code, state: !!state, error: spotifyError })
+
+    // Decodifica o state para pegar o appToken
+    let appToken = null
+    try {
+      if (state) {
+        const stateData = JSON.parse(Buffer.from(state, 'base64').toString())
+        appToken = stateData.appToken
+        console.log('✅ AppToken decodificado do state:', !!appToken)
+      }
+    } catch (e) {
+      console.error('❌ Erro ao decodificar state:', e.message)
+    }
+
+    // FALLBACK: tenta pegar do query param
+    if (!appToken) {
+      appToken = req.query.app_token
+      console.log('⚠️ Usando app_token do query param:', !!appToken)
+    }
+
+    if (spotifyError) {
+      console.error('❌ Spotify retornou erro:', spotifyError)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent(spotifyError)}`)
+    }
+
+    if (!code) {
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Code não fornecido')}`)
+    }
+
+    if (!appToken) {
+      console.error('❌ appToken está NULO')
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Token do app não encontrado. Faça login novamente.')}`)
+    }
+
+    // Troca code por tokens do Spotify
+    let tokenResponse
+    try {
+      tokenResponse = await axios.post(
+        'https://accounts.spotify.com/api/token',
+        new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: SPOTIFY_REDIRECT_URI,
+          client_id: SPOTIFY_CLIENT_ID,
+          client_secret: SPOTIFY_CLIENT_SECRET
+        }).toString(),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        }
+      )
+    } catch (err) {
+      console.error('❌ Erro ao trocar code por token:', err.response?.data || err.message)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Erro ao autenticar com Spotify')}`)
+    }
+
+    const { access_token, refresh_token, expires_in } = tokenResponse.data
+
+    // Decodifica token do app para pegar userId
+    const jwt = require('jsonwebtoken')
+    let decoded
+    try {
+      decoded = jwt.verify(appToken, process.env.JWT_SECRET)
+      console.log('✅ JWT decodificado:', { id: decoded.id, _id: decoded._id, userId: decoded.userId })
+    } catch (e) {
+      console.error('❌ JWT inválido:', e.message)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Token do app inválido ou expirado')}`)
+    }
+    
+    // ✅ CORREÇÃO: Pegar o ID de todas as possíveis propriedades
+    const userId = decoded.id || decoded._id || decoded.userId || decoded.sub
+    
+    if (!userId) {
+      console.error('❌ userId não encontrado no JWT. Payload:', decoded)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('ID do usuário não encontrado no token')}`)
+    }
+
+    console.log('🔍 Buscando usuário:', userId)
+
+    // Salva tokens no usuário
+    const user = await Usuario.findById(userId)
+    
+    if (!user) {
+      console.error('❌ Usuário não encontrado no banco:', userId)
+      return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Usuário não encontrado. Faça login novamente.')}`)
+    }
+
+    console.log('✅ Usuário encontrado:', user.email || user.nome)
+
+    user.spotifyAccessToken = access_token
+    user.spotifyRefreshToken = refresh_token
+    user.spotifyTokenExpiresAt = new Date(Date.now() + expires_in * 1000)
+    user.spotifyConnected = true
+    await user.save()
+
+    console.log('✅ Spotify conectado com sucesso para:', userId)
+    res.redirect(`${FRONTEND_URL}/spotify-connected?success=true`)
+
+  } catch (error) {
+    console.error('❌ Spotify callback error GERAL:', error.message, error.stack)
+    res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Erro interno: ' + error.message)}`)
+  }
+}
+// ================= OAUTH: REFRESH TOKEN MANUAL =================
+exports.refreshUserToken = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id
+    const user = await Usuario.findById(userId)
+    
+    if (!user || !user.spotifyRefreshToken) {
+      return res.status(403).json({ error: 'Spotify não conectado' })
+    }
+    
+    const response = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: user.spotifyRefreshToken
+      }).toString(),
+      {
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+    
+    await user.updateSpotifyTokens(
+      response.data.access_token,
+      user.spotifyRefreshToken,
+      response.data.expires_in
+    )
+    
+    res.json({ success: true, expires_in: response.data.expires_in })
+  } catch (error) {
+    console.error('❌ Refresh error:', error.response?.data || error.message)
+    res.status(500).json({ error: 'Erro ao renovar token' })
+  }
+}
+
+// ================= BUSCA COM STREAMING URL =================
+exports.searchFullTracks = async (req, res) => {
+  try {
+    const { q, type = 'track', market = 'BR' } = req.query
+    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+
+    // ✅ USA O TOKEN DO USUÁRIO do middleware requireSpotifyAuth
+    const userToken = req.spotifyUserToken
+    
+    if (!userToken) {
+      return res.status(403).json({ 
+        error: 'Spotify não conectado',
+        message: 'Conecte sua conta Spotify para buscar músicas completas'
+      })
+    }
+
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: { q, type, limit: 20, market }
+    }, 3, userToken) // ✅ Passa userToken aqui
+
+    const data = response.data
+    if (data.tracks?.items) {
+      data.tracks.items = data.tracks.items.map(track => ({
+        ...track,
+        _fullTrack: true,
+        _source: 'spotify_full'
+      }))
+    }
+
+    res.json(data)
+  } catch (error) {
+    if (error.isUserTokenExpired) {
+      return res.status(401).json({ 
+        error: 'Token Spotify expirado',
+        needsReconnect: true 
+      })
+    }
+    console.error('❌ Full tracks search:', error.message)
+    res.status(500).json({ error: 'Erro na busca', details: error.message })
+  }
+}
+
+
+// ================= VERIFICAR STATUS DO SPOTIFY =================
+exports.getSpotifyStatus = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id
+    const user = await Usuario.findById(userId).select('spotifyConnected spotifyTokenExpiresAt')
+    
+    res.json({
+      connected: user?.spotifyConnected || false,
+      tokenValid: user?.isSpotifyTokenValid() || false
+    })
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao verificar status' })
   }
 }

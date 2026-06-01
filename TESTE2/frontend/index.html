@@ -10,6 +10,17 @@
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
 />
     <title>Vite App</title>
+       <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    
+    <!-- ✅ ADICIONAR: Definir a callback global ANTES de qualquer outro script -->
+    <script>
+      window.onSpotifyWebPlaybackSDKReady = function() {
+        console.log('[SPOTIFY] SDK Ready (global callback)')
+        window.SpotifySDKReady = true
+        // Dispara evento customizado para o Vue capturar
+        window.dispatchEvent(new Event('spotify-sdk-ready'))
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

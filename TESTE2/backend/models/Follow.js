@@ -37,4 +37,15 @@ followSchema.index(
   { unique: true }
 )
 
+// ✅ Garante consistência tipo/tipoRef
+followSchema.pre('validate', function(next) {
+  if (this.tipo === 'cantor' && this.tipoRef !== 'Cantor') {
+    this.tipoRef = 'Cantor'
+  }
+  if (this.tipo === 'usuario' && this.tipoRef !== 'Usuario') {
+    this.tipoRef = 'Usuario'
+  }
+  next()
+})
+
 module.exports = mongoose.model('Follow', followSchema)

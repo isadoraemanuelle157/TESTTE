@@ -75,9 +75,9 @@ const getById = async (req, res) => {
 const update = async (req, res) => {
   try {
     const isOwner = String(req.user?.id) === String(req.params.id)
-    const isOnboardingUpdate = req.body.onboardingCompleto !== undefined
-    
-    if (!isOwner && !isOnboardingUpdate) {
+    const isAdmin = req.user?.role === 'admin'
+
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
     }
 
@@ -95,6 +95,7 @@ const update = async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }
+
 
 const remove = async (req, res) => {
   try {
@@ -287,6 +288,100 @@ const recuperarSenha = async (req, res) => {
   }
 }
 
+const getPublicSeguidores = async (req, res) => {
+  try {
+    const data = await userService.getPublicFollowers(req.params.id, req.user?.id)
+    res.json(data)
+  } catch (error) {
+    if (error.code === 'PROFILE_PRIVATE') {
+      return res.status(403).json({ message: 'Perfil privado' })
+    }
+    if (error.code === 'FOLLOWERS_BLOCKED') {
+      return res.status(403).json({ message: 'Seguidores ocultos para você' })
+    }
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const getPublicSeguindo = async (req, res) => {
+  try {
+    const data = await userService.getPublicFollowing(req.params.id, req.user?.id)
+    res.json(data)
+  } catch (error) {
+    if (error.code === 'PROFILE_PRIVATE') {
+      return res.status(403).json({ message: 'Perfil privado' })
+    }
+    if (error.code === 'FOLLOWING_BLOCKED') {
+      return res.status(403).json({ message: 'Seguindo oculto para você' })
+    }
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const getBlockStatus = async (req, res) => {
+  try {
+    const data = await userService.getBlockStatus(req.user.id, req.params.id)
+    res.json(data)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+const blockUser = async (req, res) => {
+  try {
+    const data = await userService.blockUser(req.user.id, req.params.id)
+    res.json({
+      message: 'Usuário bloqueado com sucesso',
+      data
+    })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const unblockUser = async (req, res) => {
+  try {
+    const data = await userService.unblockUser(req.user.id, req.params.id)
+    res.json({
+      message: 'Usuário desbloqueado com sucesso',
+      data
+    })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const reportUser = async (req, res) => {
+  try {
+    const { motivo, chat } = req.body
+
+    const data = await userService.reportUser(
+      req.user.id,
+      req.params.id,
+      motivo,
+      chat || null
+    )
+
+    res.status(201).json({
+      message: 'Denúncia enviada com sucesso',
+      data
+    })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const RECURSOS_VALIDOS = [
+  'curtidas',
+  'playlists',
+  'atividades',
+  'seguidores',
+  'seguindo',
+  'estatisticas',
+  'mixes',
+  'tudo'
+]
+
 module.exports = {
   create,
   login,
@@ -299,5 +394,12 @@ module.exports = {
   getPublicCurtidas,
   getPublicPlaylists,
   getEstatisticas,
-  recuperarSenha
+  recuperarSenha,
+    getPublicSeguidores,
+  getPublicSeguindo,
+  getBlockStatus,
+  blockUser,
+  unblockUser,
+  reportUser
+
 }

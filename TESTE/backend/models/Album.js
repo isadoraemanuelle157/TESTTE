@@ -58,16 +58,6 @@ const albumSchema = new mongoose.Schema({
   }
 })
 
-albumSchema.path('musicas').validate(
-  val => Array.isArray(val) && val.length > 0,
-  'Selecione ao menos uma música'
-)
-
-albumSchema.path('generos').validate(
-  val => Array.isArray(val) && val.length > 0,
-  'Selecione ao menos um gênero'
-)
-
 albumSchema.pre('save', function(next) {
   if (this.isModified('ano')) {
     this.decada = calcularDecada(this.ano)

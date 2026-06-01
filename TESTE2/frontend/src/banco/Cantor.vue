@@ -73,9 +73,9 @@
       </div>
 
       <!-- Artist Cards -->
-      <div 
-        v-for="cantor in cantores" 
-        :key="cantor._id" 
+      <div
+        v-for="cantor in cantores"
+        :key="cantor._id"
         class="artist-card"
         @mouseenter="hoveredCard = cantor._id"
         @mouseleave="hoveredCard = null"
@@ -84,9 +84,9 @@
           <div class="circle-glow" :style="getGlowStyle(cantor.foto)"></div>
           <div class="artist-circle" :class="{ 'playing': hoveredCard === cantor._id }">
             <div class="circle-inner">
-              <img 
-                v-if="cantor.foto" 
-                :src="cantor.foto" 
+              <img
+                v-if="cantor.foto"
+                :src="cantor.foto"
                 :alt="cantor.nome"
                 class="artist-image"
                 @error="handleImageError"
@@ -110,7 +110,7 @@
 
             </div>
           </div>
-        
+       
         </div>
 
      <div class="artist-card-body">
@@ -210,14 +210,14 @@
               <!-- Coluna Esquerda: Dados do Artista -->
               <div class="form-column">
                 <div class="upload-soundup">
-                  <div 
-  class="upload-circle" 
+                  <div
+  class="upload-circle"
   @click="triggerFileInput"
   :class="{ 'has-image': previewFoto || form.foto }"
 >
-  <img 
-    v-if="previewFoto || form.foto" 
-    :src="previewFoto || form.foto" 
+  <img
+    v-if="previewFoto || form.foto"
+    :src="previewFoto || form.foto"
     alt="Preview"
   />
 
@@ -248,10 +248,10 @@
   </button>
 </div>
 
-<input 
+<input
   ref="fileInput"
-  type="file" 
-  accept="image/*" 
+  type="file"
+  accept="image/*"
   @change="handleFileChange"
   hidden
 />
@@ -260,9 +260,9 @@
                 <div class="form-soundup">
                   <div class="input-group">
                     <label>Nome do Artista *</label>
-                    <input 
-                      v-model="form.nome" 
-                      type="text" 
+                    <input
+                      v-model="form.nome"
+                      type="text"
                       placeholder="Nome do artista"
                       required
                       maxlength="100"
@@ -271,16 +271,16 @@
 
                   <div class="input-group">
                     <label>Foto do artista *</label>
-                    <input 
-                      v-model="form.foto" 
-                      type="url" 
+                    <input
+                      v-model="form.foto"
+                      type="url"
                       placeholder="https://..."
                       @input="previewFoto = null"
                     />
                   </div>
             <div class="input-group">
     <label>Seguidores/Fãs iniciais *</label>
-    <input 
+    <input
       v-model="form.seguidoresBase"
       type="text"
       placeholder="Ex: 10k, 100k, 2500"
@@ -302,10 +302,10 @@
 </div>
                 </div>
               </div>
-                
+               
                 <!-- Coluna Direita: 3 Quadros (Gêneros, Músicas, Álbuns) -->
 <div class="form-column albums-column">
-  
+ 
   <!-- Quadro 1: Gêneros -->
   <div class="selection-box">
     <div class="selection-header">
@@ -315,27 +315,27 @@
        <span class="count-badge">{{ form.generos.length }}</span>
       </h3>
     </div>
-    
+   
     <!-- Tags Selecionadas -->
 <div class="selected-tags-container" v-if="form.generos.length > 0">
-  <span 
-    v-for="generoId in form.generos" 
-    :key="normalizeMongoId(generoId)" 
+  <span
+    v-for="generoId in form.generos"
+    :key="normalizeMongoId(generoId)"
     class="selection-tag genero-tag"
   >
     {{ getGeneroNome(generoId) }}
-    <button 
+    <button
       type="button"
-      @click="removeGenero(generoId)" 
+      @click="removeGenero(generoId)"
       class="tag-remove"
     >×</button>
   </span>
 </div>
-    
+   
     <!-- Dropdown de Gêneros -->
  <div class="dropdown-wrapper" :class="{ open: dropdownOpen.generos }">
-  <div 
-    class="dropdown-trigger" 
+  <div
+    class="dropdown-trigger"
     @click="toggleDropdown('generos')"
   >
     <span class="trigger-text">
@@ -353,9 +353,9 @@
   <transition name="dropdown">
     <div v-if="dropdownOpen.generos" class="dropdown-menu" @click.stop>
           <div class="dropdown-search">
-            <input 
-              v-model="searchGeneros" 
-              placeholder="Buscar gênero..." 
+            <input
+              v-model="searchGeneros"
+              placeholder="Buscar gênero..."
               @click.stop
             />
           </div>
@@ -366,7 +366,7 @@
     class="dropdown-option"
     :class="{ selected: isGeneroSelecionado(genero._id) }"
   >
-    <input 
+    <input
       type="checkbox"
       :value="genero._id"
       :checked="isGeneroSelecionado(genero._id)"
@@ -395,9 +395,9 @@
        <span class="count-badge">{{ form.musicas.length }}</span>
       </h3>
       <!-- 🔥 NOVO BOTÃO ADICIONADO -->
-      <button 
-        type="button" 
-        class="btn-add-inline" 
+      <button
+        type="button"
+        class="btn-add-inline"
         @click="abrirModalAdicionarMusica"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -407,27 +407,27 @@
         Nova
       </button>
     </div>
-    
+   
     <!-- Tags Selecionadas -->
     <div class="selected-tags-container" v-if="form.musicas.length > 0">
-      <span 
-        v-for="musicaId in form.musicas" 
-        :key="musicaId" 
+      <span
+        v-for="musicaId in form.musicas"
+        :key="musicaId"
         class="selection-tag musica-tag"
       >
         {{ getMusicaNome(musicaId) }}
-        <button 
+        <button
           type="button"
-          @click="removeMusica(musicaId)" 
+          @click="removeMusica(musicaId)"
           class="tag-remove"
         >×</button>
       </span>
     </div>
-    
+   
     <!-- Dropdown de Músicas -->
 <div class="dropdown-wrapper" :class="{ open: dropdownOpen.musicas }">
-  <div 
-    class="dropdown-trigger" 
+  <div
+    class="dropdown-trigger"
     @click="toggleDropdown('musicas')"
   >
     <span class="trigger-text">
@@ -441,13 +441,13 @@
   <span class="trigger-arrow" :class="{ open: dropdownOpen.musicas }">▼</span>
 </div>
   </div>
-  
+ 
   <transition name="dropdown">
     <div v-if="dropdownOpen.musicas" class="dropdown-menu" @click.stop>
           <div class="dropdown-search">
-            <input 
-              v-model="searchMusicas" 
-              placeholder="Buscar música..." 
+            <input
+              v-model="searchMusicas"
+              placeholder="Buscar música..."
               @click.stop
             />
           </div>
@@ -458,9 +458,9 @@
               class="dropdown-option"
               :class="{ selected: form.musicas.includes(musica._id) }"
             >
-              <input 
-                type="checkbox" 
-                :value="musica._id" 
+              <input
+                type="checkbox"
+                :value="musica._id"
                 v-model="form.musicas"
                 @click.stop
               />
@@ -485,9 +485,9 @@
     <span class="count-badge">{{ form.albuns.length }}</span>
       </h3>
       <!-- 🔥 BOTÃO NOVO MANTIDO -->
-      <button 
-        type="button" 
-        class="btn-add-inline" 
+      <button
+        type="button"
+        class="btn-add-inline"
         @click="abrirModalAdicionarAlbum"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -497,11 +497,11 @@
         Novo
       </button>
     </div>
-    
+   
     <!-- 🔥 DROPDOWN DE SELEÇÃO DE ÁLBUNS ADICIONADO -->
   <div class="dropdown-wrapper" :class="{ open: dropdownOpen.albuns }">
-  <div 
-    class="dropdown-trigger" 
+  <div
+    class="dropdown-trigger"
     @click="toggleDropdown('albuns')"
   >
     <span class="trigger-text">
@@ -515,13 +515,13 @@
   <span class="trigger-arrow" :class="{ open: dropdownOpen.albuns }">▼</span>
 </div>
   </div>
-  
+ 
   <transition name="dropdown">
     <div v-if="dropdownOpen.albuns" class="dropdown-menu" @click.stop>
           <div class="dropdown-search">
-            <input 
-              v-model="searchAlbuns" 
-              placeholder="Buscar álbum..." 
+            <input
+              v-model="searchAlbuns"
+              placeholder="Buscar álbum..."
               @click.stop
             />
           </div>
@@ -532,9 +532,9 @@
               class="dropdown-option"
               :class="{ selected: isAlbumSelected(album) }"
             >
-              <input 
-                type="checkbox" 
-                :value="album._id" 
+              <input
+                type="checkbox"
+                :value="album._id"
                 :checked="isAlbumSelected(album)"
                 @change="toggleAlbumSelection(album)"
                 @click.stop
@@ -549,11 +549,11 @@
         </div>
       </transition>
     </div>
-    
+   
     <!-- Lista de Álbuns Selecionados -->
     <div class="albums-list-compact" v-if="form.albuns.length > 0">
-      <div 
-        v-for="(album, index) in form.albuns" 
+      <div
+        v-for="(album, index) in form.albuns"
         :key="index"
         class="album-item-compact"
       >
@@ -572,7 +572,7 @@
           <p>{{ album.descricao }}</p>
         </div>
         <div class="album-actions-compact">
-          <button 
+          <button
             type="button"
             class="btn-icon-action edit"
             @click="editarAlbum(index)"
@@ -583,7 +583,7 @@
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
           </button>
-          <button 
+          <button
             type="button"
             class="btn-icon-action delete"
             @click="removerAlbum(index)"
@@ -597,9 +597,9 @@
         </div>
       </div>
     </div>
-    
+   
     <!-- Estado Vazio -->
-    
+   
   </div>
 
 </div>
@@ -610,8 +610,8 @@
               <button type="button" @click="fecharModal" class="btn-cancel">
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 class="btn-save soundup-gradient"
                 :disabled="salvando || !form.nome.trim()"
               >
@@ -641,28 +641,28 @@
             <div class="form-soundup">
               <div class="input-group">
                 <label>Nome do Álbum</label>
-                <input 
-                  v-model="albumForm.nome" 
+                <input
+                  v-model="albumForm.nome"
                   type="text"
                   placeholder="Ex: Thriller, Abbey Road..."
-                  required 
+                  required
                 />
               </div>
 
               <div class="input-group">
                 <label>Descrição</label>
-                <input 
-                  v-model="albumForm.descricao" 
+                <input
+                  v-model="albumForm.descricao"
                   type="text"
                   placeholder="Gênero, ano, descrição..."
-                  required 
+                  required
                 />
               </div>
 
               <div class="input-group">
                 <label>Capa do Álbum (URL)</label>
-                <input 
-                  v-model="albumForm.foto" 
+                <input
+                  v-model="albumForm.foto"
                   type="url"
                   placeholder="https://..."
                 />
@@ -681,8 +681,8 @@
               <button type="button" @click="fecharModalAlbum" class="btn-cancel">
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 class="btn-save soundup-gradient"
               >
                 {{ editandoAlbumIndex !== null ? 'Salvar Alterações' : 'Adicionar Álbum' }}
@@ -736,9 +736,9 @@
 
   <div class="input-group">
     <label>Letra</label>
-    <textarea 
-      v-model="musicaForm.letra" 
-      rows="4" 
+    <textarea
+      v-model="musicaForm.letra"
+      rows="4"
       placeholder="Digite a letra da música..."
       required
     ></textarea>
@@ -757,8 +757,8 @@
           <button type="button" @click="fecharModalMusica" class="btn-cancel">
             Cancelar
           </button>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             class="btn-save soundup-gradient"
           >
             {{ editandoMusicaIndex !== null ? 'Salvar Alterações' : 'Adicionar Música' }}
@@ -779,8 +779,8 @@
             <button @click="showDeleteModal = false" class="btn-cancel">
               Cancelar
             </button>
-            <button 
-              @click="excluirCantor" 
+            <button
+              @click="excluirCantor"
               class="btn-delete"
               :disabled="excluindo"
             >
@@ -805,7 +805,7 @@
 <script>
 export default {
   name: 'CantoresSoundUp',
-  
+ 
   data() {
     return {
       cantores: [],
@@ -814,11 +814,11 @@ export default {
         usuarioLogadoId: localStorage.getItem('usuarioId') || '',
       loading: true,
       hoveredCard: null,
-      
+     
       showModal: false,
       modoEdicao: false,
       cantorEditando: null,
-      
+     
       form: {
         nome: '',
         foto: '',
@@ -830,13 +830,13 @@ export default {
       },
       previewFoto: null,
       arquivoSelecionado: null,
-      
+     
       salvando: false,
       excluindo: false,
-      
+     
       showDeleteModal: false,
       cantorParaExcluir: null,
-      
+     
       // Controle de Dropdowns
      dropdownOpen: {
   generos: false,
@@ -847,7 +847,7 @@ export default {
       searchMusicas: '',
       searchAlbuns: '',
     albunsDisponiveis: [], // Lista de álbuns do backend
-    
+   
     // Modal de Música
     showMusicaModal: false,
     musicaForm: {
@@ -861,7 +861,7 @@ export default {
   albuns: []
 },
     editandoMusicaIndex: null,
-      
+     
       // Modal de Álbum Local
       showAlbumModal: false,
       editandoAlbumIndex: null,
@@ -870,7 +870,7 @@ export default {
         descricao: '',
         foto: ''
       },
-      
+     
       toast: {
         show: false,
         message: '',
@@ -924,7 +924,7 @@ filteredGeneros() {
     this.carregarGeneros()
     this.carregarMusicas()
     this.carregarAlbunsDisponiveis()
-    
+   
     // Fechar dropdowns ao clicar fora
     document.addEventListener('mousedown', this.handleClickOutside)
   },
@@ -1239,7 +1239,7 @@ fecharModalMusica() {
   }
 },
     // Gerenciamento de Álbuns no Modal de Artista
-    
+   
     abrirModalAdicionarAlbum() {
       this.editandoAlbumIndex = null
       this.albumForm = {
@@ -1319,7 +1319,7 @@ fecharModalMusica() {
         const response = await fetch('http://localhost:3002/cantores')
         if (!response.ok) throw new Error('Erro ao carregar')
         const data = await response.json()
-        
+       
         this.cantores = await Promise.all(data.map(async (cantor) => {
           try {
             const albunsResponse = await fetch(`http://localhost:3002/albuns?cantor=${cantor._id}`)
@@ -1562,66 +1562,70 @@ async editarCantor(cantor) {
     this.cantorEditando = null
     this.resetForm()
 
+    // Carrega listas globais primeiro
     await Promise.all([
       this.generos.length ? Promise.resolve() : this.carregarGeneros(),
       this.musicas.length ? Promise.resolve() : this.carregarMusicas(),
       this.albunsDisponiveis.length ? Promise.resolve() : this.carregarAlbunsDisponiveis()
     ])
 
-    const [cantorResponse, albunsResponse] = await Promise.all([
-      fetch(`http://localhost:3002/cantores/${cantor._id}`),
-      fetch(`http://localhost:3002/albuns?cantor=${cantor._id}`)
-    ])
-
+    // Busca cantor completo
+    const cantorResponse = await fetch(`http://localhost:3002/cantores/${cantor._id}`)
+   
     if (!cantorResponse.ok) {
       throw new Error('Erro ao buscar cantor')
     }
 
     const cantorCompleto = await cantorResponse.json()
-    const albunsDoCantor = albunsResponse.ok ? await albunsResponse.json() : []
 
-    const cantorBase = {
-      ...cantor,
-      ...cantorCompleto
+    // 🔥 NOVO: Buscar músicas específicas do cantor se não vierem populadas
+    let musicasDoCantor = cantorCompleto.musicas || []
+   
+    // Se musicas vierem como IDs apenas (não populadas), buscar detalhes
+    if (musicasDoCantor.length > 0 && typeof musicasDoCantor[0] === 'string') {
+      const musicasResponse = await fetch(`http://localhost:3002/musicas?cantor=${cantor._id}`)
+      if (musicasResponse.ok) {
+        const musicasData = await musicasResponse.json()
+        musicasDoCantor = musicasData.results || musicasData
+      }
     }
 
-    this.cantorEditando = cantorBase
+    this.cantorEditando = cantorCompleto
 
     this.form = {
-      nome: cantorBase.nome || '',
-      foto: cantorBase.foto || '',
-      ano: cantorBase.ano || '',
-
-      generos: Array.isArray(cantorBase.generos)
-  ? [...new Set(cantorBase.generos.map(g => this.normalizeMongoId(g)).filter(Boolean))]
-  : [],
-
-      musicas: Array.isArray(cantorBase.musicas)
-        ? cantorBase.musicas.map(m => this.normalizeMongoId(m)).filter(Boolean)
+      nome: cantorCompleto.nome || '',
+      foto: cantorCompleto.foto || '',
+      ano: cantorCompleto.ano || '',
+     
+      generos: Array.isArray(cantorCompleto.generos)
+        ? cantorCompleto.generos.map(g => this.normalizeMongoId(g)).filter(Boolean)
         : [],
-
-      albuns: Array.isArray(albunsDoCantor)
-        ? albunsDoCantor.map(a => ({
+     
+      // 🔥 AQUI: usar as músicas do cantor
+      musicas: Array.isArray(musicasDoCantor)
+        ? musicasDoCantor.map(m => {
+            return typeof m === 'object' && m !== null ? m._id : m
+          }).filter(Boolean)
+        : [],
+     
+      albuns: Array.isArray(cantorCompleto.albuns)
+        ? cantorCompleto.albuns.map(a => ({
             _id: a._id,
             nome: a.nome || '',
             descricao: a.descricao || '',
             foto: a.foto || ''
           }))
         : [],
-
-      seguidoresBase: cantorBase.seguidoresBase ?? ''
+     
+      seguidoresBase: cantorCompleto.seguidoresBase ?? ''
     }
 
     this.previewFoto = null
     this.arquivoSelecionado = null
 
-    this.dropdownOpen = {
-      generos: false,
-      musicas: false,
-      albuns: false
-    }
-
+    this.dropdownOpen = { generos: false, musicas: false, albuns: false }
     this.showModal = true
+
   } catch (error) {
     console.error(error)
     this.mostrarToast('Erro ao carregar dados do artista', 'error', '❌')
@@ -1637,8 +1641,8 @@ fecharModal() {
 },
 
 resetForm() {
-  this.form = { 
-    nome: '', 
+  this.form = {
+    nome: '',
     foto: '',
     ano: '',
     albuns: [],

@@ -217,19 +217,6 @@
       </div>
     </header>
 
-    <div v-if="isFullscreen && !showSongSelection" class="fullscreen-album">
-  <div class="album-art-mini" :style="{ backgroundImage: `url(${currentSong.cover})` }">
-    <div class="vinyl-ring-mini" :class="{ 'spinning': isPlaying }">
-      <div class="vinyl-center-mini"></div>
-    </div>
-  </div>
-  <div class="fullscreen-song-info">
-    <span class="live-badge" :class="{ 'recording': isRecording }">LIVE</span>
-    <h3>{{ currentSong.title }}</h3>
-    <p>{{ currentSong.artist }}</p>
-  </div>
-</div>
-
     <!-- Main Stage -->
     <main v-if="!showSongSelection" class="karaoke-stage">
       <!-- Album Art (Left) -->
@@ -281,33 +268,48 @@
         </div>
 
         <div v-else class="lyrics-wrapper">
-          <div
-            v-for="(line, index) in processedLyrics"
-            :key="index"
-            class="lyric-line"
-            :class="{
-              'active': currentLineIndex === index,
-              'past': currentLineIndex > index,
-              'future': currentLineIndex < index,
-              'correct': line.correct,
-              'wrong': line.wrong,
-              'instrumental': line.isInstrumental
-            }"
-            :data-time="line.time"
-          >
-            <span v-if="line.isInstrumental" class="instrumental-indicator">
-              <i class="fas fa-wave-square"></i>
-              Instrumental
-            </span>
-            <span v-else class="lyric-text" :style="{ fontSize: fontSize + 'px' }">{{ line.text }}</span>
-          <div v-if="showPhonetic && line.phonetic" class="lyric-phonetic">{{ line.phonetic }}</div>
-            <span v-if="visualFeedback && line.correct && withMicrophone" class="feedback-icon correct">
-              <i class="fas fa-check"></i>
-            </span>
-            <span v-if="visualFeedback && line.wrong && withMicrophone" class="feedback-icon wrong">
-              <i class="fas fa-xmark"></i>
-            </span>
-          </div>
+        <!-- ========== SUBSTITUIR o bloco da lyric-line (linha ~380) ========== -->
+
+<div
+  v-for="(line, index) in processedLyrics"
+  :key="index"
+  class="lyric-line"
+  :class="{
+    'active': currentLineIndex === index,
+    'past': currentLineIndex > index,
+    'future': currentLineIndex < index,
+    'correct': line.correct,
+    'wrong': line.wrong,
+    'instrumental': line.isInstrumental
+  }"
+  :data-time="line.time"
+>
+  <!-- Container principal da linha -->
+  <div class="lyric-content">
+    <span v-if="line.isInstrumental" class="instrumental-indicator">
+      <i class="fas fa-wave-square"></i>
+      Instrumental
+    </span>
+    
+    <!-- Texto da música -->
+    <span v-else class="lyric-text" :style="{ fontSize: fontSize + 'px' }">
+      {{ line.text }}
+    </span>
+    
+    <!-- ✅ MOVIDO PARA DENTRO de .lyric-content, DEPOIS do texto -->
+    <div v-if="showPhonetic && line.phonetic" class="lyric-phonetic">
+      {{ line.phonetic }}
+    </div>
+  </div>
+
+  <!-- Ícones de feedback (mantidos fora do flow central) -->
+  <span v-if="visualFeedback && line.correct && withMicrophone" class="feedback-icon correct">
+    <i class="fas fa-check"></i>
+  </span>
+  <span v-if="visualFeedback && line.wrong && withMicrophone" class="feedback-icon wrong">
+    <i class="fas fa-xmark"></i>
+  </span>
+</div>
         </div>
 
         <div class="progress-line"></div>
@@ -452,57 +454,181 @@
     </footer>
 
     <!-- Settings Modal -->
-    <transition name="fade">
-      <div v-if="showSettings" class="settings-modal" @click.self="toggleSettings">
-        <div class="settings-content">
-          <h3>
-            <i class="fas fa-gear"></i>
-            Configurações
-          </h3>
+  <!-- Settings Modal -->
+<transition name="fade">
+  <div v-if="showSettings" class="settings-modal" @click.self="toggleSettings">
+    <div class="settings-content">
+      <h3>
+        <i class="fas fa-gear"></i>
+        Configurações
+      </h3>
 
-          <div class="setting-item">
-            <label>Modo de Exibição</label>
-            <div class="setting-options">
-              <button
-                v-for="mode in displayModes"
-                :key="mode.value"
-                :class="{ active: displayMode === mode.value }"
-                @click="setDisplayMode(mode.value)"
-              >
-                {{ mode.label }}
-              </button>
-            </div>
-          </div>
-
-          <div class="setting-item">
-            <label>Tamanho da Letra: {{ fontSize }}px</label>
-            <input type="range" min="16" max="48" v-model.number="fontSize" class="setting-slider">
-          </div>
-
-          <div class="setting-item checkbox">
-            <input type="checkbox" v-model="showPhonetic" id="phonetic" @change="saveSettings">
-            <label for="phonetic">Mostrar Pronúncia</label>
-          </div>
-
-          <div class="setting-item checkbox">
-           <input type="checkbox" v-model="visualFeedback" id="feedback" @change="saveSettings">
-            <label for="feedback">Feedback Visual</label>
-          </div>
-
-          <div class="setting-item checkbox">
-           <input type="checkbox" v-model="autoScroll" id="autoscroll" @change="saveSettings">
-            <label for="autoscroll">Auto-scroll de Letras</label>
-          </div>
-
-          <div v-if="withMicrophone" class="setting-item">
-            <label>Sensibilidade do Microfone: {{ micSensitivity }}%</label>
-            <input type="range" min="0" max="100" v-model.number="micSensitivity" class="setting-slider">
-          </div>
-
-          <button class="btn-close" @click="toggleSettings">Fechar</button>
+      <div class="setting-item">
+        <label>Modo de Exibição</label>
+        <div class="setting-options">
+          <button
+            v-for="mode in displayModes"
+            :key="mode.value"
+            :class="{ active: displayMode === mode.value }"
+            @click="setDisplayMode(mode.value)"
+          >
+            {{ mode.label }}
+          </button>
         </div>
       </div>
-    </transition>
+
+      <div class="setting-item">
+        <label>Tamanho da Letra: {{ fontSize }}px</label>
+        <input type="range" min="16" max="48" v-model.number="fontSize" class="setting-slider">
+      </div>
+
+      <div class="setting-item">
+        <label>Ajuste de Sincronia das Letras: {{ lyricsSyncOffset.toFixed(1) }}s</label>
+        <input type="range" min="-5" max="5" step="0.1" v-model.number="lyricsSyncOffset" class="setting-slider">
+        <small style="opacity:0.6; font-size:11px; display:block; margin-top:4px;">
+          Negativo = letras antecipam | Positivo = letras atrasam
+        </small>
+      </div>
+
+      <div class="setting-item checkbox">
+        <input type="checkbox" v-model="showPhonetic" id="phonetic" @change="saveSettings">
+        <label for="phonetic">Mostrar Pronúncia</label>
+      </div>
+
+      <div class="setting-item checkbox">
+        <input type="checkbox" v-model="visualFeedback" id="feedback" @change="saveSettings">
+        <label for="feedback">Feedback Visual</label>
+      </div>
+
+      <div class="setting-item checkbox">
+        <input type="checkbox" v-model="autoScroll" id="autoscroll" @change="saveSettings">
+        <label for="autoscroll">Auto-scroll de Letras</label>
+      </div>
+
+      <!-- ✅ NOVO: Silenciar voz do cantor -->
+      <div class="setting-item checkbox vocal-remover">
+        <input type="checkbox" v-model="vocalRemoval" id="vocalremoval" @change="toggleVocalRemoval">
+        <label for="vocalremoval">
+          <i class="fas fa-microphone-slash"></i>
+          Silenciar Voz do Cantor (Modo Instrumental)
+        </label>
+      </div>
+  <small v-if="vocalRemoval" class="vocal-hint">
+  <i class="fas fa-microphone-slash"></i> A voz original será reduzida. Ideal para você cantar!
+</small>
+
+      <div v-if="withMicrophone" class="setting-item">
+        <label>Sensibilidade do Microfone: {{ micSensitivity }}%</label>
+        <input type="range" min="0" max="100" v-model.number="micSensitivity" class="setting-slider">
+      </div>
+
+      <div class="setting-item">
+        <button class="btn-history" @click="openHistoryModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Últimas Jogadas
+        </button>
+      </div>
+
+      <button class="btn-close" @click="toggleSettings">Fechar</button>
+    </div>
+  </div>
+</transition>
+
+    <!-- History Modal -->
+<transition name="fade">
+  <div v-if="showHistoryModal" class="settings-modal history-modal" @click.self="closeHistoryModal">
+    <div class="settings-content history-content">
+      <h3>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Últimas Jogadas
+      </h3>
+
+      <div v-if="gameHistory.length === 0" class="history-empty">
+        <p>Nenhuma jogada registrada ainda</p>
+        <small>Cante uma música para ver seu histórico aqui</small>
+      </div>
+
+      <div v-else class="history-list">
+        <div 
+          v-for="(game, index) in gameHistory.slice().reverse()" 
+          :key="index"
+          class="history-item"
+        >
+          <div class="history-song">
+            <img :src="game.cover || 'https://via.placeholder.com/40'" class="history-cover">
+            <div class="history-info">
+              <strong>{{ game.song }}</strong>
+              <span>{{ game.artist }}</span>
+            </div>
+          </div>
+          
+          <div class="history-stats">
+            <div class="history-stat">
+              <span class="stat-label">Pontuação</span>
+              <span class="stat-value" :class="getScoreClass(game.score)">
+                {{ Math.round(game.score) }}
+              </span>
+            </div>
+            <div class="history-stat">
+              <span class="stat-label">Precisão</span>
+              <span class="stat-value">{{ Math.round(game.accuracy) }}%</span>
+            </div>
+            <div class="history-stat">
+              <span class="stat-label">Dificuldade</span>
+              <span class="difficulty-badge" :class="game.difficulty">
+                {{ getDifficultyLabel(game.difficulty) }}
+              </span>
+            </div>
+            <div class="history-stat">
+              <span class="stat-label">Gravado</span>
+              <span class="stat-value" :class="game.recorded ? 'yes' : 'no'">
+                {{ game.recorded ? 'Sim' : 'Não' }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="history-date">{{ formatDate(game.date) }}</div>
+        </div>
+      </div>
+
+      <div class="history-actions">
+        <button v-if="gameHistory.length > 0" class="btn-clear-history" @click="clearHistory">
+          Limpar Histórico
+        </button>
+        <button class="btn-close" @click="closeHistoryModal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</transition>
+
+<!-- ============ ADICIONAR DEPOIS do History Modal ============ -->
+<<transition name="fade">
+  <div v-if="showDeleteConfirmModal" class="settings-modal confirm-modal" @click.self="showDeleteConfirmModal = false">
+    <div class="settings-content confirm-content">
+      <div class="confirm-icon warning">
+        <i class="fas fa-triangle-exclamation"></i>
+      </div>
+      <h3>Apagar Histórico?</h3>
+      <p class="confirm-text">
+        Esta ação não pode ser desfeita. Todas as suas jogadas serão permanentemente removidas.
+      </p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" @click="showDeleteConfirmModal = false">
+          <i class="fas fa-xmark"></i>
+          Cancelar
+        </button>
+        <button class="btn-confirm-delete" @click="confirmClearHistory">
+          <i class="fas fa-trash-can"></i>
+          Sim, apagar
+        </button>
+      </div>
+    </div>
+  </div>
+</transition>
 
     <!-- Hidden Audio Player -->
     <audio
@@ -542,6 +668,13 @@ export default {
       searchTimeout: null,
       isLoading: false,
       displayLimit: 24,
+      showHistoryModal: false,
+      showDeleteConfirmModal: false,
+      spotifyPlayer: null,
+spotifyDeviceId: null,
+isSpotifyPremium: false,
+spotifyToken: null,
+    gameHistory: [],
 
       // Difficulty
       selectedDifficulty: 'medium',
@@ -617,6 +750,13 @@ export default {
       showPhonetic: false,
       visualFeedback: true,
       autoScroll: true,
+      // ✅ NOVO: Vocal Removal
+vocalRemoval: false,
+vocalRemovalNode: null,
+audioSourceNode: null,
+audioContextPlayer: null,
+isVocalRemovalSetup: false,
+
 
       // Microphone
       micActive: false,
@@ -679,6 +819,17 @@ export default {
   },
 
 watch: {
+vocalRemoval() {
+  this.saveSettings()
+},
+  lyricsSyncOffset(newVal, oldVal) {
+    if (newVal !== oldVal) {
+      // Força re-sync imediato
+      this.syncLyricsWithAudio()
+      this.saveSettings()
+    }
+  },
+
   selectedDifficulty: {
     immediate: false,
     async handler(newVal) {
@@ -701,33 +852,33 @@ watch: {
     }
   },
 
-  currentLineIndex(newVal, oldVal) {
-    if (newVal === oldVal) return
-    if (!this.autoScroll) return
+ currentLineIndex(newVal, oldVal) {
+  if (newVal === oldVal) return
+  if (!this.autoScroll) return
 
-    this.$nextTick(() => {
-      const container = this.$refs.lyricsContainer
-      const activeLine = container?.querySelector('.lyric-line.active')
-      if (!activeLine || !container) return
+  this.$nextTick(() => {
+    const container = this.$refs.lyricsContainer
+    const activeLine = container?.querySelector('.lyric-line.active')
+    if (!activeLine || !container) return
 
-      const containerRect = container.getBoundingClientRect()
-      const lineRect = activeLine.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+    const lineRect = activeLine.getBoundingClientRect()
 
-      // mais para cima em fullscreen, um pouco menos no modo normal
-      const anchorRatio = this.isFullscreen ? 0.28 : 0.38
-      const targetTop = container.clientHeight * anchorRatio
+    // ✅ Linha ativa MUITO mais para cima em fullscreen (18% do topo)
+    const anchorRatio = this.isFullscreen ? 0.18 : 0.35
+    const targetTop = container.clientHeight * anchorRatio
 
-      const delta =
-        (lineRect.top - containerRect.top) -
-        targetTop +
-        (lineRect.height / 2)
+    const delta =
+      (lineRect.top - containerRect.top) -
+      targetTop +
+      (lineRect.height / 2)
 
-      container.scrollTo({
-        top: Math.max(0, container.scrollTop + delta),
-        behavior: 'smooth'
-      })
+    container.scrollTo({
+      top: Math.max(0, container.scrollTop + delta),
+      behavior: 'smooth'
     })
-  },
+  })
+},
 
   showPhonetic() {
     this.saveSettings()
@@ -754,19 +905,30 @@ watch: {
   }
 },
 
-  mounted() {
-    this.detectAuthProvider()
-    this.initAudio()
-    if (this.withMicrophone) {
-      this.initSpeechRecognition()
-    }
+ async mounted() {
+  this.detectAuthProvider()
+  this.initAudio()
+  
+  // Inicializa Spotify Player se tiver token
+  await this.initSpotifyPlayer()
+  
+  if (this.withMicrophone) {
+    this.initSpeechRecognition()
+  }
     window.addEventListener('keydown', this.handleKeydown)
     this.loadSettings()
     this.loadSongsByDifficulty(this.selectedDifficulty)
     this.$emit('karaoke-active', true)
+      this.loadGameHistory()
   },
 
+
 beforeUnmount() {
+  // ✅ SALVAR antes de destruir se tiver score
+  if (this.withMicrophone && !this.showSongSelection && this.currentScore > 0) {
+    this.saveGameToHistory()
+  }
+  
   this.stopPlayback()
   this.stopMicrophone()
   window.removeEventListener('keydown', this.handleKeydown)
@@ -801,17 +963,97 @@ beforeUnmount() {
 getEffectiveLyricsTime(includeManualOffset = true) {
   const manualOffset = includeManualOffset ? this.lyricsSyncOffset : 0
 
-  // Quando já recortou o LRC para o preview, os tempos já estão relativos ao preview
   if (this.hasRealLRC) {
-    return this.currentTime + manualOffset
+    // ✅ Aplica o offset do preview (quando o preview começa na música)
+    // + offset manual do usuário (ajuste fino)
+    return (this.currentTime + this.previewStartOffset) + manualOffset
   }
 
-  // Letras estimadas ainda usam escala e offset do trecho do preview
   return (
     this.previewStartOffset +
     (this.currentTime * this.lyricsTimeScale) +
     manualOffset
   )
+},
+
+openHistoryModal() {
+  this.showHistoryModal = true
+  this.loadGameHistory()
+},
+
+closeHistoryModal() {
+  this.showHistoryModal = false
+},
+
+loadGameHistory() {
+  const saved = localStorage.getItem('karaokeGameHistory')
+  if (saved) {
+    try {
+      this.gameHistory = JSON.parse(saved)
+    } catch (e) {
+      this.gameHistory = []
+    }
+  }
+},
+
+saveGameToHistory() {
+  if (!this.withMicrophone) return // só salva no modo com microfone
+  
+  const game = {
+    date: new Date().toISOString(),
+    song: this.currentSong.title,
+    artist: this.currentSong.artist,
+    cover: this.currentSong.cover,
+    score: this.currentScore,
+    accuracy: this.accuracyPercent,
+    difficulty: this.currentSong.difficulty,
+    recorded: this.isRecording,
+    combo: this.combo,
+    stars: this.starRating
+  }
+  
+  this.gameHistory.push(game)
+  
+  // Mantém apenas últimas 50 jogadas
+  if (this.gameHistory.length > 50) {
+    this.gameHistory = this.gameHistory.slice(-50)
+  }
+  
+  localStorage.setItem('karaokeGameHistory', JSON.stringify(this.gameHistory))
+},
+
+clearHistory() {
+  this.showDeleteConfirmModal = true
+},
+// ============ ADICIONAR ============
+confirmClearHistory() {
+  this.gameHistory = []
+  localStorage.removeItem('karaokeGameHistory')
+  this.showDeleteConfirmModal = false
+  
+  this.showMicPermissionToast(
+    'success',
+    'Histórico apagado',
+    'Todas as jogadas foram removidas com sucesso.'
+  )
+},
+
+getScoreClass(score) {
+  if (score >= 8000) return 'excellent'
+  if (score >= 5000) return 'good'
+  if (score >= 2000) return 'average'
+  return 'low'
+},
+
+formatDate(isoString) {
+  const date = new Date(isoString)
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 },
 
     // ===================== TRACK MAPPING =====================
@@ -893,7 +1135,11 @@ getEffectiveLyricsTime(includeManualOffset = true) {
       } catch (error) {
         console.error('Erro na busca:', error)
         this.searchResults = []
-        alert(`Erro ao buscar músicas via ${this.currentProviderLabel}.`)
+        this.showMicPermissionToast(    // ✅ REUSA O TOAST QUE JÁ EXISTE
+    'error',
+    'Erro na busca',
+    `Não foi possível buscar músicas via ${this.currentProviderLabel}. Verifique sua conexão.`
+  )
       } finally {
         this.isLoading = false
       }
@@ -915,12 +1161,72 @@ getEffectiveLyricsTime(includeManualOffset = true) {
     },
 
     // ===================== SONG SELECTION =====================
-    async selectTrackAndStart(track) {
-      await this.setSongData(track)
-      this.showSongSelection = false
-      this.searchQuery = ''
-      this.displayLimit = 12
-    },
+ // ============ ADICIONAR dentro de selectTrackAndStart ============
+async selectTrackAndStart(track) {
+  await this.setSongData(track)
+  
+  // Se é Spotify e usuário tem Premium, toca música completa como backing
+  if (track.source === 'spotify' && this.isSpotifyPremium && this.spotifyPlayer) {
+    try {
+      await this.spotifyPlayer._options.getOAuthToken(async (token) => {
+        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            uris: [`spotify:track:${track.id}`]
+          })
+        })
+      })
+      
+      // Atualiza duração real
+      this.duration = track.duration || 180
+      this.currentSong.previewDuration = track.duration || 180
+      
+      // Inicia karaoke sync
+      this.startKaraokeSync()
+      
+    } catch (e) {
+      console.error('Erro ao tocar no Spotify:', e)
+      // Fallback para preview
+      this.audioPreviewUrl = track.preview || track.preview_url || ''
+    }
+  } else {
+    // Fallback Deezer
+    this.audioPreviewUrl = track.preview || track.preview_url || ''
+  }
+  
+  this.showSongSelection = false
+  this.searchQuery = ''
+  this.displayLimit = 12
+},
+
+// ========== ADICIONAR startKaraokeSync ==========
+startKaraokeSync() {
+  // Em vez de usar timeupdate do audio, usa o estado do Spotify SDK
+  if (!this.spotifyPlayer) return
+  
+  const syncInterval = setInterval(async () => {
+    const state = await this.spotifyPlayer.getCurrentState()
+    if (!state) return
+    
+    this.currentTime = state.position / 1000
+    this.duration = state.duration / 1000
+    this.progressPercent = (this.currentTime / this.duration) * 100
+    this.syncLyricsWithAudio()
+    
+    if (state.paused) {
+      this.isPlaying = false
+    } else {
+      this.isPlaying = true
+    }
+  }, 300)
+  
+  // Limpa no beforeUnmount
+  this._karaokeSyncInterval = syncInterval
+},
 
     async setSongData(track) {
       const difficulty = track.difficulty || this.calculateDifficulty(track)
@@ -1307,18 +1613,18 @@ getEffectiveLyricsTime(includeManualOffset = true) {
       })
     },
 
-    calculateLyricsTimeScale() {
-      if (!this.processedLyrics.length) return
+ calculateLyricsTimeScale() {
+  if (!this.processedLyrics.length) return
+  const previewDuration = this.duration || 30
+  const fullDuration = this.currentSong.duration || 180
 
-      const previewDuration = this.duration || 30
-      const fullDuration = this.currentSong.duration || 180
-
-      if (!this.hasRealLRC) {
-        this.lyricsTimeScale = fullDuration / previewDuration
-        this.previewStartOffset = Math.max(0, (fullDuration - previewDuration) / 2)
-        return
-      }
-
+  if (!this.hasRealLRC) {
+    this.lyricsTimeScale = fullDuration / previewDuration
+    // ✅ Se já temos offset do backend, usa ele. Senão, estima o meio
+    this.previewStartOffset = this.previewStartOffset || Math.max(0, (fullDuration - previewDuration) / 2)
+    return
+  }
+this.lyricsTimeScale = 1
       const lines = this.processedLyrics
 
       let bestWindow = {
@@ -1605,70 +1911,109 @@ generatePhonetic(text) {
   return phonetics.join(' ') || lowerText
 },
 
-    async loadLyricsForCurrentSong() {
-      this.isLoadingLyrics = true
-      this.lyricsError = null
+  async loadLyricsForCurrentSong() {
+  this.isLoadingLyrics = true
+  this.lyricsError = null
 
-      try {
-        let lrcData = await this.fetchLRCFromLRCLIB(
+  try {
+    // ✅ NOVO: Tenta primeiro o backend karaoke para sincronia perfeita
+    let lrcData = null
+    let previewOffset = 0
+    
+    try {
+      const syncRes = await fetch(
+        `${this.API_BASE}/api/karaoke/lyrics-sync?` + 
+        `title=${encodeURIComponent(this.currentSong.title)}&` +
+        `artist=${encodeURIComponent(this.currentSong.artist)}&` +
+        `previewDuration=${this.currentSong.previewDuration || 30}`
+      )
+      
+    if (syncRes.ok) {
+  const syncData = await syncRes.json()
+  lrcData = syncData.lyrics
+  previewOffset = syncData.suggestedOffset || 0
+  this.currentSong.duration = syncData.fullDuration || this.currentSong.duration
+  
+  // ✅ LOG para debug (remova depois)
+  console.log(`[KARAOKE] Preview offset: ${previewOffset}s, Full: ${syncData.fullDuration}s`)
+}
+    } catch (e) {
+     console.warn('[KARAOKE] Backend indisponível, usando fallback LRCLIB:', e)
+    }
+    
+    // Fallback direto pro LRCLIB se backend falhar
+    if (!lrcData) {
+      lrcData = await this.fetchLRCFromLRCLIB(
+        this.currentSong.title,
+        this.currentSong.artist,
+        this.currentSong.duration
+      )
+    }
+
+    if (lrcData && lrcData.length > 0) {
+      this.rawLyrics = lrcData.map(l => l.text).join('\n')
+      
+      // ✅ Aplica o offset do preview nos tempos
+      const adjustedLrc = lrcData.map(l => ({
+        ...l,
+        time: Math.max(0, l.time - previewOffset)  // Ajusta tempo pro preview
+      })).filter(l => l.time >= 0 && l.time <= (this.currentSong.previewDuration || 30))
+      
+      this.processedLyrics = this.processLyricsWithTiming(
+        this.rawLyrics,
+        this.currentSong.duration,
+        adjustedLrc
+      )
+      
+      this.hasRealLRC = true
+      this.previewStartOffset = previewOffset  // Guarda o offset usado
+     console.log('[KARAOKE] Letra sincronizada. Offset do preview:', previewOffset)
+      
+    } else {
+      // Fallback para letras não sincronizadas
+      let lyricsText = await this.fetchLyricsFromGenius(
+        this.currentSong.title,
+        this.currentSong.artist
+      )
+
+      if (!lyricsText) {
+        lyricsText = await this.fetchLyricsFromAlternativeAPI(
           this.currentSong.title,
-          this.currentSong.artist,
-          this.currentSong.duration
+          this.currentSong.artist
         )
-
-        if (lrcData && lrcData.length > 0) {
-          this.rawLyrics = lrcData.map(l => l.text).join('\n')
-          this.processedLyrics = this.processLyricsWithTiming(
-            this.rawLyrics,
-            this.currentSong.duration,
-            lrcData
-          )
-          this.hasRealLRC = true
-          console.log('✅ Letra sincronizada via LRCLIB')
-        } else {
-          let lyricsText = await this.fetchLyricsFromGenius(
-            this.currentSong.title,
-            this.currentSong.artist
-          )
-
-          if (!lyricsText) {
-            lyricsText = await this.fetchLyricsFromAlternativeAPI(
-              this.currentSong.title,
-              this.currentSong.artist
-            )
-          }
-
-          if (lyricsText) {
-            this.rawLyrics = lyricsText
-            const estimatedSongDuration = this.currentSong.duration || 180
-            this.processedLyrics = this.processLyricsWithTiming(
-              lyricsText,
-              estimatedSongDuration
-            )
-            this.hasRealLRC = false
-          } else {
-            throw new Error('Letras não disponíveis')
-          }
-        }
-
-        const realDifficulty = this.calculateDifficulty(this.currentSong, this.rawLyrics)
-        this.currentSong.difficulty = realDifficulty
-
-        const words = this.rawLyrics.split(/\s+/).length
-        this.currentSong.stats = {
-          wordDensity: Math.round((words / this.currentSong.duration) * 60),
-          uniqueWords: new Set(this.rawLyrics.toLowerCase().split(/\s+/)).size,
-          totalLines: this.processedLyrics.length
-        }
-
-      } catch (error) {
-        console.error('Erro ao carregar letras:', error)
-        this.lyricsError = 'Letras não disponíveis. Usando letras de exemplo.'
-        this.loadFallbackLyrics()
-      } finally {
-        this.isLoadingLyrics = false
       }
-    },
+
+      if (lyricsText) {
+        this.rawLyrics = lyricsText
+        const estimatedSongDuration = this.currentSong.duration || 180
+        this.processedLyrics = this.processLyricsWithTiming(
+          lyricsText,
+          estimatedSongDuration
+        )
+        this.hasRealLRC = false
+      } else {
+        throw new Error('Letras não disponíveis')
+      }
+    }
+
+       const realDifficulty = this.calculateDifficulty(this.currentSong, this.rawLyrics)
+    this.currentSong.difficulty = realDifficulty
+
+    const words = this.rawLyrics.split(/\s+/).length
+    this.currentSong.stats = {
+      wordDensity: Math.round((words / this.currentSong.duration) * 60),
+      uniqueWords: new Set(this.rawLyrics.toLowerCase().split(/\s+/)).size,
+      totalLines: this.processedLyrics.length
+    }
+
+  } catch (error) {
+    console.error('Erro ao carregar letras:', error)
+    this.lyricsError = 'Letras não disponíveis. Usando letras de exemplo.'
+    this.loadFallbackLyrics()
+  } finally {
+    this.isLoadingLyrics = false
+  }
+},
 
     loadFallbackLyrics() {
       const fallbackLyrics = {
@@ -1700,29 +2045,47 @@ generatePhonetic(text) {
     },
 
     // ===================== AUDIO SYNC =====================
-   syncLyricsWithAudio() {
+syncLyricsWithAudio() {
   if (!this.processedLyrics.length) return
-  
- if (!this.autoScroll) return  // Não sincroniza linha se auto-scroll desativado
+  if (!this.autoScroll) return
 
-  if (this.withMicrophone && Date.now() - this.lastSpeechSyncAt < 1200) {
+  // Bloqueia auto-sync se reconhecimento de voz acabou de sincronizar
+  if (this.withMicrophone && Date.now() - this.lastSpeechSyncAt < 800) {
     return
   }
 
-  const effectiveTime = this.getEffectiveLyricsTime(true)
+  // ✅ APLICA O OFFSET AQUI — sem lookahead que anula o offset
+   const effectiveTime = this.getEffectiveLyricsTime(true)
 
-  let newLineIndex = this.processedLyrics.findIndex((line, i) => {
+  let newLineIndex = -1
+
+  // Busca a linha ativa baseada no tempo EFETIVO (com offset)
+  for (let i = 0; i < this.processedLyrics.length; i++) {
+    const line = this.processedLyrics[i]
     const nextLine = this.processedLyrics[i + 1]
-    const start = Math.max(0, line.time - 0.15)
-    const end = nextLine ? nextLine.time - 0.05 : line.time + (line.duration || 3)
-    return effectiveTime >= start && effectiveTime < end
-  })
+    
+    const start = line.time
+    const end = nextLine ? nextLine.time : line.time + (line.duration || 3)
+    
+    // ✅ Compara com effectiveTime que JÁ INCLUI o offset
+    if (effectiveTime >= start && effectiveTime < end) {
+      newLineIndex = i
+      break
+    }
+  }
 
+  // Fallback
   if (newLineIndex === -1) {
-    if (effectiveTime <= (this.processedLyrics[0]?.time || 0)) {
+    if (effectiveTime < this.processedLyrics[0].time) {
       newLineIndex = 0
     } else {
-      newLineIndex = this.processedLyrics.length - 1
+      for (let i = this.processedLyrics.length - 1; i >= 0; i--) {
+        if (this.processedLyrics[i].time <= effectiveTime) {
+          newLineIndex = i
+          break
+        }
+      }
+      if (newLineIndex === -1) newLineIndex = 0
     }
   }
 
@@ -1731,16 +2094,21 @@ generatePhonetic(text) {
   }
 },
 
-    onAudioTimeUpdate() {
-      const audio = this.$refs.audioPlayer
-      if (!audio) return
+onAudioTimeUpdate() {
+  const audio = this.$refs.audioPlayer
+  if (!audio) return
 
-      this.currentTime = audio.currentTime
-      this.duration = this.currentSong.previewDuration || 30
-      this.progressPercent = (this.currentTime / this.duration) * 100
+  this.currentTime = audio.currentTime
+  this.duration = this.currentSong.previewDuration || 30
+  this.progressPercent = (this.currentTime / this.duration) * 100
 
-      this.syncLyricsWithAudio()
-    },
+  this.syncLyricsWithAudio()
+  
+  // ✅ NOVO: Auto-salva a cada 10 segundos se estiver com microfone e pontuando
+  if (this.withMicrophone && this.currentScore > 0 && Math.floor(this.currentTime) % 10 === 0) {
+    this.saveGameToHistory()
+  }
+},
 
     onAudioLoaded() {
       const audio = this.$refs.audioPlayer
@@ -1750,29 +2118,51 @@ generatePhonetic(text) {
       }
     },
 
-    handleAudioEnded() {
-      const audio = this.$refs.audioPlayer
-      if (audio && audio.paused) {
-        this.isPlaying = false
-      }
-    },
+  handleAudioEnded() {
+  const audio = this.$refs.audioPlayer
+  if (audio) {
+    this.isPlaying = false
+    // ✅ Sempre salva quando a música termina, mesmo se não estiver "pausada"
+    if (this.withMicrophone) {
+      this.saveGameToHistory()
+    }
+  }
+},
 
     // ===================== PLAYBACK CONTROLS =====================
-    togglePlay() {
-      if (!this.audioPreviewUrl) {
-        alert('Nenhum preview disponível.')
-        return
-      }
+async togglePlay() {
+  // Se tem Spotify Premium e música do Spotify, usa o player completo
+  if (this.isSpotifyPremium && this.currentSong.spotifyId) {
+    if (this.isPlaying) {
+      await this.spotifyPlayer.pause()
+      this.isPlaying = false
+    } else {
+      await this.spotifyPlayer.resume()
+      this.isPlaying = true
+      if (this.withMicrophone && !this.micActive) this.startMicrophone()
+    }
+    return
+  }
 
-      this.isPlaying = !this.isPlaying
+  // Fallback: preview de 30s (Deezer ou Spotify sem Premium)
+  if (!this.audioPreviewUrl) {
+    this.showMicPermissionToast(
+      'warning',
+      'Preview indisponível',
+      'Esta música não possui preview disponível. Faça login com Spotify Premium para ouvir músicas completas.'
+    )
+    return
+  }
 
-      if (this.isPlaying) {
-        this.$refs.audioPlayer?.play()
-        if (this.withMicrophone && !this.micActive) this.startMicrophone()
-      } else {
-        this.$refs.audioPlayer?.pause()
-      }
-    },
+  this.isPlaying = !this.isPlaying
+
+  if (this.isPlaying) {
+    this.$refs.audioPlayer?.play()
+    if (this.withMicrophone && !this.micActive) this.startMicrophone()
+  } else {
+    this.$refs.audioPlayer?.pause()
+  }
+},
 
     skipBackward() {
       const audio = this.$refs.audioPlayer
@@ -1999,6 +2389,16 @@ generatePhonetic(text) {
       this.micLevel = Math.min(100, (average / 255) * 100 * (1 + sensitivity))
       this.pitchPosition = 30 + (average / 255) * 40
 
+        // ✅ NOVO: Pontuação por energia vocal contínua
+  if (this.isPlaying && this.withMicrophone && this.micActive) {
+    const energyThreshold = 15 // mínimo de energia para considerar "cantando"
+    if (average > energyThreshold) {
+      // Pontos baseados na intensidade do som (quanto mais forte/melhor, mais pontos)
+      const energyScore = (average / 255) * 2 // 0~2 pontos por frame
+      this.addScore(energyScore, 'good')
+    }
+  }
+
       if (this.micActive) {
         requestAnimationFrame(() => this.analyzeAudio())
       }
@@ -2046,9 +2446,10 @@ generatePhonetic(text) {
     matchedLine.wrong = false
     this.combo++
 
-    let points = 100
-    if (match.score >= 0.90) points = 160
-    else if (match.score >= 0.80) points = 130
+let points = 150
+if (match.score >= 0.90) points = 300  // perfect hit
+else if (match.score >= 0.80) points = 220
+else if (match.score >= 0.70) points = 180
 
     if (this.currentSong.difficulty === 'hard') {
       points *= 1.5
@@ -2181,6 +2582,160 @@ generatePhonetic(text) {
       return matrix[str2.length][str1.length]
     },
 
+// ===================== VOCAL REMOVAL (Karaokê) =====================
+toggleVocalRemoval() {
+  this.saveSettings()
+  
+  if (this.vocalRemoval) {
+    this.setupVocalRemoval()
+  } else {
+    this.disableVocalRemoval()
+  }
+},
+
+// SUBSTITUIR o método setupVocalRemoval() inteiro:
+
+setupVocalRemoval() {
+  const audio = this.$refs.audioPlayer
+  if (!audio) return
+
+  try {
+    if (!this.audioContextPlayer) {
+      this.audioContextPlayer = new (window.AudioContext || window.webkitAudioContext)()
+    }
+
+    if (this.isVocalRemovalSetup && this.vocalRemovalNode) {
+      return
+    }
+
+    if (!this.audioSourceNode) {
+      this.audioSourceNode = this.audioContextPlayer.createMediaElementSource(audio)
+    }
+
+    const ctx = this.audioContextPlayer
+    const source = this.audioSourceNode
+
+    // ==== CADEIA AGRESSIVA DE REMOÇÃO DE VOZ ====
+    
+    // 1. Splitter stereo
+    const splitter = ctx.createChannelSplitter(2)
+    
+    // 2. Ganho para canal invertido (-1 = fase invertida)
+    const invertGain = ctx.createGain()
+    invertGain.gain.value = -1
+
+    // 3. Merger L - R (cancela o centro onde está a voz)
+    const merger = ctx.createChannelMerger(2)
+
+    // 4. PRIMEIRO NOTCH: corta frequência fundamental da voz (85-255Hz = grave)
+    const notchLow = ctx.createBiquadFilter()
+    notchLow.type = 'notch'
+    notchLow.frequency.value = 180
+    notchLow.Q.value = 0.3  // Largura maior = corte mais agressivo
+
+    // 5. SEGUNDO NOTCH: corta corpo da voz (255-500Hz)
+    const notchMid1 = ctx.createBiquadFilter()
+    notchMid1.type = 'notch'
+    notchMid1.frequency.value = 350
+    notchMid1.Q.value = 0.4
+
+    // 6. TERCEIRO NOTCH: presença vocal (500Hz-2kHz) — ONDE A VOZ MAIS ESTÁ
+    const notchMid2 = ctx.createBiquadFilter()
+    notchMid2.type = 'notch'
+    notchMid2.frequency.value = 1000
+    notchMid2.Q.value = 0.5
+
+    // 7. QUARTO NOTCH: harmônicos agudos da voz (2-4kHz)
+    const notchHigh = ctx.createBiquadFilter()
+    notchHigh.type = 'notch'
+    notchHigh.frequency.value = 3000
+    notchHigh.Q.value = 0.6
+
+    // 8. BANDPASS: deixa passar só o que NÃO é voz (instrumentos)
+    // Voz humana = 85Hz a 4kHz. Instrumentos = fora disso + estéreo
+    const bandpass = ctx.createBiquadFilter()
+    bandpass.type = 'bandpass'
+    bandpass.frequency.value = 8000  // Foca nos agudos (pratos, guitarras)
+    bandpass.Q.value = 0.4
+
+    // 9. PEAKING: boost em frequências de instrumentos (6-12kHz brilho)
+    const peakBoost = ctx.createBiquadFilter()
+    peakBoost.type = 'peaking'
+    peakBoost.frequency.value = 8000
+    peakBoost.gain.value = 8  // Boost AGRESSIVO nos agudos
+    peakBoost.Q.value = 0.5
+
+    // 10. Compressor para nivelar
+    const compressor = ctx.createDynamicsCompressor()
+    compressor.threshold.value = -30
+    compressor.knee.value = 20
+    compressor.ratio.value = 20  // Mais compressão
+    compressor.attack.value = 0.001
+    compressor.release.value = 0.1
+
+    // 11. Ganho final COMPENSATÓRIO (a voz sumiu, soou baixo, boost aqui)
+    this.vocalRemovalNode = ctx.createGain()
+    this.vocalRemovalNode.gain.value = 2.2  // BOOST MAIOR
+
+    // === CONEXÕES ===
+    source.connect(splitter)
+    
+    // L - R = cancelamento de centro (voz)
+    splitter.connect(merger, 0, 0)      // L → L
+    splitter.connect(invertGain, 1)      // R → invert
+    invertGain.connect(merger, 0, 1)     // -R → R
+
+    // Cadeia de filtros agressivos
+    merger.connect(notchLow)
+    notchLow.connect(notchMid1)
+    notchMid1.connect(notchMid2)
+    notchMid2.connect(notchHigh)
+    notchHigh.connect(bandpass)
+    bandpass.connect(peakBoost)
+    peakBoost.connect(compressor)
+    compressor.connect(this.vocalRemovalNode)
+    this.vocalRemovalNode.connect(ctx.destination)
+
+    this.isVocalRemovalSetup = true
+
+    this.showMicPermissionToast(
+      'success',
+      'Modo Karaokê ATIVADO',
+      'Voz do cantor REDUZIDA AO MÁXIMO. Cante por cima!'
+    )
+  } catch (error) {
+    console.error('Erro ao configurar vocal removal:', error)
+    this.vocalRemoval = false
+    this.showMicPermissionToast(
+      'warning',
+      'Não foi possível ativar',
+      'Seu navegador não suporta processamento de áudio avançado.'
+    )
+  }
+},
+
+disableVocalRemoval() {
+  if (this.audioSourceNode && this.audioContextPlayer) {
+    try {
+      // Desconecta TUDO do source
+      this.audioSourceNode.disconnect()
+      // Reconecta direto ao destination (áudio normal)
+      this.audioSourceNode.connect(this.audioContextPlayer.destination)
+      
+      this.isVocalRemovalSetup = false
+      this.vocalRemovalNode = null
+    } catch (e) {
+      console.warn('Erro ao desativar vocal removal:', e)
+    }
+  }
+
+  this.showMicPermissionToast(
+    'success',
+    'Modo normal restaurado',
+    'A música voltou ao original.'
+  )
+},
+
     // ===================== SETTINGS =====================
    loadSettings() {
   const saved = localStorage.getItem('karaokeSettings')
@@ -2210,6 +2765,8 @@ generatePhonetic(text) {
     this.micSensitivity = Number(settings.micSensitivity ?? 70)
     this.selectedDifficulty = settings.selectedDifficulty ?? 'medium'
     this.playbackRate = Number(settings.playbackRate ?? 1)
+    this.vocalRemoval = typeof settings.vocalRemoval === 'boolean' ? settings.vocalRemoval : false
+
   } catch (e) {
     console.error('Erro ao carregar configurações:', e)
   }
@@ -2223,7 +2780,8 @@ generatePhonetic(text) {
         visualFeedback: this.visualFeedback,
         autoScroll: this.autoScroll,
         micSensitivity: this.micSensitivity,
-        selectedDifficulty: this.selectedDifficulty
+        selectedDifficulty: this.selectedDifficulty,
+        vocalRemoval: this.vocalRemoval
       }
       localStorage.setItem('karaokeSettings', JSON.stringify(settings))
     },
@@ -2333,11 +2891,16 @@ setDisplayMode(mode) {
       this.pitchShift = Math.max(-5, Math.min(5, this.pitchShift + delta))
     },
 
-    goBack() {
-      this.showSongSelection = true
-      this.stopPlayback()
-      this.stopMicrophone()
-    },
+ goBack() {
+  // ✅ SALVAR antes de sair se estiver jogando com microfone
+  if (this.withMicrophone && !this.showSongSelection && this.currentScore > 0) {
+    this.saveGameToHistory()
+  }
+  
+  this.showSongSelection = true
+  this.stopPlayback()
+  this.stopMicrophone()
+},
 
     formatTime(seconds) {
       const mins = Math.floor(seconds / 60)
@@ -2351,6 +2914,92 @@ setDisplayMode(mode) {
         this.initBackgroundVisualizer()
       })
     },
+
+    // ============ ADICIONAR ============
+async initSpotifyPlayer() {
+  // Só inicializa se estiver logado com Spotify
+  const spotifyToken = localStorage.getItem('spotify_access_token')
+  if (!spotifyToken) return
+
+  this.spotifyToken = spotifyToken
+
+  // Carrega o SDK do Spotify
+  if (!window.Spotify) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://sdk.scdn.co/spotify-player.js'
+      script.onload = resolve
+      script.onerror = reject
+      document.head.appendChild(script)
+    })
+  }
+
+  this.spotifyPlayer = new window.Spotify.Player({
+    name: 'SoundUp Karaokê',
+    getOAuthToken: cb => cb(this.spotifyToken),
+    volume: this.volume / 100
+  })
+
+  this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+    console.log('[SPOTIFY] Player pronto:', device_id)
+    this.spotifyDeviceId = device_id
+    this.isSpotifyPremium = true
+  })
+
+  this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+    console.log('[SPOTIFY] Device offline:', device_id)
+    this.isSpotifyPremium = false
+  })
+
+  this.spotifyPlayer.addListener('player_state_changed', (state) => {
+    if (!state) return
+    this.isPlaying = !state.paused
+    this.currentTime = state.position / 1000
+    this.duration = state.duration / 1000
+    this.progressPercent = (this.currentTime / this.duration) * 100
+  })
+
+  this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+    console.error('[SPOTIFY] Init error:', message)
+    this.isSpotifyPremium = false
+  })
+
+  this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
+    console.error('[SPOTIFY] Auth error:', message)
+    this.isSpotifyPremium = false
+    // Token expirado, tenta refresh
+    this.refreshSpotifyToken()
+  })
+
+  this.spotifyPlayer.addListener('account_error', ({ message }) => {
+    console.error('[SPOTIFY] Account error:', message)
+    this.isSpotifyPremium = false
+    this.showMicPermissionToast(
+      'warning',
+      'Spotify Premium necessário',
+      'Para tocar músicas completas, você precisa de uma conta Spotify Premium.'
+    )
+  })
+
+  await this.spotifyPlayer.connect()
+},
+
+async refreshSpotifyToken() {
+  try {
+    const res = await fetch(`${this.API_BASE}/spotify/refresh-token`, {
+      headers: this.getAuthHeaders()
+    })
+    if (res.ok) {
+      const data = await res.json()
+      localStorage.setItem('spotify_access_token', data.access_token)
+      this.spotifyToken = data.access_token
+      // Reconecta o player
+      await this.initSpotifyPlayer()
+    }
+  } catch (e) {
+    console.error('Erro ao refresh token Spotify:', e)
+  }
+},
 
     initAudioVisualizer() {
       const canvas = this.$refs.audioCanvas
@@ -2668,20 +3317,39 @@ setDisplayMode(mode) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 0 2px;
+ padding: 0;
+  margin-bottom: -40px; 
   z-index: 10;
   position: relative;
 }
 
 .fullscreen-album .album-art-mini {
-  width: 120px;
-  height: 120px;
+  width: 60px; /* ✅ Menor ainda */
+  height: 60px;
+  margin-bottom: 2px;
   border-radius: 50%;
   background-size: cover;
   background-position: center;
   position: relative;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-  margin-bottom: 8px;
+}
+
+.karaoke-container.fullscreen .fullscreen-album .vinyl-ring-mini {
+  width: 32px;
+  height: 32px;
+}
+
+.karaoke-container.fullscreen .fullscreen-album .vinyl-center-mini {
+  width: 12px;
+  height: 12px;
+}
+
+.karaoke-container.fullscreen .fullscreen-song-info h3 {
+  font-size: 14px;
+}
+
+.karaoke-container.fullscreen .fullscreen-song-info p {
+  font-size: 11px;
 }
 
 .fullscreen-album .vinyl-ring-mini {
@@ -2731,20 +3399,27 @@ width: 16px;
   opacity: 0.7;
 }
 
-/* Ajuste o stage em fullscreen para acomodar o disco */
 .karaoke-container.fullscreen .karaoke-stage {
   grid-template-columns: 1fr;
-  align-items: flex-start;
-  padding-top: 0;
-  padding-bottom: 8px;
+  align-items: stretch;
+  padding: 0;
   gap: 0;
+  height: 100vh;
+  min-height: 0;
 }
 
 .karaoke-container.fullscreen .lyrics-section {
-  height: calc(100vh - 220px);
-  margin-top: -10px;
-  padding-top: 0;
+ height: calc(100vh - 180px);
+  margin-top: 0;
+  padding-top: 40px;   /* Espaço pro header flutuante */
+  justify-content: flex-start; /* Começa do topo, mas scrolla */
+ padding-bottom: 20px; 
+  display: flex;
+  flex-direction: column;
+  mask-image: linear-gradient(to bottom, black 0%, black 95%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 95%, transparent 100%);
 }
+
 /* ============ SEARCH ============ */
 
 .search-wrapper-selection {
@@ -2799,7 +3474,82 @@ width: 16px;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
+.confirm-modal .confirm-content {
+  text-align: center;
+  padding: 40px 32px;
+  max-width: 400px;
+}
 
+.confirm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 28px;
+}
+
+.confirm-icon.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+  color: #f59e0b;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.confirm-content h3 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.confirm-text {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-cancel,
+.btn-confirm-delete {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+}
+
+.btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-confirm-delete {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.btn-confirm-delete:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+}
 .clear-search-btn:hover {
   color: #fff;
   background: rgba(255, 255, 255, 0.1);
@@ -3337,39 +4087,72 @@ width: 16px;
   padding: 12px 0 80px;
 }
 
-.karaoke-container.fullscreen .karaoke-stage {
-  grid-template-columns: 1fr;
-  align-items: flex-start;
-  padding-top: 0;
-  padding-bottom: 8px;
-  gap: 0;
-}
-
-.karaoke-container.fullscreen .lyrics-section {
-  height: calc(100vh - 185px);
-  margin-top: -50px;
-  padding-top: 0;
-}
-
 .karaoke-container.fullscreen .lyrics-wrapper {
   padding-top: 0;
-  padding-bottom: 40px;
-}
-
-.karaoke-container.fullscreen .progress-line {
-  top: 35%;
+  padding-bottom: 60px;  /* Menos espaço embaixo */
 }
 
 .karaoke-container.fullscreen .lyric-line {
-  min-height: 48px;
-  padding: 8px 20px;
+  min-height: auto;     /* Remove altura mínima fixa */
+  padding: 6px 20px;    /* Menos padding vertical */
+  margin: 2px 0;        /* Espaço entre linhas */
+}
+
+.karaoke-container.fullscreen .lyric-text {
+  font-size: 32px !important;  /* MAIOR — era 22px */
+  line-height: 1.3;
+}
+
+/* ✅ Linha de progresso (indicador) mais ao topo */
+.karaoke-container.fullscreen .progress-line {
+  top: 12%;
 }
 
 .karaoke-container.fullscreen .karaoke-header {
-  padding: 6px 40px;
-  min-height: auto;
+  padding: 2px 20px;
+  min-height: 36px;  /* Header bem compacto */
+  background: transparent;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  z-index: 100;
 }
 
+
+/* ============ VOCAL REMOVAL TOGGLE ============ */
+
+.setting-item.checkbox.vocal-remover {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.1), rgba(131, 56, 236, 0.1));
+  border: 2px solid rgba(255, 0, 110, 0.25);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 8px;
+}
+
+.setting-item.checkbox.vocal-remover label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.setting-item.checkbox.vocal-remover label i {
+  color: #ff006e;
+  font-size: 16px;
+}
+
+.vocal-hint {
+  display: block;
+  margin: -16px 0 16px 0;
+  padding: 8px 14px;
+  background: rgba(34, 197, 94, 0.1);
+  border-left: 3px solid #22c55e;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  line-height: 1.4;
+}
 
 .lyrics-loading, .lyrics-error {
   display: flex;
@@ -3413,6 +4196,57 @@ width: 16px;
   justify-content: center;
 }
 
+/* ✅ NOVO: Container que empilha texto + fonética verticalmente */
+.lyric-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px; /* espaço entre frase e pronúncia */
+  width: 100%;
+}
+
+.lyric-text {
+  display: block;
+  font-weight: 700;
+  line-height: 1.4;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ✅ AJUSTADO: phonetic agora é block dentro da coluna */
+.lyric-phonetic {
+  display: block;
+  font-size: 14px;
+  opacity: 0.7;
+  font-style: italic;
+  color: #a5b4fc;
+  width: 100%;
+  text-align: center;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* ADICIONE para fullscreen: */
+.karaoke-container.fullscreen .lyric-phonetic {
+  font-size: 18px !important;  /* Era 14px */
+  margin-top: 4px;
+  opacity: 0.85;
+  width: 100%;
+  text-align: center;
+}
+
+.karaoke-container.fullscreen .lyric-line.active .lyric-text {
+  font-size: 38px !important;  /* Destaque na linha ativa */
+}
+
+.karaoke-container.fullscreen .lyric-content {
+  gap: 8px;
+}
+
 .lyric-line.active {
   opacity: 1;
   transform: scale(1.08);
@@ -3440,17 +4274,6 @@ width: 16px;
   gap: 8px;
 }
 
-.lyric-text {
-  display: block;
-  font-weight: 700;
-  line-height: 1.4;
-  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 .lyric-line.active .lyric-text {
   background: linear-gradient(135deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%);
   -webkit-background-clip: text;
@@ -3466,26 +4289,6 @@ width: 16px;
 .lyric-line.wrong .lyric-text {
   color: #e74c3c;
   text-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
-}
-
-.lyric-phonetic {
-  display: block;
-  font-size: 14px;
-  margin-top: 6px;
-  opacity: 0.7;
-  font-style: italic;
-  color: #a5b4fc;
-  width: 100%;
-  text-align: center;
-}
-
-/* ADICIONE para fullscreen: */
-.karaoke-container.fullscreen .lyric-phonetic {
-  font-size: 18px;
-  opacity: 0.85;
-  margin-top: 8px;
-  width: 100%;
-  text-align: center;
 }
 
 .progress-line {
@@ -3726,12 +4529,12 @@ width: 16px;
 
 .audio-visualizer {
   position: fixed;
-  bottom: 120px;
+  bottom: 100px;
   left: 0;
   width: 100%;
-  height: 100px;
+  height: 60px;
   z-index: 2;
-  opacity: 0.6;
+  opacity: 0.4;
   pointer-events: none;
 }
 
@@ -4081,6 +4884,219 @@ width: 16px;
 
 .btn-close:hover {
   background: rgba(255,255,255,0.2);
+}
+
+/* ============ HISTORY BUTTON ============ */
+/* ✅ ADICIONAR DEPOIS de .btn-close */
+
+.btn-history {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.15), rgba(131, 56, 236, 0.15));
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  backdrop-filter: blur(10px);
+  margin-bottom: 8px;
+}
+
+.btn-history:hover {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.3), rgba(131, 56, 236, 0.3));
+  border-color: rgba(255, 0, 110, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 0, 110, 0.2);
+}
+
+.btn-history svg {
+  flex-shrink: 0;
+}
+
+/* ============ HISTORY MODAL ============ */
+
+.history-content {
+  max-width: 560px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.history-content h3 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.history-content h3 svg {
+  color: #ff006e;
+}
+
+.history-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.history-empty p {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.history-empty small {
+  font-size: 13px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.history-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.history-song {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.history-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.history-info strong {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-info span {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.history-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.history-stat .stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.history-stat .stat-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.history-stat .stat-value.excellent {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.history-stat .stat-value.good {
+  color: #22c55e;
+}
+
+.history-stat .stat-value.average {
+  color: #f59e0b;
+}
+
+.history-stat .stat-value.low {
+  color: #ef4444;
+}
+
+.history-stat .stat-value.yes {
+  color: #22c55e;
+}
+
+.history-stat .stat-value.no {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.history-date {
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.history-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-clear-history {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-history:hover {
+  background: rgba(239, 68, 68, 0.2);
 }
 
 /* ============ ANIMATIONS ============ */

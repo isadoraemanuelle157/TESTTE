@@ -13,8 +13,15 @@ const create = async (req, res) => {
 // LISTAR
 const list = async (req, res) => {
   try {
-    const generos = await generoService.getGeneros()
-    res.json(generos)
+    const { format } = req.query // ?format=flat para array simples
+    const resultado = await generoService.getGeneros()
+
+    // 🔥 SE PEDIR FLAT, RETORNA ARRAY SIMPLES
+    if (format === 'flat') {
+      return res.json(resultado.lista || [])
+    }
+
+    res.json(resultado.agrupado || resultado)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

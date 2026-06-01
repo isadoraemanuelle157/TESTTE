@@ -46,6 +46,11 @@ const usuarioSchema = new mongoose.Schema({
   localizacao: { type: String, default: '' },
   website: { type: String, default: '' },
 
+   spotifyConnected: { type: Boolean, default: false },
+  spotifyAccessToken: { type: String, default: null },
+  spotifyRefreshToken: { type: String, default: null },
+  spotifyTokenExpiresAt: { type: Date, default: null },
+
   perfilPrivado: { type: Boolean, default: false },
   mostrarAtividade: { type: Boolean, default: true },
 
@@ -213,7 +218,7 @@ usuarioSchema.pre('save', function(next) {
   }
   
   // ✅ NOVO: Se generos já é objeto { locais, externos }, validar locais
-  if (this.generos && typeof this.generos === 'object' && !Array.isArray(this.generos)) {
+    if (this.generos && typeof this.generos === 'object' && !Array.isArray(this.generos)) {
     // Validar locais
     if (Array.isArray(this.generos.locais)) {
       this.generos.locais = this.generos.locais
@@ -286,4 +291,17 @@ usuarioSchema.methods.updateOnboarding = async function(generos, artistas, vibes
   return this.save()
 }
 
+usuarioSchema.methods.isSpotifyTokenValid = function() {
+  if (!this.spotifyAccessToken || !this.spotifyTokenExpiresAt) return false
+  return new Date() < this.spotifyTokenExpiresAt
+}
+
+// ✅ NOVO: Método para atualizar tokens do Spotify
+usuarioSchema.methods.updateSpotifyTokens = async function(accessToken, refreshToken, expiresIn) {
+  this.spotifyAccessToken = accessToken
+  this.spotifyRefreshToken = refreshToken
+  this.spotifyTokenExpiresAt = new Date(Date.now() + expiresIn * 1000)
+  this.spotifyConnected = true
+  await this.save()
+}
 module.exports = mongoose.model('Usuario', usuarioSchema)

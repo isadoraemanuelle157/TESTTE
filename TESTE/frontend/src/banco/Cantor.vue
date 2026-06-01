@@ -912,11 +912,12 @@ filteredGeneros() {
     return this.albunsDisponiveis.filter(a => a.nome.toLowerCase().includes(s))
   },
 
-  filteredMusicas() {
-    if (!this.searchMusicas) return this.musicas
-    const s = this.searchMusicas.toLowerCase()
-    return this.musicas.filter(m => m.nome.toLowerCase().includes(s))
-  }
+filteredMusicas() {
+  const lista = Array.isArray(this.musicas) ? this.musicas : []
+  if (!this.searchMusicas) return lista
+  const s = this.searchMusicas.toLowerCase()
+  return lista.filter(m => m.nome?.toLowerCase().includes(s))
+}
 },
 
   mounted() {
@@ -950,23 +951,42 @@ normalizarListaGeneros(payload) {
 },
 
 isGeneroSelecionado(generoId) {
-  const idNormalizado = this.normalizeMongoId(generoId)
+  if (!generoId || !Array.isArray(this.form.generos)) return false
 
-  return Array.isArray(this.form.generos) && this.form.generos.some(g => {
-    return this.normalizeMongoId(g) === idNormalizado
+  // Aceita string ou objeto
+  const targetId = typeof generoId === 'object'
+    ? (generoId._id || generoId.id || generoId.nome)
+    : String(generoId)
+
+  return this.form.generos.some(g => {
+    const gId = typeof g === 'object' && g !== null
+      ? (g._id || g.id || g.nome)
+      : String(g)
+    return String(gId) === String(targetId)
   })
 },
 
 toggleGeneroSelection(generoId) {
-  const idNormalizado = this.normalizeMongoId(generoId)
-  const jaSelecionado = this.isGeneroSelecionado(idNormalizado)
+  const jaSelecionado = this.isGeneroSelecionado(generoId)
 
   if (jaSelecionado) {
+    // Remove o gênero correspondente
+    const targetId = typeof generoId === 'object'
+      ? (generoId._id || generoId.id || generoId.nome)
+      : String(generoId)
+
     this.form.generos = this.form.generos.filter(g => {
-      return this.normalizeMongoId(g) !== idNormalizado
+      const gId = typeof g === 'object' && g !== null
+        ? (g._id || g.id || g.nome)
+        : String(g)
+      return String(gId) !== String(targetId)
     })
   } else {
-    this.form.generos.push(idNormalizado)
+    // Adiciona o ID (ou objeto completo se da API)
+    const idParaSalvar = typeof generoId === 'object' && generoId !== null
+      ? (generoId._id || generoId.id || generoId)
+      : generoId
+    this.form.generos.push(idParaSalvar)
   }
 },
 
@@ -1060,23 +1080,43 @@ async toggleSeguirCantor(cantor) {
   }
 },
 
-    getGeneroNome(id) {
-  const idNormalizado = this.normalizeMongoId(id)
+getGeneroNome(id) {
+  if (!id) return 'Desconhecido'
 
-  return this.generos.find(g => {
-    return this.normalizeMongoId(g._id) === idNormalizado
-  })?.nome || 'Desconhecido'
+  // Aceita objeto ou string
+  const idNormalizado = typeof id === 'object' && id !== null
+    ? (id._id || id.id || id.nome)
+    : String(id)
+
+  const lista = Array.isArray(this.generos) ? this.generos : []
+
+  // Busca por _id, id ou nome (para gêneros da API sem ID fixo)
+  const encontrado = lista.find(g => {
+    if (!g) return false
+    const gId = g._id || g.id
+    const matchId = gId && String(gId) === String(idNormalizado)
+    const matchNome = g.nome && String(g.nome).toLowerCase() === String(idNormalizado).toLowerCase()
+    return matchId || matchNome
+  })
+
+  return encontrado?.nome || encontrado?.name || encontrado?.label || 'Desconhecido'
 },
 
-    getMusicaNome(id) {
-      return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
-    },
+ getMusicaNome(id) {
+  const lista = Array.isArray(this.musicas) ? this.musicas : []
+  return lista.find(m => m._id === id)?.nome || 'Desconhecida'
+},
 
-    removeGenero(id) {
-  const idNormalizado = this.normalizeMongoId(id)
+   removeGenero(id) {
+  const targetId = typeof id === 'object' && id !== null
+    ? (id._id || id.id || id.nome)
+    : String(id)
 
   this.form.generos = this.form.generos.filter(g => {
-    return this.normalizeMongoId(g) !== idNormalizado
+    const gId = typeof g === 'object' && g !== null
+      ? (g._id || g.id || g.nome)
+      : String(g)
+    return String(gId) !== String(targetId)
   })
 },
 
@@ -1181,17 +1221,20 @@ async toggleSeguirCantor(cantor) {
       ? this.cantorEditando._id
       : null
 
-    const musicaPayload = {
-      nome: m.nome.trim(),
-      duracao: m.duracao.trim(),
-      humor: m.humor.trim(),
-      link: m.link.trim(),
-      letra: m.letra.trim(),
-      foto: m.foto.trim(),
-      generos: Array.isArray(m.generos) ? m.generos.filter(Boolean) : [],
-      albuns: Array.isArray(m.albuns) ? m.albuns.filter(a => typeof a === 'object' ? a._id : a).filter(Boolean) : [],
-      cantores: cantorId ? [cantorId] : []
-    }
+// EM salvarMusicaLocal, ADICIONAR ano do cantor se disponível:
+const musicaPayload = {
+  nome: m.nome.trim(),
+  duracao: m.duracao.trim(),
+  humor: m.humor.trim(),
+  link: m.link.trim(),
+  letra: m.letra.trim(),
+  foto: m.foto.trim(),
+  // 🔥 ADICIONAR ANO DO CANTOR SE EXISTIR
+  ano: this.form.ano || null,
+  generos: Array.isArray(m.generos) ? m.generos.filter(Boolean) : [],
+  albuns: Array.isArray(m.albuns) ? m.albuns.filter(a => typeof a === 'object' ? a._id : a).filter(Boolean) : [],
+  cantores: cantorId ? [cantorId] : []
+}
 
     const response = await fetch('http://localhost:3002/musicas', {
       method: 'POST',
@@ -1340,46 +1383,76 @@ fecharModalMusica() {
       }
     },
 
-   async carregarGeneros() {
+async carregarGeneros() {
   try {
-    const response = await fetch('http://localhost:3002/generos')
+    const response = await fetch('http://localhost:3002/generos?format=flat')
     if (!response.ok) throw new Error('Erro ao carregar gêneros')
 
     const data = await response.json()
-    this.generos = this.normalizarListaGeneros(data)
+    console.log('📥 Generos carregados:', data)
+
+    // Garante que é array
+    const lista = Array.isArray(data) ? data : []
+    
+    // Normaliza para garantir _id e nome
+    this.generos = lista.map(g => ({
+      _id: g._id || g.id,
+      nome: g.nome || g.name || g.label || 'Desconhecido',
+      ...g
+    })).filter(g => g._id)
+
+    console.log('✅ Total generos:', this.generos.length)
+
   } catch (error) {
     console.error('Erro ao carregar gêneros:', error)
     this.generos = []
   }
 },
 
-    async carregarMusicas() {
-      try {
-        const response = await fetch('http://localhost:3002/musicas')
-        if (!response.ok) throw new Error('Erro ao carregar músicas')
-        this.musicas = await response.json()
-      } catch (error) {
-        console.error('Erro ao carregar músicas:', error)
-        this.musicas = []
-      }
-    },
+async carregarMusicas() {
+  try {
+    const response = await fetch('http://localhost:3002/musicas')
+    if (!response.ok) throw new Error('Erro ao carregar músicas')
+    const data = await response.json()
 
-    async salvarCantor() {
-      if (
- !this.form.nome.trim() ||
- !this.form.foto.trim() ||
- !this.form.ano ||
- !this.form.seguidoresBase ||
- this.form.generos.length === 0 ||
- this.form.musicas.length === 0
-) {
- this.mostrarToast(
-   'Preencha todos os campos obrigatórios (álbum é opcional)',
-   'error',
-   '⚠️'
- )
- return
-}
+    // 🔥 Extrair array de qualquer formato que o backend enviar
+    if (Array.isArray(data)) {
+      this.musicas = data
+    } else if (data.results && Array.isArray(data.results)) {
+      this.musicas = data.results
+    } else if (data.lista && Array.isArray(data.lista)) {
+      this.musicas = data.lista
+    } else if (data.musicas && Array.isArray(data.musicas)) {
+      this.musicas = data.musicas
+    } else {
+      this.musicas = Object.values(data).flat().filter(m => m && m._id)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar músicas:', error)
+    this.musicas = []
+  }
+},
+
+async salvarCantor() {
+  // 🔥 Só valida campos obrigatórios no CRIAR, não no EDITAR
+  if (!this.modoEdicao) {
+    if (
+      !this.form.nome?.trim() ||
+      !this.form.foto?.trim() ||
+      !this.form.ano ||
+      !this.form.seguidoresBase ||
+      this.form.generos.length === 0 ||
+      this.form.musicas.length === 0
+    ) {
+      this.mostrarToast(
+        'Preencha todos os campos obrigatórios (álbum é opcional)',
+        'error',
+        '⚠️'
+      )
+      return
+    }
+  }
+  // 🔥 No EDITAR: remove validações obrigatórias — permite salvar parcial
 
       try {
         this.salvando = true
@@ -1436,44 +1509,55 @@ fecharModalMusica() {
 
           this.mostrarToast('Artista criado!', 'success', '✅')
         }
+// Só processa álbuns locais (objetos sem _id ou com _id que são strings do backend)
+// Álbuns do dropdown já estão salvos no banco, não precisa re-salvar
+const albunsParaCriar = this.form.albuns.filter(a => !a._id || a._id?.startsWith?.('local-'))
+const albunsParaAtualizar = this.form.albuns.filter(a => a._id && !a._id.startsWith?.('local-'))
 
-        for (const album of this.form.albuns) {
-          if (album._id) {
-            const responseAlbum = await fetch(`http://localhost:3002/albuns/${album._id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                nome: album.nome,
-                descricao: album.descricao,
-                foto: album.foto || '',
-                cantor: cantorId
-              })
-            })
+for (const album of albunsParaAtualizar) {
+  // Atualiza apenas se tiver cantor vinculado
+  try {
+    await fetch(`http://localhost:3002/albuns/${album._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: album.nome,
+        descricao: album.descricao || '',
+        foto: album.foto || '',
+        cantor: cantorId
+        // Não envia musicas/generos para não quebrar validação
+      })
+    })
+  } catch (e) {
+    console.warn('Erro ao atualizar álbum:', e)
+    // Não quebra o fluxo do cantor
+  }
+}
 
-            const resultAlbum = await responseAlbum.json()
+for (const album of albunsParaCriar) {
+  try {
+    const responseAlbum = await fetch('http://localhost:3002/albuns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: album.nome,
+        descricao: album.descricao || '',
+        foto: album.foto || '',
+        cantor: cantorId,
+        ano: this.form.ano || new Date().getFullYear(),
+        musicas: [], // Array vazio para não quebrar validação
+        generos: this.form.generos?.length ? this.form.generos : [] // Usa generos do cantor
+      })
+    })
 
-            if (!responseAlbum.ok) {
-              throw new Error(resultAlbum.error || 'Erro ao atualizar álbum')
-            }
-          } else {
-            const responseAlbum = await fetch(`http://localhost:3002/albuns`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                nome: album.nome,
-                descricao: album.descricao,
-                foto: album.foto || '',
-                 cantor: cantorId
-              })
-            })
-
-            const resultAlbum = await responseAlbum.json()
-
-            if (!responseAlbum.ok) {
-              throw new Error(resultAlbum.error || 'Erro ao criar álbum')
-            }
-          }
-        }
+    if (!responseAlbum.ok) {
+      const err = await responseAlbum.json()
+      console.warn('Erro ao criar álbum:', err.error)
+    }
+  } catch (e) {
+    console.warn('Erro ao criar álbum:', e)
+  }
+}
 
         this.fecharModal()
         this.carregarCantores()
@@ -1564,11 +1648,10 @@ async editarCantor(cantor) {
 
     // Carrega listas globais primeiro
     await Promise.all([
-      this.generos.length ? Promise.resolve() : this.carregarGeneros(),
-      this.musicas.length ? Promise.resolve() : this.carregarMusicas(),
-      this.albunsDisponiveis.length ? Promise.resolve() : this.carregarAlbunsDisponiveis()
+      this.carregarGeneros(),
+      this.carregarMusicas(),
+      this.carregarAlbunsDisponiveis()
     ])
-
     // Busca cantor completo
     const cantorResponse = await fetch(`http://localhost:3002/cantores/${cantor._id}`)
    

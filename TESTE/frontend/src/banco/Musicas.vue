@@ -446,8 +446,8 @@
                 <h3 class="music-title">{{ musica.nome }}</h3>
                 <div class="music-meta">
                   <span class="duration">⏱️ {{ musica.duracao }}</span>
-                  <span class="year">
-  📅 {{ musica.ano || '---' }} ({{ musica.decada || '-' }})
+        <span class="year">
+  📅 {{ musica.ano ? `${Math.floor(musica.ano / 10) * 10}s` : '---' }}
 </span>
                   <span class="mood">{{ musica.humor }}</span>
                   <span class="generos">🎶 {{ musica.generos?.map(g => g.nome).join(', ') || 'Sem gênero' }}</span>
@@ -536,6 +536,12 @@
 
 <script>
 import axios from "axios"
+
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
 const API = "http://localhost:3002/musicas"
 const API_GENEROS = "http://localhost:3002/generos"
@@ -770,22 +776,34 @@ forceFloatingLabels() {
   })
 },
 
+async carregarMusicas() {
+  try {
+    const res = await axios.get(API)
+    // 🔥 CORRIGIDO: backend retorna { success, results: [...] }
+    const dados = res.data?.results || res.data?.data || res.data
+    this.musicas = Array.isArray(dados) ? dados : []
+    console.log('✅ MÚSICAS CARREGADAS:', this.musicas.length)
+  } catch (err) {
+    console.error('❌ ERRO CARREGAR MÚSICAS:', err)
+    this.musicas = []
+    this.showToast('Erro ao carregar músicas', 'error')
+  }
+},
+
 async carregarGeneros() {
   try {
     const res = await axios.get(API_GENEROS)
     console.log('📦 RESPOSTA GENEROS:', res.data)
 
-    let dados = res.data
+    let dados = res.data?.results || res.data?.data || res.data
 
-    // 🔥 Se vier agrupado (objeto), transforma em array
-    if (!Array.isArray(dados) && typeof dados === 'object') {
+    // Se vier agrupado (objeto), transforma em array
+    if (!Array.isArray(dados) && typeof dados === 'object' && dados !== null) {
       dados = Object.values(dados).flat()
     }
 
     this.generos = Array.isArray(dados) ? dados : []
-
-    console.log('✅ GENEROS TRATADOS:', this.generos)
-
+    console.log('✅ GENEROS TRATADOS:', this.generos.length)
   } catch (err) {
     console.error('❌ ERRO CARREGAR GENEROS:', err)
     this.generos = []
@@ -796,8 +814,10 @@ async carregarGeneros() {
 async carregarAlbuns() {
   try {
     const res = await axios.get(API_ALBUNS)
-    this.albuns = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+    const dados = res.data?.results || res.data?.data || res.data
+    this.albuns = Array.isArray(dados) ? dados : []
   } catch (err) {
+    console.error('❌ ERRO CARREGAR ALBUNS:', err)
     this.albuns = []
     this.showToast('Erro ao carregar álbuns', 'error')
   }
@@ -806,41 +826,35 @@ async carregarAlbuns() {
 async carregarCantores() {
   try {
     const res = await axios.get(API_CANTORES)
-    this.cantores = Array.isArray(res.data) ? res.data : (res.data?.data || [])
+    const dados = res.data?.results || res.data?.data || res.data
+    this.cantores = Array.isArray(dados) ? dados : []
   } catch (err) {
+    console.error('❌ ERRO CARREGAR CANTORES:', err)
     this.cantores = []
     this.showToast('Erro ao carregar cantores', 'error')
   }
 },
 
-async carregarMusicas() {
+async salvarMusica() {
+  this.loading = true
   try {
-    const res = await axios.get(API)
-    this.musicas = Array.isArray(res.data) ? res.data : (res.data?.data || [])
-  } catch (err) {
-    this.musicas = []
-    this.showToast('Erro ao carregar músicas', 'error')
-  }
-},
+    const payload = {
+      nome: this.form.nome,
+      duracao: this.form.duracao,
+      foto: this.form.foto && this.isValidUrl(this.form.foto)
+        ? this.form.foto
+        : this.defaultImage,
+      humor: this.form.humor,
+      letra: this.form.letra,
+      link: this.form.link,
+      
+      // 🔥 CONVERTE PARA NÚMERO ANTES DE ENVIAR
+      ano: this.form.ano ? parseInt(this.form.ano) : null,
 
-    async salvarMusica() {
-      this.loading = true
-      try {
-        const payload = {
-  nome: this.form.nome,
-  duracao: this.form.duracao,
-  foto: this.form.foto && this.isValidUrl(this.form.foto)
-    ? this.form.foto
-    : this.defaultImage,
-  humor: this.form.humor,
-  letra: this.form.letra,
-  link: this.form.link,
-  ano: this.form.ano,
-
-  generos: this.form.generos || [],
-  albuns: this.form.album ? [this.form.album] : [], // 🔥 CORRETO
-  cantores: this.form.cantores || []
-}
+      generos: this.form.generos || [],
+      albuns: this.form.album ? [this.form.album] : [],
+      cantores: this.form.cantores || []
+    }
 
         if (!payload.albuns || payload.albuns.length === 0) {
           delete payload.albuns

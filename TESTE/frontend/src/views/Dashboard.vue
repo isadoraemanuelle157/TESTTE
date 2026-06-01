@@ -157,31 +157,208 @@
           {{ showAllCurtidas ? 'Ver menos' : 'Ver mais' }}<i class="fa" :class="showAllCurtidas ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
         </button>
       </section>
-  <section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title"><i class="fa fa-magic section-icon personal"></i> Feito para Você</h2>
-            <span class="section-subtitle">Playlists personalizadas baseadas nas suas escolhas</span>
-          </div>
-          <button class="see-all" @click="showAllPersonal">
-            {{ showAllPersonalContent ? 'Ver menos' : 'Ver tudo' }}<i class="fa" :class="showAllPersonalContent ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
-          </button>
+<section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
+  <div class="section-header">
+    <div class="section-title-wrapper">
+      <h2 class="section-title">
+        <i class="fa fa-magic section-icon personal"></i> Feito para Você
+      </h2>
+      <span class="section-subtitle">{{ recommendationPreferencesText || 'Recomendações baseadas nas suas escolhas' }}</span>
+    </div>
+    <button class="see-all" @click="openRecommendationsModal">
+      Explorar tudo <i class="fa fa-chevron-right"></i>
+    </button>
+  </div>
+  
+  <!-- Cards de Mixes (visão resumida) -->
+  <div class="cards-row" :class="{ 'expanded': showAllPersonalContent }">
+    <div v-for="(mix, index) in madeForYou.slice(0, showAllPersonalContent ? 10 : 5)" 
+         :key="'mix-'+mix.id" 
+         class="music-card mix-card" 
+         @click="openMixModal(mix)" 
+         :class="{ 'active': isCurrentMix(mix) }">
+      <div class="card-image">
+        <img :src="mix.cover" @error="handleImageError" alt="Mix Cover" />
+        <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
+        <div class="mix-gradient-overlay" :style="{ background: mix.gradient }"></div>
+        <div class="mix-info-badge"><i class="fa fa-magic"></i> {{ mix.tracks }} músicas</div>
+      </div>
+      <div class="card-info">
+        <h3 class="card-title">{{ mix.title }}</h3>
+        <p class="card-artist">{{ mix.description }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 🎯 NOVO: MODAL DE RECOMENDAÇÕES COMPLETAS -->
+<transition name="modal">
+  <div v-if="showRecommendationsModal" class="modal-overlay recommendations-modal-overlay" @click.self="closeRecommendationsModal">
+    <div class="modal-content recommendations-modal">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3><i class="fa fa-magic"></i> Feito para Você</h3>
+          <p>Baseado em: {{ recommendationPreferencesText }}</p>
         </div>
-        <div class="cards-row" :class="{ 'expanded': showAllPersonalContent }">
-          <div v-for="(mix, index) in madeForYou.slice(0, showAllPersonalContent ? 10 : 5)" :key="'mix-'+mix.id" class="music-card mix-card" @click="playMix(mix)" :class="{ 'active': isCurrentMix(mix) }">
-            <div class="card-image">
-              <img :src="mix.cover" @error="handleImageError" alt="Mix Cover" />
-              <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
-              <div class="mix-gradient-overlay" :style="{ background: mix.gradient }"></div>
-              <div class="mix-info-badge"><i class="fa fa-magic"></i> {{ mix.tracks }} músicas</div>
-            </div>
-            <div class="card-info">
-              <h3 class="card-title">{{ mix.title }}</h3>
-              <p class="card-artist">{{ mix.description }}</p>
-            </div>
-          </div>
+        <button @click="closeRecommendationsModal" class="close-btn">
+          <i class="fa fa-times"></i>
+        </button>
+      </div>
+      
+      <!-- Tabs de Categoria -->
+      <div class="category-tabs">
+        <button v-for="tab in recommendationTabs" 
+                :key="tab.key"
+                class="tab-btn"
+                :class="{ active: activeRecommendationTab === tab.key }"
+                @click="switchRecommendationTab(tab.key)">
+          <i :class="tab.icon"></i>
+          {{ tab.label }}
+          <span class="tab-count" v-if="recommendations[tab.key]?.length > 0">
+            {{ recommendations[tab.key].length }}
+          </span>
+        </button>
+      </div>
+      
+      <!-- Conteúdo das Recomendações -->
+      <div class="modal-body recommendations-body">
+        <div v-if="loadingRecommendations" class="loading-recommendations">
+          <div class="loading-spinner"></div>
+          <p>Carregando recomendações...</p>
         </div>
-      </section>
+        
+        <div v-else-if="!hasRecommendations" class="empty-recommendations">
+          <i class="fa fa-music"></i>
+          <p>Nenhuma recomendação encontrada para esta categoria</p>
+          <button class="btn-retry" @click="loadRecommendations(activeRecommendationTab)">Tentar novamente</button>
+        </div>
+        
+        <div v-else class="recommendations-list">
+          <!-- MÚSICAS -->
+          <template v-if="activeRecommendationTab === 'musicas'">
+            <div v-for="(item, index) in recommendations.musicas" 
+                 :key="'rec-music-'+item.id+'-'+index"
+                 class="recommendation-item music-item"
+                 @click="playRecommendation(item)">
+              <div class="rec-number">{{ index + 1 }}</div>
+              <div class="rec-cover">
+                <img :src="item.cover" @error="handleImageError" />
+                <div class="rec-play-overlay"><i class="fa fa-play"></i></div>
+              </div>
+              <div class="rec-info">
+                <h4>{{ item.title }}</h4>
+                <p>{{ item.artist }}</p>
+                <span class="rec-reason"><i class="fa fa-magic"></i> {{ item.razao }}</span>
+              </div>
+              <div class="rec-meta">
+                <span class="rec-duration" v-if="item.duration">{{ formatTime(item.duration) }}</span>
+                <span class="rec-source" :class="item.source">{{ item.source }}</span>
+              </div>
+            </div>
+          </template>
+          
+          <!-- ÁLBUNS -->
+          <template v-if="activeRecommendationTab === 'albuns'">
+            <div v-for="(item, index) in recommendations.albuns" 
+                 :key="'rec-album-'+item.id+'-'+index"
+                 class="recommendation-item album-item"
+                 @click="playAlbumTracks(item)">
+              <div class="rec-cover album-cover">
+                <img :src="item.cover" @error="handleImageError" />
+                <div class="rec-play-overlay"><i class="fa fa-play"></i></div>
+              </div>
+              <div class="rec-info">
+                <h4>{{ item.title }}</h4>
+                <p>{{ item.artist }}</p>
+                <span class="rec-reason">{{ item.razao }}</span>
+                <div class="album-meta">
+                  <span><i class="fa fa-calendar"></i> {{ formatDate(item.releaseDate) }}</span>
+                  <span><i class="fa fa-music"></i> {{ item.totalTracks }} faixas</span>
+                </div>
+              </div>
+            </div>
+          </template>
+          
+          <!-- ARTISTAS -->
+          <template v-if="activeRecommendationTab === 'artistas'">
+            <div v-for="(item, index) in recommendations.artistas" 
+                 :key="'rec-artist-'+item.id+'-'+index"
+                 class="recommendation-item artist-item"
+                 @click="goToArtist(item)">
+              <div class="rec-cover artist-cover">
+                <img :src="item.cover" @error="handleImageError" />
+                <div class="artist-overlay">
+                  <i class="fa fa-user"></i>
+                </div>
+              </div>
+              <div class="rec-info">
+                <h4>{{ item.title }}</h4>
+                <p>{{ item.genres?.slice(0, 3).join(', ') || 'Artista' }}</p>
+                <span class="rec-reason">{{ item.razao }}</span>
+                <div class="artist-meta">
+                  <span><i class="fa fa-users"></i> {{ formatListeners(item.followers) }} seguidores</span>
+                  <span><i class="fa fa-fire"></i> {{ item.popularity }}% popular</span>
+                </div>
+              </div>
+              <button class="btn-follow-artist" @click.stop="toggleFollow(item)">
+                <i :class="isFollowing(item.id) ? 'fa fa-check' : 'fa fa-plus'"></i>
+                {{ isFollowing(item.id) ? 'Seguindo' : 'Seguir' }}
+              </button>
+            </div>
+          </template>
+          
+          <!-- PLAYLISTS -->
+          <template v-if="activeRecommendationTab === 'playlists'">
+            <div v-for="(item, index) in recommendations.playlists" 
+                 :key="'rec-playlist-'+item.id+'-'+index"
+                 class="recommendation-item playlist-item"
+                 @click="openPlaylist(item)">
+              <div class="rec-cover playlist-cover">
+                <img :src="item.cover" @error="handleImageError" />
+                <div class="rec-play-overlay"><i class="fa fa-play"></i></div>
+              </div>
+              <div class="rec-info">
+                <h4>{{ item.title }}</h4>
+                <p>{{ item.description }}</p>
+                <span class="rec-reason">{{ item.razao }}</span>
+                <div class="playlist-meta">
+                  <span><i class="fa fa-user"></i> {{ item.owner }}</span>
+                  <span><i class="fa fa-list"></i> {{ item.tracksCount }} músicas</span>
+                </div>
+              </div>
+            </div>
+          </template>
+          
+          <!-- TUDO (MIX) -->
+          <template v-if="activeRecommendationTab === 'tudo'">
+            <div v-for="(item, index) in recommendations.tudo" 
+                 :key="'rec-all-'+item.id+'-'+index"
+                 class="recommendation-item"
+                 :class="item.type || item.categoria || 'music-item'"
+                 @click="handleRecommendationClick(item)">
+              <div class="rec-cover" :class="item.type || item.categoria">
+                <img :src="item.cover" @error="handleImageError" />
+                <div class="type-badge">
+                  <i :class="getTypeIcon(item.type || item.categoria)"></i>
+                  {{ getTypeLabel(item.type || item.categoria) }}
+                </div>
+              </div>
+              <div class="rec-info">
+                <h4>{{ item.title }}</h4>
+                <p>{{ item.artist || item.description || '' }}</p>
+                <span class="rec-reason"><i class="fa fa-magic"></i> {{ item.razao }}</span>
+              </div>
+              <div class="rec-meta" v-if="item.duration">
+                <span class="rec-duration">{{ formatTime(item.duration) }}</span>
+                <span class="rec-source" :class="item.source">{{ item.source }}</span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</transition>
 
       <section id="generos-favoritos" class="section" v-if="selectedGenres.length > 0">
         <div class="section-header">
@@ -471,6 +648,55 @@
         </div>
       </transition>
 
+      <!-- 🎯 MODAL DE MIX INDIVIDUAL -->
+      <transition name="modal">
+        <div v-if="showMixModal" class="modal-overlay recommendations-modal-overlay" @click.self="closeMixModal">
+          <div class="modal-content recommendations-modal">
+            <div class="modal-header">
+              <div class="modal-title-group">
+                <h3><i class="fa fa-magic"></i> {{ currentMixModal?.title }}</h3>
+                <p>{{ currentMixModal?.description }}</p>
+              </div>
+              <button @click="closeMixModal" class="close-btn">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+            
+            <div class="modal-body recommendations-body">
+              <div v-if="!currentMixModal?._tracks?.length" class="empty-recommendations">
+                <i class="fa fa-music"></i>
+                <p>Este mix ainda não tem músicas carregadas</p>
+                <button class="btn-primary" @click="playMix(currentMixModal)">
+                  <i class="fa fa-play"></i> Gerar Mix Agora
+                </button>
+              </div>
+              
+              <div v-else class="recommendations-list">
+                <div v-for="(item, index) in currentMixModal._tracks" 
+                     :key="'mix-track-'+item.id+'-'+index"
+                     class="recommendation-item music-item"
+                     @click="playRecommendation(item)">
+                  <div class="rec-number">{{ index + 1 }}</div>
+                  <div class="rec-cover">
+                    <img :src="item.cover" @error="handleImageError" />
+                    <div class="rec-play-overlay"><i class="fa fa-play"></i></div>
+                  </div>
+                  <div class="rec-info">
+                    <h4>{{ item.title }}</h4>
+                    <p>{{ item.artist }}</p>
+                    <span class="rec-reason"><i class="fa fa-magic"></i> {{ currentMixModal?.title }}</span>
+                  </div>
+                  <div class="rec-meta">
+                    <span class="rec-duration" v-if="item.duration">{{ formatTime(item.duration) }}</span>
+                    <span class="rec-source" :class="item.source">{{ item.source }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+
       <transition name="fade">
         <div v-if="showPlaylistModal" class="modal-overlay" @click.self="showPlaylistModal = false">
           <div class="modal">
@@ -521,10 +747,10 @@ export default {
       },
 
       userStats: {
-        hoursListened: 127,
+        hoursListened: 0,
         likedSongs: 0,
         playlists: 0,
-        streak: 15
+        streak: 0
       },
 
       greeting: "Bom dia",
@@ -597,10 +823,43 @@ export default {
         "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)"
       ],
 
+          showRecommendationsModal: false,
+      activeRecommendationTab: 'tudo',
+      loadingRecommendations: false,
+      recommendations: {
+        tudo: [],
+        musicas: [],
+        albuns: [],
+        artistas: [],
+        playlists: []
+      },
+      recommendationTabs: [
+        { key: 'tudo', label: 'Tudo', icon: 'fa fa-th-large' },
+        { key: 'musicas', label: 'Músicas', icon: 'fa fa-music' },
+        { key: 'albuns', label: 'Álbuns', icon: 'fa fa-compact-disc' },
+        { key: 'artistas', label: 'Artistas', icon: 'fa fa-microphone' },
+        { key: 'playlists', label: 'Playlists', icon: 'fa fa-list-ul' }
+      ],
+      recommendationPreferencesText: '',
+      currentMixModal: null,
+      showMixModal: false,
+
       _lastAddedToRecent: null,
       _minListenTime: 10000
     }
   },
+
+    computed: {
+    hasRecommendations() {
+      const tab = this.activeRecommendationTab
+      return this.recommendations[tab] && this.recommendations[tab].length > 0
+    }
+  },
+
+  created() {
+  // Carregar mock pool do localStorage ou definir aqui
+  this.MOCK_TRACKS_POOL = [ /* tracks */ ]
+},
 
   async mounted() {
     this.checkAuth()
@@ -645,6 +904,372 @@ export default {
   },
 
   methods: {
+    
+    gerarMockTracksParaMix(genero, seed) {
+  const aliases = this.getGenreAliases ? this.getGenreAliases(genero) : [genero]
+  const pool = this.MOCK_TRACKS_POOL || []
+  const filtrados = pool.filter(t => aliases.includes(t.genre))
+  const poolFinal = filtrados.length >= 15 ? filtrados : pool
+  const shuffled = poolFinal.sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, 15).map((t, i) => ({
+    ...t,
+    id: `${t.id}_mix${seed}_${i}`,
+    razao: `Top ${genero}`
+  }))
+},
+    async openRecommendationsModal() {
+      this.showRecommendationsModal = true
+      document.body.style.overflow = 'hidden'
+      this.activeRecommendationTab = 'tudo'
+      await this.loadRecommendations('tudo')
+    },
+    
+    closeRecommendationsModal() {
+      this.showRecommendationsModal = false
+      document.body.style.overflow = ''
+    },
+
+    async switchRecommendationTab(tabKey) {
+      this.activeRecommendationTab = tabKey
+      if (this.recommendations[tabKey].length === 0) {
+        await this.loadRecommendations(tabKey)
+      }
+    },
+    
+    async loadRecommendations(tipo = 'tudo') {
+      this.loadingRecommendations = true
+      try {
+        const token = localStorage.getItem('token')
+        const user = JSON.parse(localStorage.getItem('usuario') || '{}')
+        const userId = user?._id || user?.id
+        
+        if (!userId || !token) {
+          this.loadMockRecommendations()
+          return
+        }
+        
+        const res = await fetch(`${this.API_BASE_URL}/usuarios/${userId}/recomendacoes?tipo=${tipo}&limit=50`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (!res.ok) throw new Error(`Erro ${res.status}`)
+        
+        const data = await res.json()
+        this.recommendations = {
+          tudo: data.tudo || [],
+          musicas: data.musicas || [],
+          albuns: data.albuns || [],
+          artistas: data.artistas || [],
+          playlists: data.playlists || []
+        }
+        
+        // Texto das preferências
+        const prefs = data.preferences || {}
+        const parts = []
+        if (prefs.generos?.length) parts.push(prefs.generos.slice(0, 2).join(', '))
+        if (prefs.artistas?.length) parts.push(prefs.artistas.slice(0, 2).join(', '))
+        if (prefs.vibes?.length) parts.push(prefs.vibes.slice(0, 2).join(', '))
+        this.recommendationPreferencesText = parts.join(' • ') || 'Suas escolhas'
+        
+      } catch (err) {
+        console.error('Erro ao carregar recomendações:', err)
+        this.loadMockRecommendations()
+      } finally {
+        this.loadingRecommendations = false
+      }
+    },
+    
+ loadMockRecommendations() {
+  // ✅ USAR AS MÚSICAS REAIS DOS MIXES (que já vêm filtradas pelo gênero correto)
+  const tracksDosMixes = this.madeForYou.flatMap(m => 
+    (m._tracks || []).map(t => ({
+      ...t,
+      razao: t.razao || `Do mix: ${m.title}`
+    }))
+  )
+
+// ✅ Usar preferências do usuário para gerar mocks relevantes
+const generoPrincipal = this.selectedGenres[0]?.name || 'pop'
+const artistaPrincipal = this.selectedArtists[0]?.name || ''
+const vibePrincipal = this.selectedVibes[0]?.name || ''
+
+// Gerar 15 músicas baseadas nas preferências reais
+let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal, artistaPrincipal, vibePrincipal)
+
+  if (musicasFinais.length < 15) {
+    const faltam = 15 - musicasFinais.length
+    for (let i = 0; i < faltam; i++) {
+      const genero = this.selectedGenres[i % Math.max(this.selectedGenres.length, 1)]?.name || generoPrincipal
+      const artista = this.selectedArtists[i % Math.max(this.selectedArtists.length, 1)]?.name || artistaPrincipal
+      musicasFinais.push({
+        id: `local_fb_${i}_${Date.now()}`,
+        title: `Hit de ${genero} #${i + 1}`,
+        artist: artista,
+        cover: this.selectedArtists[i % Math.max(this.selectedArtists.length, 1)]?.photo 
+          || `https://picsum.photos/seed/${encodeURIComponent(genero + i)}/300/300`,
+        url: '',
+        duration: 180 + (i * 5),
+        source: 'spotify',
+        categoria: 'musicas',
+        razao: `Baseado em ${genero}`
+      })
+    }
+  }
+
+  // Álbuns: gerados a partir dos artistas favoritos
+  const albunsFinais = []
+  this.selectedArtists.slice(0, 8).forEach((artista, i) => {
+    albunsFinais.push({
+      id: `album_fb_${i}_${Date.now()}`,
+      title: `Best of ${artista.name}`,
+      artist: artista.name,
+      cover: artista.photo || `https://picsum.photos/seed/album_${i}/300/300`,
+      releaseDate: `202${(i % 4) + 1}-0${(i % 9) + 1}-15`,
+      totalTracks: 10 + i,
+      categoria: 'albuns',
+      razao: `Álbuns de ${artista.name}`,
+      source: artista.source || 'spotify',
+      type: 'album'
+    })
+  })
+  // Completar com álbuns por gênero
+  while (albunsFinais.length < 15) {
+    const i = albunsFinais.length
+    const g = this.selectedGenres[i % Math.max(this.selectedGenres.length, 1)]?.name || generoPrincipal
+    albunsFinais.push({
+      id: `album_gen_${i}_${Date.now()}`,
+      title: `${g} Essentials`,
+      artist: 'Vários Artistas',
+      cover: `https://picsum.photos/seed/${encodeURIComponent(g + i)}/300/300`,
+      releaseDate: `2024-0${(i % 9) + 1}-15`,
+      totalTracks: 15 + i,
+      categoria: 'albuns',
+      razao: `Álbum de ${g}`,
+      source: 'spotify',
+      type: 'album'
+    })
+  }
+
+  // Artistas: os favoritos + sugestões do mesmo gênero
+  const artistasFinais = this.selectedArtists.slice(0, 15).map((a, i) => ({
+    id: a.id,
+    title: a.name,
+    cover: a.photo || a.picture_medium || `https://picsum.photos/seed/artist_${a.id}/300/300`,
+    categoria: 'artistas',
+    razao: 'Você curte este artista',
+    source: a.source || 'local',
+    type: 'artist',
+    followers: 1000000 + Math.floor(Math.random() * 50000000),
+    popularity: a.popularity || 80 + (i % 15),
+    genres: [a.genre || generoPrincipal]
+  }))
+
+  // Playlists: baseadas em gêneros e vibes reais
+  const playlistsFinais = []
+  this.selectedGenres.forEach((g, i) => {
+    playlistsFinais.push({
+      id: `pl_gen_${g.id}_${i}`,
+      title: `This Is ${g.name}`,
+      description: `Os maiores hits de ${g.name}`,
+      cover: g.gradient || `https://picsum.photos/seed/${encodeURIComponent(g.name)}/300/300`,
+      owner: 'SoundUp',
+      tracksCount: 30 + (i * 5),
+      categoria: 'playlists',
+      razao: `Playlist de ${g.name}`,
+      source: 'spotify',
+      type: 'playlist'
+    })
+  })
+  this.selectedVibes.forEach((v, i) => {
+    playlistsFinais.push({
+      id: `pl_vibe_${v.id}_${i}`,
+      title: `${v.name} ${v.emoji || '✨'}`,
+      description: v.description || `Playlist para o momento ${v.name}`,
+      cover: v.gradient || `https://picsum.photos/seed/${encodeURIComponent(v.name)}/300/300`,
+      owner: 'SoundUp',
+      tracksCount: 25 + (i * 4),
+      categoria: 'playlists',
+      razao: `Para a vibe ${v.name}`,
+      source: 'spotify',
+      type: 'playlist'
+    })
+  })
+  // Completar até 15
+  while (playlistsFinais.length < 15) {
+    const i = playlistsFinais.length
+    const g = this.selectedGenres[i % Math.max(this.selectedGenres.length, 1)]?.name || generoPrincipal
+    playlistsFinais.push({
+      id: `pl_extra_${i}_${Date.now()}`,
+      title: `Mix ${g} #${i}`,
+      description: `Mix personalizado de ${g}`,
+      cover: `https://picsum.photos/seed/pl_${i}/300/300`,
+      owner: 'SoundUp',
+      tracksCount: 20 + i,
+      categoria: 'playlists',
+      razao: `Mix de ${g}`,
+      source: 'spotify',
+      type: 'playlist'
+    })
+  }
+
+  this.recommendations = {
+    tudo: [
+      ...musicasFinais.slice(0, 4).map(m => ({ ...m, type: 'musicas' })),
+      ...albunsFinais.slice(0, 4).map(a => ({ ...a, type: 'albuns' })),
+      ...artistasFinais.slice(0, 4).map(a => ({ ...a, type: 'artistas' })),
+      ...playlistsFinais.slice(0, 4).map(p => ({ ...p, type: 'playlists' }))
+    ].sort(() => Math.random() - 0.5),
+    musicas: musicasFinais,
+    albuns: albunsFinais.slice(0, 15),
+    artistas: artistasFinais,
+    playlists: playlistsFinais.slice(0, 15)
+  }
+
+  // Texto descritivo das preferências
+  const partes = []
+  if (this.selectedGenres.length) partes.push(this.selectedGenres.slice(0, 2).map(g => g.name).join(', '))
+  if (this.selectedArtists.length) partes.push(this.selectedArtists.slice(0, 2).map(a => a.name).join(', '))
+  if (this.selectedVibes.length) partes.push(this.selectedVibes.slice(0, 2).map(v => v.name).join(', '))
+  this.recommendationPreferencesText = partes.join(' • ') || 'Seus gostos musicais'
+},
+    
+    handleRecommendationClick(item) {
+      const type = item.type || item.categoria || 'musicas'
+      switch(type) {
+        case 'musicas':
+        case 'track':
+          this.playRecommendation(item)
+          break
+        case 'albuns':
+        case 'album':
+          this.playAlbumTracks(item)
+          break
+        case 'artistas':
+        case 'artist':
+          this.goToArtist(item)
+          break
+        case 'playlists':
+        case 'playlist':
+          this.openPlaylist(item)
+          break
+        default:
+          this.playRecommendation(item)
+      }
+    },
+    
+    playRecommendation(item) {
+      const playerSong = {
+        id: item.id,
+        title: item.title,
+        artist: item.artist,
+        cover: item.cover,
+        url: item.url || item.preview_url,
+        duration: item.duration || 30,
+        source: item.source || 'spotify'
+      }
+      
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: this.recommendations.musicas.map(m => ({
+            id: m.id, title: m.title, artist: m.artist, cover: m.cover,
+            url: m.url || m.preview_url, duration: m.duration || 30, source: m.source || 'spotify'
+          })),
+          index: this.recommendations.musicas.findIndex(m => m.id === item.id),
+          context: 'recommendations'
+        }
+      }))
+      
+      this.showToast('Tocando', item.title, 'success', 'fa fa-music')
+    },
+    
+    getTypeIcon(type) {
+      const icons = {
+        musicas: 'fa fa-music',
+        track: 'fa fa-music',
+        albuns: 'fa fa-compact-disc',
+        album: 'fa fa-compact-disc',
+        artistas: 'fa fa-microphone',
+        artist: 'fa fa-microphone',
+        playlists: 'fa fa-list-ul',
+        playlist: 'fa fa-list-ul'
+      }
+      return icons[type] || 'fa fa-music'
+    },
+    
+    getTypeLabel(type) {
+      const labels = {
+        musicas: 'Música',
+        track: 'Música',
+        albuns: 'Álbum',
+        album: 'Álbum',
+        artistas: 'Artista',
+        artist: 'Artista',
+        playlists: 'Playlist',
+        playlist: 'Playlist'
+      }
+      return labels[type] || 'Música'
+    },
+
+    // Modal de Mix individual
+    openMixModal(mix) {
+      this.currentMixModal = mix
+      this.showMixModal = true
+      document.body.style.overflow = 'hidden'
+      
+      // Se o mix tiver tracks, mostra no modal
+      if (mix._tracks && mix._tracks.length > 0) {
+        this.recommendations.musicas = mix._tracks.map(t => ({
+          ...t,
+          razao: `Do mix: ${mix.title}`
+        }))
+      }
+    },
+
+    closeMixModal() {
+      this.showMixModal = false
+      this.currentMixModal = null
+      document.body.style.overflow = ''
+    },
+
+    async loadHorasOuvidas() {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    const res = await fetch(`${this.API_BASE_URL}/historico/estatisticas/mensal`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    if (!res.ok) throw new Error(`Erro ${res.status}`)
+    const data = await res.json()
+    
+    this.userStats.hoursListened = data.horasOuvidasEsteMes || 0
+  } catch (err) {
+    console.error('Erro ao carregar horas ouvidas:', err)
+    this.userStats.hoursListened = 0
+  }
+},
+
+async loadSequencia() {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const res = await fetch(`${this.API_BASE_URL}/historico/estatisticas/sequencia`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) throw new Error(`Erro ${res.status}`)
+    const data = await res.json()
+
+    this.userStats.streak = data.sequencia || 0
+  } catch (err) {
+    console.error('Erro ao carregar sequência:', err)
+    this.userStats.streak = 0
+  }
+},
+
     loadFeitoParaVoceData() {
       try {
         const selectionsRaw = localStorage.getItem('feitoParaVoceSelections')
@@ -901,7 +1526,7 @@ export default {
       return favorites.some(f => f.id === artistId)
     },
 
-    async loadMadeForYou() {
+      async loadMadeForYou() {
       try {
         const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
         const userId = usuario?._id || usuario?.id
@@ -925,26 +1550,90 @@ export default {
             title: mix.title,
             description: mix.description,
             tracks: mix.tracks || 0,
-            cover: mix.cover || "",
+            cover: mix.cover || mix.gradient || this.genreGradients[index % this.genreGradients.length],
             gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
-            _tracks: mix._tracks || []
+            _tracks: mix._tracks || [],
+            tipo: mix.tipo || 'mix',
+            basedOn: mix.basedOn || ''
           }))
+          
+          // Atualiza texto de preferências
+          if (data.preferences) {
+            const parts = []
+            if (data.preferences.generos?.length) parts.push(data.preferences.generos.slice(0, 2).join(', '))
+            if (data.preferences.artistas?.length) parts.push(data.preferences.artistas.slice(0, 2).join(', '))
+            if (data.preferences.vibes?.length) parts.push(data.preferences.vibes.slice(0, 2).join(', '))
+            this.recommendationPreferencesText = parts.join(' • ') || 'Suas escolhas'
+          }
+          
           return
         }
         this.loadMockMadeForYou()
       } catch (error) {
+        console.error('Erro loadMadeForYou:', error)
         this.loadMockMadeForYou()
       }
     },
 
-    loadMockMadeForYou() {
+      loadMockMadeForYou() {
       this.madeForYou = [
-        { id: 1, title: "Mix Diário 1", description: "Marília Mendonça, Maiara & Maraisa...", tracks: 50, cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", _tracks: [] },
-        { id: 2, title: "Mix Diário 2", description: "Henrique & Juliano, Jorge & Mateus...", tracks: 45, cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", _tracks: [] },
-        { id: 3, title: "Descobertas", description: "Novas músicas para você", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", _tracks: [] },
-        { id: 4, title: "On Repeat", description: "Músicas que você ama", tracks: 100, cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", _tracks: [] },
-        { id: 5, title: "Radar", description: "Atualizado toda sexta", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", _tracks: [] }
+        { 
+          id: 'mix_mock_1', 
+          title: "Mix Diário 1", 
+          description: "Marília Mendonça, Maiara & Maraisa...", 
+          tracks: 50, 
+          cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", 
+          gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+          _tracks: this.gerarMockTracksParaMix('sertanejo', 1),
+          tipo: 'mix',
+          basedOn: 'Sertanejo'
+        },
+        { 
+          id: 'mix_mock_2', 
+          title: "Mix Diário 2", 
+          description: "Henrique & Juliano, Jorge & Mateus...", 
+          tracks: 45, 
+          cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", 
+          gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", 
+          _tracks: [],
+          tipo: 'mix',
+          basedOn: 'Sertanejo'
+        },
+        { 
+          id: 'mix_mock_3', 
+          title: "Descobertas", 
+          description: "Novas músicas para você", 
+          tracks: 30, 
+          cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", 
+          gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", 
+          _tracks: [],
+          tipo: 'descobertas',
+          basedOn: 'múltiplos gostos'
+        },
+        { 
+          id: 'mix_mock_4', 
+          title: "On Repeat", 
+          description: "Músicas que você ama", 
+          tracks: 100, 
+          cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", 
+          gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", 
+          _tracks: [],
+          tipo: 'mix',
+          basedOn: 'Funk, Pop'
+        },
+        { 
+          id: 'mix_mock_5', 
+          title: "Radar", 
+          description: "Atualizado toda sexta", 
+          tracks: 30, 
+          cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", 
+          gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", 
+          _tracks: [],
+          tipo: 'top',
+          basedOn: 'Pop'
+        }
       ]
+      this.recommendationPreferencesText = 'Sertanejo, Funk, Pop'
     },
 
     async loadAllData() {
@@ -957,7 +1646,9 @@ export default {
           this.loadFollowedArtists(),
           Promise.resolve(this.loadRecentlyPlayed()),
           this.loadUserPlaylists(),
-          this.carregarCurtidas()
+          this.carregarCurtidas(),
+           this.loadHorasOuvidas(),
+           this.loadSequencia() 
         ])
       } catch (error) {
         console.error("Erro ao carregar dashboard:", error)
@@ -4176,6 +4867,360 @@ export default {
   50% { transform: translateY(-6px); }
 }
 
+/* 🎯 MODAL DE RECOMENDAÇÕES */
+.recommendations-modal-overlay {
+  z-index: 1000;
+}
+
+.recommendations-modal {
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  background: #121212;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.recommendations-modal .modal-header {
+  padding: 24px 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.modal-title-group h3 {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-title-group h3 i {
+  color: #1db954;
+}
+
+.modal-title-group p {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+}
+
+.category-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px 32px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: #888;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tab-btn:hover {
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+}
+
+.tab-btn.active {
+  background: #1db954;
+  border-color: #1db954;
+  color: #000;
+}
+
+.tab-count {
+  background: rgba(0,0,0,0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.recommendations-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 32px;
+}
+
+.loading-recommendations,
+.empty-recommendations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #888;
+  gap: 16px;
+}
+
+.empty-recommendations i {
+  font-size: 48px;
+  opacity: 0.3;
+}
+
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recommendation-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.recommendation-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(29,185,84,0.3);
+  transform: translateX(4px);
+}
+
+.rec-number {
+  width: 28px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.rec-cover {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.rec-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rec-cover.artist-cover {
+  border-radius: 50%;
+}
+
+.rec-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.recommendation-item:hover .rec-play-overlay {
+  opacity: 1;
+}
+
+.rec-play-overlay i {
+  color: #fff;
+  font-size: 20px;
+}
+
+.artist-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.artist-overlay i {
+  color: rgba(255,255,255,0.8);
+  font-size: 20px;
+}
+
+.type-badge {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rec-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rec-info h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-info p {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 6px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-reason {
+  font-size: 11px;
+  color: #1db954;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rec-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.rec-duration {
+  font-size: 12px;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-source {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.rec-source.spotify {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+}
+
+.rec-source.deezer {
+  background: rgba(239, 89, 60, 0.15);
+  color: #ef593c;
+}
+
+.rec-source.local {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.album-meta,
+.artist-meta,
+.playlist-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.album-meta span,
+.artist-meta span,
+.playlist-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-follow-artist {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.btn-follow-artist:hover {
+  border-color: #1db954;
+  color: #1db954;
+}
+
+@media (max-width: 768px) {
+  .recommendations-modal {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .category-tabs {
+    padding: 12px 16px;
+  }
+  
+  .tab-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  
+  .recommendations-body {
+    padding: 12px 16px;
+  }
+  
+  .rec-cover {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .rec-meta {
+    display: none;
+  }
+}
 @media (max-width: 768px) {
   .genre-tile-selected {
     height: 140px;

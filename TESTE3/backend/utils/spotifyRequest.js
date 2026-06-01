@@ -1,0 +1,196 @@
+const axios = require('axios')
+const { SPOTIFY_AUTH_URL, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = require('../config/spotify')
+
+let spotifyToken = null
+let tokenExpiresAt = 0
+let lastRequestTime = 0  // ✅ NOVO: controla tempo entre requests
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+/**
+ * ✅ NOVO: Delay entre requests para evitar rate limit
+ * Mínimo 500ms entre cada request ao Spotify
+ */
+async function respectRateLimit() {
+  const now = Date.now()
+  const timeSinceLastRequest = now - lastRequestTime
+ const minDelay = 4000 
+  
+  if (timeSinceLastRequest < minDelay) {
+    const wait = minDelay - timeSinceLastRequest
+    await sleep(wait)
+  }
+  lastRequestTime = Date.now()
+}
+
+async function getSpotifyToken(retries = 5) {
+  if (spotifyToken && Date.now() < tokenExpiresAt - 60000) {
+    return spotifyToken
+  }
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.post(
+        SPOTIFY_AUTH_URL,
+        'grant_type=client_credentials',
+        {
+          headers: {
+            Authorization: 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          timeout: 10000
+        }
+      )
+
+      spotifyToken = response.data.access_token
+      tokenExpiresAt = Date.now() + (response.data.expires_in * 1000)
+      console.log('🎵 Token Spotify renovado')
+      return spotifyToken
+
+    } catch (error) {
+      const status = error.response?.status
+      const errorCode = error.response?.data?.error
+      
+      // ✅ CORREÇÃO: retry-after em segundos, limitado a 30s
+      const retryAfterSeconds = parseInt(error.response?.headers?.['retry-after'] || '5', 10)
+      const delayMs = Math.min(retryAfterSeconds, 30) * 1000 + Math.random() * 1000
+
+      console.warn(`⏳ Retry auth em ${Math.round(delayMs)}ms`)
+      await sleep(delayMs)
+      
+      if (i === retries - 1) {
+        spotifyToken = null
+        tokenExpiresAt = 0
+        throw new Error(`Falha autenticação Spotify: ${errorCode || error.message}`)
+      }
+    }
+  }
+}
+
+/**
+ * ✅ CORREÇÃO CRÍTICA: 
+ * 1. Delay de 500ms entre requests consecutivos
+ * 2. retry-after limitado a 10 segundos (nunca 100 min!)
+ */
+async function spotifyRequest(config, retries = 3) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // ✅ Respeita intervalo mínimo
+      await respectRateLimit()
+
+      const token = await getSpotifyToken()
+
+      let finalUrl = config.url
+
+      if (config.params && Object.keys(config.params).length > 0) {
+        const query = new URLSearchParams(config.params).toString()
+        finalUrl += `?${query}`
+      }
+
+      console.log(`📤 Spotify Request (${attempt + 1}/${retries + 1})`)
+      console.log(finalUrl)
+
+      const response = await axios({
+        method: config.method || 'GET',
+        url: finalUrl,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(config.headers || {})
+        },
+        timeout: config.timeout || 15000
+      })
+
+      return response
+
+    } catch (error) {
+      const status = error.response?.status
+
+      console.error(
+        `❌ Tentativa ${attempt + 1}/${retries + 1} falhou:`,
+        status,
+        error.message
+      )
+
+      // =========================
+      // RATE LIMIT 429
+      // =========================
+      if (status === 429) {
+        const retryAfter = parseInt(
+          error.response?.headers?.['retry-after'] || '3',
+          10
+        )
+
+ const delay = Math.min(retryAfter, 3) * 1000
+
+  console.warn(`🚫 Spotify Rate Limit → aguardando ${delay}ms`)
+
+  // ✅ AJUSTE 2: Aumentar retries de 3 para 5
+  if (attempt >= 5) {  // antes era >= retries (3)
+    error.isRateLimit = true
+    throw error
+  }
+
+        await sleep(delay)
+        continue
+      }
+
+      // =========================
+      // TOKEN EXPIRADO
+      // =========================
+      if (status === 401) {
+        spotifyToken = null
+        tokenExpiresAt = 0
+
+        if (attempt >= retries) {
+          throw error
+        }
+
+        continue
+      }
+
+      // =========================
+      // ERROS RETRYABLE
+      // =========================
+      const retryableStatuses = [500, 502, 503, 504]
+
+      const retryable =
+        retryableStatuses.includes(status) ||
+        error.code === 'ECONNRESET' ||
+        error.code === 'ETIMEDOUT'
+
+      if (retryable) {
+        const delay = Math.min(1000 * (attempt + 1), 5000)
+
+        console.warn(`⏳ Retry em ${delay}ms`)
+
+        if (attempt >= retries) {
+          throw error
+        }
+
+        await sleep(delay)
+        continue
+      }
+
+      // erro comum
+      throw error
+    }
+  }
+
+  throw new Error('Spotify max retries exceeded')
+}
+
+async function refreshSpotifyToken() {
+  spotifyToken = null
+  tokenExpiresAt = 0
+  return await getSpotifyToken()
+}
+
+function isTokenValid() {
+  return spotifyToken && Date.now() < tokenExpiresAt - 60000
+}
+
+module.exports = {
+  spotifyRequest,
+  refreshSpotifyToken,
+  isTokenValid
+}

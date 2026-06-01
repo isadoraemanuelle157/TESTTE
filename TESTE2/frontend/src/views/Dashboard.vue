@@ -2,7 +2,6 @@
   <div class="dashboard">
     <div class="dashboard-content">
 
-      <!-- WELCOME SECTION -->
       <section class="welcome-section">
         <div class="welcome-content">
           <h1 class="welcome-title">
@@ -12,39 +11,30 @@
           </h1>
           <p class="welcome-subtitle">{{ welcomeMessage }}</p>
 
-          <!-- Quick Stats -->
           <div class="quick-stats">
             <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fa fa-clock-o"></i>
-              </div>
+              <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
               <div class="stat-data">
                 <span class="stat-value">{{ userStats.hoursListened }}h</span>
                 <span class="stat-label">Ouvidas este mês</span>
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fa fa-heart"></i>
-              </div>
+              <div class="stat-icon"><i class="fa fa-heart"></i></div>
               <div class="stat-data">
                 <span class="stat-value">{{ userStats.likedSongs }}</span>
                 <span class="stat-label">Músicas curtidas</span>
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fa fa-list"></i>
-              </div>
+              <div class="stat-icon"><i class="fa fa-list"></i></div>
               <div class="stat-data">
                 <span class="stat-value">{{ userStats.playlists }}</span>
                 <span class="stat-label">Playlists criadas</span>
               </div>
             </div>
             <div class="stat-card">
-              <div class="stat-icon">
-                <i class="fa fa-fire"></i>
-              </div>
+              <div class="stat-icon"><i class="fa fa-fire"></i></div>
               <div class="stat-data">
                 <span class="stat-value">{{ userStats.streak }} dias</span>
                 <span class="stat-label">Sequência</span>
@@ -54,73 +44,46 @@
         </div>
       </section>
 
-      <!-- HERO: CONTINUE LISTENING (SINCRONIZADO COM PLAYER) -->
       <div v-if="continueListening.length > 0" class="hero-banner continue-listening" :style="heroGradient">
         <div class="hero-ambient"></div>
         <div class="hero-content">
           <div class="hero-badge">
             <i class="fa fa-play-circle"></i>
             {{ isPlaying ? 'Tocando Agora' : 'Continue Ouvindo' }}
-            <span class="badge-live" v-if="isPlaying">
-              <span class="live-dot"></span> LIVE
-            </span>
+            <span class="badge-live" v-if="isPlaying"><span class="live-dot"></span> LIVE</span>
           </div>
-         
-          <!-- Título dinâmico: mostra currentTrack do player se existir -->
           <h1 class="hero-title">{{ currentTrack?.title || continueListening[0].title }}</h1>
           <p class="hero-artist">{{ currentTrack?.artist || continueListening[0].artist }}</p>
-         
           <p class="hero-description" v-if="!isPlaying && continueListening[0].progress < 95">
-            De onde você parou
-            <span class="highlight">{{ Math.round(continueListening[0].progress || 0) }}% completo</span>
+            De onde você parou <span class="highlight">{{ Math.round(continueListening[0].progress || 0) }}% completo</span>
           </p>
-          <p class="hero-description" v-else-if="isPlaying">
-            <span class="highlight">▶ Reproduzindo agora</span>
-          </p>
-
-          <!-- Progress Bar sincronizada com o player -->
+          <p class="hero-description" v-else-if="isPlaying"><span class="highlight">▶ Reproduzindo agora</span></p>
           <div class="hero-progress" v-if="continueListening[0]">
             <div class="progress-bar">
-              <div
-                class="progress-fill"
-                :style="{ width: (isPlaying ? progressPercent : (continueListening[0].progress || 0)) + '%' }"
-              ></div>
+              <div class="progress-fill" :style="{ width: (isPlaying ? progressPercent : (continueListening[0].progress || 0)) + '%' }"></div>
             </div>
             <div class="progress-time">
               <span>{{ formatTime(isPlaying ? currentTime : continueListening[0].currentTime) }}</span>
               <span>{{ formatTime(isPlaying ? duration : continueListening[0].duration) }}</span>
             </div>
           </div>
-
           <div class="hero-actions">
             <button class="btn-primary btn-glow" @click="playContinueListening(0)">
               <i class="fa" :class="isPlaying ? 'fa-pause' : 'fa-play'"></i>
               {{ isPlaying ? 'Pausar' : (continueListening[0].progress > 0 ? 'Continuar' : 'Tocar') }}
             </button>
-            <button class="btn-secondary" @click="playNextInQueue">
-              <i class="fa fa-step-forward"></i> Próxima
-            </button>
-            <button
-              class="btn-secondary btn-icon"
-              @click="toggleLike"
-              :class="{ 'active': isLiked }"
-            >
+            <button class="btn-secondary" @click="playNextInQueue"><i class="fa fa-step-forward"></i> Próxima</button>
+            <button class="btn-secondary btn-icon" @click="toggleLike" :class="{ 'active': isLiked }">
               <i class="fa" :class="isLiked ? 'fa-heart' : 'fa-heart-o'"></i>
             </button>
           </div>
         </div>
-
         <div class="hero-image">
           <div class="vinyl-container" :class="{ 'playing': isPlaying }">
             <div class="vinyl-record">
               <div class="vinyl-grooves"></div>
               <div class="vinyl-label">
-                <img
-                  v-if="(currentTrack?.cover || continueListening[0]?.cover)"
-                  :src="currentTrack?.cover || continueListening[0].cover"
-                  @error="handleImageError"
-                  alt="Album Cover"
-                />
+                <img v-if="(currentTrack?.cover || continueListening[0]?.cover)" :src="currentTrack?.cover || continueListening[0].cover" @error="handleImageError" alt="Album Cover" />
                 <i v-else class="fa fa-music"></i>
               </div>
             </div>
@@ -134,110 +97,55 @@
         </div>
       </div>
 
-      <!-- SEÇÃO: MÚSICAS CURTIDAS -->
       <section class="section curtidas-section" v-if="musicas.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-heart section-icon liked"></i>
-              Músicas Curtidas
-            </h2>
+            <h2 class="section-title"><i class="fa fa-heart section-icon liked"></i> Músicas Curtidas</h2>
             <span class="section-subtitle">{{ musicas.length }} {{ musicas.length === 1 ? 'música' : 'músicas' }} que você ama</span>
           </div>
           <div class="header-actions-group">
-            <button class="btn-play-all" @click="playAllCurtidas">
-              <i class="fa fa-play"></i> Tocar todas
-            </button>
-            <button class="see-all" @click="goToCurtidas">
-              Ver tudo <i class="fa fa-chevron-right"></i>
-            </button>
+            <button class="btn-play-all" @click="playAllCurtidas"><i class="fa fa-play"></i> Tocar todas</button>
+            <button class="see-all" @click="goToCurtidas">Ver tudo <i class="fa fa-chevron-right"></i></button>
           </div>
         </div>
-
         <div class="curtidas-list">
-          <div
-            v-for="(musica, index) in musicas.slice(0, showAllCurtidas ? musicas.length : 5)"
-            :key="`${musica.source}-${musica.id}`"
-            class="curtida-item"
-            @dblclick="playCurtida(index)"
-            :class="{ 'active': isCurrentTrack(musica) && isPlaying }"
-          >
+          <div v-for="(musica, index) in musicas.slice(0, showAllCurtidas ? musicas.length : 5)" :key="`${musica.source}-${musica.id}`" class="curtida-item" @dblclick="playCurtida(index)" :class="{ 'active': isCurrentTrack(musica) && isPlaying }">
             <div class="curtida-number">{{ index + 1 }}</div>
-
             <div class="curtida-cover-wrapper">
               <img :src="musica.cover || '/default-cover.png'" :alt="musica.title" @error="handleImageError" />
-              <div class="curtida-play-overlay">
-                <i class="fa" :class="isCurrentTrack(musica) && isPlaying ? 'fa-pause' : 'fa-play'"></i>
-              </div>
-              <div class="equalizer-mini" v-if="isCurrentTrack(musica) && isPlaying">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
+              <div class="curtida-play-overlay"><i class="fa" :class="isCurrentTrack(musica) && isPlaying ? 'fa-pause' : 'fa-play'"></i></div>
+              <div class="equalizer-mini" v-if="isCurrentTrack(musica) && isPlaying"><span v-for="n in 4" :key="n"></span></div>
             </div>
-
             <div class="curtida-info">
               <h3 class="curtida-title">{{ musica.title }}</h3>
               <p class="curtida-artist">
-                <span class="source-badge" :class="musica.source">
-                  <i :class="getSourceIcon(musica.source)"></i>
-                </span>
+                <span class="source-badge" :class="musica.source"><i :class="getSourceIcon(musica.source)"></i></span>
                 {{ musica.artist }}
                 <span v-if="musica.album" class="album-dot">•</span>
                 <span v-if="musica.album" class="album-name">{{ musica.album }}</span>
               </p>
             </div>
-
-            <div class="curtida-duration" v-if="musica.duration">
-              {{ formatTime(musica.duration) }}
-            </div>
-
+            <div class="curtida-duration" v-if="musica.duration">{{ formatTime(musica.duration) }}</div>
             <div class="curtida-actions">
-              <button
-                class="btn-like active"
-                @click.stop="removerCurtida(musica, index)"
-                title="Remover dos curtidos"
-              >
-                <i class="fa fa-heart"></i>
-              </button>
-
+              <button class="btn-like active" @click.stop="removerCurtida(musica, index)" title="Remover dos curtidos"><i class="fa fa-heart"></i></button>
               <div class="dropdown-container" ref="dropdownContainers">
-                <button class="btn-more" @click.stop="toggleMenu(index, $event)" :class="{ active: activeMenuIndex === index }">
-                  <i class="fa fa-ellipsis-v"></i>
-                </button>
-
+                <button class="btn-more" @click.stop="toggleMenu(index, $event)" :class="{ active: activeMenuIndex === index }"><i class="fa fa-ellipsis-v"></i></button>
                 <transition name="menu-pop">
-                  <div
-                    v-if="activeMenuIndex === index"
-                    class="modern-dropdown"
-                    ref="dropdownMenus"
-                  >
+                  <div v-if="activeMenuIndex === index" class="modern-dropdown" ref="dropdownMenus">
                     <div class="dropdown-options">
                       <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
-                        <div class="option-icon playlist-icon">
-                          <i class="fa fa-plus-square-o"></i>
-                        </div>
-                        <div class="option-content">
-                          <span class="option-label">Adicionar à playlist</span>
-                          <span class="option-hint">Escolha uma playlist existente</span>
-                        </div>
+                        <div class="option-icon playlist-icon"><i class="fa fa-plus-square-o"></i></div>
+                        <div class="option-content"><span class="option-label">Adicionar à playlist</span><span class="option-hint">Escolha uma playlist existente</span></div>
                         <i class="fa fa-chevron-right option-arrow"></i>
                       </button>
-
                       <button class="dropdown-option" @click="favoritarMusica(musica)">
-                        <div class="option-icon favorite-icon">
-                          <i class="fa fa-star-o"></i>
-                        </div>
-                        <div class="option-content">
-                          <span class="option-label">Favoritar</span>
-                          <span class="option-hint">Adicionar aos favoritos especiais</span>
-                        </div>
+                        <div class="option-icon favorite-icon"><i class="fa fa-star-o"></i></div>
+                        <div class="option-content"><span class="option-label">Favoritar</span><span class="option-hint">Adicionar aos favoritos especiais</span></div>
                         <i class="fa fa-chevron-right option-arrow"></i>
                       </button>
                     </div>
-
                     <div class="dropdown-footer">
-                      <button class="dropdown-close" @click="closeMenu">
-                        <i class="fa fa-times"></i> Fechar
-                      </button>
+                      <button class="dropdown-close" @click="closeMenu"><i class="fa fa-times"></i> Fechar</button>
                     </div>
                   </div>
                 </transition>
@@ -245,48 +153,27 @@
             </div>
           </div>
         </div>
-
-        <button
-          v-if="musicas.length > 5"
-          class="btn-show-more"
-          @click="showAllCurtidas = !showAllCurtidas"
-        >
-          {{ showAllCurtidas ? 'Ver menos' : 'Ver mais' }}
-          <i class="fa" :class="showAllCurtidas ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+        <button v-if="musicas.length > 5" class="btn-show-more" @click="showAllCurtidas = !showAllCurtidas">
+          {{ showAllCurtidas ? 'Ver menos' : 'Ver mais' }}<i class="fa" :class="showAllCurtidas ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
         </button>
       </section>
-
-      <!-- SEÇÃO: Feito para Você -->
-      <section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
+  <section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-magic section-icon personal"></i>
-              Feito para Você
-            </h2>
-     <span class="section-subtitle">Baseado nas suas escolhas de gêneros, artistas e vibes</span>
+            <h2 class="section-title"><i class="fa fa-magic section-icon personal"></i> Feito para Você</h2>
+            <span class="section-subtitle">Playlists personalizadas baseadas nas suas escolhas</span>
           </div>
           <button class="see-all" @click="showAllPersonal">
-            Ver tudo <i class="fa fa-chevron-right"></i>
+            {{ showAllPersonalContent ? 'Ver menos' : 'Ver tudo' }}<i class="fa" :class="showAllPersonalContent ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
           </button>
         </div>
         <div class="cards-row" :class="{ 'expanded': showAllPersonalContent }">
-          <div
-            v-for="(mix, index) in madeForYou.slice(0, showAllPersonalContent ? 10 : 5)"
-            :key="'mix-'+mix.id"
-            class="music-card mix-card"
-            @click="playMix(mix)"
-            :class="{ 'active': isCurrentMix(mix) }"
-          >
+          <div v-for="(mix, index) in madeForYou.slice(0, showAllPersonalContent ? 10 : 5)" :key="'mix-'+mix.id" class="music-card mix-card" @click="playMix(mix)" :class="{ 'active': isCurrentMix(mix) }">
             <div class="card-image">
               <img :src="mix.cover" @error="handleImageError" alt="Mix Cover" />
-              <div class="play-button-overlay">
-                <i class="fa fa-play-circle"></i>
-              </div>
+              <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
               <div class="mix-gradient-overlay" :style="{ background: mix.gradient }"></div>
-              <div class="mix-info-badge">
-                <i class="fa fa-magic"></i> {{ mix.tracks }} músicas
-              </div>
+              <div class="mix-info-badge"><i class="fa fa-magic"></i> {{ mix.tracks }} músicas</div>
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ mix.title }}</h3>
@@ -296,100 +183,121 @@
         </div>
       </section>
 
-      <!-- SEÇÃO: Tocadas Recentemente (SINCRONIZADO COM PLAYER) -->
+      <section id="generos-favoritos" class="section" v-if="selectedGenres.length > 0">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title"><i class="fa fa-guitar section-icon genre"></i> Seus Gêneros</h2>
+            <span class="section-subtitle">{{ selectedGenres.length }} gêneros favoritos escolhidos no onboarding</span>
+          </div>
+        </div>
+        <div class="categories-grid">
+          <div v-for="(genre, index) in selectedGenres.slice(0, 8)" :key="'selected-genre-'+genre.id" class="category-tile genre-tile-selected" @click="navigateToGenre(genre)" :style="{ background: genre.gradient || genreGradients[index % genreGradients.length] }">
+            <div class="category-content">
+              <span class="genre-emoji-large">{{ genre.emoji || genre.icon || '🎵' }}</span>
+              <h3>{{ genre.name }}</h3>
+              <span class="category-explore">Explorar <i class="fa fa-arrow-right"></i></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="artistas-favoritos" class="section" v-if="selectedArtists.length > 0">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title"><i class="fa fa-star section-icon artist"></i> Artistas Favoritos</h2>
+            <span class="section-subtitle">{{ selectedArtists.length }} artistas que você ama — clique para ver o perfil</span>
+          </div>
+        </div>
+        <div class="cards-row artists-row">
+          <div v-for="(artist, index) in selectedArtists.slice(0, 5)" :key="'selected-artist-'+artist.id" class="music-card artist-card" @click="goToArtist(artist)" :class="{ 'active': currentArtist?.id === artist.id }">
+            <div class="card-image artist-image">
+              <img :src="artist.photo || artist.picture_medium || artist.picture" @error="handleImageError" alt="Artist" />
+              <div class="play-button-overlay artist-play"><i class="fa fa-play-circle"></i></div>
+            </div>
+            <div class="card-info">
+              <h3 class="card-title">{{ artist.name }}</h3>
+              <p class="card-artist">{{ artist.genre || 'Artista' }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="vibes-favoritas" class="section" v-if="selectedVibes.length > 0">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title"><i class="fa fa-bolt section-icon personal"></i> Suas Vibes</h2>
+            <span class="section-subtitle">{{ selectedVibes.length }} vibes selecionadas — clique para explorar</span>
+          </div>
+        </div>
+        <div class="vibes-showcase">
+          <div v-for="(vibe, index) in selectedVibes" :key="'selected-vibe-'+vibe.id" class="vibe-showcase-card" :style="{ '--vibe-gradient': vibe.gradient || genreGradients[index % genreGradients.length] }" @click="navigateToVibe(vibe)">
+            <div class="vibe-bg" :style="{ background: vibe.gradient || genreGradients[index % genreGradients.length] }"></div>
+            <div class="vibe-illustration"><span class="vibe-emoji-large">{{ vibe.emoji || '✨' }}</span></div>
+            <div class="vibe-content">
+              <h3>{{ vibe.name }}</h3>
+              <p>{{ vibe.description || 'Vibe musical' }}</p>
+              <div class="vibe-tags" v-if="vibe.tags && vibe.tags.length > 0">
+                <span v-for="tag in vibe.tags.slice(0, 3)" :key="tag" class="vibe-tag">{{ tag }}</span>
+              </div>
+              <div class="vibe-search-hint"><i class="fa fa-search"></i> Explorar</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="section" v-if="recentlyPlayed.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-history section-icon"></i>
-              Tocadas Recentemente
-            </h2>
+            <h2 class="section-title"><i class="fa fa-history section-icon"></i> Tocadas Recentemente</h2>
             <span class="section-count">{{ recentlyPlayed.length }} músicas</span>
           </div>
           <button class="see-all" @click="showAllRecent">
-              {{ showAllRecentTracks ? 'Ver menos' : 'Ver tudo' }}
-              <i class="fa" :class="showAllRecentTracks ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
-            </button>
+            {{ showAllRecentTracks ? 'Ver menos' : 'Ver tudo' }}<i class="fa" :class="showAllRecentTracks ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
+          </button>
         </div>
         <div class="cards-row" :class="{ 'expanded': showAllRecentTracks }">
-          <div
-            v-for="(track, index) in recentlyPlayed.slice(0, showAllRecentTracks ? 12 : 6)"
-            :key="'recent-'+track.id+'-'+track.playedAt"
-            class="music-card"
-            @click="playTrack(track, 'recent', index)"
-            :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }"
-          >
+          <div v-for="(track, index) in recentlyPlayed.slice(0, showAllRecentTracks ? 12 : 6)" :key="'recent-'+track.id+'-'+track.playedAt" class="music-card" @click="playTrack(track, 'recent', index)" :class="{ 'active': isCurrentTrack(track), 'playing': isCurrentTrack(track) && isPlaying }">
             <div class="card-image">
               <img :src="track.cover" @error="handleImageError" alt="Cover" />
-              <div class="play-button-overlay">
-                <i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i>
-              </div>
-              <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
-              <!-- Mostra "Agora" se for a atual, senão mostra tempo relativo -->
-              <div class="time-badge" :class="{ 'now-playing': isCurrentTrack(track) && isPlaying }">
-                {{ isCurrentTrack(track) && isPlaying ? '▶ AGORA' : formatTimeAgo(track.playedAt) }}
-              </div>
+              <div class="play-button-overlay"><i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i></div>
+              <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying"><span v-for="n in 4" :key="n"></span></div>
+              <div class="time-badge" :class="{ 'now-playing': isCurrentTrack(track) && isPlaying }">{{ isCurrentTrack(track) && isPlaying ? '▶ AGORA' : formatTimeAgo(track.playedAt) }}</div>
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ track.title }}</h3>
               <p class="card-artist">{{ track.artist }}</p>
             </div>
-            <button class="card-more" @click.stop="showTrackOptions(track)">
-              <i class="fa fa-ellipsis-h"></i>
-            </button>
+            <button class="card-more" @click.stop="showTrackOptions(track)"><i class="fa fa-ellipsis-h"></i></button>
           </div>
         </div>
       </section>
 
-      <!-- SEÇÃO: Suas Playlists -->
       <section class="section" v-if="userPlaylists.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-folder-open section-icon playlist"></i>
-              Suas Playlists
-            </h2>
+            <h2 class="section-title"><i class="fa fa-folder-open section-icon playlist"></i> Suas Playlists</h2>
             <span class="section-subtitle">{{ userPlaylists.length }} criadas por você</span>
           </div>
           <div class="header-actions-group">
-            <button class="see-all" @click="goToPlaylist">
-              Ver todos <i class="fa fa-chevron-right"></i>
-            </button>
+            <button class="see-all" @click="goToPlaylist">Ver todos <i class="fa fa-chevron-right"></i></button>
           </div>
         </div>
         <div class="cards-row">
-          <div
-            v-for="(playlist, index) in userPlaylists.slice(0, 5)"
-            :key="'user-playlist-'+playlist.id"
-            class="music-card playlist-card user-playlist"
-            @click="openPlaylist(playlist)"
-            :class="{ 'active': isCurrentPlaylist(playlist) }"
-          >
+          <div v-for="(playlist, index) in userPlaylists.slice(0, 5)" :key="'user-playlist-'+playlist.id" class="music-card playlist-card user-playlist" @click="openPlaylist(playlist)" :class="{ 'active': isCurrentPlaylist(playlist) }">
             <div class="card-image">
               <img :src="playlist.cover || defaultPlaylistCover" @error="handleImageError" alt="Playlist" />
-              <div class="play-button-overlay">
-                <i class="fa fa-play-circle"></i>
-              </div>
-              <div class="playlist-type-badge" v-if="playlist.isPublic">
-                <i class="fa fa-globe"></i> Pública
-              </div>
-              <div class="playlist-type-badge private" v-else>
-                <i class="fa fa-lock"></i> Privada
-              </div>
+              <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
+              <div class="playlist-type-badge" v-if="playlist.isPublic"><i class="fa fa-globe"></i> Pública</div>
+              <div class="playlist-type-badge private" v-else><i class="fa fa-lock"></i> Privada</div>
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ playlist.title }}</h3>
               <p class="card-artist">Por {{ currentUser.name }} • {{ playlist.songs?.length || 0 }} músicas</p>
             </div>
           </div>
-
           <div class="music-card create-card" @click="createPlaylist">
             <div class="create-content">
-              <div class="create-icon">
-                <i class="fa fa-plus"></i>
-              </div>
+              <div class="create-icon"><i class="fa fa-plus"></i></div>
               <h3 class="create-title">Criar Playlist</h3>
               <p class="create-subtitle">Adicione suas músicas favoritas</p>
             </div>
@@ -397,348 +305,185 @@
         </div>
       </section>
 
-      <!-- ESTADO VAZIO: Sem Playlists -->
       <section class="section" v-else-if="!loadingPlaylists">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-folder-open section-icon playlist"></i>
-              Suas Playlists
-            </h2>
+            <h2 class="section-title"><i class="fa fa-folder-open section-icon playlist"></i> Suas Playlists</h2>
             <span class="section-subtitle">0 criadas por você</span>
           </div>
-          <button class="btn-create" @click="createPlaylist">
-            <i class="fa fa-plus"></i> Criar Nova
-          </button>
+          <button class="btn-create" @click="createPlaylist"><i class="fa fa-plus"></i> Criar Nova</button>
         </div>
         <div class="empty-playlists">
           <div class="empty-illustration">
             <i class="fa fa-music"></i>
-            <div class="sound-waves">
-              <span></span><span></span><span></span>
-            </div>
+            <div class="sound-waves"><span></span><span></span><span></span></div>
           </div>
           <h3>Você ainda não tem playlists</h3>
           <p>Crie sua primeira playlist e organize suas músicas favoritas</p>
-          <button class="btn-primary" @click="createPlaylist">
-            <i class="fa fa-plus"></i> Criar Playlist
-          </button>
+          <button class="btn-primary" @click="createPlaylist"><i class="fa fa-plus"></i> Criar Playlist</button>
         </div>
       </section>
 
-      <!-- SEÇÃO: Artistas que Você Segue -->
       <section class="section" v-if="followedArtists.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-users section-icon artist"></i>
-              Artistas que Você Segue
-            </h2>
+            <h2 class="section-title"><i class="fa fa-users section-icon artist"></i> Artistas que Você Segue</h2>
             <span class="section-subtitle">{{ followedArtists.length }} artistas</span>
           </div>
-          <button class="see-all" @click="goToArtists">
-            Ver todos <i class="fa fa-chevron-right"></i>
-          </button>
+          <button class="see-all" @click="goToArtists">Ver todos <i class="fa fa-chevron-right"></i></button>
         </div>
         <div class="cards-row artists-row">
-          <div
-            v-for="(artist, index) in followedArtists.slice(0, 5)"
-            :key="'followed-'+artist.id"
-            class="music-card artist-card"
-            @click="playArtistTopTrack(artist)"
-            :class="{ 'active': currentArtist?.id === artist.id }"
-          >
+          <div v-for="(artist, index) in followedArtists.slice(0, 5)" :key="'followed-'+artist.id" class="music-card artist-card" @click="goToArtist(artist)" :class="{ 'active': currentArtist?.id === artist.id }">
             <div class="card-image artist-image">
               <img :src="artist.picture_medium" @error="handleImageError" alt="Artist" />
-              <div class="play-button-overlay artist-play">
-                <i class="fa fa-play-circle"></i>
-              </div>
-              <div class="new-release-badge" v-if="artist.hasNewRelease">
-                <i class="fa fa-star"></i> Novo
-              </div>
+              <div class="play-button-overlay artist-play"><i class="fa fa-play-circle"></i></div>
+              <div class="new-release-badge" v-if="artist.hasNewRelease"><i class="fa fa-star"></i> Novo</div>
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ artist.name }}</h3>
               <p class="card-artist">Artista</p>
             </div>
-            <button
-              class="follow-btn"
-              :class="{ 'following': artist.isFollowing }"
-              @click.stop="toggleFollow(artist)"
-            >
-              <i class="fa" :class="artist.isFollowing ? 'fa-check' : 'fa-plus'"></i>
-            </button>
+            <button class="follow-btn" :class="{ 'following': artist.isFollowing }" @click.stop="toggleFollow(artist)"><i class="fa" :class="artist.isFollowing ? 'fa-check' : 'fa-plus'"></i></button>
           </div>
         </div>
       </section>
 
-      <!-- SEÇÃO: Gêneros Populares -->
       <section class="section" v-if="genres.length > 0">
         <div class="section-header">
           <div class="section-title-wrapper">
-            <h2 class="section-title">
-              <i class="fa fa-guitar section-icon genre"></i>
-              Gêneros Populares
-            </h2>
+            <h2 class="section-title"><i class="fa fa-guitar section-icon genre"></i> Gêneros Populares</h2>
             <span class="section-subtitle">Explore por estilo musical</span>
           </div>
         </div>
         <div class="categories-grid">
-          <div
-            v-for="(genre, index) in genres.slice(0, 8)"
-            :key="'genre-'+genre.id"
-            class="category-tile"
-            @click="navigateToGenre(genre)"
-            :style="{ background: genreGradients[index % genreGradients.length] }"
-          >
+          <div v-for="(genre, index) in genres.slice(0, 8)" :key="'genre-'+genre.id" class="category-tile" @click="navigateToGenre(genre)" :style="{ background: genreGradients[index % genreGradients.length] }">
             <div class="category-content">
               <h3>{{ genre.name }}</h3>
-              <span class="category-explore">
-                Explorar <i class="fa fa-arrow-right"></i>
-              </span>
+              <span class="category-explore">Explorar <i class="fa fa-arrow-right"></i></span>
             </div>
-            <img
-              v-if="genre.picture_medium"
-              :src="genre.picture_medium"
-              class="genre-image"
-              @error="handleImageError"
-              alt="Genre"
-            />
+            <img v-if="genre.picture_medium" :src="genre.picture_medium" class="genre-image" @error="handleImageError" alt="Genre" />
             <i v-else class="fa fa-music genre-icon"></i>
           </div>
         </div>
       </section>
 
-      <!-- SEÇÃO: Lançamentos Recentes -->
-      <!-- SEÇÃO: Lançamentos Recentes (SPOTIFY REAL) -->
-<section class="section" v-if="spotifyNewReleases.length > 0 || newReleases.length > 0">
-  <div class="section-header">
-    <div class="section-title-wrapper">
-      <h2 class="section-title">
-        <i class="fa fa-bullhorn section-icon new"></i>
-        Lançamentos
-      </h2>
-      <span class="section-subtitle">
-        {{ spotifyNewReleases.length > 0 ? 'Novidades do Spotify' : 'Novidades da semana' }}
-        <span v-if="spotifyNewReleases.length > 0" class="spotify-badge">
-          <i class="fa fa-spotify"></i> Spotify
-        </span>
-      </span>
-    </div>
-    <button class="see-all" @click="loadMoreReleases">
-      Ver mais <i class="fa fa-chevron-right"></i>
-    </button>
-  </div>
-  
-  <div class="cards-row">
-    <div
-      v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, 5)"
-      :key="'release-'+album.id"
-      class="music-card album-card"
-      @click="playAlbumTracks(album)"
-      :class="{ 'active': isCurrentAlbum(album) }"
-    >
-      <div class="card-image">
-        <img :src="album.cover || album.cover_medium" @error="handleImageError" alt="Album Cover" />
-        <div class="play-button-overlay">
-          <i class="fa fa-play-circle"></i>
-        </div>
-        <div class="new-badge"><i class="fa fa-star"></i> NEW</div>
-        <div class="source-badge spotify" v-if="album.source === 'spotify'">
-          <i class="fa fa-spotify"></i>
-        </div>
-      </div>
-      <div class="card-info">
-        <h3 class="card-title">{{ album.title }}</h3>
-        <p class="card-artist">{{ album.artist?.name || album.artist }}</p>
-        <p class="card-date">
-          <i class="fa fa-calendar"></i> {{ formatDate(album.release_date) }}
-          <span v-if="album.total_tracks">• {{ album.total_tracks }} faixas</span>
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- SEÇÃO: Artistas Populares (SPOTIFY) -->
-<section class="section artists-section" v-if="spotifyPopularArtists.length > 0">
-  <div class="section-header">
-    <div class="section-title-wrapper">
-      <h2 class="section-title">
-        <i class="fa fa-users section-icon artist"></i>
-        Artistas em Alta
-      </h2>
-      <span class="section-subtitle">
-        Os maiores nomes da música global
-        <span class="spotify-badge">
-          <i class="fa fa-spotify"></i> Spotify
-        </span>
-      </span>
-    </div>
-    <button @click="openAllArtists" class="see-all">
-      Ver todos
-      <i class="fa fa-chevron-right"></i>
-    </button>
-  </div>
-
-  <!-- Carousel Container -->
-  <div v-if="spotifyPopularArtists.length && !error" class="carousel-container">
-    <button
-      v-if="showLeft"
-      class="nav-btn prev"
-      @click="scroll(-320)"
-      aria-label="Anterior"
-    >
-      <i class="fa fa-chevron-left"></i>
-    </button>
-
-    <div class="artists-track" ref="scrollContainer" @scroll="checkArrows">
-      <article
-        v-for="artist in spotifyPopularArtists"
-        :key="artist.id"
-        class="artist-card"
-        @click="goToArtist(artist)"
-      >
-        <div class="image-wrapper">
-          <div class="image-container">
-            <img 
-              :src="artist.picture_big || artist.picture_medium || artist.picture" 
-              :alt="artist.name"
-              loading="lazy"
-              @error="handleImageError"
-            />
+      <section class="section" v-if="spotifyNewReleases.length > 0 || newReleases.length > 0">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title"><i class="fa fa-bullhorn section-icon new"></i> Lançamentos</h2>
+            <span class="section-subtitle">
+              {{ spotifyNewReleases.length > 0 ? 'Novidades do Spotify' : 'Novidades da semana' }}
+              <span v-if="spotifyNewReleases.length > 0" class="spotify-badge"><i class="fa fa-spotify"></i> Spotify</span>
+            </span>
           </div>
-          <div class="source-badge spotify">SP</div>
-          
-          <button 
-            class="follow-btn-float"
-            :class="{ 'following': isFollowing(artist.id) }"
-            @click.stop="toggleFollow(artist)"
-          >
-            <i v-if="!isFollowing(artist.id)" class="fa fa-plus"></i>
-            <i v-else class="fa fa-check"></i>
-          </button>
+          <button class="see-all" @click="loadMoreReleases">Ver mais <i class="fa fa-chevron-right"></i></button>
         </div>
-        
-        <div class="artist-info">
-          <h3 class="artist-name">{{ artist.name }}</h3>
-          <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
-          <div class="monthly-listeners">
-            <span class="listeners-count">{{ formatListeners(artist.followers) }}</span>
-            <span class="listeners-label">seguidores</span>
-          </div>
-          <button 
-            class="follow-btn"
-            :class="{ 'following': isFollowing(artist.id) }"
-            @click.stop="toggleFollow(artist)"
-          >
-            <span class="btn-text">{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
-          </button>
-        </div>
-      </article>
-    </div>
-
-    <button
-      v-if="showRight"
-      class="nav-btn next"
-      @click="scroll(320)"
-      aria-label="Próximo"
-    >
-      <i class="fa fa-chevron-right"></i>
-    </button>
-  </div>
-</section>
-
-<!-- Modal Todos os Artistas -->
-<transition name="modal">
-  <div v-if="showAllModal" class="modal-overlay" @click.self="closeAllModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Todos os Artistas</h3>
-        <button @click="closeAllModal" class="close-btn">
-          <i class="fa fa-times"></i>
-        </button>
-      </div>
-      
-      <div class="modal-body">
-        <div class="artists-list">
-          <div 
-            v-for="artist in spotifyPopularArtists" 
-            :key="artist.id" 
-            class="list-item"
-            @click="goToArtist(artist)"
-          >
-            <div class="list-image">
-              <img :src="artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError">
+        <div class="cards-row">
+          <div v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, 5)" :key="'release-'+album.id" class="music-card album-card" @click="playAlbumTracks(album)" :class="{ 'active': isCurrentAlbum(album) }">
+            <div class="card-image">
+              <img :src="album.cover || album.cover_medium" @error="handleImageError" alt="Album Cover" />
+              <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
+              <div class="new-badge"><i class="fa fa-star"></i> NEW</div>
+              <div class="source-badge spotify" v-if="album.source === 'spotify'"><i class="fa fa-spotify"></i></div>
             </div>
-            <div class="list-info">
-              <h4>{{ artist.name }}</h4>
-              <p>{{ getArtistGenre(artist) }} • {{ formatListeners(artist.followers) }} seguidores</p>
+            <div class="card-info">
+              <h3 class="card-title">{{ album.title }}</h3>
+              <p class="card-artist">{{ album.artist?.name || album.artist }}</p>
+              <p class="card-date"><i class="fa fa-calendar"></i> {{ formatDate(album.release_date) }}<span v-if="album.total_tracks">• {{ album.total_tracks }} faixas</span></p>
             </div>
-            <button 
-              class="list-follow-btn"
-              :class="{ 'following': isFollowing(artist.id) }"
-              @click.stop="toggleFollow(artist)"
-            >
-              <span>{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
-            </button>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</transition>
+      </section>
 
-      <!-- TOAST NOTIFICATION -->
+      <section class="section artists-section" v-if="spotifyPopularArtists.length > 0">
+        <div class="section-header">
+          <div class="section-title-wrapper">
+            <h2 class="section-title"><i class="fa fa-users section-icon artist"></i> Artistas em Alta</h2>
+            <span class="section-subtitle">Os maiores nomes da música global <span class="spotify-badge"><i class="fa fa-spotify"></i> Spotify</span></span>
+          </div>
+          <button @click="openAllArtists" class="see-all">Ver todos <i class="fa fa-chevron-right"></i></button>
+        </div>
+        <div v-if="spotifyPopularArtists.length && !error" class="carousel-container">
+          <button v-if="showLeft" class="nav-btn prev" @click="scroll(-320)" aria-label="Anterior"><i class="fa fa-chevron-left"></i></button>
+          <div class="artists-track" ref="scrollContainer" @scroll="checkArrows">
+            <article v-for="artist in spotifyPopularArtists" :key="artist.id" class="artist-card" @click="goToArtist(artist)">
+              <div class="image-wrapper">
+                <div class="image-container">
+                  <img :src="artist.picture_big || artist.picture_medium || artist.picture" :alt="artist.name" loading="lazy" @error="handleImageError" />
+                </div>
+                <div class="source-badge spotify">SP</div>
+                <button class="follow-btn-float" :class="{ 'following': isFollowing(artist.id) }" @click.stop="toggleFollow(artist)">
+                  <i v-if="!isFollowing(artist.id)" class="fa fa-plus"></i>
+                  <i v-else class="fa fa-check"></i>
+                </button>
+              </div>
+              <div class="artist-info">
+                <h3 class="artist-name">{{ artist.name }}</h3>
+                <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
+                <div class="monthly-listeners">
+                  <span class="listeners-count">{{ formatListeners(artist.followers) }}</span>
+                  <span class="listeners-label">seguidores</span>
+                </div>
+                <button class="follow-btn" :class="{ 'following': isFollowing(artist.id) }" @click.stop="toggleFollow(artist)">
+                  <span class="btn-text">{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
+                </button>
+              </div>
+            </article>
+          </div>
+          <button v-if="showRight" class="nav-btn next" @click="scroll(320)" aria-label="Próximo"><i class="fa fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <transition name="modal">
+        <div v-if="showAllModal" class="modal-overlay" @click.self="closeAllModal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Todos os Artistas</h3>
+              <button @click="closeAllModal" class="close-btn"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+              <div class="artists-list">
+                <div v-for="artist in spotifyPopularArtists" :key="artist.id" class="list-item" @click="goToArtist(artist)">
+                  <div class="list-image"><img :src="artist.picture_medium || artist.picture" :alt="artist.name" @error="handleImageError"></div>
+                  <div class="list-info">
+                    <h4>{{ artist.name }}</h4>
+                    <p>{{ getArtistGenre(artist) }} • {{ formatListeners(artist.followers) }} seguidores</p>
+                  </div>
+                  <button class="list-follow-btn" :class="{ 'following': isFollowing(artist.id) }" @click.stop="toggleFollow(artist)">
+                    <span>{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+
       <transition name="toast">
         <div v-if="toast.visible" class="toast-notification" :class="toast.type">
-          <div class="toast-icon-wrapper">
-            <i :class="toast.icon"></i>
-          </div>
+          <div class="toast-icon-wrapper"><i :class="toast.icon"></i></div>
           <div class="toast-content">
             <span class="toast-title">{{ toast.title }}</span>
             <span class="toast-message">{{ toast.message }}</span>
           </div>
-          <button class="toast-close" @click="hideToast">
-            <i class="fa fa-times"></i>
-          </button>
+          <button class="toast-close" @click="hideToast"><i class="fa fa-times"></i></button>
           <div class="toast-progress" :style="{ width: toast.progress + '%' }"></div>
         </div>
       </transition>
 
-      <!-- MODAL PLAYLIST -->
       <transition name="fade">
         <div v-if="showPlaylistModal" class="modal-overlay" @click.self="showPlaylistModal = false">
           <div class="modal">
             <div class="modal-header">
               <h3>Adicionar à playlist</h3>
-              <button @click="showPlaylistModal = false">
-                <i class="fa fa-times"></i>
-              </button>
+              <button @click="showPlaylistModal = false"><i class="fa fa-times"></i></button>
             </div>
-
             <div class="modal-body">
-              <div v-if="playlists.length === 0" class="empty-playlists-modal">
-                <p>Você não tem playlists ainda</p>
-              </div>
-
+              <div v-if="playlists.length === 0" class="empty-playlists-modal"><p>Você não tem playlists ainda</p></div>
               <div v-else class="playlist-list">
-                <div
-                  v-for="playlist in playlists"
-                  :key="playlist._id"
-                  class="playlist-item"
-                >
-                  <div>
-                    <strong>{{ playlist.nome }}</strong>
-                    <p>{{ playlist.musicas?.length || 0 }} músicas</p>
-                  </div>
-
-                  <button
-                    class="btn-add"
-                    @click="adicionarNaPlaylist(playlist._id)"
-                  >
-                    Adicionar
-                  </button>
+                <div v-for="playlist in playlists" :key="playlist._id" class="playlist-item">
+                  <div><strong>{{ playlist.nome }}</strong><p>{{ playlist.musicas?.length || 0 }} músicas</p></div>
+                  <button class="btn-add" @click="adicionarNaPlaylist(playlist._id)">Adicionar</button>
                 </div>
               </div>
             </div>
@@ -755,18 +500,16 @@ export default {
 
   data() {
     return {
-      // API Configuration
       API_BASE_URL: 'http://localhost:3002',
-       showLeft: false,
-    showRight: true,
-    showAllModal: false,
-newReleases: [],
-      spotifyTop10: [],        // ← NOVO: Top 10 real do Spotify
-    spotifyNewReleases: [],  // ← NOVO: Lançamentos reais do Spotify
-    spotifyPopularArtists: [], // ← NOVO: Artistas populares do Spotify
-    loadingSpotify: false,
+      showLeft: false,
+      showRight: true,
+      showAllModal: false,
+      newReleases: [],
+      spotifyTop10: [],
+      spotifyNewReleases: [],
+      spotifyPopularArtists: [],
+      loadingSpotify: false,
 
-      // User State
       currentUser: {
         id: 1,
         name: "João Silva",
@@ -777,7 +520,6 @@ newReleases: [],
         memberSince: "2023-01-15"
       },
 
-      // User Stats
       userStats: {
         hoursListened: 127,
         likedSongs: 0,
@@ -785,22 +527,17 @@ newReleases: [],
         streak: 15
       },
 
-      // UI State
       greeting: "Bom dia",
       welcomeMessage: "Pronto para descobrir novas músicas hoje?",
 
-      // ═══════════════════════════════════════════════════════
-      // PLAYER SYNC STATE (NOVO - Sincronizado com MusicPlayer)
-      // ═══════════════════════════════════════════════════════
       isPlaying: false,
       isLiked: false,
-      currentTrack: null,        // Track atual do player (sincronizado)
-      currentTime: 0,          // Tempo atual do player
-      duration: 0,             // Duração total do player
-      progressPercent: 0,      // Porcentagem de progresso do player
-      playerContext: null,       // Contexto da música (recent, chart, curtidas, etc)
+      currentTrack: null,
+      currentTime: 0,
+      duration: 0,
+      progressPercent: 0,
+      playerContext: null,
 
-      // Legacy Player State (mantido para compatibilidade)
       currentPlaylist: null,
       currentAlbum: null,
       currentArtist: null,
@@ -811,25 +548,24 @@ newReleases: [],
       showAllPersonalContent: false,
       showAllCurtidas: false,
 
-      // API Data
       popularArtists: [],
       genres: [],
       recommendedTracks: [],
       followedArtists: [],
 
-      // Personalized Data (SINCRONIZADAS COM PLAYER)
-      continueListening: [],   // [0] = música atual do player com progresso real
+      continueListening: [],
       madeForYou: [],
-      recentlyPlayed: [],      // Histórico real de músicas escutadas
+      recentlyPlayed: [],
 
-      // Playlists reais do usuário
+      selectedGenres: [],
+      selectedArtists: [],
+      selectedVibes: [],
+
       userPlaylists: [],
       defaultPlaylistCover: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjE1MCIgeT0iMTcwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4=',
 
-      // Hero Section
       heroGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
 
-      // Toast
       toast: {
         visible: false,
         title: '',
@@ -840,7 +576,6 @@ newReleases: [],
         timer: null
       },
 
-      // Curtidas (integrado do Curtidas.vue)
       musicas: [],
       isLoading: false,
       ultimaMusicaRemovida: null,
@@ -851,7 +586,6 @@ newReleases: [],
       musicaSelecionada: null,
       usuarioId: null,
 
-      // Gradients
       genreGradients: [
         "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
@@ -863,619 +597,463 @@ newReleases: [],
         "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)"
       ],
 
-      // Controle de histórico
-      _lastAddedToRecent: null,  // Evita duplicatas rápidas
-      _minListenTime: 10000      // Mínimo 10s para contar como "ouvida"
+      _lastAddedToRecent: null,
+      _minListenTime: 10000
     }
   },
 
-async mounted() {
-  this.checkAuth()
-  this.loadUserFromStorage()
-  this.updateGreeting()
-  this.loadAllData()
+  async mounted() {
+    this.checkAuth()
+    this.loadUserFromStorage()
+    this.updateGreeting()
+    this.loadFeitoParaVoceData()
+    this.loadAllData()
 
-  window.addEventListener('player-state-changed', this.handlePlayerStateChange)
-  window.addEventListener('player-track-ended', this.handlePlayerTrackEnded)
-  window.addEventListener('play-song', this.handlePlaySongFromDashboard)
+    window.addEventListener('player-state-changed', this.handlePlayerStateChange)
+    window.addEventListener('player-track-ended', this.handlePlayerTrackEnded)
+    window.addEventListener('play-song', this.handlePlaySongFromDashboard)
+    window.addEventListener('artists-updated', this.loadFollowedArtists)
+    window.addEventListener('feito-para-voce-updated', this.handleFeitoParaVoceUpdate)
+    window.addEventListener('playlist-updated', this.loadUserPlaylists)
+    window.addEventListener('curtidas-updated', this.carregarCurtidas)
+    window.addEventListener('likes-updated', this.carregarCurtidas)
+    document.addEventListener('click', this.handleClickOutside)
+    window.addEventListener('profile-updated', this.loadMadeForYou)
 
-  window.addEventListener('artists-updated', this.loadFollowedArtists)
-  window.addEventListener('playlist-updated', this.loadUserPlaylists)
-  window.addEventListener('curtidas-updated', this.carregarCurtidas)
-  window.addEventListener('likes-updated', this.carregarCurtidas)
-  document.addEventListener('click', this.handleClickOutside)
-  window.addEventListener('profile-updated', this.loadMadeForYou)
-
-  setInterval(this.updateGreeting, 60000)
+    setInterval(this.updateGreeting, 60000)
 
     setTimeout(() => {
       this.loadUserPlaylists()
       this.carregarCurtidas()
     }, 0)
-     await this.loadSpotifyData()
+    await this.loadSpotifyData()
   },
 
   beforeDestroy() {
-    // Remover eventos do player
     window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
     window.removeEventListener('player-track-ended', this.handlePlayerTrackEnded)
     window.removeEventListener('play-song', this.handlePlaySongFromDashboard)
-
     window.removeEventListener('playlist-updated', this.loadUserPlaylists)
     window.removeEventListener('curtidas-updated', this.carregarCurtidas)
     window.removeEventListener('likes-updated', this.carregarCurtidas)
     document.removeEventListener('click', this.handleClickOutside)
     window.removeEventListener('profile-updated', this.loadMadeForYou)
+    window.removeEventListener('feito-para-voce-updated', this.handleFeitoParaVoceUpdate)
 
-    if (this.toast.timer) {
-      clearInterval(this.toast.timer)
-    }
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout)
-    }
+    if (this.toast.timer) clearInterval(this.toast.timer)
+    if (this.toastTimeout) clearTimeout(this.toastTimeout)
   },
 
   methods: {
-    async loadSpotifyTop10() {
-  this.spotifyTop10 = []
-},
+    loadFeitoParaVoceData() {
+      try {
+        const selectionsRaw = localStorage.getItem('feitoParaVoceSelections')
+        if (selectionsRaw) {
+          const selections = JSON.parse(selectionsRaw)
+          this.selectedGenres = selections.genres || []
+          this.selectedArtists = selections.artists || []
+          this.selectedVibes = selections.vibes || []
+        }
 
-async loadSpotifyNewReleases() {
-  this.spotifyNewReleases = []
-},
+        const mixesRaw = localStorage.getItem('feitoParaVoceMixes')
+        if (mixesRaw) {
+          const mixes = JSON.parse(mixesRaw)
+          this.madeForYou = mixes.map((mix, index) => ({
+            id: mix.id,
+            title: mix.title,
+            description: mix.description,
+            tracks: mix.tracks || 0,
+            cover: mix.cover || mix.gradient || this.genreGradients[index % this.genreGradients.length],
+            gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
+            _tracks: mix._tracks || []
+          }))
+        }
 
-async loadSpotifyPopularArtists() {
-  this.spotifyPopularArtists = []
-},
-    goToArtist(artist) {
-    this.$router.push({
-      name: 'DetalheCantor',
-      params: { id: artist.id },
-      query: { source: artist.source || 'spotify' }
-    })
-  },
-
-  openAllArtists() {
-    this.showAllModal = true
-    document.body.style.overflow = 'hidden'
-  },
-
-  closeAllModal() {
-    this.showAllModal = false
-    document.body.style.overflow = ''
-  },
-
-  // ==================== CAROUSEL ====================
-  
-  scroll(amount) {
-    const container = this.$refs.scrollContainer
-    if (container) {
-      container.scrollBy({ left: amount, behavior: "smooth" })
-      setTimeout(this.checkArrows, 350)
-    }
-  },
-
-  checkArrows() {
-    const container = this.$refs.scrollContainer
-    if (!container) return
-    
-    const tolerance = 5
-    this.showLeft = container.scrollLeft > tolerance
-    this.showRight = 
-      container.scrollLeft + container.clientWidth < container.scrollWidth - tolerance
-  },
-
-  // ==================== FORMATTERS ====================
-  
-  formatListeners(num) {
-    if (!num) return '0'
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1).replace('.0', '') + 'M'
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1).replace('.0', '') + 'K'
-    }
-    return num.toString()
-  },
-  
-  getArtistGenre(artist) {
-    if (artist.genres && artist.genres.length > 0) {
-      // Pegar os 2 primeiros gêneros em português simplificado
-      const genreMap = {
-        'sertanejo': 'Sertanejo',
-        'funk': 'Funk',
-        'mpb': 'MPB',
-        'brazilian rock': 'Rock BR',
-        'pop': 'Pop',
-        'rap': 'Rap',
-        'hip hop': 'Hip Hop',
-        'reggaeton': 'Reggaeton',
-        'electronic': 'Eletrônica',
-        'indie': 'Indie'
+        const artistsRaw = localStorage.getItem('feitoParaVoceArtists')
+        if (artistsRaw) {
+          const artists = JSON.parse(artistsRaw)
+          const existingIds = new Set(this.followedArtists.map(a => a.id))
+          artists.forEach(artist => {
+            if (!existingIds.has(artist.id)) {
+              this.followedArtists.push(artist)
+            }
+          })
+        }
+      } catch (error) {
+        console.error('Erro ao carregar FeitoParaVoce:', error)
       }
-      
-      const mainGenre = artist.genres[0].toLowerCase()
-      for (const [key, value] of Object.entries(genreMap)) {
-        if (mainGenre.includes(key)) return value
-      }
-      return artist.genres[0].charAt(0).toUpperCase() + artist.genres[0].slice(1, 15)
-    }
-    return 'Artista'
-  },
-
-  // ==================== FOLLOW (adaptado para Spotify) ====================
-  
-  async toggleFollow(artist) {
-    // Se for artista do Spotify, só permite favoritar localmente
-    if (artist.source === 'spotify') {
-      // Implementar favorito local no banco ou localStorage
-      const favorites = JSON.parse(localStorage.getItem('favorite_artists') || '[]')
-      const index = favorites.findIndex(f => f.id === artist.id)
-      
-      if (index >= 0) {
-        favorites.splice(index, 1)
-        this.showToast('Removido', `${artist.name} removido dos favoritos`, 'info')
-      } else {
-        favorites.push({
-          id: artist.id,
-          name: artist.name,
-          picture: artist.picture,
-          source: 'spotify'
-        })
-        this.showToast('Favoritado', `${artist.name} adicionado aos favoritos`, 'success')
-      }
-      
-      localStorage.setItem('favorite_artists', JSON.stringify(favorites))
-      return
-    }
-    
-    // Se for artista do DB, usar o fluxo original...
-    // (manter código existente de toggleFollow para DB)
-  },
-
-  isFollowing(artistId) {
-    const favorites = JSON.parse(localStorage.getItem('favorite_artists') || '[]')
-    return favorites.some(f => f.id === artistId)
-  },
-    async loadSpotifyData() {
-  this.loadingSpotify = true
-  try {
-    await Promise.all([
-      this.loadSpotifyTop10(),
-      this.loadSpotifyNewReleases(),
-      this.loadSpotifyPopularArtists()
-    ])
-  } catch (error) {
-    console.error('Erro Spotify:', error)
-    // Fallback para Deezer se Spotify falhar
-    this.loadChartTracks()
-    this.loadNewReleases()
-  } finally {
-    this.loadingSpotify = false
-  }
     },
-async loadMadeForYou() {
-  try {
-    const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
-    const userId = usuario?._id || usuario?.id
-    const token = localStorage.getItem("token")
 
-    if (!userId || !token) {
-      console.log("⚠️ Usuário não autenticado")
-      this.loadMockMadeForYou()
-      return
-    }
-
-    const response = await fetch(
-      `${this.API_BASE_URL}/usuarios/${userId}/mixes?limit=12`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`Erro ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (Array.isArray(data.mixes) && data.mixes.length > 0) {
-      this.madeForYou = data.mixes.map((mix, index) => ({
-        id: mix.id,
-        title: mix.title,
-        description: mix.description,
-        tracks: mix.tracks || 0,
-        cover: mix.cover || "",
-        gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
-        _tracks: mix._tracks || []  // ← IMPORTANTE: guardar as músicas reais
-      }))
-
-      console.log(`✅ ${this.madeForYou.length} mixes personalizados carregados`)
-      return
-    }
-
-    // Se não tem mixes, carrega mock
-    this.loadMockMadeForYou()
-  } catch (error) {
-    console.error("❌ Erro ao carregar Feito para Você:", error)
-    this.loadMockMadeForYou()
-  }
-},
-
-  /**
-   * Carrega mixes adicionais (gêneros, artistas, vibes)
-   * NOTA: Se a rota /usuarios/:id/mixes não existir no backend,
-   * comente ou remova esta função
-   */
-  async loadAdditionalMixes(userId, token) {
-    try {
-      const response = await fetch(
-        `http://localhost:3002/usuarios/${userId}/mixes`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      )
-
-      if (!response.ok) return
-
-      const data = await response.json()
-
-      if (data.mixes && data.mixes.length > 0) {
-        // Adicionar mixes adicionais (máximo 4 total)
-        const additionalMixes = data.mixes.slice(0, 4).map((mix, index) => ({
-          id: mix.id || `mix_${index}`,
+    handleFeitoParaVoceUpdate(e) {
+      const data = e.detail || {}
+      if (data.selectedGenres) this.selectedGenres = data.selectedGenres
+      if (data.selectedArtists) this.selectedArtists = data.selectedArtists
+      if (data.selectedVibes) this.selectedVibes = data.selectedVibes
+      if (data.madeForYou) {
+        this.madeForYou = data.madeForYou.map((mix, index) => ({
+          id: mix.id,
           title: mix.title,
           description: mix.description,
-          tracks: mix.tracks || 10,
-          cover: mix.cover || '',
+          tracks: mix.tracks || 0,
+          cover: mix.cover || mix.gradient || this.genreGradients[index % this.genreGradients.length],
           gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
           _tracks: mix._tracks || []
         }))
-
-        this.madeForYou = [...this.madeForYou, ...additionalMixes]
       }
-    } catch (error) {
-      console.warn('⚠️ Erro ao carregar mixes adicionais:', error)
-    }
-  },
-
-  /**
-   * Dados mockados de fallback
-   */
-  loadMockMadeForYou() {
-    this.madeForYou = [
-      {
-        id: 1,
-        title: "Mix Diário 1",
-        description: "Marília Mendonça, Maiara & Maraisa...",
-        tracks: 50,
-        cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg",
-        gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        _tracks: []
-      },
-      {
-        id: 2,
-        title: "Mix Diário 2",
-        description: "Henrique & Juliano, Jorge & Mateus...",
-        tracks: 45,
-        cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg",
-        gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-        _tracks: []
-      },
-      {
-        id: 3,
-        title: "Descobertas",
-        description: "Novas músicas para você",
-        tracks: 30,
-        cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg",
-        gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-        _tracks: []
-      },
-      {
-        id: 4,
-        title: "On Repeat",
-        description: "Músicas que você ama",
-        tracks: 100,
-        cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg",
-        gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-        _tracks: []
-      },
-      {
-        id: 5,
-        title: "Radar",
-        description: "Atualizado toda sexta",
-        tracks: 30,
-        cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg",
-        gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-        _tracks: []
+      if (data.followedArtists) {
+        const existingIds = new Set(this.followedArtists.map(a => a.id))
+        data.followedArtists.forEach(artist => {
+          if (!existingIds.has(artist.id)) {
+            this.followedArtists.push(artist)
+          }
+        })
       }
-    ]
-  },
+      this.showToast('Perfil Atualizado', 'Suas preferências foram sincronizadas!', 'success', 'fa fa-magic')
+    },
 
-  /**
-   * Tocar um mix personalizado
-   * Agora usa as tracks reais armazenadas no mix
-   */
-playMix(mix) {
-  if (!mix._tracks || mix._tracks.length === 0) {
-    this.showToast("Mix vazio", "Nenhuma música disponível neste mix", "info", "fa fa-info-circle")
-    return
-  }
+    async playMix(mix) {
+      if (mix._tracks && mix._tracks.length > 0) {
+        const playerSongs = mix._tracks.map(t => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist,
+          cover: t.cover,
+          url: t.preview || t.url,
+          duration: t.duration || 30,
+          source: t.source || "mixed"
+        }))
+        window.dispatchEvent(new CustomEvent("play-song", {
+          detail: { song: playerSongs[0], playlist: playerSongs, index: 0, context: "made-for-you" }
+        }))
+        this.showToast("Tocando Mix", mix.title, "success", "fa fa-music")
+        return
+      }
 
-  const playerSongs = mix._tracks.map(t => ({
-    id: t.id,
-    title: t.title,
-    artist: t.artist,
-    cover: t.cover,
-    url: t.preview || t.url,
-    duration: t.duration || 30,
-    source: t.source || "mixed"
-  }))
+      if (this.selectedArtists.length > 0) {
+        await this.playMixFromSelectedArtists(mix)
+        return
+      }
 
-  window.dispatchEvent(new CustomEvent("play-song", {
-    detail: {
-      song: playerSongs[0],
-      playlist: playerSongs,
-      index: 0,
-      context: "made-for-you"
-    }
-  }))
+      this.showToast("Mix vazio", "Nenhuma música disponível neste mix", "info", "fa fa-info-circle")
+    },
 
-  this.showToast("Tocando Mix", mix.title, "success", "fa fa-music")
-},
+    async playMixFromSelectedArtists(mix) {
+      this.loading = true
+      try {
+        const allTracks = []
+        for (const artist of this.selectedArtists.slice(0, 3)) {
+          try {
+            const response = await fetch(`${this.API_BASE_URL}/deezer/artist/${artist.id}/top?limit=5`)
+            const data = await response.json()
+            if (data.data) {
+              data.data.forEach(track => {
+                allTracks.push({
+                  id: track.id,
+                  title: track.title,
+                  artist: track.artist?.name || artist.name,
+                  cover: track.album?.cover_medium || artist.photo || '',
+                  url: track.preview,
+                  duration: track.duration || 30,
+                  source: 'deezer'
+                })
+              })
+            }
+          } catch (e) {
+            console.warn(`Erro ao buscar tracks de ${artist.name}:`, e)
+          }
+        }
 
-  // ═══════════════════════════════════════════════════════
-  // ATUALIZAÇÃO DO loadAllData()
-  // ═══════════════════════════════════════════════════════
-async loadAllData() {
-  this.loading = true
-  try {
-    await Promise.all([
-      this.loadMadeForYou(),
-      this.loadNewReleases(),
-      this.loadGenres(),
-      this.loadFollowedArtists(),
-      Promise.resolve(this.loadRecentlyPlayed()),
-      this.loadUserPlaylists(),
-      this.carregarCurtidas()
-    ])
-  } catch (error) {
-    console.error("Erro ao carregar dashboard:", error)
-  } finally {
-    this.loading = false
-  }
-},
-    // ═══════════════════════════════════════════════════════
-    // PLAYER SYNC METHODS (NOVO)
-    // ═══════════════════════════════════════════════════════
+        if (allTracks.length > 0) {
+          const shuffled = allTracks.sort(() => Math.random() - 0.5)
+          window.dispatchEvent(new CustomEvent("play-song", {
+            detail: { song: shuffled[0], playlist: shuffled, index: 0, context: "made-for-you" }
+          }))
+          this.showToast("Tocando Mix", `${mix.title} — ${shuffled.length} músicas`, "success", "fa fa-music")
+        } else {
+          this.showToast("Mix indisponível", "Não foi possível carregar músicas para este mix", "info", "fa fa-info-circle")
+        }
+      } catch (error) {
+        console.error('Erro ao criar mix:', error)
+        this.showToast("Erro", "Falha ao carregar o mix", "error", "fa fa-times")
+      } finally {
+        this.loading = false
+      }
+    },
 
-    /**
-     * Recebe atualizações de estado do MusicPlayer em tempo real
-     * Atualiza: continueListening[0], isPlaying, currentTrack, progresso
-     */
+    goToArtist(artist) {
+      if (!artist || !artist.id) return
+      const artistId = artist.id
+      const source = artist.source || 'local'
+      if (this.$router) {
+        this.$router.push({ name: 'DetalheCantor', params: { id: artistId }, query: { source: source } })
+      } else {
+        window.location.href = `/artista/${artistId}?source=${source}`
+      }
+    },
+
+    navigateToVibe(vibe) {
+      if (!vibe) return
+      const query = vibe.name || vibe.nome || ''
+      if (this.$router) {
+        this.$router.push({ path: '/search', query: { q: query, type: 'vibe', vibeId: vibe.id } })
+      } else {
+        window.location.href = `/search?q=${encodeURIComponent(query)}&type=vibe&vibeId=${vibe.id}`
+      }
+    },
+
+    navigateToGenre(genre) {
+      const query = genre.name || genre.nome || ''
+      if (this.$router) {
+        this.$router.push({ path: '/search', query: { q: query, type: 'genre' } })
+      } else {
+        window.location.href = `/search?q=${encodeURIComponent(query)}&type=genre`
+      }
+    },
+
+    async loadSpotifyData() {
+      this.loadingSpotify = true
+      try {
+        await Promise.all([this.loadSpotifyTop10(), this.loadSpotifyNewReleases(), this.loadSpotifyPopularArtists()])
+      } catch (error) {
+        console.error('Erro Spotify:', error)
+        this.loadChartTracks()
+        this.loadNewReleases()
+      } finally {
+        this.loadingSpotify = false
+      }
+    },
+
+    async loadSpotifyTop10() { this.spotifyTop10 = [] },
+    async loadSpotifyNewReleases() { this.spotifyNewReleases = [] },
+    async loadSpotifyPopularArtists() { this.spotifyPopularArtists = [] },
+
+    openAllArtists() {
+      this.showAllModal = true
+      document.body.style.overflow = 'hidden'
+    },
+
+    closeAllModal() {
+      this.showAllModal = false
+      document.body.style.overflow = ''
+    },
+
+    scroll(amount) {
+      const container = this.$refs.scrollContainer
+      if (container) {
+        container.scrollBy({ left: amount, behavior: "smooth" })
+        setTimeout(this.checkArrows, 350)
+      }
+    },
+
+    checkArrows() {
+      const container = this.$refs.scrollContainer
+      if (!container) return
+      const tolerance = 5
+      this.showLeft = container.scrollLeft > tolerance
+      this.showRight = container.scrollLeft + container.clientWidth < container.scrollWidth - tolerance
+    },
+
+    formatListeners(num) {
+      if (!num) return '0'
+      if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M'
+      if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'K'
+      return num.toString()
+    },
+
+    getArtistGenre(artist) {
+      if (artist.genres && artist.genres.length > 0) {
+        const genreMap = {
+          'sertanejo': 'Sertanejo', 'funk': 'Funk', 'mpb': 'MPB',
+          'brazilian rock': 'Rock BR', 'pop': 'Pop', 'rap': 'Rap',
+          'hip hop': 'Hip Hop', 'reggaeton': 'Reggaeton',
+          'electronic': 'Eletrônica', 'indie': 'Indie'
+        }
+        const mainGenre = artist.genres[0].toLowerCase()
+        for (const [key, value] of Object.entries(genreMap)) {
+          if (mainGenre.includes(key)) return value
+        }
+        return artist.genres[0].charAt(0).toUpperCase() + artist.genres[0].slice(1, 15)
+      }
+      return 'Artista'
+    },
+
+    async toggleFollow(artist) {
+      if (artist.source === 'spotify') {
+        const favorites = JSON.parse(localStorage.getItem('favorite_artists') || '[]')
+        const index = favorites.findIndex(f => f.id === artist.id)
+        if (index >= 0) {
+          favorites.splice(index, 1)
+          this.showToast('Removido', `${artist.name} removido dos favoritos`, 'info')
+        } else {
+          favorites.push({ id: artist.id, name: artist.name, picture: artist.picture, source: 'spotify' })
+          this.showToast('Favoritado', `${artist.name} adicionado aos favoritos`, 'success')
+        }
+        localStorage.setItem('favorite_artists', JSON.stringify(favorites))
+        return
+      }
+      artist.isFollowing = !artist.isFollowing
+      const msg = artist.isFollowing ? 'Seguindo' : 'Deixou de seguir'
+      this.showToast(msg, artist.name, 'success', 'fa fa-check')
+    },
+
+    isFollowing(artistId) {
+      const favorites = JSON.parse(localStorage.getItem('favorite_artists') || '[]')
+      return favorites.some(f => f.id === artistId)
+    },
+
+    async loadMadeForYou() {
+      try {
+        const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
+        const userId = usuario?._id || usuario?.id
+        const token = localStorage.getItem("token")
+
+        if (!userId || !token) {
+          this.loadMockMadeForYou()
+          return
+        }
+
+        const response = await fetch(`${this.API_BASE_URL}/usuarios/${userId}/mixes?limit=12`, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+        })
+
+        if (!response.ok) throw new Error(`Erro ${response.status}`)
+        const data = await response.json()
+
+        if (Array.isArray(data.mixes) && data.mixes.length > 0) {
+          this.madeForYou = data.mixes.map((mix, index) => ({
+            id: mix.id,
+            title: mix.title,
+            description: mix.description,
+            tracks: mix.tracks || 0,
+            cover: mix.cover || "",
+            gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
+            _tracks: mix._tracks || []
+          }))
+          return
+        }
+        this.loadMockMadeForYou()
+      } catch (error) {
+        this.loadMockMadeForYou()
+      }
+    },
+
+    loadMockMadeForYou() {
+      this.madeForYou = [
+        { id: 1, title: "Mix Diário 1", description: "Marília Mendonça, Maiara & Maraisa...", tracks: 50, cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", _tracks: [] },
+        { id: 2, title: "Mix Diário 2", description: "Henrique & Juliano, Jorge & Mateus...", tracks: 45, cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", _tracks: [] },
+        { id: 3, title: "Descobertas", description: "Novas músicas para você", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", _tracks: [] },
+        { id: 4, title: "On Repeat", description: "Músicas que você ama", tracks: 100, cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", _tracks: [] },
+        { id: 5, title: "Radar", description: "Atualizado toda sexta", tracks: 30, cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", _tracks: [] }
+      ]
+    },
+
+    async loadAllData() {
+      this.loading = true
+      try {
+        await Promise.all([
+          this.loadMadeForYou(),
+          this.loadNewReleases(),
+          this.loadGenres(),
+          this.loadFollowedArtists(),
+          Promise.resolve(this.loadRecentlyPlayed()),
+          this.loadUserPlaylists(),
+          this.carregarCurtidas()
+        ])
+      } catch (error) {
+        console.error("Erro ao carregar dashboard:", error)
+      } finally {
+        this.loading = false
+      }
+    },
     handlePlayerStateChange(e) {
-      const { track, isPlaying, currentTime, duration, progress, context, timestamp } = e.detail || {}
-
+      const { track, isPlaying, currentTime, duration, progress, context } = e.detail || {}
       if (!track) return
-
-      // Atualizar estado de reprodução
       this.isPlaying = isPlaying
       this.currentTrack = track
       this.currentTime = currentTime || 0
       this.duration = duration || track.duration || 0
       this.progressPercent = progress || 0
       this.playerContext = context
-
-      // Atualizar "Continue Ouvindo" com a música atual em tempo real
       this.updateContinueListening(track, {
         progress: progress || 0,
         currentTime: currentTime || 0,
         duration: duration || track.duration || 0,
         isPlaying: isPlaying,
-        timestamp: timestamp || Date.now()
+        timestamp: Date.now()
       })
-
-      // Se começou a tocar agora, adicionar ao início do histórico
       if (isPlaying && this._lastAddedToRecent !== track.id) {
         this._lastAddedToRecent = track.id
       }
     },
 
-        /**
-     * Quando uma música termina ou é trocada, adiciona ao "Tocadas Recentemente"
-     */
     handlePlayerTrackEnded(e) {
-      const { track, listenedDuration, totalDuration, context, naturallyEnded, timestamp } = e.detail || {}
+      const { track, listenedDuration, totalDuration, naturallyEnded } = e.detail || {}
+      if (!track) return
+      const listenedPercent = totalDuration > 0 ? ((listenedDuration || 0) / totalDuration) * 100 : 0
+      const shouldAdd = naturallyEnded || listenedPercent > 30 || (listenedDuration || 0) > 10000
+      if (!shouldAdd) return
+      this.addToRecentlyPlayed(track, this.playerContext)
+    },
 
-      if (!track) {
-        console.log('⚠️ player-track-ended recebido sem track')
-        return
-      }
-
-      console.log(`📥 player-track-ended: "${track.title}" - ouvida ${Math.round((listenedDuration || 0)/1000)}s (naturallyEnded: ${naturallyEnded})`)
-
-      // Calcular porcentagem ouvida
-      const listenedPercent = totalDuration > 0
-        ? ((listenedDuration || 0) / totalDuration) * 100
-        : 0
-
-      // Critérios para adicionar ao histórico:
-      // 1. Terminou naturalmente (chegou ao fim) -> SEMPRE adiciona
-      // 2. Ouveu mais de 30% da música -> Adiciona
-      // 3. Ouveu mais de 10 segundos -> Adiciona
-      const shouldAdd = naturallyEnded ||
-                        listenedPercent > 30 ||
-                        (listenedDuration || 0) > 10000
-
-      if (!shouldAdd) {
-        console.log(`⏭️ "${track.title}" ignorada (ouvida apenas ${Math.round(listenedPercent)}% / ${Math.round((listenedDuration||0)/1000)}s)`)
-        return
-      }
-
-  // ✅ CHAME A FUNÇÃO AQUI
-  this.addToRecentlyPlayed(track, context)
-  },
-      // Normalizar dados do track
-    addToRecentlyPlayed(track, context) {
-  const normalizedTrack = {
-    id: track.id,
-    title: track.title || 'Sem título',
-    artist: track.artist || 'Artista desconhecido',
-    cover: track.cover || track.album?.cover_medium || '',
-    url: track.url || track.preview,
-    duration: track.duration || 0,
-    source: track.source || context || 'unknown',
-    playedAt: Date.now()
-  }
-
-  const existingIndex = this.recentlyPlayed.findIndex(t => t.id === normalizedTrack.id)
-  if (existingIndex >= 0) {
-    this.recentlyPlayed.splice(existingIndex, 1)
-  }
-
-  this.recentlyPlayed.unshift(normalizedTrack)
-
-  if (this.recentlyPlayed.length > 20) {
-    this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
-  }
-
-  this.saveRecentlyPlayed()
-  console.log('📋 Histórico atualizado. Total:', this.recentlyPlayed.length)
-},
-   
-    /**
-     * Atualiza o "Continue Ouvindo" com dados em tempo real do player
-     */
     updateContinueListening(track, data) {
       const existingIndex = this.continueListening.findIndex(t => t.id === track.id)
-
       const trackData = {
-        id: track.id,
-        title: track.title,
-        artist: track.artist,
-        cover: track.cover,
-        preview: track.url || track.preview,
-        progress: data.progress || 0,
-        currentTime: data.currentTime || 0,
-        duration: data.duration || track.duration || 0,
-        isPlaying: data.isPlaying,
-        lastPlayed: data.timestamp || Date.now()
+        id: track.id, title: track.title, artist: track.artist, cover: track.cover,
+        preview: track.url || track.preview, progress: data.progress || 0,
+        currentTime: data.currentTime || 0, duration: data.duration || track.duration || 0,
+        isPlaying: data.isPlaying, lastPlayed: data.timestamp || Date.now()
       }
-
       if (existingIndex >= 0) {
-        // Atualizar existente
-       this.continueListening.splice(existingIndex, 1, trackData)
+        this.continueListening.splice(existingIndex, 1, trackData)
       } else {
-        // Adicionar no início
         this.continueListening.unshift(trackData)
-        // Manter apenas 5 itens
         if (this.continueListening.length > 5) {
           this.continueListening = this.continueListening.slice(0, 5)
         }
       }
     },
 
-    /**
-     * Adiciona uma música ao "Tocadas Recentemente"
-     * Evita duplicatas consecutivas e mantém ordem cronológica
-     */
     addToRecentlyPlayed(track, context) {
-      // Normalizar dados do track
       const normalizedTrack = {
-        id: track.id,
-        title: track.title || 'Sem título',
+        id: track.id, title: track.title || 'Sem título',
         artist: track.artist || 'Artista desconhecido',
         cover: track.cover || track.album?.cover_medium || '',
-        url: track.url || track.preview,
-        duration: track.duration || 0,
-        source: track.source || context || 'unknown',
-        playedAt: Date.now()
+        url: track.url || track.preview, duration: track.duration || 0,
+        source: track.source || context || 'unknown', playedAt: Date.now()
       }
-
-      // Remover se já existe (para mover para o topo)
       const existingIndex = this.recentlyPlayed.findIndex(t => t.id === normalizedTrack.id)
-      if (existingIndex >= 0) {
-        this.recentlyPlayed.splice(existingIndex, 1)
-      }
-
-      // Adicionar no início
+      if (existingIndex >= 0) this.recentlyPlayed.splice(existingIndex, 1)
       this.recentlyPlayed.unshift(normalizedTrack)
-
-      // Manter máximo de 20 itens
-      if (this.recentlyPlayed.length > 20) {
-        this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
-      }
-
-      // Persistir no localStorage para manter entre sessões
+      if (this.recentlyPlayed.length > 20) this.recentlyPlayed = this.recentlyPlayed.slice(0, 20)
       this.saveRecentlyPlayed()
-
-      console.log('📋 Adicionada ao histórico:', normalizedTrack.title)
     },
 
-    /**
-     * Persiste o histórico no localStorage
-     */
     saveRecentlyPlayed() {
-      try {
-        localStorage.setItem('dashboard_recently_played', JSON.stringify(this.recentlyPlayed))
-      } catch (e) {
-        console.error('Erro ao salvar histórico:', e)
-      }
+      try { localStorage.setItem('dashboard_recently_played', JSON.stringify(this.recentlyPlayed)) }
+      catch (e) { console.error('Erro ao salvar histórico:', e) }
     },
 
-    /**
-     * Carrega o histórico do localStorage
-     */
     loadRecentlyPlayed() {
       try {
         const stored = localStorage.getItem('dashboard_recently_played')
         if (stored) {
           const parsed = JSON.parse(stored)
-          // Filtrar apenas itens dos últimos 7 dias
           const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
           this.recentlyPlayed = parsed.filter(t => t.playedAt > sevenDaysAgo)
         }
-      } catch (e) {
-        console.error('Erro ao carregar histórico:', e)
-      }
+      } catch (e) { console.error('Erro ao carregar histórico:', e) }
     },
 
-    /**
-     * Handler para quando o Dashboard dispara play-song (clique do usuário)
-     * Notifica o MusicPlayer para tocar
-     */
-    handlePlaySongFromDashboard(e) {
-      const { song, playlist, index, context } = e.detail || {}
-
-      // O MusicPlayer vai receber este evento e disparar player-state-changed de volta
-      // Não precisamos fazer nada aqui, apenas log
-      console.log('🎵 Dashboard solicitou reprodução:', song?.title, 'context:', context)
-    },
-
-    // ═══════════════════════════════════════════════════════
-    // CURTIDAS METHODS (do Curtidas.vue)
-    // ═══════════════════════════════════════════════════════
+    handlePlaySongFromDashboard(e) {},
 
     getSourceIcon(source) {
-      const icons = {
-        spotify: 'fa fa-spotify',
-        deezer: 'si si-deezer',
-        local: 'fa fa-database'
-      }
+      const icons = { spotify: 'fa fa-spotify', deezer: 'si si-deezer', local: 'fa fa-database' }
       return icons[source] || 'fa fa-music'
     },
 
     parseDuration(durationStr) {
       if (!durationStr) return 30
-      if (typeof durationStr === 'number') {
-        return Number.isFinite(durationStr) ? Math.floor(durationStr) : 30
-      }
+      if (typeof durationStr === 'number') return Number.isFinite(durationStr) ? Math.floor(durationStr) : 30
       if (typeof durationStr === 'string') {
         if (durationStr.includes(':')) {
           const [m, s] = durationStr.split(':').map(Number)
@@ -1491,47 +1069,24 @@ async loadAllData() {
       this.isLoading = true
       try {
         const token = localStorage.getItem("token")
-        if (!token) {
-          this.musicas = []
-          this.userStats.likedSongs = 0
-          return
-        }
+        if (!token) { this.musicas = []; this.userStats.likedSongs = 0; return }
 
         const res = await fetch(`http://localhost:3002/curtidas`, {
           headers: { Authorization: `Bearer ${token}` }
         })
-
-        if (!res.ok) {
-          const text = await res.text()
-          console.error("Erro API:", text)
-          this.musicas = []
-          this.userStats.likedSongs = 0
-          return
-        }
+        if (!res.ok) { this.musicas = []; this.userStats.likedSongs = 0; return }
 
         const data = await res.json()
-
         this.musicas = data.map(c => ({
-          id: c.id,
-          title: c.nome,
-          artist: c.artist || 'Artista desconhecido',
-          album: c.album || '',
-          cover: c.cover,
-          url: c.url,
-          source: c.source || 'local',
-          duration: c.duration || 180,
-          ano: c.ano || null
+          id: c.id, title: c.nome, artist: c.artist || 'Artista desconhecido',
+          album: c.album || '', cover: c.cover, url: c.url,
+          source: c.source || 'local', duration: c.duration || 180, ano: c.ano || null
         }))
-
         this.userStats.likedSongs = this.musicas.length
-
       } catch (err) {
         console.error("Erro ao carregar curtidas:", err)
-        this.musicas = []
-        this.userStats.likedSongs = 0
-      } finally {
-        this.isLoading = false
-      }
+        this.musicas = []; this.userStats.likedSongs = 0
+      } finally { this.isLoading = false }
     },
 
     toggleMenu(index, event) {
@@ -1539,20 +1094,14 @@ async loadAllData() {
       this.activeMenuIndex = this.activeMenuIndex === index ? null : index
     },
 
-    closeMenu() {
-      this.activeMenuIndex = null
-    },
+    closeMenu() { this.activeMenuIndex = null },
 
     handleClickOutside(event) {
       const dropdowns = this.$refs.dropdownContainers
       if (dropdowns) {
         const containers = Array.isArray(dropdowns) ? dropdowns : [dropdowns]
-        const clickedInside = containers.some(container =>
-          container && container.contains(event.target)
-        )
-        if (!clickedInside) {
-          this.activeMenuIndex = null
-        }
+        const clickedInside = containers.some(container => container && container.contains(event.target))
+        if (!clickedInside) this.activeMenuIndex = null
       }
     },
 
@@ -1560,7 +1109,6 @@ async loadAllData() {
       this.closeMenu()
       this.musicaSelecionada = musica
       this.showPlaylistModal = true
-
       try {
         const token = localStorage.getItem("token")
         const res = await fetch(`http://localhost:3002/playlists`, {
@@ -1568,16 +1116,13 @@ async loadAllData() {
         })
         const data = await res.json()
         this.playlists = data
-      } catch (err) {
-        console.error(err)
-      }
+      } catch (err) { console.error(err) }
     },
 
     async adicionarNaPlaylist(playlistId) {
       try {
         const token = localStorage.getItem("token")
         const musica = this.musicaSelecionada
-
         const body = { source: musica.source || 'local' }
 
         if (musica.source && musica.source !== 'local') {
@@ -1592,17 +1137,11 @@ async loadAllData() {
           }
         }
 
-        const res = await fetch(
-          `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify(body)
-          }
-        )
+        const res = await fetch(`http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(body)
+        })
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
@@ -1638,10 +1177,7 @@ async loadAllData() {
 
         const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify(body)
         })
 
@@ -1674,7 +1210,6 @@ async loadAllData() {
         this.userStats.likedSongs = this.musicas.length
 
         const body = { source: musica.source || 'local' }
-
         if (musica.source !== 'local') {
           body.dadosMusica = {
             titulo: musica.title,
@@ -1689,15 +1224,11 @@ async loadAllData() {
 
         const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         })
 
         const data = await res.json()
-
         if (data.liked === false) {
           this.showToast('Removida dos curtidos', `"${musica.title}" foi removida`, 'info', 'fa fa-heart-broken')
         } else {
@@ -1708,7 +1239,6 @@ async loadAllData() {
 
         window.dispatchEvent(new Event('likes-updated'))
         window.dispatchEvent(new Event('curtidas-updated'))
-
       } catch (err) {
         console.error("Erro ao remover curtida:", err)
         if (this.ultimaMusicaRemovida && this.ultimoIndiceRemovido !== null) {
@@ -1734,7 +1264,6 @@ async loadAllData() {
       try {
         const token = localStorage.getItem("token")
         const body = { source: musica.source || 'local' }
-
         if (musica.source !== 'local') {
           body.dadosMusica = {
             titulo: musica.title,
@@ -1749,17 +1278,12 @@ async loadAllData() {
 
         await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         })
 
         window.dispatchEvent(new Event('likes-updated'))
-      } catch (err) {
-        console.error("Erro ao recurtir:", err)
-      }
+      } catch (err) { console.error("Erro ao recurtir:", err) }
     },
 
     playCurtida(index) {
@@ -1775,19 +1299,12 @@ async loadAllData() {
         type: 'liked'
       }
 
-      // Disparar evento para o MusicPlayer
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
           playlist: this.musicas.map(m => ({
-            id: m.id,
-            title: m.title,
-            artist: m.artist,
-            cover: m.cover,
-            url: m.url,
-            duration: m.duration || 30,
-            source: m.source,
-            type: 'liked'
+            id: m.id, title: m.title, artist: m.artist, cover: m.cover,
+            url: m.url, duration: m.duration || 30, source: m.source, type: 'liked'
           })),
           index: index,
           context: 'curtidas'
@@ -1796,18 +1313,12 @@ async loadAllData() {
     },
 
     playAllCurtidas() {
-      if (this.musicas.length > 0) {
-        this.playCurtida(0)
-      }
+      if (this.musicas.length > 0) this.playCurtida(0)
     },
 
     goToCurtidas() {
       this.$router?.push('/curtidas')
     },
-
-    // ═══════════════════════════════════════════════════════
-    // PLAYLISTS METHODS
-    // ═══════════════════════════════════════════════════════
 
     async loadUserPlaylists() {
       this.loadingPlaylists = true
@@ -1837,7 +1348,6 @@ async loadAllData() {
         }))
 
         this.userStats.playlists = this.userPlaylists.length
-
       } catch (err) {
         console.error('Erro ao carregar playlists:', err)
       } finally {
@@ -1854,10 +1364,6 @@ async loadAllData() {
       this.$router?.push('/playlist')
         || this.showToast('Criar Playlist', 'Redirecionando para criar playlist...', 'info', 'fa fa-plus')
     },
-
-    // ═══════════════════════════════════════════════════════
-    // AUTH & USER
-    // ═══════════════════════════════════════════════════════
 
     checkAuth() {
       const isLoggedIn = localStorage.getItem('isLoggedIn')
@@ -1881,9 +1387,7 @@ async loadAllData() {
             avatar: userData.avatar || userData.foto || this.currentUser.avatar,
             plan: userData.plano || userData.plan || "Free"
           }
-        } catch (e) {
-          console.error('Erro ao carregar usuário:', e)
-        }
+        } catch (e) { console.error('Erro ao carregar usuário:', e) }
       }
     },
 
@@ -1911,43 +1415,26 @@ async loadAllData() {
 
     async loadNewReleases() {
       try {
-       const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/albums?limit=10`)
+        const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/albums?limit=10`)
         const data = await response.json()
         if (data.data) this.newReleases = data.data
-      } catch (error) {
-        console.error('Erro lançamentos:', error)
-      }
+      } catch (error) { console.error('Erro lançamentos:', error) }
     },
 
-async loadGenres() {
-  try {
-   const response = await fetch(`${this.API_BASE_URL}/deezer/genre`)
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (data.data) {
-      this.genres = data.data.filter(g => g.id !== 0)
-    } else {
-      this.genres = []
-    }
-
-  } catch (error) {
-    console.error('❌ Erro gêneros:', error)
-    this.genres = []
-  }
-},
+    async loadGenres() {
+      try {
+        const response = await fetch(`${this.API_BASE_URL}/deezer/genre`)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const data = await response.json()
+        if (data.data) this.genres = data.data.filter(g => g.id !== 0)
+        else this.genres = []
+      } catch (error) { this.genres = [] }
+    },
 
     async loadFollowedArtists() {
       try {
         const token = localStorage.getItem("token")
-        if (!token) {
-          this.followedArtists = []
-          return
-        }
+        if (!token) { this.followedArtists = []; return }
 
         const res = await fetch(
           'http://localhost:3002/follows/usuario/seguindo?tipo=cantor',
@@ -1969,7 +1456,6 @@ async loadGenres() {
             isFollowing: true,
             hasNewRelease: false
           }))
-
       } catch (error) {
         console.error('Erro ao carregar artistas seguidos:', error)
         this.followedArtists = []
@@ -1985,22 +1471,15 @@ async loadGenres() {
       }
     },
 
-    // ═══════════════════════════════════════════════════════
-    // PLAYBACK METHODS (Atualizados para sincronização)
-    // ═══════════════════════════════════════════════════════
-
     playContinueListening(index) {
       const track = this.continueListening[index]
       if (!track) return
 
-      // Se for a música atual e estiver tocando, pausar via evento
       if (this.isCurrentTrack(track) && this.isPlaying) {
-        // Disparar evento de pausa para o MusicPlayer
         window.dispatchEvent(new CustomEvent('player-toggle-play'))
         return
       }
 
-      // Converter para formato do player e disparar evento
       const playerSong = {
         id: track.id,
         title: track.title,
@@ -2015,12 +1494,8 @@ async loadGenres() {
         detail: {
           song: playerSong,
           playlist: this.continueListening.map(t => ({
-            id: t.id,
-            title: t.title,
-            artist: t.artist,
-            cover: t.cover,
-            url: t.preview,
-            duration: t.duration || 30
+            id: t.id, title: t.title, artist: t.artist, cover: t.cover,
+            url: t.preview, duration: t.duration || 30
           })),
           index: index,
           context: 'continue'
@@ -2028,26 +1503,17 @@ async loadGenres() {
       }))
     },
 
-
     playPlaylist(playlist) {
       this.currentPlaylist = playlist
       this.showToast('Playlist', `Tocando: ${playlist.title}`, 'success', 'fa fa-list')
     },
 
-    toggleFollow(artist) {
-      artist.isFollowing = !artist.isFollowing
-      const msg = artist.isFollowing ? 'Seguindo' : 'Deixou de seguir'
-      this.showToast(msg, artist.name, 'success', 'fa fa-check')
-    },
-
     async playTrack(track, context, index) {
-      // Se for a mesma track e estiver tocando, pausar
       if (this.isCurrentTrack(track) && this.isPlaying) {
         window.dispatchEvent(new CustomEvent('player-toggle-play'))
         return
       }
 
-      // Normalizar track para o formato do player
       const playerSong = {
         id: track.id,
         title: track.title,
@@ -2058,43 +1524,26 @@ async loadGenres() {
         source: context
       }
 
-      // Determinar playlist baseada no contexto
       let playlist = []
       switch(context) {
-        case 'chart':
-          playlist = this.chartTracks
-          break
-        case 'recommended':
-          playlist = this.recommendedTracks
-          break
-        case 'recent':
-          playlist = this.recentlyPlayed
-          break
-        default:
-          playlist = [playerSong]
+        case 'chart': playlist = this.chartTracks; break
+        case 'recommended': playlist = this.recommendedTracks; break
+        case 'recent': playlist = this.recentlyPlayed; break
+        default: playlist = [playerSong]
       }
 
       window.dispatchEvent(new CustomEvent('play-song', {
-        detail: {
-          song: playerSong,
-          playlist: playlist,
-          index: index,
-          context: context
-        }
+        detail: { song: playerSong, playlist: playlist, index: index, context: context }
       }))
     },
 
     async playArtistTopTrack(artist) {
       this.loading = true
       try {
-         const response = await fetch(
-      `${this.API_BASE_URL}/deezer/artist/${artist.id}/top?limit=5`
-    )
+        const response = await fetch(`${this.API_BASE_URL}/deezer/artist/${artist.id}/top?limit=5`)
         const data = await response.json()
         if (data.data?.length > 0) {
           this.currentArtist = artist
-         
-          // Disparar evento para o player
           const playerSong = {
             id: data.data[0].id,
             title: data.data[0].title,
@@ -2109,12 +1558,8 @@ async loadGenres() {
             detail: {
               song: playerSong,
               playlist: data.data.map(t => ({
-                id: t.id,
-                title: t.title,
-                artist: t.artist?.name,
-                cover: t.album?.cover_medium,
-                url: t.preview,
-                duration: t.duration || 30
+                id: t.id, title: t.title, artist: t.artist?.name,
+                cover: t.album?.cover_medium, url: t.preview, duration: t.duration || 30
               })),
               index: 0,
               context: 'artist'
@@ -2123,21 +1568,16 @@ async loadGenres() {
         }
       } catch (error) {
         this.showToast('Erro', 'Falha ao carregar artista', 'error', 'fa fa-exclamation-circle')
-      } finally {
-        this.loading = false
-      }
+      } finally { this.loading = false }
     },
 
     async playAlbumTracks(album) {
       this.loading = true
       try {
-        const response = await fetch(
-      `${this.API_BASE_URL}/deezer/album/${album.id}/tracks`
-    )
+        const response = await fetch(`${this.API_BASE_URL}/deezer/album/${album.id}/tracks`)
         const data = await response.json()
         if (data.data?.length > 0) {
           this.currentAlbum = album
-         
           const playerSong = {
             id: data.data[0].id,
             title: data.data[0].title,
@@ -2152,12 +1592,8 @@ async loadGenres() {
             detail: {
               song: playerSong,
               playlist: data.data.map(t => ({
-                id: t.id,
-                title: t.title,
-                artist: album.artist?.name,
-                cover: album.cover_medium,
-                url: t.preview,
-                duration: t.duration || 30
+                id: t.id, title: t.title, artist: album.artist?.name,
+                cover: album.cover_medium, url: t.preview, duration: t.duration || 30
               })),
               index: 0,
               context: 'album'
@@ -2166,33 +1602,14 @@ async loadGenres() {
         }
       } catch (error) {
         this.showToast('Erro', 'Falha ao carregar álbum', 'error', 'fa fa-exclamation-circle')
-      } finally {
-        this.loading = false
-      }
+      } finally { this.loading = false }
     },
 
     playNextInQueue() {
-      // Disparar evento para o MusicPlayer avançar
       window.dispatchEvent(new CustomEvent('player-next-track'))
       this.showToast('Fila', 'Reproduzindo próxima música', 'info', 'fa fa-step-forward')
     },
 
-    // ═══════════════════════════════════════════════════════
-    // NAVIGATION
-    // ═══════════════════════════════════════════════════════
-
-navigateToGenre(genre) {
-  // Navega para /search com o gênero como parâmetro de query
-  if (this.$router) {
-    this.$router.push({
-      path: '/search',
-      query: { q: genre.name, type: 'genre' }
-    })
-  } else {
-    // Fallback se router não estiver disponível
-    window.location.href = `/search?q=${encodeURIComponent(genre.name)}&type=genre`
-  }
-},
     showAllPersonal() {
       this.showAllPersonalContent = !this.showAllPersonalContent
     },
@@ -2217,10 +1634,6 @@ navigateToGenre(genre) {
     loadMoreReleases() {
       this.showToast('Carregando', 'Buscando mais lançamentos...', 'info', 'fa fa-spinner fa-spin')
     },
-
-    // ═══════════════════════════════════════════════════════
-    // UTILITIES
-    // ═══════════════════════════════════════════════════════
 
     isCurrentTrack(track) {
       if (!this.currentTrack || !track) return false
@@ -2278,14 +1691,8 @@ navigateToGenre(genre) {
       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzE4MTgxOCIvPjx0ZXh0IHg9IjE1MCIgeT0iMTcwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDAiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4='
     },
 
-    // ═══════════════════════════════════════════════════════
-    // TOAST SYSTEM
-    // ═══════════════════════════════════════════════════════
-
     showToast(title, message, type = 'success', icon = 'fa fa-check-circle') {
-      if (this.toast.timer) {
-        clearInterval(this.toast.timer)
-      }
+      if (this.toast.timer) clearInterval(this.toast.timer)
 
       this.toast = {
         visible: true,
@@ -2303,9 +1710,7 @@ navigateToGenre(genre) {
 
       this.toast.timer = setInterval(() => {
         this.toast.progress -= step
-        if (this.toast.progress <= 0) {
-          this.hideToast()
-        }
+        if (this.toast.progress <= 0) this.hideToast()
       }, interval)
     },
 
@@ -2322,7 +1727,6 @@ navigateToGenre(genre) {
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
-/* ========== ANIMATIONS ========== */
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
@@ -2409,7 +1813,6 @@ navigateToGenre(genre) {
   50% { transform: translateY(-10px); }
 }
 
-/* ========== LAYOUT BASE ========== */
 .dashboard {
   min-height: 100vh;
   color: #fff;
@@ -2430,7 +1833,6 @@ navigateToGenre(genre) {
   padding: 0 32px;
 }
 
-/* ========== WELCOME SECTION ========== */
 .welcome-section {
   margin-bottom: 32px;
   padding: 24px 0;
@@ -2468,7 +1870,6 @@ navigateToGenre(genre) {
   margin: 0 0 24px 0;
 }
 
-/* Quick Stats */
 .quick-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -2495,7 +1896,6 @@ navigateToGenre(genre) {
   box-shadow: 0 8px 32px rgba(29,185,84,0.1);
 }
 
-/* Artists Section Adaptação */
 .artists-section {
   padding: 40px 0;
   background: linear-gradient(180deg, #0a0a0a 0%, #121212 100%);
@@ -2512,6 +1912,7 @@ navigateToGenre(genre) {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
 }
+
 .stat-icon {
   width: 48px;
   height: 48px;
@@ -2548,7 +1949,6 @@ navigateToGenre(genre) {
   margin-top: 4px;
 }
 
-/* ========== HERO BANNER ========== */
 .hero-banner {
   border-radius: 24px;
   padding: 48px;
@@ -2650,7 +2050,6 @@ navigateToGenre(genre) {
   margin-top: 8px;
 }
 
-/* Progress Bar no Hero */
 .hero-progress {
   margin-bottom: 24px;
   max-width: 400px;
@@ -2679,7 +2078,6 @@ navigateToGenre(genre) {
   color: rgba(255,255,255,0.6);
 }
 
-/* Hero Actions */
 .hero-actions {
   display: flex;
   gap: 16px;
@@ -2755,7 +2153,6 @@ navigateToGenre(genre) {
   border-radius: 50%;
 }
 
-/* Hero Image - Vinyl */
 .hero-image {
   position: relative;
   z-index: 1;
@@ -2855,7 +2252,6 @@ navigateToGenre(genre) {
 .note-2 { left: 30px; animation-delay: 1s; }
 .note-3 { left: 60px; animation-delay: 2s; }
 
-/* ========== SECTIONS ========== */
 .section {
   margin-bottom: 48px;
   animation: slideIn 0.6s ease-out;
@@ -3006,7 +2402,6 @@ navigateToGenre(genre) {
   transform: translateX(3px);
 }
 
-/* ========== CURTIDAS SECTION ========== */
 .curtidas-section {
   background: linear-gradient(180deg, rgba(236,72,153,0.05) 0%, transparent 100%);
   border-radius: 24px;
@@ -3241,7 +2636,6 @@ navigateToGenre(genre) {
   transform: rotate(90deg);
 }
 
-/* Modern Dropdown */
 .modern-dropdown {
   position: absolute;
   top: 100%;
@@ -3252,10 +2646,7 @@ navigateToGenre(genre) {
   backdrop-filter: blur(20px);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   z-index: 1000;
   overflow: hidden;
   transform-origin: top right;
@@ -3410,7 +2801,6 @@ navigateToGenre(genre) {
   border-color: rgba(236, 72, 153, 0.3);
 }
 
-/* ========== CARDS ========== */
 .cards-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -3495,7 +2885,6 @@ navigateToGenre(genre) {
   margin-left: 2px;
 }
 
-/* Equalizer Animation */
 .equalizer {
   position: absolute;
   bottom: 8px;
@@ -3523,7 +2912,6 @@ navigateToGenre(genre) {
 .equalizer span:nth-child(3) { animation-delay: 0.2s; height: 12px; }
 .equalizer span:nth-child(4) { animation-delay: 0.3s; height: 10px; }
 
-/* Badges */
 .rank-badge {
   position: absolute;
   top: -8px;
@@ -3604,7 +2992,6 @@ navigateToGenre(genre) {
   gap: 4px;
 }
 
-/* Mix Cards */
 .mix-card .card-image {
   position: relative;
 }
@@ -3633,7 +3020,6 @@ navigateToGenre(genre) {
   backdrop-filter: blur(4px);
 }
 
-/* Playlist Cards */
 .playlist-type-badge {
   position: absolute;
   top: 8px;
@@ -3655,7 +3041,6 @@ navigateToGenre(genre) {
   color: #fff;
 }
 
-/* Create Card */
 .create-card {
   border: 2px dashed rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.02);
@@ -3709,7 +3094,6 @@ navigateToGenre(genre) {
   margin: 0;
 }
 
-/* Card Info */
 .card-info {
   position: relative;
 }
@@ -3766,7 +3150,6 @@ navigateToGenre(genre) {
   background: rgba(255,255,255,0.1);
 }
 
-/* Artist Cards */
 .artists-row {
   grid-template-columns: repeat(5, 1fr);
 }
@@ -3846,7 +3229,6 @@ navigateToGenre(genre) {
   color: #000;
 }
 
-/* Categories Grid */
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -3941,7 +3323,6 @@ navigateToGenre(genre) {
   transform: rotate(15deg);
 }
 
-/* ========== ESTADO VAZIO DE PLAYLISTS ========== */
 .empty-playlists {
   text-align: center;
   padding: 60px 20px;
@@ -4001,7 +3382,6 @@ navigateToGenre(genre) {
   display: inline-flex;
 }
 
-/* ========== MODAL ========== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -4086,7 +3466,6 @@ navigateToGenre(genre) {
   font-weight: 600;
 }
 
-/* ========== LOADING & TOAST ========== */
 .loading-overlay {
   position: fixed;
   top: 0;
@@ -4142,7 +3521,6 @@ navigateToGenre(genre) {
   font-size: 13px;
 }
 
-/* Toast Notification */
 .toast-notification {
   position: fixed;
   bottom: 100px;
@@ -4266,7 +3644,6 @@ navigateToGenre(genre) {
   background: linear-gradient(90deg, #3498db, #5dade2);
 }
 
-/* Toast Transitions */
 .toast-enter-active {
   animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -4275,7 +3652,6 @@ navigateToGenre(genre) {
   animation: toastSlideOut 0.3s ease;
 }
 
-/* Fade transition for modal */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s ease;
 }
@@ -4294,7 +3670,6 @@ navigateToGenre(genre) {
   margin-bottom: 48px;
 }
 
-/* ========== RESPONSIVE ========== */
 @media (max-width: 1400px) {
   .dashboard-content {
     max-width: 100%;
@@ -4628,4 +4003,208 @@ navigateToGenre(genre) {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Gêneros Favoritos - Tile com Emoji */
+.genre-tile-selected {
+  position: relative;
+  height: 180px;
+  border-radius: 16px;
+  padding: 24px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.genre-tile-selected:hover {
+  transform: scale(1.03);
+  filter: brightness(1.1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.genre-tile-selected .category-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.genre-emoji-large {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.genre-tile-selected h3 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.genre-tile-selected .category-explore {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+}
+
+.genre-tile-selected:hover .category-explore {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Vibes Showcase */
+.vibes-showcase {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  padding-bottom: 20px;
+}
+
+.vibe-showcase-card {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 160px;
+  animation: fadeInUp 0.6s ease backwards;
+  will-change: transform, box-shadow;
+  contain: layout style;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vibe-showcase-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.vibe-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+
+.vibe-showcase-card:hover .vibe-bg {
+  opacity: 1;
+}
+
+.vibe-illustration {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.vibe-emoji-large {
+  font-size: 44px;
+  display: block;
+  animation: float 3s ease-in-out infinite;
+  will-change: transform;
+}
+
+.vibe-content {
+  position: relative;
+  z-index: 2;
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 160px;
+}
+
+.vibe-content h3 {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: white;
+}
+
+.vibe-content p {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vibe-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vibe-tag {
+  font-size: 10px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (max-width: 768px) {
+  .genre-tile-selected {
+    height: 140px;
+    padding: 16px;
+  }
+
+  .genre-emoji-large {
+    font-size: 36px;
+  }
+
+  .genre-tile-selected h3 {
+    font-size: 16px;
+  }
+
+  .vibes-showcase {
+    grid-template-columns: 1fr;
+  }
+
+  .vibe-showcase-card {
+    min-height: 140px;
+  }
+
+  .vibe-emoji-large {
+    font-size: 36px;
+  }
+
+  .vibe-content h3 {
+    font-size: 18px;
+  }
+}
+
 </style>

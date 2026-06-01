@@ -48,6 +48,7 @@ const getById = async (req, res) => {
 }
 
 // ATUALIZAR
+// ATUALIZAR
 const update = async (req, res) => {
   try {
     const album = await albumService.updateAlbum(req.params.id, req.body)
@@ -58,6 +59,12 @@ const update = async (req, res) => {
 
     res.json({ message: "Álbum atualizado", album })
   } catch (error) {
+    // 🔥 ADICIONAR: retornar 400 para erros de validação
+    if (error.message.includes('obrigatório') || 
+        error.message.includes('Selecione') ||
+        error.message.includes('vazio')) {
+      return res.status(400).json({ error: error.message })
+    }
     res.status(500).json({ error: error.message })
   }
 }

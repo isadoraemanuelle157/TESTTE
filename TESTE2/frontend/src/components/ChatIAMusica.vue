@@ -102,13 +102,27 @@
     <!-- Layout Principal -->
     <div class="main-layout">
       <!-- Sidebar -->
-      <aside class="sidebar" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
-        <div class="logo">
-       <div class="logo-icon"><i class="fa-solid fa-music" style="font-size: 24px; color: white;"></i></div>
-          <h1>MusicAI</h1>
-     <button class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
-    <i :class="sidebarCollapsed ? 'fa-solid fa-chevron-right' : 'fa-solid fa-chevron-left'"></i>
-  </button>
+   <button 
+  v-if="sidebarCollapsed" 
+  class="sidebar-toggle-floating"
+  @click="sidebarCollapsed = false"
+>
+  <i class="fa-solid fa-chevron-right"></i>
+</button>
+
+<!-- Sidebar -->
+<aside class="sidebar" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
+  <div class="logo">
+    <div class="logo-icon"><i class="fa-solid fa-music" style="font-size: 24px; color: white;"></i></div>
+    <h1>MusicAI</h1>
+    <!-- Botão toggle DENTRO do sidebar (só visível quando aberto) -->
+    <button 
+      v-if="!sidebarCollapsed" 
+      class="sidebar-toggle" 
+      @click="sidebarCollapsed = true"
+    >
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
         </div>
 
         <!-- Botão Novo Chat -->
@@ -244,6 +258,7 @@
 
       <!-- Área do Chat -->
       <main class="chat-wrapper">
+         <template v-if="activeNav === 'chat'">
         <!-- Header -->
         <header class="chat-header">
           <div class="header-info">
@@ -440,7 +455,7 @@
            <p><i class="fa-solid fa-lock" style="margin-right: 6px;"></i> Limite de mensagens atingido. <button @click="redirectToLogin">Faça login</button> para continuar.</p>
           </div>
           <div v-else class="input-container">
-            <button class="input-action" title="Anexar" @click="showAttachMenu = !showAttachMenu"><i class="fa-solid fa-paperclip" style="font-size: 20px;"></i></button>
+        
             <input
               v-model="inputMessage"
               @keyup.enter="sendMessage"
@@ -471,8 +486,214 @@
             <span class="hint-tag" @click="inputMessage = 'rock'">Rock</span>
           </p>
         </div>
-      </main>
+          </template>
+
+           <template v-else-if="activeNav === 'favorites'">
+    <div class="view-content">
+      <header class="chat-header">
+        <div class="header-info">
+          <div class="ai-avatar" style="background: linear-gradient(135deg, #ec4899, #f43f5e);">
+            <i class="fa-solid fa-heart" style="font-size: 24px; color: white;"></i>
+          </div>
+          <div class="header-text">
+            <h2>Favoritos</h2>
+            <p>{{ favoritesList.length }} músicas salvas</p>
+          </div>
+        </div>
+      </header>
+      <div class="chat-container">
+        <div v-if="favoritesList.length === 0" class="empty-state">
+          <i class="fa-solid fa-heart" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+          <h3>Nenhum favorito ainda</h3>
+          <p>Clique no ❤️ nas músicas do chat para adicionar aqui</p>
+        </div>
+        <div v-else class="tracks-list">
+          <div
+            v-for="(track, index) in favoritesList"
+            :key="track.id"
+            class="track-item"
+            :class="{ playing: currentTrack?.id === track.id && isPlaying }"
+            @click="playTrack(track)"
+          >
+            <div class="track-number">
+              <span v-if="currentTrack?.id === track.id && isPlaying">
+                <i class="fa-solid fa-music" style="color: var(--primary-light);"></i>
+              </span>
+              <span v-else>{{ index + 1 }}</span>
+            </div>
+            <div class="track-cover">
+              <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
+              <div v-else class="cover-art" :style="{ background: track.color }">
+                <span><i class="fa-solid fa-music"></i></span>
+              </div>
+              <div class="play-overlay">
+                <span><i :class="currentTrack?.id === track.id && isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i></span>
+              </div>
+            </div>
+            <div class="track-meta">
+              <h4>{{ track.title }}</h4>
+              <p>{{ track.artist }}</p>
+            </div>
+            <div class="track-actions">
+              <span class="duration">{{ track.duration }}</span>
+              <button class="action-btn active" @click.stop="toggleFavorite(track)">
+                <i class="fa-solid fa-heart"></i>
+              </button>
+              <button class="action-btn" @click.stop="addToPlaylist(track)">
+                <i class="fa-solid fa-plus"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </template>
+ <!-- VIEW DE PLAYLISTS -->
+  <template v-else-if="activeNav === 'playlists'">
+    <div class="view-content">
+      <header class="chat-header">
+        <div class="header-info">
+          <div class="ai-avatar" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+            <i class="fa-solid fa-headphones" style="font-size: 24px; color: white;"></i>
+          </div>
+          <div class="header-text">
+            <h2>Minhas Playlists</h2>
+            <p>{{ userPlaylists.length }} playlists</p>
+          </div>
+        </div>
+      </header>
+      <div class="chat-container">
+        <div v-if="userPlaylists.length === 0" class="empty-state">
+          <i class="fa-solid fa-headphones" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+          <h3>Nenhuma playlist ainda</h3>
+          <p>Clique no ➕ nas músicas do chat para criar sua playlist</p>
+        </div>
+        <div v-else class="playlists-grid">
+          <div
+            v-for="playlist in userPlaylists"
+            :key="playlist.id"
+            class="playlist-card"
+            @click="loadPlaylist(playlist)"
+          >
+            <div class="playlist-cover" :style="{ background: playlist.color || 'linear-gradient(135deg, #667eea, #764ba2)' }">
+              <i class="fa-solid fa-music" style="font-size: 40px; color: white;"></i>
+            </div>
+            <h4>{{ playlist.name }}</h4>
+            <p>{{ playlist.tracks?.length || 0 }} músicas</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- VIEW DE HISTÓRICO -->
+  <template v-else-if="activeNav === 'history'">
+    <div class="view-content">
+      <header class="chat-header">
+        <div class="header-info">
+          <div class="ai-avatar" style="background: linear-gradient(135deg, #06b6d4, #14b8a6);">
+            <i class="fa-solid fa-clock-rotate-left" style="font-size: 24px; color: white;"></i>
+          </div>
+          <div class="header-text">
+            <h2>Histórico</h2>
+            <p>{{ playHistory.length }} reproduções</p>
+          </div>
+        </div>
+      </header>
+      <div class="chat-container">
+        <div v-if="playHistory.length === 0" class="empty-state">
+          <i class="fa-solid fa-clock-rotate-left" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+          <h3>Nenhum histórico ainda</h3>
+          <p>As músicas que você ouvir aparecerão aqui</p>
+        </div>
+        <div v-else class="tracks-list">
+          <div
+            v-for="(track, index) in playHistory"
+            :key="`${track.id}-${index}`"
+            class="track-item"
+            @click="playTrack(track)"
+          >
+            <div class="track-number">{{ index + 1 }}</div>
+            <div class="track-cover">
+              <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
+              <div v-else class="cover-art" :style="{ background: track.color }">
+                <span><i class="fa-solid fa-music"></i></span>
+              </div>
+            </div>
+            <div class="track-meta">
+              <h4>{{ track.title }}</h4>
+              <p>{{ track.artist }}</p>
+              <span class="history-date">{{ formatDate(track.playedAt) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- VIEW DE BIBLIOTECA -->
+  <template v-else-if="activeNav === 'library'">
+    <div class="view-content">
+      <header class="chat-header">
+        <div class="header-info">
+          <div class="ai-avatar" style="background: linear-gradient(135deg, #f59e0b, #f97316);">
+            <i class="fa-solid fa-book" style="font-size: 24px; color: white;"></i>
+          </div>
+          <div class="header-text">
+            <h2>Biblioteca</h2>
+            <p>{{ libraryTracks.length }} músicas</p>
+          </div>
+        </div>
+      </header>
+      <div class="chat-container">
+        <div v-if="libraryTracks.length === 0" class="empty-state">
+          <i class="fa-solid fa-book" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+          <h3>Carregando biblioteca...</h3>
+        </div>
+        <div v-else class="tracks-list">
+          <div
+            v-for="(track, index) in libraryTracks"
+            :key="track.id"
+            class="track-item"
+            :class="{ playing: currentTrack?.id === track.id && isPlaying }"
+            @click="playTrack(track)"
+          >
+            <div class="track-number">
+              <span v-if="currentTrack?.id === track.id && isPlaying">
+                <i class="fa-solid fa-music" style="color: var(--primary-light);"></i>
+              </span>
+              <span v-else>{{ index + 1 }}</span>
+            </div>
+            <div class="track-cover">
+              <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
+              <div v-else class="cover-art" :style="{ background: track.color }">
+                <span><i class="fa-solid fa-music"></i></span>
+              </div>
+              <div class="play-overlay">
+                <span><i :class="currentTrack?.id === track.id && isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i></span>
+              </div>
+            </div>
+            <div class="track-meta">
+              <h4>{{ track.title }}</h4>
+              <p>{{ track.artist }}</p>
+            </div>
+            <div class="track-actions">
+              <span class="duration">{{ track.duration }}</span>
+              <button class="action-btn" @click.stop="toggleFavorite(track)">
+                <i :class="isFavorite(track) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
+              </button>
+              <button class="action-btn" @click.stop="addToPlaylist(track)">
+                <i class="fa-solid fa-plus"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</main>
+    </div>
+
 
     <!-- Toast Notification -->
     <Transition name="toast">
@@ -508,15 +729,115 @@
     </div>
   </Transition>
 
-    <!-- Audio Element -->
-    <audio
-      ref="audioPlayer"
-      :src="currentTrack?.url"
-      @timeupdate="onTimeUpdate"
-      @ended="onTrackEnded"
-      @loadedmetadata="onLoadedMetadata"
-      @error="onAudioError"
-    ></audio>
+    <!-- ═══════════════════════════════════════════════════════
+       MODAL DE PLAYLIST (DETALHES COM LIXEIRA)
+       ═══════════════════════════════════════════════════════ -->
+  <Transition name="modal-scale">
+    <div v-if="showPlaylistModal" class="delete-modal-overlay" @click.self="closePlaylistModal">
+      <div class="delete-modal" style="max-width: 520px; padding: 32px;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div style="display: flex; align-items: center; gap: 16px;">
+            <div class="delete-modal-icon" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.2)); border-color: rgba(139, 92, 246, 0.4); animation: none;">
+              <i class="fa-solid fa-headphones" style="font-size: 28px; color: #8b5cf6;"></i>
+            </div>
+            <div style="text-align: left;">
+              <h3 class="delete-modal-title" style="margin-bottom: 4px;">{{ selectedPlaylistModal?.name }}</h3>
+              <p style="font-size: 13px; color: var(--text-muted);">
+                {{ selectedPlaylistModal?.tracks?.length || 0 }} músicas
+              </p>
+            </div>
+          </div>
+          <button 
+            @click="closePlaylistModal" 
+            style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); width: 36px; height: 36px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;"
+            onmouseover="this.style.background='var(--bg-glass-hover)'; this.style.color='var(--text-primary)'"
+            onmouseout="this.style.background='var(--bg-card)'; this.style.color='var(--text-muted)'"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Lista de músicas -->
+        <div v-if="!selectedPlaylistModal?.tracks?.length" class="empty-state" style="padding: 40px 0;">
+          <i class="fa-solid fa-music" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;"></i>
+          <p style="color: var(--text-muted); font-size: 14px;">Playlist vazia</p>
+        </div>
+        
+        <div v-else style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+          <div
+            v-for="(track, index) in selectedPlaylistModal.tracks"
+            :key="track.id"
+            class="track-item"
+            :class="{ playing: currentTrack?.id === track.id && isPlaying, 'removing': isRemovingTrack }"
+            @click="playTrackFromModal(track)"
+            style="padding: 10px 12px; cursor: pointer;"
+          >
+            <div class="track-number">
+              <span v-if="currentTrack?.id === track.id && isPlaying">
+                <i class="fa-solid fa-music" style="color: var(--primary-light);"></i>
+              </span>
+              <span v-else>{{ index + 1 }}</span>
+            </div>
+            
+            <div class="track-cover" style="width: 44px; height: 44px;">
+              <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
+              <div v-else class="cover-art" :style="{ background: track.color }">
+                <span><i class="fa-solid fa-music" style="font-size: 18px;"></i></span>
+              </div>
+              <div class="play-overlay">
+                <span><i :class="currentTrack?.id === track.id && isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i></span>
+              </div>
+            </div>
+            
+            <div class="track-meta">
+              <h4 style="font-size: 14px;">{{ track.title }}</h4>
+              <p style="font-size: 12px;">{{ track.artist }}</p>
+            </div>
+            
+            <div class="track-actions" style="gap: 8px;">
+              <span class="duration" style="font-size: 12px;">{{ track.duration }}</span>
+              
+              <!-- 🔥 BOTÃO LIXEIRA -->
+              <button 
+                class="action-btn"
+                @click.stop="removeTrackFromPlaylist(selectedPlaylistModal.id, track.id)"
+                :disabled="isRemovingTrack"
+                title="Remover da playlist"
+                style="color: var(--error); border-color: rgba(239, 68, 68, 0.3);"
+                onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'"
+                onmouseout="this.style.background='transparent'"
+              >
+                <i class="fa-solid fa-trash" style="font-size: 14px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div style="display: flex; gap: 12px; border-top: 1px solid var(--border); padding-top: 20px;">
+          <button 
+            class="btn-cancel" 
+            @click="closePlaylistModal"
+            style="flex: 1;"
+          >
+            <span>Fechar</span>
+          </button>
+          <button 
+            class="btn-confirm-delete" 
+            @click="playAllFromModal"
+            style="flex: 1; background: linear-gradient(135deg, #8b5cf6, #6366f1);"
+            :disabled="!selectedPlaylistModal?.tracks?.length"
+          >
+            <span><i class="fa-solid fa-play" style="margin-right: 6px;"></i> Tocar Todas</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
+
+  <router-view />
+  <MusicPlayer />
   </div>
 </template>
 <script setup>
@@ -556,22 +877,22 @@ const showDeleteModal = ref(false)
 const deleteTargetId = ref(null)
 const deleteTargetTitle = ref('')
 const isDeleting = ref(false)
+const showPlaylistModal = ref(false)
+const selectedPlaylistModal = ref(null)
+const isRemovingTrack = ref(false)
 
 // Chat History
 const savedChats = ref([])
 const currentChatId = ref(null)
 
 // Player State
-const audioPlayer = ref(null)
 const currentTrack = ref(null)
 const isPlaying = ref(false)
-const currentTime = ref(0)
-const duration = ref(0)
-const volume = ref(0.8)
 const currentPlaylist = ref([])
 const currentTrackIndex = ref(-1)
 const favorites = ref(new Set())
-
+const currentTime = ref(0)
+const duration = ref(0)
 // User
 const userName = ref('')
 
@@ -717,6 +1038,84 @@ function createNewChat() {
   }]
   showToastFn('Novo chat iniciado!', 'success')
   nextTick(() => inputRef.value?.focus())
+}
+
+const loadPlaylist = (playlist) => {
+  // 🔥 MUDANÇA: Abre modal ao invés de tocar direto
+  openPlaylistModal(playlist)
+}
+
+const openPlaylistModal = (playlist) => {
+  selectedPlaylistModal.value = JSON.parse(JSON.stringify(playlist)) // deep copy
+  showPlaylistModal.value = true
+}
+
+const closePlaylistModal = () => {
+  showPlaylistModal.value = false
+  selectedPlaylistModal.value = null
+  isRemovingTrack.value = false
+}
+
+const removeTrackFromPlaylist = async (playlistId, trackId) => {
+  if (isRemovingTrack.value) return
+  
+  isRemovingTrack.value = true
+  
+  // Pequeno delay para animação
+  await new Promise(resolve => setTimeout(resolve, 200))
+  
+  // Carrega playlists do localStorage
+  const stored = localStorage.getItem('user_playlists')
+  let playlists = stored ? JSON.parse(stored) : []
+  
+  const playlistIndex = playlists.findIndex(p => p.id === playlistId)
+  if (playlistIndex === -1) {
+    isRemovingTrack.value = false
+    return
+  }
+  
+  // Remove a música
+  playlists[playlistIndex].tracks = playlists[playlistIndex].tracks.filter(t => t.id !== trackId)
+  
+  // Salva
+  localStorage.setItem('user_playlists', JSON.stringify(playlists))
+  
+  // Atualiza estado reativo
+  userPlaylists.value = playlists
+  
+  // Atualiza o modal
+  selectedPlaylistModal.value = JSON.parse(JSON.stringify(playlists[playlistIndex]))
+  
+  showToastFn('Música removida da playlist', 'success')
+  isRemovingTrack.value = false
+}
+
+const playTrackFromModal = (track) => {
+  playTrack(track)
+  closePlaylistModal()
+}
+
+const playAllFromModal = () => {
+  if (!selectedPlaylistModal.value?.tracks?.length) return
+  playAll(selectedPlaylistModal.value.tracks)
+  closePlaylistModal()
+}
+
+const playTrackFromLyrics = (song) => {
+  if (!song || !song.id) {
+    showToastFn('Música inválida', 'error')
+    return
+  }
+  // Converte formato do lyric result para track format
+  const track = {
+    id: song.id,
+    title: song.title,
+    artist: song.artist,
+    cover: song.albumArt,
+    url: song.url,
+    source: 'deezer'
+  }
+  playTrack(track)
 }
 
 function saveCurrentChat() {
@@ -1490,150 +1889,72 @@ const handleNavClick = (item) => {
 // ═══════════════════════════════════════════════════════
 // PLAYER DE MÚSICA FUNCIONAL
 // ═══════════════════════════════════════════════════════
+const musicPlayerRef = ref(null)
+
+const handlePlayerPlay = () => {
+  isPlaying.value = true
+}
+
 const playTrack = (track) => {
-  if (!track || !track.url) {
-    showToastFn('Música não disponível no momento', 'error')
+  // Garante que a track tem os dados mínimos necessários
+  if (!track || !track.id) {
+    console.warn('⚠️ Tentativa de tocar track inválida:', track)
     return
   }
-  if (currentTrack.value?.id === track.id) {
-    togglePlay()
-    return
+  
+  // Atualiza o índice correto na playlist atual
+  const index = currentPlaylist.value.findIndex(t => t.id === track.id)
+  if (index !== -1) {
+    currentTrackIndex.value = index
   }
-  currentTrack.value = track
-  const existingIndex = currentPlaylist.value.findIndex(t => t.id === track.id)
-  if (existingIndex === -1) {
-    currentPlaylist.value.push(track)
-    currentTrackIndex.value = currentPlaylist.value.length - 1
-  } else {
-    currentTrackIndex.value = existingIndex
-  }
-  nextTick(() => {
-    if (audioPlayer.value) {
-      audioPlayer.value.src = track.url
-      audioPlayer.value.volume = volume.value
-      audioPlayer.value.play()
-        .then(() => {
-          isPlaying.value = true
-          showToastFn(`Tocando: ${track.title} - ${track.artist}`, 'success')
-        })
-        .catch(err => {
-          console.error('Erro ao tocar:', err)
-          showToastFn('Erro ao reproduzir música', 'error')
-        })
+  
+  window.dispatchEvent(new CustomEvent('play-song', {
+    detail: {
+      song: { ...track }, // clone para evitar referências reativas problemáticas
+      playlist: [...currentPlaylist.value], // clone da playlist
+      index: index !== -1 ? index : 0,
+      context: 'chat'
     }
-  })
+  }))
+}
+
+const addToHistory = (track) => {
+  const historyItem = {
+    ...track,
+    playedAt: new Date().toISOString()
+  }
+  playHistory.value.unshift(historyItem)
+  // Limita a 50 itens
+  if (playHistory.value.length > 50) {
+    playHistory.value = playHistory.value.slice(0, 50)
+  }
+  localStorage.setItem('play_history', JSON.stringify(playHistory.value))
 }
 
 const playTrackAtIndex = (index) => {
   if (index >= 0 && index < currentPlaylist.value.length) {
+    const track = currentPlaylist.value[index]
+    if (!track || !track.id) {
+      console.warn('⚠️ Track no índice', index, 'é inválida')
+      return
+    }
     currentTrackIndex.value = index
-    playTrack(currentPlaylist.value[index])
+    playTrack(track)
   }
-}
-
-const playTrackFromLyrics = (song) => {
-  const track = {
-    id: `lyric_${song.id}`,
-    title: song.title,
-    artist: song.artist,
-    cover: song.albumArt || '',
-    duration: '3:30',
-    emoji: '🎵',
-    color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    url: song.url || '',
-    source: 'deezer'
-  }
-  playTrack(track)
 }
 
 const playAll = (tracks) => {
-  if (!tracks || tracks.length === 0) return
-  currentPlaylist.value = [...tracks]
-  currentTrackIndex.value = 0
-  playTrack(tracks[0])
-  showToastFn(`Playlist iniciada com ${tracks.length} músicas`, 'success')
-}
-
-const togglePlay = () => {
-  if (!audioPlayer.value || !currentTrack.value) {
-    showToastFn('Selecione uma música primeiro', 'info')
+  // Filtra tracks inválidas
+  const validTracks = tracks.filter(t => t && t.id && (t.url || t.preview || t.source === 'spotify'))
+  if (validTracks.length === 0) {
+    showToastFn('Nenhuma música válida para tocar', 'error')
     return
   }
-  if (isPlaying.value) {
-    audioPlayer.value.pause()
-    isPlaying.value = false
-  } else {
-    audioPlayer.value.play()
-      .then(() => {
-        isPlaying.value = true
-      })
-      .catch(err => {
-        console.error('Erro ao tocar:', err)
-        showToastFn('Erro ao reproduzir', 'error')
-      })
-  }
-}
-
-const prevTrack = () => {
-  if (currentTrackIndex.value > 0) {
-    currentTrackIndex.value--
-    playTrack(currentPlaylist.value[currentTrackIndex.value])
-  } else {
-    if (currentPlaylist.value.length > 0) {
-      currentTrackIndex.value = currentPlaylist.value.length - 1
-      playTrack(currentPlaylist.value[currentTrackIndex.value])
-    }
-  }
-}
-
-const nextTrack = () => {
-  if (currentTrackIndex.value < currentPlaylist.value.length - 1) {
-    currentTrackIndex.value++
-    playTrack(currentPlaylist.value[currentTrackIndex.value])
-  } else {
-    if (currentPlaylist.value.length > 0) {
-      currentTrackIndex.value = 0
-      playTrack(currentPlaylist.value[0])
-    }
-  }
-}
-
-const onTimeUpdate = () => {
-  if (audioPlayer.value) {
-    currentTime.value = audioPlayer.value.currentTime
-  }
-}
-
-const onLoadedMetadata = () => {
-  if (audioPlayer.value) {
-    duration.value = audioPlayer.value.duration || 0
-  }
-}
-
-const onTrackEnded = () => {
-  isPlaying.value = false
-  nextTrack()
-}
-
-const onAudioError = (e) => {
-  console.error('Erro de áudio:', e)
-  showToastFn('Erro ao carregar áudio. Tente outra música.', 'error')
-  isPlaying.value = false
-}
-
-const seekTo = (event) => {
-  if (!audioPlayer.value || !duration.value) return
-  const rect = event.currentTarget.getBoundingClientRect()
-  const percent = (event.clientX - rect.left) / rect.width
-  const newTime = percent * duration.value
-  audioPlayer.value.currentTime = newTime
-  currentTime.value = newTime
-}
-
-const updateVolume = () => {
-  if (audioPlayer.value) {
-    audioPlayer.value.volume = volume.value
-  }
+  
+  currentPlaylist.value = validTracks
+  currentTrackIndex.value = 0
+  playTrack(validTracks[0])
+  showToastFn(`Playlist iniciada com ${validTracks.length} músicas`, 'success')
 }
 
 const formatDuration = (seconds) => {
@@ -1642,13 +1963,6 @@ const formatDuration = (seconds) => {
   const secs = Math.floor(seconds % 60)
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
-
-const openFullPlayer = () => {
-  if (currentTrack.value) {
-    showFullPlayer.value = true
-  }
-}
-
 // ═══════════════════════════════════════════════════════
 // UTILITÁRIOS E FAVORITOS
 // ═══════════════════════════════════════════════════════
@@ -1682,12 +1996,68 @@ const isFavorite = (track) => {
 }
 
 const addToPlaylist = (track) => {
-  if (!currentPlaylist.value.find(t => t.id === track.id)) {
-    currentPlaylist.value.push(track)
-    showToastFn(`"${track.title}" adicionada à fila`, 'success')
-  } else {
-    showToastFn(`"${track.title}" já está na fila`, 'info')
+  // Carrega playlists do localStorage
+  const stored = localStorage.getItem('user_playlists')
+  let playlists = stored ? JSON.parse(stored) : []
+  
+  // Cria playlist padrão se não existir
+  let defaultPlaylist = playlists.find(p => p.id === 'default')
+  if (!defaultPlaylist) {
+    defaultPlaylist = {
+      id: 'default',
+      name: 'Minha Playlist',
+      color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      tracks: [],
+      createdAt: new Date().toISOString()
+    }
+    playlists.push(defaultPlaylist)
   }
+  
+  // Verifica se música já existe
+  if (!defaultPlaylist.tracks.find(t => t.id === track.id)) {
+    defaultPlaylist.tracks.push(track)
+    // Atualiza no array
+    const idx = playlists.findIndex(p => p.id === 'default')
+    playlists[idx] = defaultPlaylist
+    // Salva
+    localStorage.setItem('user_playlists', JSON.stringify(playlists))
+    // Atualiza estado reativo
+    userPlaylists.value = playlists
+    showToastFn(`"${track.title}" adicionada à sua playlist!`, 'success')
+  } else {
+    showToastFn(`"${track.title}" já está na playlist`, 'info')
+  }
+}
+
+const togglePlay = () => {
+  window.dispatchEvent(new CustomEvent('player-toggle-play'))
+}
+
+const prevTrack = () => {
+  window.dispatchEvent(new CustomEvent('player-prev-track'))
+}
+
+const nextTrack = () => {
+  window.dispatchEvent(new CustomEvent('player-next-track'))
+}
+
+const createPlaylist = (name) => {
+  const stored = localStorage.getItem('user_playlists')
+  let playlists = stored ? JSON.parse(stored) : []
+  
+  const newPlaylist = {
+    id: Date.now().toString(),
+    name: name || 'Nova Playlist',
+    color: getRandomGradient(playlists.length),
+    tracks: [],
+    createdAt: new Date().toISOString()
+  }
+  
+  playlists.push(newPlaylist)
+  localStorage.setItem('user_playlists', JSON.stringify(playlists))
+  userPlaylists.value = playlists
+  showToastFn(`Playlist "${name}" criada!`, 'success')
+  return newPlaylist
 }
 
 const askAboutArtist = (artist) => {
@@ -1732,8 +2102,6 @@ watch(currentView, async (newView) => {
   if (newView === 'library') {
     libraryTracks.value = await searchRealMusic('popular', 'track', 20)
   }
-  // Favorites já é computed
-  // History pode ser carregado de localStorage
   if (newView === 'history') {
     const stored = localStorage.getItem('play_history')
     playHistory.value = stored ? JSON.parse(stored) : []
@@ -1824,6 +2192,27 @@ onMounted(() => {
   }
   isOnline.value = navigator.onLine
   window.addEventListener('online', () => { isOnline.value = true })
+    // Ouvir eventos do MusicPlayer para sincronizar estado
+  window.addEventListener('player-state-changed', (e) => {
+  const detail = e.detail || {}
+  
+  // Só sincroniza se tiver track válida
+  if (detail.track && detail.track.id) {
+    currentTrack.value = detail.track
+  }
+  
+  if (detail.isPlaying !== undefined) {
+    isPlaying.value = detail.isPlaying
+  }
+  
+  if (detail.currentTime !== undefined) {
+    currentTime.value = detail.currentTime
+  }
+  
+  if (detail.duration !== undefined) {
+    duration.value = detail.duration
+  }
+})
   window.addEventListener('offline', () => { isOnline.value = false })
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
@@ -1846,9 +2235,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (audioPlayer.value) {
-    audioPlayer.value.pause()
-  }
   // Save chat before unmount
   if (isAuthenticated.value && messages.value.length > 1) {
     saveCurrentChat()
@@ -2304,7 +2690,6 @@ body {
   backdrop-filter: blur(10px);
 }
 
-/* Sidebar */
 .sidebar {
   width: 300px;
   background: var(--bg-glass);
@@ -2314,11 +2699,54 @@ body {
   flex-direction: column;
   backdrop-filter: blur(20px);
   overflow-y: auto;
-  transition: width 0.3s ease;
+  overflow-x: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+.sidebar-collapsed {
+  width: 0;
+  padding: 0;
+  border-right: none;
+  overflow: hidden;
+  opacity: 0;
 }
 
-.sidebar-collapsed {
-  width: 80px;
+/* Botão Toggle Flutuante (quando sidebar fechado) */
+.sidebar-toggle-floating {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  transition: all 0.3s ease;
+  animation: slideInLeft 0.3s ease;
+}
+
+.sidebar-toggle-floating:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 25px rgba(99, 102, 241, 0.6);
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .sidebar-collapsed .nav-label,
@@ -2383,13 +2811,15 @@ body {
 
 .sidebar-toggle {
   position: absolute;
-  right: 0;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   background: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
   display: flex;
@@ -2399,10 +2829,11 @@ body {
 }
 
 .sidebar-toggle:hover {
-  background: var(--primary);
+  background: var(--error);
+  border-color: var(--error);
   color: white;
+  transform: translateY(-50%) scale(1.1);
 }
-
 /* Novo Chat Button */
 .new-chat-btn {
   display: flex;
@@ -3533,7 +3964,30 @@ body {
   overflow: hidden;
   flex-shrink: 0;
 }
+/* Estilos adicionais para o modal de playlist */
+.track-item.removing {
+  opacity: 0.6;
+  pointer-events: none;
+}
 
+/* Animação de remoção suave */
+.track-item {
+  transition: all 0.3s ease, opacity 0.2s ease;
+}
+
+/* Scrollbar do modal de playlist */
+.delete-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.delete-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.delete-modal::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
 .cover-art-img {
   width: 100%;
   height: 100%;

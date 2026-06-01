@@ -10,6 +10,21 @@
         </div>
       </header>
 
+      <!-- Banner de Conectar Spotify -->
+      <div v-if="isLogged && !spotifyConnected" class="spotify-connect-banner">
+        <div class="spotify-connect-content">
+          <i class="fa fa-spotify" style="color: #1db954; font-size: 24px;"></i>
+          <div class="spotify-connect-text">
+            <span class="spotify-connect-title">Conecte o Spotify</span>
+            <span class="spotify-connect-sub">Ouça músicas completas sem limites</span>
+          </div>
+          <button @click="connectSpotify" class="btn-connect-spotify">
+            <i class="fa fa-link"></i>
+            Conectar
+          </button>
+        </div>
+      </div>
+
       <!-- Barra de Busca Principal -->
       <div class="search-main">
         <div class="search-box" :class="{ focused: isFocused }">
@@ -32,7 +47,7 @@
         <!-- Sugestões / Histórico Dropdown -->
         <div v-if="showSuggestions" class="suggestions-box">
          
-          <!-- HISTÓRICO: quando input vazio e tem histórico -->
+          <!-- HISTÓRICO -->
           <div v-if="searchQuery.length === 0 && searchHistory.length > 0" class="history-section">
             <div class="history-header-row">
               <span class="history-title">
@@ -64,7 +79,7 @@
             </div>
           </div>
 
-          <!-- RECOMENDADO: quando vazio e sem histórico -->
+          <!-- RECOMENDADO -->
           <div v-else-if="searchQuery.length === 0 && searchHistory.length === 0" class="suggested-section">
             <div class="suggested-header">
               <i class="fa fa-star"></i>
@@ -86,7 +101,7 @@
             </div>
           </div>
 
-          <!-- RESULTADOS AGRUPADOS: quando tem texto -->
+          <!-- RESULTADOS AGRUPADOS -->
           <div v-else-if="groupedSuggestions.length > 0" class="grouped-results">
             <div
               v-for="group in groupedSuggestions"
@@ -133,12 +148,11 @@
         <!-- Estado Inicial - Descoberta -->
         <div v-if="!hasSearched && !isLoading" class="discover-section">
          
-          <!-- Categorias Rápidas com Botão Detalhado -->
+          <!-- Categorias Rápidas -->
           <div class="quick-tags">
             <div class="tags-header">
               <h3 class="section-label">Explorar</h3>
              
-              <!-- Botão Categorias Detalhadas -->
               <div class="categories-dropdown-wrapper" ref="categoriesContainer">
                 <button
                   class="categories-btn"
@@ -150,7 +164,6 @@
                   <i class="fa fa-chevron-down" :class="{ rotate: showCategoriesDropdown }"></i>
                 </button>
                
-                <!-- Dropdown de Categorias Detalhadas -->
                 <transition name="dropdown">
                   <div v-if="showCategoriesDropdown" class="categories-dropdown">
                     <div class="categories-dropdown-header">
@@ -175,37 +188,34 @@
                    
                     <div class="categories-content">
                       <!-- Tab: Gêneros -->
-                     <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
-  <div
-    v-for="section in genreCategorySections"
-    :key="section.key"
-    class="category-section"
-  >
-    <h4>{{ section.title }}</h4>
-
-    <div class="category-tags detailed">
-      <button
-        v-for="genre in section.items"
-        :key="genre.id"
-        class="tag-btn detailed"
-        @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
-      >
-        <i :class="section.icon"></i>
-        <span>{{ genre.nome }}</span>
-
-        <small v-if="genre.source === 'local'">
-          🎵 {{ genre.musicasCount || 0 }} •
-          💿 {{ genre.albunsCount || 0 }} •
-          🎤 {{ genre.cantoresCount || 0 }}
-        </small>
-
-        <small v-else>
-          API
-        </small>
-      </button>
-    </div>
-  </div>
-</div>
+                      <div v-if="activeCategoryTab === 'genres'" class="category-tab-content">
+                        <div
+                          v-for="section in genreCategorySections"
+                          :key="section.key"
+                          class="category-section"
+                        >
+                          <h4>{{ section.title }}</h4>
+                          <div class="category-tags detailed">
+                            <button
+                              v-for="genre in section.items"
+                              :key="genre.id"
+                              class="tag-btn detailed"
+                              @click="searchAndGo(genre.nome); showCategoriesDropdown = false"
+                            >
+                              <i :class="section.icon"></i>
+                              <span>{{ genre.nome }}</span>
+                              <small v-if="genre.source === 'local'">
+                                🎵 {{ genre.musicasCount || 0 }} •
+                                💿 {{ genre.albunsCount || 0 }} •
+                                🎤 {{ genre.cantoresCount || 0 }}
+                              </small>
+                              <small v-else>
+                                API
+                              </small>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                      
                       <!-- Tab: Moods -->
                       <div v-if="activeCategoryTab === 'moods'" class="category-tab-content">
@@ -250,7 +260,9 @@
                             </div>
                           </div>
                         </div>
-                                              <!-- Tab: Locais -->
+                      </div>
+                                             
+                      <!-- Tab: Locais -->
                       <div v-if="activeCategoryTab === 'locals'" class="category-tab-content">
                         <div class="local-section" style="margin: 0;">
                           <div class="local-header" style="margin-bottom: 16px;">
@@ -264,7 +276,7 @@
                               v-for="loc in localizacoes"
                               :key="loc"
                               class="local-card"
-                              @click="searchAndGo(loc); showCategoriesDropdown = false"
+                              @click="goToLocalPlaylist(loc); showCategoriesDropdown = false"
                               style="padding: 10px; border-radius: 10px;"
                             >
                               <div class="local-card-bg" :style="getLocalGradient(loc)" style="aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 8px;">
@@ -276,259 +288,249 @@
                           </div>
                         </div>
                       </div>
-                      </div>
                     </div>
                   </div>
                 </transition>
               </div>
             </div>
            
-<div class="tags-row">
-  <button
-    v-for="cat in exploreGenres"
-    :key="cat"
-    class="tag-btn"
-    @click="searchAndGo(cat)"
-  >
-    {{ cat }}
-  </button>
-</div>
-</div>
+            <div class="tags-row">
+              <button
+                v-for="cat in exploreGenres"
+                :key="cat"
+                class="tag-btn"
+                @click="searchAndGo(cat)"
+              >
+                {{ cat }}
+              </button>
+            </div>
+          </div>
 
-          <!-- Top Músicas - Layout em Linha tipo Spotify -->
+          <!-- Top Músicas -->
           <div class="top-section" v-if="chartTracks.length > 0">
-           <div class="top-header">
-  <h3>{{ topSectionTitle }}</h3>
-  <div class="top-header-actions">
-<!-- Dropdown Customizado de Gêneros/Local -->
-<div class="custom-dropdown-wrapper" ref="genreDropdownRef">
-  <button
-    class="custom-dropdown-trigger"
-    @click="toggleGenreDropdown"
-    :class="{ active: showGenreDropdown }"
-  >
-    <span class="dropdown-current">
-      <span class="dropdown-icon-wrap" :class="getCategoryIconClass(currentTopCategory)">
-        <i :class="getCategoryIcon(currentTopCategory)"></i>
-      </span>
-      <span class="dropdown-text">
-        {{ currentTopCategory === 'Brasil' ? '🇧🇷 Brasil' : currentTopCategory }}
-      </span>
-    </span>
-    <span class="dropdown-chevron-wrap">
-      <i class="fa fa-chevron-down dropdown-chevron"></i>
-    </span>
-  </button>
- 
-  <transition name="dropdown-fancy">
-    <div v-if="showGenreDropdown" class="custom-dropdown-menu">
-     
-      <!-- Header do Dropdown -->
-      <div class="dropdown-header">
-        <div class="dropdown-header-icon">
-          <i class="fa fa-sliders"></i>
-        </div>
-        <div class="dropdown-header-info">
-          <span class="dropdown-header-title">Explorar por</span>
-          <span class="dropdown-header-subtitle">Gêneros, locais e regiões</span>
-        </div>
-        <button class="dropdown-close-btn" @click="showGenreDropdown = false">
-          <i class="fa fa-times"></i>
-        </button>
-      </div>
+            <div class="top-header">
+              <h3>{{ topSectionTitle }}</h3>
+              <div class="top-header-actions">
+                <div class="custom-dropdown-wrapper" ref="genreDropdownRef">
+                  <button
+                    class="custom-dropdown-trigger"
+                    @click="toggleGenreDropdown"
+                    :class="{ active: showGenreDropdown }"
+                  >
+                    <span class="dropdown-current">
+                      <span class="dropdown-icon-wrap" :class="getCategoryIconClass(currentTopCategory)">
+                        <i :class="getCategoryIcon(currentTopCategory)"></i>
+                      </span>
+                      <span class="dropdown-text">
+                        {{ currentTopCategory === 'Brasil' ? '🇧🇷 Brasil' : currentTopCategory }}
+                      </span>
+                    </span>
+                    <span class="dropdown-chevron-wrap">
+                      <i class="fa fa-chevron-down dropdown-chevron"></i>
+                    </span>
+                  </button>
+                 
+                  <transition name="dropdown-fancy">
+                    <div v-if="showGenreDropdown" class="custom-dropdown-menu">
+                     
+                      <div class="dropdown-header">
+                        <div class="dropdown-header-icon">
+                          <i class="fa fa-sliders"></i>
+                        </div>
+                        <div class="dropdown-header-info">
+                          <span class="dropdown-header-title">Explorar por</span>
+                          <span class="dropdown-header-subtitle">Gêneros, locais e regiões</span>
+                        </div>
+                        <button class="dropdown-close-btn" @click="showGenreDropdown = false">
+                          <i class="fa fa-times"></i>
+                        </button>
+                      </div>
 
-      <!-- Barra de busca -->
-      <div class="dropdown-search-box">
-        <div class="search-icon-wrap">
-          <i class="fa fa-search"></i>
-        </div>
-        <input
-          type="text"
-          v-model="dropdownSearchQuery"
-          placeholder="Buscar gênero, local ou artista..."
-          ref="dropdownSearchInput"
-        />
-        <button
-          v-if="dropdownSearchQuery"
-          @click="dropdownSearchQuery = ''"
-          class="clear-search"
-        >
-          <i class="fa fa-times-circle"></i>
-        </button>
-      </div>
-     
-      <!-- Brasil - Destaque Premium -->
-      <div class="dropdown-section highlight-section">
-        <div class="section-accent-bar"></div>
-        <span class="dropdown-section-label">
-          <span class="label-dot" style="background: #1db954;"></span>
-          Região Principal
-        </span>
-        <button
-          class="dropdown-item featured-item"
-          :class="{ active: currentTopCategory === 'Brasil' }"
-          @click="selectCategory('Brasil')"
-        >
-          <div class="item-visual">
-            <div class="item-avatar brasil-avatar">
-              <span class="brasil-flag">🇧🇷</span>
-            </div>
-          </div>
-          <div class="item-info">
-            <span class="item-text">Brasil</span>
-            <span class="item-sub">Top 50 nacional • Atualizado diariamente</span>
-          </div>
-          <div class="item-status">
-            <span v-if="currentTopCategory === 'Brasil'" class="status-badge active">
-              <i class="fa fa-check"></i>
-              <span>Ativo</span>
-            </span>
-            <span v-else class="status-badge">Selecionar</span>
-          </div>
-        </button>
-      </div>
-     
-      <!-- Recentes -->
-      <div class="dropdown-section" v-if="recentCategories.length > 0">
-        <span class="dropdown-section-label">
-          <span class="label-dot" style="background: #ff6b6b;"></span>
-          Recentes
-        </span>
-        <div class="recent-chips">
-          <button
-            v-for="cat in recentCategories.slice(0, 5)"
-            :key="cat"
-            class="recent-chip"
-            :class="{ active: currentTopCategory === cat }"
-            @click="selectCategory(cat)"
-          >
-            <span class="chip-icon">{{ getCategoryEmoji(cat) }}</span>
-            <span class="chip-text">{{ cat }}</span>
-          </button>
-        </div>
-      </div>
-     
-      <!-- Localizações -->
-      <div class="dropdown-section" v-if="filteredLocalizacoes.length > 0">
-        <span class="dropdown-section-label">
-          <span class="label-dot" style="background: #667eea;"></span>
-          Localizações
-        </span>
-        <div class="dropdown-scrollable locations-scroll">
-          <button
-            v-for="loc in filteredLocalizacoes"
-            :key="loc"
-            class="dropdown-item location-item"
-            :class="{ active: currentTopCategory === loc }"
-            @click="selectCategory(loc)"
-          >
-            <div class="item-visual">
-              <div class="item-avatar location-avatar" :style="getLocalGradient(loc)">
-                <span>📍</span>
+                      <div class="dropdown-search-box">
+                        <div class="search-icon-wrap">
+                          <i class="fa fa-search"></i>
+                        </div>
+                        <input
+                          type="text"
+                          v-model="dropdownSearchQuery"
+                          placeholder="Buscar gênero, local ou artista..."
+                          ref="dropdownSearchInput"
+                        />
+                        <button
+                          v-if="dropdownSearchQuery"
+                          @click="dropdownSearchQuery = ''"
+                          class="clear-search"
+                        >
+                          <i class="fa fa-times-circle"></i>
+                        </button>
+                      </div>
+                     
+                      <div class="dropdown-section highlight-section">
+                        <div class="section-accent-bar"></div>
+                        <span class="dropdown-section-label">
+                          <span class="label-dot" style="background: #1db954;"></span>
+                          Região Principal
+                        </span>
+                        <button
+                          class="dropdown-item featured-item"
+                          :class="{ active: currentTopCategory === 'Brasil' }"
+                          @click="selectCategory('Brasil')"
+                        >
+                          <div class="item-visual">
+                            <div class="item-avatar brasil-avatar">
+                              <span class="brasil-flag">🇧🇷</span>
+                            </div>
+                          </div>
+                          <div class="item-info">
+                            <span class="item-text">Brasil</span>
+                            <span class="item-sub">Top 50 nacional • Atualizado diariamente</span>
+                          </div>
+                          <div class="item-status">
+                            <span v-if="currentTopCategory === 'Brasil'" class="status-badge active">
+                              <i class="fa fa-check"></i>
+                              <span>Ativo</span>
+                            </span>
+                            <span v-else class="status-badge">Selecionar</span>
+                          </div>
+                        </button>
+                      </div>
+                     
+                      <div class="dropdown-section" v-if="recentCategories.length > 0">
+                        <span class="dropdown-section-label">
+                          <span class="label-dot" style="background: #ff6b6b;"></span>
+                          Recentes
+                        </span>
+                        <div class="recent-chips">
+                          <button
+                            v-for="cat in recentCategories.slice(0, 5)"
+                            :key="cat"
+                            class="recent-chip"
+                            :class="{ active: currentTopCategory === cat }"
+                            @click="selectCategory(cat)"
+                          >
+                            <span class="chip-icon">{{ getCategoryEmoji(cat) }}</span>
+                            <span class="chip-text">{{ cat }}</span>
+                          </button>
+                        </div>
+                      </div>
+                     
+                      <div class="dropdown-section" v-if="filteredLocalizacoes.length > 0">
+                        <span class="dropdown-section-label">
+                          <span class="label-dot" style="background: #667eea;"></span>
+                          Localizações
+                        </span>
+                        <div class="dropdown-scrollable locations-scroll">
+                          <button
+                            v-for="loc in filteredLocalizacoes"
+                            :key="loc"
+                            class="dropdown-item location-item"
+                            :class="{ active: currentTopCategory === loc }"
+                            @click="selectCategory(loc)"
+                          >
+                            <div class="item-visual">
+                              <div class="item-avatar location-avatar" :style="getLocalGradient(loc)">
+                                <span>📍</span>
+                              </div>
+                            </div>
+                            <div class="item-info">
+                              <span class="item-text">{{ loc }}</span>
+                              <span class="item-sub">Música local</span>
+                            </div>
+                            <div class="item-action">
+                              <i v-if="currentTopCategory === loc" class="fa fa-check-circle active-check"></i>
+                              <i v-else class="fa fa-chevron-right action-arrow"></i>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                     
+                      <div class="dropdown-section" v-if="filteredGenerosDB.length > 0">
+                        <span class="dropdown-section-label">
+                          <span class="label-dot" style="background: #f093fb;"></span>
+                          Gêneros do Banco
+                        </span>
+                        <div class="dropdown-scrollable genres-scroll">
+                          <button
+                            v-for="genre in filteredGenerosDB"
+                            :key="genre._id"
+                            class="dropdown-item genre-item"
+                            :class="{ active: currentTopCategory === genre.nome }"
+                            @click="selectCategory(genre.nome)"
+                          >
+                            <div class="item-visual">
+                              <div class="item-avatar genre-avatar" :style="getGenreGradient(genre.nome)">
+                                <i class="fa fa-music"></i>
+                              </div>
+                            </div>
+                            <div class="item-info">
+                              <span class="item-text">{{ genre.nome }}</span>
+                              <span v-if="genre.musicas?.length" class="item-sub">
+                                <i class="fa fa-headphones"></i> {{ genre.musicas.length }} músicas
+                              </span>
+                              <span v-else class="item-sub">Gênero musical</span>
+                            </div>
+                            <div class="item-action">
+                              <i v-if="currentTopCategory === genre.nome" class="fa fa-check-circle active-check"></i>
+                              <i v-else class="fa fa-chevron-right action-arrow"></i>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                     
+                      <div class="dropdown-section" v-if="filteredApiGenres.length > 0">
+                        <span class="dropdown-section-label">
+                          <span class="label-dot" style="background: #4facfe;"></span>
+                          Gêneros API
+                        </span>
+                        <div class="dropdown-scrollable genres-scroll">
+                          <button
+                            v-for="genre in filteredApiGenres"
+                            :key="genre.id"
+                            class="dropdown-item genre-item api-genre-item"
+                            :class="{ active: currentTopCategory === genre.name }"
+                            @click="selectCategory(genre.name)"
+                          >
+                            <div class="item-visual">
+                              <div class="item-avatar api-avatar">
+                                <i class="fa fa-globe"></i>
+                              </div>
+                            </div>
+                            <div class="item-info">
+                              <span class="item-text">{{ genre.name }}</span>
+                              <span class="item-sub">Gênero internacional</span>
+                            </div>
+                            <div class="item-action">
+                              <i v-if="currentTopCategory === genre.name" class="fa fa-check-circle active-check"></i>
+                              <i v-else class="fa fa-chevron-right action-arrow"></i>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                     
+                      <div v-if="isDropdownEmpty" class="dropdown-empty">
+                        <div class="empty-illustration">
+                          <i class="fa fa-search"></i>
+                        </div>
+                        <span class="empty-title">Nenhum resultado</span>
+                        <span class="empty-subtitle">Tente buscar por outro termo</span>
+                      </div>
+                     
+                    </div>
+                  </transition>
+                </div>
+           
+                <button @click="searchAndGo(currentTopCategory)" class="view-all">
+                  Ver todas
+                </button>
               </div>
             </div>
-            <div class="item-info">
-              <span class="item-text">{{ loc }}</span>
-              <span class="item-sub">Música local</span>
-            </div>
-            <div class="item-action">
-              <i v-if="currentTopCategory === loc" class="fa fa-check-circle active-check"></i>
-              <i v-else class="fa fa-chevron-right action-arrow"></i>
-            </div>
-          </button>
-        </div>
-      </div>
-     
-      <!-- Gêneros do Banco -->
-      <div class="dropdown-section" v-if="filteredGenerosDB.length > 0">
-        <span class="dropdown-section-label">
-          <span class="label-dot" style="background: #f093fb;"></span>
-          Gêneros do Banco
-        </span>
-        <div class="dropdown-scrollable genres-scroll">
-          <button
-            v-for="genre in filteredGenerosDB"
-            :key="genre._id"
-            class="dropdown-item genre-item"
-            :class="{ active: currentTopCategory === genre.nome }"
-            @click="selectCategory(genre.nome)"
-          >
-            <div class="item-visual">
-              <div class="item-avatar genre-avatar" :style="getGenreGradient(genre.nome)">
-                <i class="fa fa-music"></i>
-              </div>
-            </div>
-            <div class="item-info">
-              <span class="item-text">{{ genre.nome }}</span>
-              <span v-if="genre.musicas?.length" class="item-sub">
-                <i class="fa fa-headphones"></i> {{ genre.musicas.length }} músicas
-              </span>
-              <span v-else class="item-sub">Gênero musical</span>
-            </div>
-            <div class="item-action">
-              <i v-if="currentTopCategory === genre.nome" class="fa fa-check-circle active-check"></i>
-              <i v-else class="fa fa-chevron-right action-arrow"></i>
-            </div>
-          </button>
-        </div>
-      </div>
-     
-      <!-- Gêneros API -->
-      <div class="dropdown-section" v-if="filteredApiGenres.length > 0">
-        <span class="dropdown-section-label">
-          <span class="label-dot" style="background: #4facfe;"></span>
-          Gêneros API
-        </span>
-        <div class="dropdown-scrollable genres-scroll">
-          <button
-            v-for="genre in filteredApiGenres"
-            :key="genre.id"
-            class="dropdown-item genre-item api-genre-item"
-            :class="{ active: currentTopCategory === genre.name }"
-            @click="selectCategory(genre.name)"
-          >
-            <div class="item-visual">
-              <div class="item-avatar api-avatar">
-                <i class="fa fa-globe"></i>
-              </div>
-            </div>
-            <div class="item-info">
-              <span class="item-text">{{ genre.name }}</span>
-              <span class="item-sub">Gênero internacional</span>
-            </div>
-            <div class="item-action">
-              <i v-if="currentTopCategory === genre.name" class="fa fa-check-circle active-check"></i>
-              <i v-else class="fa fa-chevron-right action-arrow"></i>
-            </div>
-          </button>
-        </div>
-      </div>
-     
-      <!-- Vazio -->
-      <div v-if="isDropdownEmpty" class="dropdown-empty">
-        <div class="empty-illustration">
-          <i class="fa fa-search"></i>
-        </div>
-        <span class="empty-title">Nenhum resultado</span>
-        <span class="empty-subtitle">Tente buscar por outro termo</span>
-      </div>
-     
-    </div>
-  </transition>
-</div>
-   
-    <button @click="searchAndGo(currentTopCategory)" class="view-all">
-      Ver todas
-    </button>
-  </div>
-</div>
             <div class="top-tracks">
-  <div
-  v-for="(track, index) in chartTracks.slice(0, 5)"
-  :key="track.id"
-  class="track-card"
-  @click="playTrack(track, 'top10', index)"
->
+              <div
+                v-for="(track, index) in chartTracks.slice(0, 5)"
+                :key="track.id"
+                class="track-card"
+                @click="playTrack(track, 'top10', index)"
+              >
                 <span class="track-number">{{ index + 1 }}</span>
                 <img :src="track.album.cover_medium" :alt="track.title" @error="$event.target.style.display='none'">
                 <div class="track-info">
@@ -536,8 +538,7 @@
                   <span class="track-artist">{{ track.artist.name }}</span>
                 </div>
                
-                <!-- Botão de curtir no Top Músicas -->
-  <button
+                <button
                   v-if="!isLogged"
                   class="btn-like-track"
                   @click.stop="openLoginModal"
@@ -569,9 +570,30 @@
             </div>
           </div>
 
+          <!-- 🔥 SEÇÃO DE LOCAIS EM DESTAQUE -->
+          <div class="top-section" v-if="localizacoes.length > 0">
+            <div class="top-header">
+              <h3>🗺️ Explorar por Local</h3>
+            </div>
+            <div class="locals-grid">
+              <div
+                v-for="loc in localizacoes.slice(0, 10)"
+                :key="loc"
+                class="local-result-card"
+                @click="goToLocalPlaylist(loc)"
+              >
+                <div class="local-result-bg" :style="getLocalGradient(loc)">
+                  <span class="local-result-emoji">📍</span>
+                </div>
+                <span class="local-result-name">{{ loc }}</span>
+                <span class="local-result-desc">Música local</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <!-- Resultados da Busca - Layout Spotify Style -->
+        <!-- Resultados da Busca -->
         <div v-else-if="hasSearched && !isLoading" class="search-results">
           <div class="results-header">
             <h2>Resultados para "{{ lastSearch }}"</h2>
@@ -592,7 +614,7 @@
             <p>Nenhum resultado encontrado</p>
           </div>
 
-          <!-- MÚSICAS - Layout em lista tipo Spotify -->
+          <!-- MÚSICAS -->
           <div v-if="getFilteredByType('track').length > 0" class="results-section">
             <div class="section-header-row">
               <h3 class="section-title">Músicas</h3>
@@ -621,7 +643,7 @@
                   </span>
                 </div>
 
-  <button
+                <button
                   v-if="!isLogged"
                   class="btn-like-list"
                   @click.stop="openLoginModal"
@@ -650,7 +672,7 @@
             </div>
           </div>
 
-          <!-- ARTISTAS - Grid de Cards Circulares -->
+          <!-- ARTISTAS -->
           <div v-if="getFilteredByType('artist').length > 0" class="results-section">
             <div class="section-header-row">
               <h3 class="section-title">Artistas</h3>
@@ -667,7 +689,7 @@
                 </div>
                 <span class="artist-card-name">{{ getResultTitle(artist) }}</span>
                 <span class="artist-card-type">Artista</span>
-<button
+                <button
                   v-if="!isLogged"
                   class="btn-like-artist"
                   @click.stop="openLoginModal"
@@ -695,7 +717,7 @@
             </div>
           </div>
 
-          <!-- ÁLBUNS - Grid de Cards Quadrados -->
+          <!-- ÁLBUNS -->
           <div v-if="getFilteredByType('album').length > 0" class="results-section">
             <div class="section-header-row">
               <h3 class="section-title">Álbuns</h3>
@@ -718,7 +740,7 @@
                 </div>
                 <span class="album-card-name">{{ getResultTitle(album) }}</span>
                 <span class="album-card-artist">{{ getResultSubtitle(album) }}</span>
-   <button
+                <button
                   v-if="!isLogged"
                   class="btn-like-album"
                   @click.stop="openLoginModal"
@@ -746,7 +768,7 @@
             </div>
           </div>
 
-          <!-- USUÁRIOS - Grid de Cards -->
+          <!-- 🔥 USUÁRIOS - NOVA SEÇÃO -->
           <div v-if="getFilteredByType('user').length > 0" class="results-section">
             <div class="section-header-row">
               <h3 class="section-title">Usuários</h3>
@@ -768,28 +790,28 @@
             </div>
           </div>
 
-<!-- LOCAIS - Grid de Cards de Localização -->
-<div v-if="getFilteredByType('local').length > 0" class="results-section">
-  <div class="section-header-row">
-    <h3 class="section-title">Locais</h3>
-  </div>
-  <div class="locals-grid">
-    <div
-      v-for="loc in getFilteredByType('local')"
-      :key="loc.id"
-      class="local-result-card"
-      @click="searchAndGo(loc.name)"
-    >
-      <div class="local-result-bg" :style="getLocalGradient(loc.name)">
-        <span class="local-result-emoji">📍</span>
-      </div>
-<span class="local-result-name">{{ loc.name }}</span>
-<span class="local-result-desc">
-  {{ loc.resultCount > 0 ? `${loc.resultCount} resultados` : (loc.description || 'Música local') }}
-</span>
-    </div>
-  </div>
-</div>
+          <!-- LOCAIS -->
+          <div v-if="getFilteredByType('local').length > 0" class="results-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Locais</h3>
+            </div>
+            <div class="locals-grid">
+              <div
+                v-for="loc in getFilteredByType('local')"
+                :key="loc.id"
+                class="local-result-card"
+                @click="goToLocalPlaylist(loc.name)"
+              >
+                <div class="local-result-bg" :style="getLocalGradient(loc.name)">
+                  <span class="local-result-emoji">📍</span>
+                </div>
+                <span class="local-result-name">{{ loc.name }}</span>
+                <span class="local-result-desc">
+                  {{ loc.resultCount > 0 ? `${loc.resultCount} resultados` : (loc.description || 'Música local') }}
+                </span>
+              </div>
+            </div>
+          </div>
 
         </div>
 
@@ -797,7 +819,7 @@
 
     </div>
 
-    <!-- TOAST DE NOTIFICAÇÃO -->
+    <!-- TOAST -->
     <transition name="toast">
       <div v-if="toast.show" class="toast" :class="toast.type">
         <i :class="toast.icon"></i>
@@ -805,7 +827,7 @@
       </div>
     </transition>
 
-    <!-- ADICIONAR AQUI: MODAL DE LOGIN -->
+    <!-- MODAL DE LOGIN -->
     <transition name="modal">
       <div v-if="showLoginModal" class="login-modal-overlay" @click="closeLoginModal">
         <div class="login-modal" @click.stop>
@@ -843,24 +865,30 @@ export default {
       searchQuery: '',
       lastSearch: '',
       isFocused: false,
-         showLoginModal: false,  // ← ADICIONAR
-    isLogged: false,
+      showLoginModal: false,
+      isLogged: false,
       hasSearched: false,
       showSuggestions: false,
       showHistory: false,
       showCategoriesDropdown: false,
       activeFilter: 'Todos',
       isLoading: false,
+      spotifyConnected: false,
+      spotifyTokenValid: false,
+      spotifyPlayer: null,
+      spotifyDeviceId: null,
+      isSpotifyPremium: false,
+      spotifyToken: null,
      
       activeCategoryTab: 'genres',
 
-currentTopCategory: 'Brasil',
+      currentTopCategory: 'Brasil',
       showGenreDropdown: false,
-            dropdownSearchQuery: '',
+      dropdownSearchQuery: '',
       recentCategories: [],
 
       // Localizações para busca regional
- localizacoes: [],
+      localizacoes: [],
 
       // importante
       searchTimeout: null,
@@ -880,7 +908,7 @@ currentTopCategory: 'Brasil',
       chartTracks: [],
       popularArtistsReal: [],
 
-       categoryTabs: [
+      categoryTabs: [
         { id: 'genres', name: 'Gêneros', icon: 'fa fa-music' },
         { id: 'moods', name: 'Atividades', icon: 'fa fa-smile-o' },
         { id: 'decades', name: 'Décadas', icon: 'fa fa-calendar' },
@@ -952,7 +980,7 @@ currentTopCategory: 'Brasil',
         ]
       },
 
-searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Locais', 'Décadas'],
+      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Locais', 'Décadas'],
 
       trending: [
         'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional',
@@ -999,79 +1027,79 @@ searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Locais
   },
 
   computed: {
-  showSpotifyContent() {
-    return this.isLogged
-  },
- 
-  showDeezerContent() {
-    return !this.isLogged
-  },
+    showSpotifyContent() {
+      return this.isLogged
+    },
+   
+    showDeezerContent() {
+      return !this.isLogged
+    },
 
-      filteredLocalizacoes() {
-    if (!this.dropdownSearchQuery) return this.localizacoes
-    const q = this.dropdownSearchQuery.toLowerCase()
-    return this.localizacoes.filter(loc => loc.toLowerCase().includes(q))
-  },
- 
-  filteredGenerosDB() {
-    if (!this.dropdownSearchQuery) return this.generosDB
-    const q = this.dropdownSearchQuery.toLowerCase()
-    return this.generosDB.filter(g => g.nome?.toLowerCase().includes(q))
-  },
- 
-  filteredApiGenres() {
-    if (!this.dropdownSearchQuery) return this.apiGenres
-    const q = this.dropdownSearchQuery.toLowerCase()
-    return this.apiGenres.filter(g => g.name?.toLowerCase().includes(q))
-  },
- 
-  isDropdownEmpty() {
-    return this.filteredLocalizacoes.length === 0 &&
-           this.filteredGenerosDB.length === 0 &&
-           this.filteredApiGenres.length === 0 &&
-           this.dropdownSearchQuery
-  },
+    filteredLocalizacoes() {
+      if (!this.dropdownSearchQuery) return this.localizacoes
+      const q = this.dropdownSearchQuery.toLowerCase()
+      return this.localizacoes.filter(loc => loc.toLowerCase().includes(q))
+    },
+   
+    filteredGenerosDB() {
+      if (!this.dropdownSearchQuery) return this.generosDB
+      const q = this.dropdownSearchQuery.toLowerCase()
+      return this.generosDB.filter(g => g.nome?.toLowerCase().includes(q))
+    },
+   
+    filteredApiGenres() {
+      if (!this.dropdownSearchQuery) return this.apiGenres
+      const q = this.dropdownSearchQuery.toLowerCase()
+      return this.apiGenres.filter(g => g.name?.toLowerCase().includes(q))
+    },
+   
+    isDropdownEmpty() {
+      return this.filteredLocalizacoes.length === 0 &&
+             this.filteredGenerosDB.length === 0 &&
+             this.filteredApiGenres.length === 0 &&
+             this.dropdownSearchQuery
+    },
 
     allGenres() {
-  const local = (this.generosDB || []).map(g => this.normalizeLocalGenre(g))
-  const api = (this.apiGenres || []).map(g => this.normalizeApiGenre(g))
+      const local = (this.generosDB || []).map(g => this.normalizeLocalGenre(g))
+      const api = (this.apiGenres || []).map(g => this.normalizeApiGenre(g))
 
-  const map = new Map()
+      const map = new Map()
 
-  ;[...local, ...api].forEach(genre => {
-    const key = (genre.nome || '').trim().toLowerCase()
-    if (!key) return
+      ;[...local, ...api].forEach(genre => {
+        const key = (genre.nome || '').trim().toLowerCase()
+        if (!key) return
 
-    if (!map.has(key)) {
-      map.set(key, genre)
-      return
-    }
+        if (!map.has(key)) {
+          map.set(key, genre)
+          return
+        }
 
-    const current = map.get(key)
+        const current = map.get(key)
 
-    map.set(key, {
-      ...current,
-      ...genre,
-      id: current.id,
-      nome: current.nome || genre.nome,
-      foto: current.foto || genre.foto || '',
-      descricao: current.descricao || genre.descricao,
-      categoria: current.categoria || genre.categoria || 'outros',
-      source: current.source === 'local' ? 'local' : genre.source,
-      musicasCount: current.musicasCount || genre.musicasCount || 0,
-      albunsCount: current.albunsCount || genre.albunsCount || 0,
-      cantoresCount: current.cantoresCount || genre.cantoresCount || 0
-    })
-  })
+        map.set(key, {
+          ...current,
+          ...genre,
+          id: current.id,
+          nome: current.nome || genre.nome,
+          foto: current.foto || genre.foto || '',
+          descricao: current.descricao || genre.descricao,
+          categoria: current.categoria || genre.categoria || 'outros',
+          source: current.source === 'local' ? 'local' : genre.source,
+          musicasCount: current.musicasCount || genre.musicasCount || 0,
+          albunsCount: current.albunsCount || genre.albunsCount || 0,
+          cantoresCount: current.cantoresCount || genre.cantoresCount || 0
+        })
+      })
 
-  return Array.from(map.values()).sort((a, b) =>
-    a.nome.localeCompare(b.nome, 'pt-BR')
-  )
-},
+      return Array.from(map.values()).sort((a, b) =>
+        a.nome.localeCompare(b.nome, 'pt-BR')
+      )
+    },
 
-exploreGenres() {
-  return this.allGenres.slice(0, 12).map(g => g.nome)
-},
+    exploreGenres() {
+      return this.allGenres.slice(0, 12).map(g => g.nome)
+    },
 
     topSectionTitle() {
       return this.currentTopCategory && this.currentTopCategory !== 'Brasil'
@@ -1095,64 +1123,64 @@ exploreGenres() {
 
       if (this.activeFilter === 'Todos') return this.searchResults
 
-const typeMap = {
-  'Músicas': 'track',
-  'Artistas': 'artist',
-  'Álbuns': 'album',
-  'Usuários': 'user',
-  'Gêneros': 'genre',
-  'Locais': 'local'
-}
-
+      const typeMap = {
+        'Músicas': 'track',
+        'Artistas': 'artist',
+        'Álbuns': 'album',
+        'Usuários': 'user',
+        'Gêneros': 'genre',
+        'Locais': 'local'
+      }
 
       const filterType = typeMap[this.activeFilter]
       return this.searchResults.filter(r => r.type === filterType)
     },
 
-generosPorCategoria() {
-  const grupos = {
-    popular: [],
-    regional: [],
-    electronic: [],
-    classical: [],
-    jazz: [],
-    rock: [],
-    pop: [],
-    hiphop: [],
-    outros: []
-  }
+    generosPorCategoria() {
+      const grupos = {
+        popular: [],
+        regional: [],
+        electronic: [],
+        classical: [],
+        jazz: [],
+        rock: [],
+        pop: [],
+        hiphop: [],
+        outros: []
+      }
 
-  this.allGenres.forEach(g => {
-    const cat = (g.categoria || this.detectGenreCategory(g.nome) || 'outros')
-      .toLowerCase()
-      .trim()
+      this.allGenres.forEach(g => {
+        const cat = (g.categoria || this.detectGenreCategory(g.nome) || 'outros')
+          .toLowerCase()
+          .trim()
 
-    if (grupos[cat]) grupos[cat].push(g)
-    else grupos.outros.push(g)
-  })
+        if (grupos[cat]) grupos[cat].push(g)
+        else grupos.outros.push(g)
+      })
 
-  return grupos
-},
-genreCategorySections() {
-  const sections = [
-    { key: 'popular', title: 'Populares', icon: 'fa fa-music' },
-    { key: 'regional', title: 'Estilos Regionais', icon: 'fa fa-map' },
-    { key: 'electronic', title: 'Eletrônica & Dance', icon: 'fa fa-headphones' },
-    { key: 'rock', title: 'Rock & Alternativo', icon: 'fa fa-bolt' },
-    { key: 'pop', title: 'Pop', icon: 'fa fa-star' },
-    { key: 'hiphop', title: 'Hip Hop, Rap & R&B', icon: 'fa fa-microphone' },
-    { key: 'jazz', title: 'Jazz, Soul & Blues', icon: 'fa fa-moon-o' },
-    { key: 'classical', title: 'Clássica & Instrumental', icon: 'fa fa-university' },
-    { key: 'outros', title: 'Outros Gêneros', icon: 'fa fa-th-large' }
-  ]
+      return grupos
+    },
 
-  return sections
-    .map(section => ({
-      ...section,
-      items: this.generosPorCategoria[section.key] || []
-    }))
-    .filter(section => section.items.length > 0)
-},
+    genreCategorySections() {
+      const sections = [
+        { key: 'popular', title: 'Populares', icon: 'fa fa-music' },
+        { key: 'regional', title: 'Estilos Regionais', icon: 'fa fa-map' },
+        { key: 'electronic', title: 'Eletrônica & Dance', icon: 'fa fa-headphones' },
+        { key: 'rock', title: 'Rock & Alternativo', icon: 'fa fa-bolt' },
+        { key: 'pop', title: 'Pop', icon: 'fa fa-star' },
+        { key: 'hiphop', title: 'Hip Hop, Rap & R&B', icon: 'fa fa-microphone' },
+        { key: 'jazz', title: 'Jazz, Soul & Blues', icon: 'fa fa-moon-o' },
+        { key: 'classical', title: 'Clássica & Instrumental', icon: 'fa fa-university' },
+        { key: 'outros', title: 'Outros Gêneros', icon: 'fa fa-th-large' }
+      ]
+
+      return sections
+        .map(section => ({
+          ...section,
+          items: this.generosPorCategoria[section.key] || []
+        }))
+        .filter(section => section.items.length > 0)
+    },
 
     groupedSuggestions() {
       if (!this.searchQuery.trim()) return []
@@ -1175,8 +1203,8 @@ genreCategorySections() {
             typeClass: type
               .toLowerCase()
               .normalize('NFD')
-              .replace(/[\\u0300-\\u036f]/g, '')
-              .replace(/\\s+/g, '-'),
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/\s+/g, '-'),
             items: []
           }
         }
@@ -1193,7 +1221,7 @@ genreCategorySections() {
         })
       })
 
-      const typeOrder = ['Artista', 'Música', 'Álbum', 'Usuário', 'Gênero']
+      const typeOrder = ['Artista', 'Música', 'Álbum', 'Usuário', 'Gênero', 'Local']
 
       return Object.values(groups)
         .sort((a, b) => {
@@ -1210,328 +1238,569 @@ genreCategorySections() {
     }
   },
 
-mounted() {
-  document.addEventListener('click', this.handleClickOutside)
-  document.addEventListener('click', this.handleGenreDropdownClickOutside)
+  async mounted() {
+    document.addEventListener('click', this.handleClickOutside)
+    document.addEventListener('click', this.handleGenreDropdownClickOutside)
 
-  // Verifica se veio de um gênero do Dashboard (query param 'q')
-  const urlQuery = this.$route?.query?.q
-  const urlType = this.$route?.query?.type
+    const urlQuery = this.$route?.query?.q
+    const urlType = this.$route?.query?.type
 
-  if (urlQuery) {
-    // Se veio do Dashboard via gênero
-    this.searchQuery = urlQuery
-    this.currentTopCategory = urlQuery
-   
-    if (urlType === 'genre') {
-      // Busca específica por gênero
-      this.searchAndGo(urlQuery)
+    if (urlQuery) {
+      this.searchQuery = urlQuery
+      this.currentTopCategory = urlQuery
+     
+      if (urlType === 'genre') {
+        await this.searchAndGo(urlQuery)
+      } else {
+        await this.loadTopTracksByCategory(urlQuery)
+        await this.performSearch()
+      }
     } else {
-      // Busca normal
-      this.loadTopTracksByCategory(urlQuery)
-      this.performSearch()
+      const initialCategory = 'Brasil'
+      this.currentTopCategory = initialCategory
+      await this.loadInitialData(initialCategory)
     }
-  } else {
-    // Comportamento padrão
-    const initialCategory = 'Brasil'
-    this.currentTopCategory = initialCategory
-    this.loadInitialData(initialCategory)
-  }
+   
+    await this.initSpotifyPlayer()
 
-        this.checkLoginStatus()
-  this.loadLikedTracks()
-  this.loadFavoritas()
-  this.loadVibes()
-  this.loadGeneros()
-  this.loadApiGenres()
-  this.loadHistory()
-  this.loadLocalizacoes()
-      this.loadRecentCategories()
-},
+    this.checkLoginStatus()
+    this.loadLikedTracks()
+    this.loadFavoritas()
+    this.loadVibes()
+    this.loadGeneros()
+    this.loadApiGenres()
+    this.loadHistory()
+    this.loadLocalizacoes()
+    this.loadRecentCategories()
+    this.checkSpotifyStatus()
+  },
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
     if (this.searchTimeout) clearTimeout(this.searchTimeout)
   },
-watch: {
-  '$route.query.q': {
-    immediate: true,
-    handler(newValue) {
-      if (newValue) {
-        this.searchQuery = newValue
-        this.currentTopCategory = newValue
-        this.searchAndGo(newValue)
+
+  watch: {
+    '$route.query.q': {
+      immediate: true,
+      handler(newValue) {
+        if (newValue) {
+          this.searchQuery = newValue
+          this.currentTopCategory = newValue
+          this.searchAndGo(newValue)
+        }
       }
     }
-  }
-},
+  },
+
   methods: {
-    
-  // Dentro do objeto methods, adicione:
-
-getCategoryIconClass(category) {
-  if (category === 'Brasil') return 'icon-brasil'
-  if (this.localizacoes.includes(category)) return 'icon-location'
-  return 'icon-genre'
-},
-
-getGenreGradient(genreName) {
-
-  const gradients = [
-    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-    'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-    'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-    'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
-    'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
-  ]
-  // Gera índice baseado no nome do gênero para ser consistente
-  let hash = 0
-  for (let i = 0; i < genreName.length; i++) {
-    hash = genreName.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  const index = Math.abs(hash) % gradients.length
-  return { background: gradients[index] }
-},
-
-// Modifique o toggleGenreDropdown existente para focar no input:
-toggleGenreDropdown() {
-  this.showGenreDropdown = !this.showGenreDropdown
-  if (this.showGenreDropdown) {
-    this.$nextTick(() => {
-      this.$refs.dropdownSearchInput?.focus()
-    })
-  }
-},
- checkLoginStatus() {
+    async registrarHistoricoLocal(track) {
+  try {
     const token = localStorage.getItem('token')
-    this.isLogged = !!token
-  },
-
-  openLoginModal() {
-    this.showLoginModal = true
-  },
-  
-  closeLoginModal() {
-    this.showLoginModal = false
-  },
-  
-  goToLogin() {
-    this.$router.push('/login')
-  },
-
-  // ===== PLAY TRACK COM VERIFICAÇÃO =====
- playTrack(track, context = 'search', index = 0) {
-  const playerSong = this.convertToPlayerFormat(track)
- 
-  // Monta playlist baseada no contexto
-  let playlist = []
-  if (context === 'top10') {
-    // Cria playlist com todas as músicas do top10
-    playlist = this.chartTracks.slice(0, 10).map(t => this.convertToPlayerFormat(t))
-  } else {
-    // Fallback: playlist com apenas a música atual
-    playlist = [playerSong]
+    if (!token) return
+    
+    await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        musicaId: track.id,
+        titulo: track.title,
+        artista: track.artist,
+        capa: track.cover,
+        source: track.source,
+        tipo: 'musica'
+      })
+    })
+  } catch (err) {
+    console.error('Erro ao registrar histórico:', err)
   }
- 
-  window.dispatchEvent(new CustomEvent('play-song', {
-    detail: {
-      song: playerSong,
-      playlist: playlist,
-      index: index,
-      context: context
-    }
-  }))
 },
+
+    // ===== NOVO: Redireciona para playlist do local =====
+    goToLocalPlaylist(locNome) {
+      this.$router.push({
+        name: 'LocalPlaylist',
+        params: { nome: encodeURIComponent(locNome) }
+      })
+    },
+
+    async initSpotifyPlayer() {
+      if (!this.isLogged || !this.spotifyConnected) return
+
+      try {
+        const tokenRes = await fetch('http://localhost:3002/spotify/status', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
+        const status = await tokenRes.json()
+       
+        if (!status.connected || !status.tokenValid) return
+
+        if (!window.Spotify) {
+          await new Promise((resolve, reject) => {
+            if (window.SpotifySDKReady) {
+              resolve()
+              return
+            }
+           
+            const handler = () => {
+              window.removeEventListener('spotify-sdk-ready', handler)
+              resolve()
+            }
+            window.addEventListener('spotify-sdk-ready', handler)
+           
+            setTimeout(() => {
+              window.removeEventListener('spotify-sdk-ready', handler)
+              if (window.Spotify) resolve()
+              else reject(new Error('Spotify SDK não carregado'))
+            }, 10000)
+          })
+        }
+
+        const refreshRes = await fetch('http://localhost:3002/spotify/refresh', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
+        const refreshData = await refreshRes.json()
+       
+        if (!refreshData.success) {
+          console.warn('[SPOTIFY] Não foi possível refresh token')
+          return
+        }
+
+        this.spotifyPlayer = new window.Spotify.Player({
+          name: 'SoundUp Music',
+          getOAuthToken: cb => cb(refreshData.access_token || this.spotifyToken),
+          volume: this.volume / 100
+        })
+
+        this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+          console.log('[SPOTIFY] Player pronto:', device_id)
+          this.spotifyDeviceId = device_id
+          this.isSpotifyPremium = true
+        })
+
+        this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+          console.log('[SPOTIFY] Device offline:', device_id)
+        })
+
+        this.spotifyPlayer.addListener('player_state_changed', (state) => {
+          if (!state) return
+          this.syncSpotifyState(state)
+        })
+
+        this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+          console.error('[SPOTIFY] Init error:', message)
+        })
+
+        this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
+          console.error('[SPOTIFY] Auth error:', message)
+          this.isSpotifyPremium = false
+        })
+
+        this.spotifyPlayer.addListener('account_error', ({ message }) => {
+          console.error('[SPOTIFY] Account error:', message)
+          this.isSpotifyPremium = false
+          this.showToast('Spotify Premium necessário para streaming completo', 'warning')
+        })
+
+        await this.spotifyPlayer.connect()
+       
+      } catch (e) {
+        console.error('[SPOTIFY] Erro ao inicializar player:', e)
+      }
+    },
+
+    syncSpotifyState(state) {
+      this.isPlaying = !state.paused
+      this.currentTime = state.position / 1000
+      this.duration = state.duration / 1000
+      this.progressPercent = this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0
+     
+      if (state.track_window?.current_track) {
+        const track = state.track_window.current_track
+        this.currentTrack = {
+          id: track.id,
+          title: track.name,
+          artist: track.artists.map(a => a.name).join(', '),
+          cover: track.album.images?.[0]?.url,
+          duration: track.duration_ms / 1000,
+          source: 'spotify_full'
+        }
+      }
+    },
+
+    async checkSpotifyStatus() {
+      if (!this.isLogged) return
+      try {
+        const token = localStorage.getItem('token')
+        const res = await fetch('http://localhost:3002/spotify/status', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        this.spotifyConnected = data.connected
+        this.spotifyTokenValid = data.tokenValid
+      } catch (err) {
+        console.error('Erro ao verificar Spotify:', err)
+      }
+    },
+   
+    async connectSpotify() {
+      try {
+        const token = localStorage.getItem('token')
+       
+        if (!token) {
+          this.showToast('Faça login primeiro', 'error')
+          this.$router.push('/login')
+          return
+        }
+
+        const res = await fetch('http://localhost:3002/spotify/auth', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+       
+        if (!res.ok) {
+          const errorData = await res.json()
+          this.showToast(errorData.error || 'Erro ao iniciar conexão', 'error')
+          return
+        }
+
+        const data = await res.json()
+        window.location.href = data.authUrl
+       
+      } catch (err) {
+        this.showToast('Erro ao iniciar conexão com Spotify', 'error')
+      }
+    },
+
+    getCategoryIconClass(category) {
+      if (category === 'Brasil') return 'icon-brasil'
+      if (this.localizacoes.includes(category)) return 'icon-location'
+      return 'icon-genre'
+    },
+
+    getGenreGradient(genreName) {
+      const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+        'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
+        'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)'
+      ]
+      let hash = 0
+      for (let i = 0; i < genreName.length; i++) {
+        hash = genreName.charCodeAt(i) + ((hash << 5) - hash)
+      }
+      const index = Math.abs(hash) % gradients.length
+      return { background: gradients[index] }
+    },
+
+    toggleGenreDropdown() {
+      this.showGenreDropdown = !this.showGenreDropdown
+      if (this.showGenreDropdown) {
+        this.$nextTick(() => {
+          this.$refs.dropdownSearchInput?.focus()
+        })
+      }
+    },
+
+    checkLoginStatus() {
+      const token = localStorage.getItem('token')
+      this.isLogged = !!token
+    },
+
+    openLoginModal() {
+      this.showLoginModal = true
+    },
+   
+    closeLoginModal() {
+      this.showLoginModal = false
+    },
+   
+    goToLogin() {
+      this.$router.push('/login')
+    },
+
+    async playTrack(track, context = 'search', index = 0) {
+      if (track._fullTrack && this.spotifyPlayer && this.spotifyDeviceId) {
+        try {
+          const token = localStorage.getItem('token')
+          const res = await fetch(
+            `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(track.title)}&type=track`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          const data = await res.json()
+         
+          if (data.tracks?.items?.[0]) {
+            const spotifyTrack = data.tracks.items[0]
+           
+            await fetch(
+              `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
+              {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${this.spotifyToken || await this.getSpotifyToken()}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  uris: [`spotify:track:${spotifyTrack.id}`]
+                })
+              }
+            )
+            return
+          }
+        } catch (e) {
+          console.error('[SPOTIFY] Erro ao tocar:', e)
+        }
+      }
+
+      const playerSong = this.convertToPlayerFormat(track)
+      let playlist = []
+      if (context === 'top10') {
+        playlist = this.chartTracks.slice(0, 10).map(t => this.convertToPlayerFormat(t))
+      } else {
+        playlist = [playerSong]
+      }
+// 🔥 NOVO: Registrar no histórico antes de tocar
+this.registrarHistoricoLocal({
+  id: track.id,
+  title: track.title || this.getResultTitle(track),
+  artist: track.artist?.name || 'Desconhecido',
+  cover: this.getBestImage(track),
+  source: track.source || 'deezer'
+})
+
+window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: playlist,
+          index: index,
+          context: context
+        }
+      }))
+    },
+
+    async getSpotifyToken() {
+      try {
+        const res = await fetch('http://localhost:3002/spotify/refresh', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
+        const data = await res.json()
+        if (data.success) {
+          this.spotifyToken = data.access_token
+          return data.access_token
+        }
+        return null
+      } catch (e) {
+        return null
+      }
+    },
 
     async loadApiGenres() {
-  try {
-    const res = await fetch('http://localhost:3002/deezer/genre')
-    const data = await res.json()
+      try {
+        const res = await fetch('http://localhost:3002/deezer/genre')
+        const data = await res.json()
 
-    const genres = Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-        ? data
-        : []
+        const genres = Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : []
 
-    this.apiGenres = genres.filter(g =>
-      g &&
-      g.id !== 0 &&
-      g.name &&
-      g.name.toLowerCase() !== 'all'
-    )
-  } catch (err) {
-    console.error('Erro ao carregar gêneros da API:', err)
-    this.apiGenres = []
-  }
-},
-normalizeLocalGenre(g) {
-  return {
-    id: `local-${g._id}`,
-    nome: g.nome,
-    descricao: g.descricao || 'Gênero musical',
-    foto: g.foto || '',
-    categoria: g.categoria || this.detectGenreCategory(g.nome),
-    source: 'local',
-    musicasCount: g.musicas?.length || 0,
-    albunsCount: g.albuns?.length || 0,
-    cantoresCount: g.cantores?.length || 0
-  }
-},
-
-normalizeApiGenre(g) {
-  return {
-    id: `deezer-${g.id}`,
-    nome: g.name,
-    descricao: 'Gênero da API',
-    foto: g.picture_medium || g.picture || g.picture_big || '',
-    categoria: this.detectGenreCategory(g.name),
-    source: 'deezer',
-    musicasCount: 0,
-    albunsCount: 0,
-    cantoresCount: 0
-  }
-},
-async loadLocalMusicas(localNome) {
-  try {
-    this.isLoading = true    // ← ADICIONAR
-    this.hasSearched = true  // ← ADICIONAR (garantir)
-   
-    const res = await fetch(`http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`)
-    const data = await res.json()
-   
-if (data.results && Array.isArray(data.results)) {
-  // Converte TODOS os resultados para o formato searchResults
-  const allItems = data.results.map(r => {
-    if (r.type === 'track') {
-      return {
-        id: r.id,
-        title: r.title,
-        artist: { name: r.artist?.name || 'Artista desconhecido' },
-        album: {
-          title: r.album?.title || '',
-          cover: r.album?.cover_medium || r.cover || ''
-        },
-        cover: r.cover || r.album?.cover_medium,
-        preview: r.preview,
-        duration: r.duration,
-        type: 'track',
-        source: r.source,
-        localContext: r.localContext || localNome
+        this.apiGenres = genres.filter(g =>
+          g &&
+          g.id !== 0 &&
+          g.name &&
+          g.name.toLowerCase() !== 'all'
+        )
+      } catch (err) {
+        this.apiGenres = []
       }
-    }
-    if (r.type === 'artist') {
+    },
+
+    normalizeLocalGenre(g) {
       return {
-        id: r.id,
-        name: r.name,
-        picture: r.picture || r.picture_medium,
-        picture_medium: r.picture_medium,
-        nb_fan: r.nb_fan || 0,
-        type: 'artist',
-        source: r.source,
-        localContext: r.localContext || localNome
+        id: `local-${g._id}`,
+        nome: g.nome,
+        descricao: g.descricao || 'Gênero musical',
+        foto: g.foto || '',
+        categoria: g.categoria || this.detectGenreCategory(g.nome),
+        source: 'local',
+        musicasCount: g.musicas?.length || 0,
+        albunsCount: g.albuns?.length || 0,
+        cantoresCount: g.cantores?.length || 0
       }
-    }
-    if (r.type === 'album') {
+    },
+
+    normalizeApiGenre(g) {
       return {
-        id: r.id,
-        title: r.title,
-        artist: { name: r.artist?.name || 'Artista' },
-        cover: r.cover || r.cover_medium,
-        cover_medium: r.cover_medium,
-        type: 'album',
-        source: r.source,
-        localContext: r.localContext || localNome
+        id: `deezer-${g.id}`,
+        nome: g.name,
+        descricao: 'Gênero da API',
+        foto: g.picture_medium || g.picture || g.picture_big || '',
+        categoria: this.detectGenreCategory(g.name),
+        source: 'deezer',
+        musicasCount: 0,
+        albunsCount: 0,
+        cantoresCount: 0
       }
-    }
-    return r
-  })
- 
- this.chartTracks = tracks
-      this.searchResults = allItems   // ← ADICIONAR
-      this.hasSearched = true         // ← GARANTIR
-     
-    } else {
-      this.chartTracks = []
-      this.searchResults = []         // ← ADICIONAR
-      this.showToast(`Nenhum resultado encontrado para ${localNome}`, 'info')
-    }
-   
-  } catch (err) {
-    console.error('Erro ao carregar músicas do local:', err)
-    this.chartTracks = []
-    this.searchResults = []           // ← ADICIONAR
-    this.showToast('Erro ao buscar músicas do local', 'error')
-  } finally {
-    this.isLoading = false            // ← ADICIONAR/MOVER para cá
-  }
-},
+    },
 
+    async loadLocalMusicas(localNome) {
+      try {
+        this.isLoading = true
+        this.hasSearched = true
+       
+        const res = await fetch(`http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`)
+        const data = await res.json()
+       
+        if (data.results && Array.isArray(data.results)) {
+          const allItems = data.results.map(r => {
+            if (r.type === 'track') {
+              return {
+                id: r.id,
+                title: r.title,
+                artist: { name: r.artist?.name || 'Artista desconhecido' },
+                album: {
+                  title: r.album?.title || '',
+                  cover: r.album?.cover_medium || r.cover || ''
+                },
+                cover: r.cover || r.album?.cover_medium,
+                preview: r.preview,
+                duration: r.duration,
+                type: 'track',
+                source: r.source,
+                localContext: r.localContext || localNome
+              }
+            }
+            if (r.type === 'artist') {
+              return {
+                id: r.id,
+                name: r.name,
+                picture: r.picture || r.picture_medium,
+                picture_medium: r.picture_medium,
+                nb_fan: r.nb_fan || 0,
+                type: 'artist',
+                source: r.source,
+                localContext: r.localContext || localNome
+              }
+            }
+            if (r.type === 'album') {
+              return {
+                id: r.id,
+                title: r.title,
+                artist: { name: r.artist?.name || 'Artista' },
+                cover: r.cover || r.cover_medium,
+                cover_medium: r.cover_medium,
+                type: 'album',
+                source: r.source,
+                localContext: r.localContext || localNome
+              }
+            }
+            return r
+          })
+         
+          this.chartTracks = allItems
+            .filter(r => r.type === 'track')
+            .map(t => ({
+              id: t.id,
+              title: t.title,
+              artist: t.artist,
+              album: t.album,
+              preview: t.preview,
+              duration: t.duration,
+              source: t.source
+            }))
+         
+          this.searchResults = allItems
+          this.hasSearched = true
+         
+        } else {
+          this.chartTracks = []
+          this.searchResults = []
+          this.showToast(`Nenhum resultado encontrado para ${localNome}`, 'info')
+        }
+       
+      } catch (err) {
+        this.chartTracks = []
+        this.searchResults = []
+        this.showToast('Erro ao buscar músicas do local', 'error')
+      } finally {
+        this.isLoading = false
+      }
+    },
 
-detectGenreCategory(name = '') {
-  const value = String(name).toLowerCase().trim()
+    detectGenreCategory(name = '') {
+      const value = String(name).toLowerCase().trim()
 
-  if (
-    ['house', 'techno', 'trance', 'edm', 'dubstep', 'drum & bass', 'electro', 'dance', 'electronic']
-      .some(term => value.includes(term))
-  ) return 'electronic'
+      if (
+        ['house', 'techno', 'trance', 'edm', 'dubstep', 'drum & bass', 'electro', 'dance', 'electronic']
+          .some(term => value.includes(term))
+      ) return 'electronic'
 
-  if (
-    ['sertanejo', 'funk', 'mpb', 'gospel', 'forró', 'forro', 'pagode', 'samba', 'bossa', 'arrocha', 'piseiro']
-      .some(term => value.includes(term))
-  ) return 'regional'
+      if (
+        ['sertanejo', 'funk', 'mpb', 'gospel', 'forró', 'forro', 'pagode', 'samba', 'bossa', 'arrocha', 'piseiro']
+          .some(term => value.includes(term))
+      ) return 'regional'
 
-  if (
-    ['rock', 'metal', 'punk', 'grunge', 'alternative']
-      .some(term => value.includes(term))
-  ) return 'rock'
+      if (
+        ['rock', 'metal', 'punk', 'grunge', 'alternative']
+          .some(term => value.includes(term))
+      ) return 'rock'
 
-  if (
-    ['hip hop', 'hip-hop', 'rap', 'trap', 'r&b']
-      .some(term => value.includes(term))
-  ) return 'hiphop'
+      if (
+        ['hip hop', 'hip-hop', 'rap', 'trap', 'r&b']
+          .some(term => value.includes(term))
+      ) return 'hiphop'
 
-  if (
-    ['jazz', 'blues', 'soul']
-      .some(term => value.includes(term))
-  ) return 'jazz'
+      if (
+        ['jazz', 'blues', 'soul']
+          .some(term => value.includes(term))
+      ) return 'jazz'
 
-  if (
-    ['classical', 'clássico', 'classico', 'opera', 'orquestra', 'instrumental']
-      .some(term => value.includes(term))
-  ) return 'classical'
+      if (
+        ['classical', 'clássico', 'classico', 'opera', 'orquestra', 'instrumental']
+          .some(term => value.includes(term))
+      ) return 'classical'
 
-  if (
-    ['pop']
-      .some(term => value.includes(term))
-  ) return 'pop'
+      if (
+        ['pop']
+          .some(term => value.includes(term))
+      ) return 'pop'
 
-  if (
-    ['pop', 'rock', 'hip hop', 'rap', 'funk', 'sertanejo', 'dance', 'electronic']
-      .some(term => value.includes(term))
-  ) return 'popular'
+      if (
+        ['pop', 'rock', 'hip hop', 'rap', 'funk', 'sertanejo', 'dance', 'electronic']
+          .some(term => value.includes(term))
+      ) return 'popular'
 
-  return 'outros'
-},
-async loadLocalizacoes() {
-  try {
-    const res = await fetch('http://localhost:3002/locais')
-    const data = await res.json()
-    if (data.locais && Array.isArray(data.locais)) {
-      this.localizacoes = data.locais.map(l => l.nome)
-    }
-  } catch (err) {
-    console.error('Erro ao carregar localizações:', err)
-  }
-},
-    // ===== NOVO: Filtrar por tipo para seções separadas =====
+      return 'outros'
+    },
+
+    async loadLocalizacoes() {
+      try {
+        const res = await fetch('http://localhost:3002/locais')
+        const data = await res.json()
+        if (data.locais && Array.isArray(data.locais)) {
+          this.localizacoes = data.locais.map(l => l.nome)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar localizações:', err)
+      }
+    },
+
     getFilteredByType(type) {
       if (this.activeFilter === 'Todos') {
         return this.filteredResults.filter(r => r.type === type)
@@ -1547,7 +1816,8 @@ async loadLocalizacoes() {
       }
       return icons[source] || 'fa fa-music'
     },
-        getCategoryEmoji(category) {
+
+    getCategoryEmoji(category) {
       if (category === 'Brasil') return '🇧🇷'
       if (this.localizacoes.includes(category)) return '📍'
       return '🎵'
@@ -1567,8 +1837,6 @@ async loadLocalizacoes() {
       this.recentCategories = JSON.parse(localStorage.getItem('soundup_recent_categories') || '[]')
     },
 
-    // ===== SISTEMA DE CURTIDAS =====
-   
     async loadLikedTracks() {
       try {
         const token = localStorage.getItem("token")
@@ -1578,16 +1846,13 @@ async loadLocalizacoes() {
         }
 
         const res = await fetch(`http://localhost:3002/curtidas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
 
         const data = await res.json()
         this.likedTracks = data.map(c => String(c.id)).filter(Boolean)
 
       } catch (err) {
-        console.error("Erro ao carregar curtidas:", err)
         this.likedTracks = []
       }
     },
@@ -1608,9 +1873,7 @@ async loadLocalizacoes() {
         if (!token) return
 
         const res = await fetch("http://localhost:3002/historico", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
 
         const data = await res.json()
@@ -1621,7 +1884,7 @@ async loadLocalizacoes() {
         }
 
       } catch (err) {
-        console.error("Erro ao carregar histórico:", err)
+        this.searchHistory = []
       }
     },
 
@@ -1642,7 +1905,6 @@ async loadLocalizacoes() {
         this.searchHistory = this.searchHistory.filter(h => h !== item)
        
       } catch (err) {
-        console.error("Erro ao remover item do histórico:", err)
         this.searchHistory = this.searchHistory.filter(h => h !== item)
       }
     },
@@ -1666,9 +1928,7 @@ async loadLocalizacoes() {
         }
 
         const res = await fetch(`http://localhost:3002/favoritas`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
 
         const data = await res.json()
@@ -1700,7 +1960,6 @@ async loadLocalizacoes() {
           .filter(Boolean)
 
       } catch (err) {
-        console.error("Erro ao carregar favoritas:", err)
         this.favoriteAlbums = []
         this.favoriteArtists = []
       }
@@ -1723,7 +1982,6 @@ async loadLocalizacoes() {
         }
 
       } catch (err) {
-        console.error("Erro ao carregar gêneros:", err)
         this.generosDB = []
       }
     },
@@ -1750,7 +2008,7 @@ async loadLocalizacoes() {
     getDecadeColor(decadeOrYear) {
       if (!decadeOrYear) return '#1db954'
 
-      if (/^\\d{4}$/.test(String(decadeOrYear))) {
+      if (/^\d{4}$/.test(String(decadeOrYear))) {
         const decade = this.getDecadeFromYear(decadeOrYear)
         return this.decadeColors[decade] || '#1db954'
       }
@@ -1786,132 +2044,124 @@ async loadLocalizacoes() {
       return this.favoriteArtists.some(id => String(id) === String(artistId))
     },
 
-// ========== MÉTODO: toggleFavoriteItem ==========
-// SUBSTITUA o método completo (aprox. linha 850) por:
-
-async toggleFavoriteItem(item) {
-  if (!this.isLogged) {
-    this.openLoginModal()
-    return
-  }
-
-  try {
-    const token = localStorage.getItem("token")
-    const itemId = item.id
-
-    // Determina o tipo baseado no item.type
-    let tipo = ''
-    if (item.type === 'album') tipo = 'album'
-    else if (item.type === 'artist') tipo = 'cantor'
-    else {
-      this.showToast("Tipo de item não suportado", "error")
-      return
-    }
-
-    // Determina se é externo (Spotify) ou local
-    const source = item.source || 'local'
-    const isExternal = source !== 'local'
-
-    // Monta o body base
-    const body = {
-      tipo: tipo,
-      source: source,
-      tipoItem: tipo
-    }
-
-    // Se for externo (Spotify), adiciona os dados do item
-    if (isExternal) {
-      body.dadosItem = {
-        titulo: item.title || item.name || 'Sem título',
-        artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
-        capa: this.getBestImage(item) || '',
-        previewUrl: item.preview || '',
-        duration: item.duration || 0,
-        ano: item.ano || null,
-        album: item.album?.title || ''
+    async toggleFavoriteItem(item) {
+      if (!this.isLogged) {
+        this.openLoginModal()
+        return
       }
-    }
 
-    const url = `http://localhost:3002/favoritas/${String(itemId)}/favoritar`
+      try {
+        const token = localStorage.getItem("token")
+        const itemId = item.id
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    })
-
-    const contentType = res.headers.get('content-type')
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await res.text()
-      console.error('Resposta não-JSON do servidor:', text.substring(0, 200))
-      throw new Error(`Erro ${res.status}: ${res.statusText}`)
-    }
-
-    const data = await res.json()
-
-    // Verifica se houve erro do backend (ex: Deezer bloqueado)
-    if (data.error) {
-      this.showToast(data.message || data.error, "error")
-      return
-    }
-
-    if (item.type === 'album') {
-      if (data.favorited) {
-        if (!this.favoriteAlbums.includes(String(itemId))) {
-          this.favoriteAlbums.push(String(itemId))
+        let tipo = ''
+        if (item.type === 'album') tipo = 'album'
+        else if (item.type === 'artist') tipo = 'cantor'
+        else {
+          this.showToast("Tipo de item não suportado", "error")
+          return
         }
-        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-      } else {
-        this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
-        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
-      }
-    }
 
-    if (item.type === 'artist') {
-      if (data.favorited) {
-        if (!this.favoriteArtists.includes(String(itemId))) {
-          this.favoriteArtists.push(String(itemId))
+        const source = item.source || 'local'
+        const isExternal = source !== 'local'
+
+        const body = {
+          tipo: tipo,
+          source: source,
+          tipoItem: tipo
         }
-        this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
-      } else {
-        this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
-        this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+
+        if (isExternal) {
+          body.dadosItem = {
+            titulo: item.title || item.name || 'Sem título',
+            artista: item.artist?.name || item.subtitle || 'Artista Desconhecido',
+            capa: this.getBestImage(item) || '',
+            previewUrl: item.preview || '',
+            duration: item.duration || 0,
+            ano: item.ano || null,
+            album: item.album?.title || ''
+          }
+        }
+
+        const url = `http://localhost:3002/favoritas/${String(itemId)}/favoritar`
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        const contentType = res.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await res.text()
+          throw new Error(`Erro ${res.status}: ${res.statusText}`)
+        }
+
+        const data = await res.json()
+
+        if (data.error) {
+          this.showToast(data.message || data.error, "error")
+          return
+        }
+
+        if (item.type === 'album') {
+          if (data.favorited) {
+            if (!this.favoriteAlbums.includes(String(itemId))) {
+              this.favoriteAlbums.push(String(itemId))
+            }
+            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+          } else {
+            this.favoriteAlbums = this.favoriteAlbums.filter(id => String(id) !== String(itemId))
+            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+          }
+        }
+
+        if (item.type === 'artist') {
+          if (data.favorited) {
+            if (!this.favoriteArtists.includes(String(itemId))) {
+              this.favoriteArtists.push(String(itemId))
+            }
+            this.showToast(`"${this.getResultTitle(item)}" adicionado aos favoritos ⭐`, "success")
+          } else {
+            this.favoriteArtists = this.favoriteArtists.filter(id => String(id) !== String(itemId))
+            this.showToast(`"${this.getResultTitle(item)}" removido dos favoritos`, "info")
+          }
+        }
+
+        window.dispatchEvent(new Event('favoritas-updated'))
+
+      } catch (err) {
+        this.showToast("Erro ao favoritar item", "error")
       }
-    }
+    },
 
-    window.dispatchEvent(new Event('favoritas-updated'))
+    // ===== ATUALIZADO: handleResultClick com redirecionamento para local =====
+    handleResultClick(result) {
+      if (result.type === 'track') {
+        return this.playTrack(result)
+      }
 
-  } catch (err) {
-    console.error("Erro ao favoritar item:", err)
-    this.showToast("Erro ao favoritar item", "error")
-  }
-},
+      if (result.type === 'album' && result.source === 'local') {
+        return this.$router.push(`/album/${result.id}`)
+      }
 
- handleResultClick(result) {
-  if (result.type === 'track') {
-    return this.playTrack(result)
-  }
+      if (result.type === 'artist' && result.source === 'local') {
+        return this.$router.push(`/cantor/${result.id}`)
+      }
 
-  if (result.type === 'album' && result.source === 'local') {
-    return this.$router.push(`/album/${result.id}`)
-  }
-
-  if (result.type === 'artist' && result.source === 'local') {
-    return this.$router.push(`/cantor/${result.id}`)
-  }
-
-  if (result.type === 'user') {
-    return this.goToUserProfile(result)
-  }
- 
-if (result.type === 'local') {
-  this.searchAndGo(result.name)   // ← USAR searchAndGo em vez de lógica manual
-  return
-}
-},
+      if (result.type === 'user') {
+        return this.goToUserProfile(result)
+      }
+     
+      // ✅ LOCAL: vai pra playlist do local
+      if (result.type === 'local') {
+        this.goToLocalPlaylist(result.name)
+        return
+      }
+    },
 
     goToUserProfile(user) {
       if (!user) return
@@ -1940,76 +2190,70 @@ if (result.type === 'local') {
       return this.likedTracks.some(id => String(id) === String(trackId))
     },
    
-async toggleLikeTrack(track) {
-  if (!this.isLogged) {
-    this.openLoginModal()
-    return
-  }
-
-  // Bloqueia curtir músicas do Deezer
-  if (track.source === 'deezer') {
-    this.showToast('Faça login com Spotify para curtir', 'info')
-    return
-  }
-
-  try {
-    const trackId = track.id
-    const source = track.source || 'local'
-    const isExternal = source !== 'local'
-
-    const body = {
-      source: source
-    }
-
-    // Se for externo (Spotify), adiciona os dados da música
-    if (isExternal) {
-      body.dadosMusica = {
-        titulo: track.title || 'Sem título',
-        artista: track.artist?.name || 'Desconhecido',
-        capa: this.getBestImage(track) || '',
-        previewUrl: track.preview || '',
-        duration: track.duration || 30,
-        ano: track.ano || null,
-        album: track.album?.title || ''
+    async toggleLikeTrack(track) {
+      if (!this.isLogged) {
+        this.openLoginModal()
+        return
       }
-    }
 
-    const res = await fetch(
-      `http://localhost:3002/curtidas/${trackId}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
+      if (track.source === 'deezer') {
+        this.showToast('Faça login com Spotify para curtir', 'info')
+        return
       }
-    )
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      console.error('Erro da API:', errorData)
-      this.showToast(errorData.error || errorData.message || `Erro ${res.status}`, "error")
-      return
-    }
+      try {
+        const trackId = track.id
+        const source = track.source || 'local'
+        const isExternal = source !== 'local'
 
-    const data = await res.json()
+        const body = { source: source }
 
-    if (data.liked) {
-      if (!this.likedTracks.includes(String(trackId))) {
-        this.likedTracks.push(String(trackId))
+        if (isExternal) {
+          body.dadosMusica = {
+            titulo: track.title || 'Sem título',
+            artista: track.artist?.name || 'Desconhecido',
+            capa: this.getBestImage(track) || '',
+            previewUrl: track.preview || '',
+            duration: track.duration || 30,
+            ano: track.ano || null,
+            album: track.album?.title || ''
+          }
+        }
+
+        const res = await fetch(
+          `http://localhost:3002/curtidas/${trackId}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          }
+        )
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          this.showToast(errorData.error || errorData.message || `Erro ${res.status}`, "error")
+          return
+        }
+
+        const data = await res.json()
+
+        if (data.liked) {
+          if (!this.likedTracks.includes(String(trackId))) {
+            this.likedTracks.push(String(trackId))
+          }
+          this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
+        } else {
+          this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
+          this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
+        }
+
+      } catch (err) {
+        this.showToast("Erro ao processar curtida", "error")
       }
-      this.showToast(`"${this.getResultTitle(track)}" curtida ❤️`, "success")
-    } else {
-      this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
-      this.showToast(`"${this.getResultTitle(track)}" descurtida 💔`, "info")
-    }
-
-  } catch (err) {
-    console.error("Erro ao curtir música:", err)
-    this.showToast("Erro ao processar curtida", "error")
-  }
-},
+    },
    
     formatDuration(seconds) {
       if (!seconds) return "3:00"
@@ -2018,7 +2262,6 @@ async toggleLikeTrack(track) {
       return `${mins}:${secs.toString().padStart(2, '0')}`
     },
 
-    // API Methods
     async loadInitialData(category = 'Brasil') {
       await Promise.all([
         this.loadTopTracksByCategory(category),
@@ -2026,87 +2269,69 @@ async toggleLikeTrack(track) {
       ])
     },
 
-// Search.vue - método loadTopTracksByCategory
-async loadTopTracksByCategory(category = 'Brasil') {
-  try {
-    this.currentTopCategory = category || 'Brasil'
+    async loadTopTracksByCategory(category = 'Brasil') {
+      try {
+        this.currentTopCategory = category || 'Brasil'
 
-    if (this.isLogged) {
-      // ============================================
-      // COM LOGIN: tenta Spotify COM token
-      // ============================================
-      const token = localStorage.getItem('token')
-      
-      const res = await fetch(
-        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+        if (this.isLogged && this.spotifyConnected) {
+          const token = localStorage.getItem('token')
+         
+          const res = await fetch(
+            `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
+            {
+              headers: { Authorization: `Bearer ${token}` }
+            }
+          )
+
+          if (res.ok) {
+            const data = await res.json()
+            this.chartTracks = data.tracks?.items?.map(t => ({
+              id: t.id,
+              title: t.name,
+              artist: { name: t.artists.map(a => a.name).join(', ') },
+              album: { cover_medium: t.album.images?.[0]?.url },
+              preview: t.preview_url,
+              _fullTrack: true,
+              source: 'spotify_full'
+            })) || []
+            return
           }
         }
-      )
 
-      // 🔥 MUDANÇA AQUI: Se 401, token expirou → trata como não logado
-      if (res.status === 401) {
-        console.log('⚠️ Token expirado, usando Deezer como fallback')
-        this.isLogged = false  // Atualiza estado local
-        // NÃO dá throw! Continua para o fallback Deezer abaixo
-      } else if (!res.ok) {
-        throw new Error(`Erro ${res.status}`)
-      } else {
-        const data = await res.json()
-        
-        this.chartTracks = data.tracks?.items?.map(t => ({
-          id: t.id,
-          title: t.name,
-          artist: { name: t.artists.map(a => a.name).join(', ') },
-          album: { cover_medium: t.album.images?.[0]?.url },
-          preview: t.preview_url,
-          source: 'spotify'
-        })) || []
-        
-        return  // Sucesso! Sai da função
+        if (category === 'Brasil') {
+          const res = await fetch(
+            `http://localhost:3002/deezer/chart/0/tracks?limit=10`
+          )
+          const data = await res.json()
+
+          this.chartTracks = data.data?.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: { name: t.artist.name },
+            album: { cover_medium: t.album.cover_medium },
+            preview: t.preview,
+            source: 'deezer'
+          })) || []
+        } else {
+          const res = await fetch(
+            `http://localhost:3002/deezer/search?q=${encodeURIComponent(category)}&limit=10`
+          )
+          const data = await res.json()
+
+          this.chartTracks = data.data?.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: { name: t.artist.name },
+            album: { cover_medium: t.album.cover_medium },
+            preview: t.preview,
+            source: 'deezer'
+          })) || []
+        }
+
+      } catch (error) {
+        this.chartTracks = []
       }
-    }
-
-    // ============================================
-    // SEM LOGIN ou token inválido: Deezer (público)
-    // ============================================
-    if (category === 'Brasil') {
-      const res = await fetch(
-        `http://localhost:3002/deezer/chart/0/tracks?limit=10`
-      )
-      const data = await res.json()
-
-      this.chartTracks = data.data?.map(t => ({
-        id: t.id,
-        title: t.title,
-        artist: { name: t.artist.name },
-        album: { cover_medium: t.album.cover_medium },
-        preview: t.preview,
-        source: 'deezer'
-      })) || []
-    } else {
-      const res = await fetch(
-        `http://localhost:3002/deezer/search?q=${encodeURIComponent(category)}&limit=10`
-      )
-      const data = await res.json()
-
-      this.chartTracks = data.data?.map(t => ({
-        id: t.id,
-        title: t.title,
-        artist: { name: t.artist.name },
-        album: { cover_medium: t.album.cover_medium },
-        preview: t.preview,
-        source: 'deezer'
-      })) || []
-    }
-
-  } catch (error) {
-    console.error('Erro ao carregar top da categoria:', error)
-    this.chartTracks = []
-  }
-},
+    },
 
     async loadPopularArtists() {
       try {
@@ -2122,503 +2347,459 @@ async loadTopTracksByCategory(category = 'Brasil') {
         }))
 
       } catch (error) {
-        console.error('Erro ao carregar artistas do banco:', error)
+        this.popularArtistsReal = []
       }
     },
    
-   async searchAll(query) {
-    this.isLoading = true
+    async searchAll(query) {
+      this.isLoading = true
 
-    try {
-      if (this.isLogged) {
-        // ============================================
-        // COM LOGIN: Busca SPOTIFY + Banco Local
-        // ============================================
-        await this.searchSpotifyAndLocal(query)
-      } else {
-        // ============================================
-        // SEM LOGIN: Busca DEEZER + Banco Local
-        // ============================================
-        await this.searchDeezerAndLocal(query)
-      }
-    } catch (err) {
-      console.error(err)
-      this.searchResults = []
-    } finally {
-      this.isLoading = false
-    }
-  },
-
-   async searchSpotifyAndLocal(query) {
-    this.isLoading = true
-    try {
-      const token = localStorage.getItem('token')
-      
-      // Spotify (autenticado)
-      const spotifyRes = await fetch(
-        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album&limit=20&market=BR`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      ).then(r => r.json())
-
-      // Banco local (público)
-      const [localMusicas, localCantores, localAlbuns, localGeneros, localUsuarios] = await Promise.all([
-        fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-        fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`).then(r => r.json())
-      ])
-
-      let results = []
-
-      // SPOTIFY - MÚSICAS
-      if (spotifyRes.tracks?.items) {
-        results.push(...spotifyRes.tracks.items.map(t => ({
-          id: t.id,
-          title: t.name,
-          artist: { name: t.artists.map(a => a.name).join(', ') },
-          album: {
-            title: t.album?.name,
-            cover: t.album?.images?.[0]?.url,
-            cover_medium: t.album?.images?.[0]?.url
-          },
-          cover: t.album?.images?.[0]?.url,
-          preview: t.preview_url,
-          duration: Math.round(t.duration_ms / 1000),
-          type: 'track',
-          source: 'spotify',
-          ano: parseInt(t.album?.release_date?.substring(0, 4)) || null
-        })))
-      }
-
-      // SPOTIFY - ARTISTAS
-      if (spotifyRes.artists?.items) {
-        results.push(...spotifyRes.artists.items.map(a => ({
-          id: a.id,
-          name: a.name,
-          picture: a.images?.[0]?.url,
-          picture_medium: a.images?.[0]?.url,
-          picture_big: a.images?.[0]?.url,
-          nb_fan: a.followers?.total || 0,
-          type: 'artist',
-          source: 'spotify'
-        })))
-      }
-
-      // SPOTIFY - ÁLBUNS
-      if (spotifyRes.albums?.items) {
-        results.push(...spotifyRes.albums.items.map(al => ({
-          id: al.id,
-          title: al.name,
-          artist: { name: al.artists.map(a => a.name).join(', ') },
-          cover: al.images?.[0]?.url,
-          cover_medium: al.images?.[0]?.url,
-          cover_big: al.images?.[1]?.url,
-          type: 'album',
-          source: 'spotify',
-          ano: parseInt(al.release_date?.substring(0, 4)) || null
-        })))
-      }
-
-       const matchedApiGenres = (this.apiGenres || []).filter(g =>
-      g.name?.toLowerCase().includes(query.toLowerCase())
-    )
-   
-    if (matchedApiGenres.length > 0) {
-      results.push(...matchedApiGenres.map(g => ({
-        id: `deezer-genre-${g.id}`,
-        name: g.name,
-        description: 'Gênero da API',
-        picture: g.picture_medium || g.picture || g.picture_big || '',
-        picture_medium: g.picture_medium || g.picture || g.picture_big || '',
-        type: 'genre',
-        source: 'deezer'
-      })))
-    }
-
-const matchedLocais = this.localizacoes.filter(loc =>
-      loc.toLowerCase().includes(query.toLowerCase())
-    )
-
-    // Para CADA local encontrado, busca as músicas/artistas/álbuns reais
-    for (const localNome of matchedLocais) {
       try {
-        const localRes = await fetch(
-          `http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`
-        ).then(r => r.json())
-       
-        if (localRes.results && Array.isArray(localRes.results) && localRes.results.length > 0) {
-          // Adiciona os resultados reais (tracks, artists, albums) com contexto do local
-          results.push(...localRes.results.map(r => {
-            if (r.type === 'track') {
-              return {
-                id: r.id,
-                title: r.title,
-                artist: { name: r.artist?.name || 'Artista desconhecido' },
-                album: {
-                  title: r.album?.title || '',
-                  cover: r.album?.cover_medium || r.cover || ''
-                },
-                cover: r.cover || r.album?.cover_medium,
-                preview: r.preview,
-                duration: r.duration,
-                type: 'track',
-                source: r.source,
-                localContext: r.localContext || localNome
-              }
-            }
-            if (r.type === 'artist') {
-              return {
-                id: r.id,
-                name: r.name,
-                picture: r.picture || r.picture_medium,
-                picture_medium: r.picture_medium,
-                nb_fan: r.nb_fan || 0,
-                type: 'artist',
-                source: r.source,
-                localContext: r.localContext || localNome
-              }
-            }
-            if (r.type === 'album') {
-              return {
-                id: r.id,
-                title: r.title,
-                artist: { name: r.artist?.name || 'Artista' },
-                cover: r.cover || r.cover_medium,
-                cover_medium: r.cover_medium,
-                type: 'album',
-                source: r.source,
-                localContext: r.localContext || localNome
-              }
-            }
-            return r
-          }))
-
-          // Adiciona também um card do próprio local para aparecer na seção "Locais"
-          results.push({
-            id: `local-${localNome}`,
-            name: localNome,
-            description: `Música de ${localNome}`,
-            type: 'local',
-            source: 'local',
-            gradient: this.getLocalGradient(localNome),
-            resultCount: localRes.total || localRes.results.length
-          })
+        if (this.isLogged) {
+          await this.searchSpotifyAndLocal(query)
         } else {
-          // Local encontrado mas sem resultados da API - mostra card do local mesmo assim
-          results.push({
-            id: `local-${localNome}`,
-            name: localNome,
-            description: `Música de ${localNome}`,
-            type: 'local',
-            source: 'local',
-            gradient: this.getLocalGradient(localNome),
-            resultCount: 0
-          })
+          await this.searchDeezerAndLocal(query)
         }
       } catch (err) {
-        console.warn(`Erro ao buscar músicas de ${localNome}:`, err)
-        // Mesmo com erro, adiciona o card do local
-        results.push({
-          id: `local-${localNome}`,
-          name: localNome,
-          description: `Música de ${localNome}`,
-          type: 'local',
-          source: 'local',
-          gradient: this.getLocalGradient(localNome),
-          resultCount: 0
-        })
+        this.searchResults = []
+      } finally {
+        this.isLoading = false
       }
-    }
+    },
 
-      this.searchResults = results
-
-    } catch (err) {
-      console.error('Erro na busca Spotify:', err)
-      this.searchResults = []
-    } finally {
-      this.isLoading = false
-    }
-  },
-
-async searchDeezerAndLocal(query) {
-  this.isLoading = true
-
-  try {
-    const [
-      localMusicas,
-      localCantores,
-      localAlbuns,
-      localGeneros,
-      localUsuarios
-    ] = await Promise.all([
-      fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
-      fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`)
-        .then(async r => r.ok ? r.json() : []).catch(() => [])
-    ])
-
-    // Busca Deezer (pública)
-    const deezerRes = await fetch(
-      `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
-    ).then(r => r.json())
-
-    let results = []
-
-    // DEEZER - MÚSICAS
-    if (deezerRes.data) {
-      results.push(...deezerRes.data.map(t => ({
-        id: t.id,
-        title: t.title,
-        artist: { name: t.artist?.name },
-        album: {
-          title: t.album?.title,
-          cover: t.album?.cover_medium
-        },
-        cover: t.album?.cover_medium,
-        preview: t.preview,
-        duration: t.duration,
-        type: 'track',
-        source: 'deezer'
-      })))
-    }
-
-    // DEEZER - ARTISTAS
-    if (deezerRes.data) {
-      const deezerArtists = deezerRes.data
-        .map(t => t.artist)
-        .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
-     
-      results.push(...deezerArtists.map(a => ({
-        id: a.id,
-        name: a.name,
-        picture: a.picture_medium,
-        picture_medium: a.picture_medium,
-        picture_big: a.picture_big,
-        nb_fan: a.nb_fan || 0,
-        type: 'artist',
-        source: 'deezer'
-      })))
-    }
-
-    // DEEZER - ÁLBUNS
-    if (deezerRes.data) {
-      const deezerAlbums = deezerRes.data
-        .map(t => t.album)
-        .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
-     
-      results.push(...deezerAlbums.map(a => ({
-        id: a.id,
-        title: a.title,
-        artist: { name: 'Artista' },
-        cover: a.cover_medium,
-        cover_medium: a.cover_medium,
-        cover_big: a.cover_big,
-        type: 'album',
-        source: 'deezer'
-      })))
-    }
-
-    // GÊNEROS API (Deezer)
-    const matchedApiGenres = (this.apiGenres || []).filter(g =>
-      g.name?.toLowerCase().includes(query.toLowerCase())
-    )
-   
-    if (matchedApiGenres.length > 0) {
-      results.push(...matchedApiGenres.map(g => ({
-        id: `deezer-genre-${g.id}`,
-        name: g.name,
-        description: 'Gênero da API',
-        picture: g.picture_medium || g.picture || g.picture_big || '',
-        picture_medium: g.picture_medium || g.picture || g.picture_big || '',
-        type: 'genre',
-        source: 'deezer'
-      })))
-    }
-
-    // LOCAIS - busca por localizações que correspondem à query
-    const matchedLocais = this.localizacoes.filter(loc =>
-      loc.toLowerCase().includes(query.toLowerCase())
-    )
-
-    // Para CADA local encontrado, busca as músicas/artistas/álbuns reais
-    for (const localNome of matchedLocais) {
+    async searchSpotifyAndLocal(query) {
+      this.isLoading = true
       try {
-        const localRes = await fetch(
-          `http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`
-        ).then(r => r.json())
+        const token = localStorage.getItem('token')
        
-        if (localRes.results && Array.isArray(localRes.results) && localRes.results.length > 0) {
-          // Adiciona os resultados reais (tracks, artists, albums) com contexto do local
-          results.push(...localRes.results.map(r => {
-            if (r.type === 'track') {
-              return {
-                id: r.id,
-                title: r.title,
-                artist: { name: r.artist?.name || 'Artista desconhecido' },
-                album: {
-                  title: r.album?.title || '',
-                  cover: r.album?.cover_medium || r.cover || ''
-                },
-                cover: r.cover || r.album?.cover_medium,
-                preview: r.preview,
-                duration: r.duration,
-                type: 'track',
-                source: r.source,
-                localContext: r.localContext || localNome
-              }
+        let spotifyRes = { tracks: { items: [] }, artists: { items: [] }, albums: { items: [] } }
+       
+        try {
+          const res = await fetch(
+            `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album&limit=20&market=BR`,
+            {
+              headers: { Authorization: `Bearer ${token}` }
             }
-            if (r.type === 'artist') {
-              return {
-                id: r.id,
-                name: r.name,
-                picture: r.picture || r.picture_medium,
-                picture_medium: r.picture_medium,
-                nb_fan: r.nb_fan || 0,
-                type: 'artist',
-                source: r.source,
-                localContext: r.localContext || localNome
-              }
-            }
-            if (r.type === 'album') {
-              return {
-                id: r.id,
-                title: r.title,
-                artist: { name: r.artist?.name || 'Artista' },
-                cover: r.cover || r.cover_medium,
-                cover_medium: r.cover_medium,
-                type: 'album',
-                source: r.source,
-                localContext: r.localContext || localNome
-              }
-            }
-            return r
-          }))
-
-          // Adiciona também um card do próprio local para aparecer na seção "Locais"
-          results.push({
-            id: `local-${localNome}`,
-            name: localNome,
-            description: `Música de ${localNome}`,
-            type: 'local',
-            source: 'local',
-            gradient: this.getLocalGradient(localNome),
-            resultCount: localRes.total || localRes.results.length
-          })
-        } else {
-          // Local encontrado mas sem resultados da API - mostra card do local mesmo assim
-          results.push({
-            id: `local-${localNome}`,
-            name: localNome,
-            description: `Música de ${localNome}`,
-            type: 'local',
-            source: 'local',
-            gradient: this.getLocalGradient(localNome),
-            resultCount: 0
-          })
-        }
-      } catch (err) {
-        console.warn(`Erro ao buscar músicas de ${localNome}:`, err)
-        // Mesmo com erro, adiciona o card do local
-        results.push({
-          id: `local-${localNome}`,
-          name: localNome,
-          description: `Música de ${localNome}`,
-          type: 'local',
-          source: 'local',
-          gradient: this.getLocalGradient(localNome),
-          resultCount: 0
-        })
-      }
-    }
-
-    // Cards de local apenas para matches parciais (busca não exata)
-    const partialMatchedLocais = this.localizacoes
-      .filter(loc => {
-        const locLower = loc.toLowerCase()
-        const queryLower = query.toLowerCase()
-
-        return (
-          locLower.includes(queryLower) &&
-          locLower !== queryLower
-        )
-      })
-      .map((loc, index) => ({
-        id: `local-${index}`,
-        name: loc,
-        description: `Música de ${loc}`,
-        type: 'local',
-        source: 'local'
-      }))
-
-    if (partialMatchedLocais.length > 0) {
-      results.push(...partialMatchedLocais)
-    }
-
-    // GÊNEROS LOCAIS
-    results.push(
-      ...localGeneros.map(g => ({
-        id: g._id,
-        name: g.nome,
-        description: g.descricao || 'Gênero musical',
-        type: 'genre',
-        source: 'local'
-      }))
-    )
-
-    // GÊNEROS DA API
-    if (matchedApiGenres.length > 0) {
-      const existingGenreNames = new Set(
-        results
-          .filter(item => item.type === 'genre')
-          .map(item => (item.name || '').toLowerCase())
-      )
-
-      results.push(
-        ...matchedApiGenres
-          .filter(g =>
-            !existingGenreNames.has(
-              g.name.toLowerCase()
-            )
           )
-          .map(g => ({
+         
+          if (res.ok) {
+            const contentType = res.headers.get('content-type')
+            if (contentType && contentType.includes('application/json')) {
+              spotifyRes = await res.json()
+            }
+          } else {
+            const errorText = await res.text()
+            console.warn(`[SPOTIFY] Erro ${res.status}:`, errorText.substring(0, 200))
+          }
+        } catch (spotifyErr) {
+          console.warn('[SPOTIFY] Falha na requisição:', spotifyErr.message)
+        }
+
+        // Banco local (público) + usuários (com auth)
+        const [localMusicas, localCantores, localAlbuns, localGeneros, localUsuarios] = await Promise.all([
+          fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          // ✅ BUSCA DE USUÁRIOS COM TOKEN
+          fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          }).then(async r => {
+            if (r.status === 401) return []
+            return r.ok ? r.json() : []
+          }).catch(() => [])
+        ])
+
+        let results = []
+
+        // SPOTIFY - MÚSICAS
+        if (spotifyRes.tracks?.items) {
+          results.push(...spotifyRes.tracks.items.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: { name: t.artists.map(a => a.name).join(', ') },
+            album: {
+              title: t.album?.name,
+              cover: t.album?.images?.[0]?.url,
+              cover_medium: t.album?.images?.[0]?.url
+            },
+            cover: t.album?.images?.[0]?.url,
+            preview: t.preview_url,
+            duration: Math.round(t.duration_ms / 1000),
+            type: 'track',
+            source: 'spotify',
+            ano: parseInt(t.album?.release_date?.substring(0, 4)) || null,
+            _fullTrack: true
+          })))
+        }
+
+        // SPOTIFY - ARTISTAS
+        if (spotifyRes.artists?.items) {
+          results.push(...spotifyRes.artists.items.map(a => ({
+            id: a.id,
+            name: a.name,
+            picture: a.images?.[0]?.url,
+            picture_medium: a.images?.[0]?.url,
+            picture_big: a.images?.[0]?.url,
+            nb_fan: a.followers?.total || 0,
+            type: 'artist',
+            source: 'spotify'
+          })))
+        }
+
+        // SPOTIFY - ÁLBUNS
+        if (spotifyRes.albums?.items) {
+          results.push(...spotifyRes.albums.items.map(al => ({
+            id: al.id,
+            title: al.name,
+            artist: { name: al.artists.map(a => a.name).join(', ') },
+            cover: al.images?.[0]?.url,
+            cover_medium: al.images?.[0]?.url,
+            cover_big: al.images?.[1]?.url,
+            type: 'album',
+            source: 'spotify',
+            ano: parseInt(al.release_date?.substring(0, 4)) || null
+          })))
+        }
+
+        // ✅ USUÁRIOS DO BANCO
+        if (localUsuarios && Array.isArray(localUsuarios)) {
+          results.push(...localUsuarios.map(u => ({
+            id: u.id || u._id,
+            name: u.nome,
+            username: u.username,
+            picture: u.avatar,
+            avatar: u.avatar,
+            bio: u.bio || '',
+            perfilPrivado: !!u.perfilPrivado,
+            mostrarAtividade: u.mostrarAtividade !== false,
+            type: 'user',
+            source: 'local'
+          })))
+        }
+
+        // GÊNEROS API (Deezer)
+        const matchedApiGenres = (this.apiGenres || []).filter(g =>
+          g.name?.toLowerCase().includes(query.toLowerCase())
+        )
+       
+        if (matchedApiGenres.length > 0) {
+          results.push(...matchedApiGenres.map(g => ({
             id: `deezer-genre-${g.id}`,
             name: g.name,
             description: 'Gênero da API',
-            picture:
-              g.picture_medium ||
-              g.picture ||
-              g.picture_big ||
-              '',
-
-            picture_medium:
-              g.picture_medium ||
-              g.picture ||
-              g.picture_big ||
-              '',
-
+            picture: g.picture_medium || g.picture || g.picture_big || '',
+            picture_medium: g.picture_medium || g.picture || g.picture_big || '',
             type: 'genre',
             source: 'deezer'
+          })))
+        }
+
+        // LOCAIS
+        const matchedLocais = this.localizacoes.filter(loc =>
+          loc.toLowerCase().includes(query.toLowerCase())
+        )
+
+        for (const localNome of matchedLocais) {
+          try {
+            const localRes = await fetch(
+              `http://localhost:3002/locais/${encodeURIComponent(localNome)}/musicas`
+            ).then(r => r.json())
+           
+            if (localRes.results && Array.isArray(localRes.results) && localRes.results.length > 0) {
+              results.push(...localRes.results.map(r => {
+                if (r.type === 'track') {
+                  return {
+                    id: r.id,
+                    title: r.title,
+                    artist: { name: r.artist?.name || 'Artista desconhecido' },
+                    album: {
+                      title: r.album?.title || '',
+                      cover: r.album?.cover_medium || r.cover || ''
+                    },
+                    cover: r.cover || r.album?.cover_medium,
+                    preview: r.preview,
+                    duration: r.duration,
+                    type: 'track',
+                    source: r.source,
+                    localContext: r.localContext || localNome
+                  }
+                }
+                if (r.type === 'artist') {
+                  return {
+                    id: r.id,
+                    name: r.name,
+                    picture: r.picture || r.picture_medium,
+                    picture_medium: r.picture_medium,
+                    nb_fan: r.nb_fan || 0,
+                    type: 'artist',
+                    source: r.source,
+                    localContext: r.localContext || localNome
+                  }
+                }
+                if (r.type === 'album') {
+                  return {
+                    id: r.id,
+                    title: r.title,
+                    artist: { name: r.artist?.name || 'Artista' },
+                    cover: r.cover || r.cover_medium,
+                    cover_medium: r.cover_medium,
+                    type: 'album',
+                    source: r.source,
+                    localContext: r.localContext || localNome
+                  }
+                }
+                return r
+              }))
+
+              results.push({
+                id: `local-${localNome}`,
+                name: localNome,
+                description: `Música de ${localNome}`,
+                type: 'local',
+                source: 'local',
+                gradient: this.getLocalGradient(localNome),
+                resultCount: localRes.total || localRes.results.length
+              })
+            } else {
+              results.push({
+                id: `local-${localNome}`,
+                name: localNome,
+                description: `Música de ${localNome}`,
+                type: 'local',
+                source: 'local',
+                gradient: this.getLocalGradient(localNome),
+                resultCount: 0
+              })
+            }
+          } catch (err) {
+            results.push({
+              id: `local-${localNome}`,
+              name: localNome,
+              description: `Música de ${localNome}`,
+              type: 'local',
+              source: 'local',
+              gradient: this.getLocalGradient(localNome),
+              resultCount: 0
+            })
+          }
+        }
+
+        this.searchResults = results
+
+      } catch (err) {
+        this.searchResults = []
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // ===== ATUALIZADO: searchDeezerAndLocal com usuários e redirecionamento de local =====
+    async searchDeezerAndLocal(query) {
+      this.isLoading = true
+
+      try {
+        const token = localStorage.getItem('token')
+
+        const [
+          localMusicas,
+          localCantores,
+          localAlbuns,
+          localGeneros,
+          localUsuarios
+        ] = await Promise.all([
+          fetch(`http://localhost:3002/musicas/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/cantores/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/albuns/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          fetch(`http://localhost:3002/generos/search?q=${encodeURIComponent(query)}`).then(r => r.json()),
+          // ✅ BUSCA DE USUÁRIOS COM TOKEN
+          fetch(`http://localhost:3002/usuarios/search?q=${encodeURIComponent(query)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+          }).then(async r => {
+            if (r.status === 401) return []
+            return r.ok ? r.json() : []
+          }).catch(() => [])
+        ])
+
+        // ✅ SE FOR LOCAL EXATO: redireciona pra playlist
+        const matchedLocal = this.localizacoes.find(loc =>
+          loc.toLowerCase() === query.toLowerCase()
+        )
+       
+        if (matchedLocal) {
+          this.goToLocalPlaylist(matchedLocal)
+          return
+        }
+
+        // Busca Deezer (pública)
+        const deezerRes = await fetch(
+          `http://localhost:3002/deezer/search?q=${encodeURIComponent(query)}`
+        ).then(r => r.json())
+
+        let results = []
+
+        // DEEZER - MÚSICAS
+        if (deezerRes.data) {
+          results.push(...deezerRes.data.map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: { name: t.artist?.name },
+            album: {
+              title: t.album?.title,
+              cover: t.album?.cover_medium
+            },
+            cover: t.album?.cover_medium,
+            preview: t.preview,
+            duration: t.duration,
+            type: 'track',
+            source: 'deezer'
+          })))
+        }
+
+        // DEEZER - ARTISTAS
+        if (deezerRes.data) {
+          const deezerArtists = deezerRes.data
+            .map(t => t.artist)
+            .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+         
+          results.push(...deezerArtists.map(a => ({
+            id: a.id,
+            name: a.name,
+            picture: a.picture_medium,
+            picture_medium: a.picture_medium,
+            picture_big: a.picture_big,
+            nb_fan: a.nb_fan || 0,
+            type: 'artist',
+            source: 'deezer'
+          })))
+        }
+
+        // DEEZER - ÁLBUNS
+        if (deezerRes.data) {
+          const deezerAlbums = deezerRes.data
+            .map(t => t.album)
+            .filter((a, i, arr) => a && arr.findIndex(x => x.id === a.id) === i)
+         
+          results.push(...deezerAlbums.map(a => ({
+            id: a.id,
+            title: a.title,
+            artist: { name: 'Artista' },
+            cover: a.cover_medium,
+            cover_medium: a.cover_medium,
+            cover_big: a.cover_big,
+            type: 'album',
+            source: 'deezer'
+          })))
+        }
+
+        // ✅ USUÁRIOS DO BANCO
+        if (localUsuarios && Array.isArray(localUsuarios)) {
+          results.push(...localUsuarios.map(u => ({
+            id: u.id || u._id,
+            name: u.nome,
+            username: u.username,
+            picture: u.avatar,
+            avatar: u.avatar,
+            bio: u.bio || '',
+            perfilPrivado: !!u.perfilPrivado,
+            mostrarAtividade: u.mostrarAtividade !== false,
+            type: 'user',
+            source: 'local'
+          })))
+        }
+
+        // GÊNEROS API (Deezer)
+        const matchedApiGenres = (this.apiGenres || []).filter(g =>
+          g.name?.toLowerCase().includes(query.toLowerCase())
+        )
+       
+        if (matchedApiGenres.length > 0) {
+          results.push(...matchedApiGenres.map(g => ({
+            id: `deezer-genre-${g.id}`,
+            name: g.name,
+            description: 'Gênero da API',
+            picture: g.picture_medium || g.picture || g.picture_big || '',
+            picture_medium: g.picture_medium || g.picture || g.picture_big || '',
+            type: 'genre',
+            source: 'deezer'
+          })))
+        }
+
+        // LOCAIS — matches parciais (mostra cards)
+        const partialMatchedLocais = this.localizacoes
+          .filter(loc => {
+            const locLower = loc.toLowerCase()
+            const queryLower = query.toLowerCase()
+            return locLower.includes(queryLower) && locLower !== queryLower
+          })
+          .map((loc, index) => ({
+            id: `local-${index}`,
+            name: loc,
+            description: `Música de ${loc}`,
+            type: 'local',
+            source: 'local'
           }))
-      )
-    }
 
-    // ← AQUI ESTAVA O ERRO: this.searchResults = results estava FORA do try
-    this.searchResults = results
+        if (partialMatchedLocais.length > 0) {
+          results.push(...partialMatchedLocais)
+        }
 
-  } catch (err) {
-    console.error('Erro na busca Deezer + Local:', err)
-    this.searchResults = []
-  } finally {
-    this.isLoading = false
-  }
-},
+        // GÊNEROS LOCAIS
+        results.push(
+          ...localGeneros.map(g => ({
+            id: g._id,
+            name: g.nome,
+            description: g.descricao || 'Gênero musical',
+            type: 'genre',
+            source: 'local'
+          }))
+        )
+
+        // GÊNEROS DA API
+        if (matchedApiGenres.length > 0) {
+          const existingGenreNames = new Set(
+            results
+              .filter(item => item.type === 'genre')
+              .map(item => (item.name || '').toLowerCase())
+          )
+
+          results.push(
+            ...matchedApiGenres
+              .filter(g =>
+                !existingGenreNames.has(
+                  g.name.toLowerCase()
+                )
+              )
+              .map(g => ({
+                id: `deezer-genre-${g.id}`,
+                name: g.name,
+                description: 'Gênero da API',
+                picture:
+                  g.picture_medium ||
+                  g.picture ||
+                  g.picture_big ||
+                  '',
+
+                picture_medium:
+                  g.picture_medium ||
+                  g.picture ||
+                  g.picture_big ||
+                  '',
+
+                type: 'genre',
+                source: 'deezer'
+              }))
+          )
+        }
+
+        this.searchResults = results
+
+      } catch (err) {
+        this.searchResults = []
+      } finally {
+        this.isLoading = false
+      }
+    },
 
     searchByDecade(decadeName) {
       const range = this.getDecadeRange(decadeName)
@@ -2714,7 +2895,6 @@ async searchDeezerAndLocal(query) {
           }
         })
         .catch(err => {
-          console.error('Erro ao buscar por década:', err)
           this.searchResults = []
           this.showToast('Erro ao buscar resultados da década', 'error')
         })
@@ -2811,7 +2991,6 @@ async searchDeezerAndLocal(query) {
           }
         })
         .catch(err => {
-          console.error('Erro ao buscar por ano:', err)
           this.searchResults = []
           this.showToast('Erro ao buscar resultados do ano', 'error')
         })
@@ -2836,7 +3015,6 @@ async searchDeezerAndLocal(query) {
 
         this.searchResults = results
       } catch (error) {
-        console.error('Erro na busca:', error)
         this.searchResults = []
       } finally {
         this.isLoading = false
@@ -2901,8 +3079,8 @@ async searchDeezerAndLocal(query) {
         return item.description || 'Gênero musical'
       }
       if (item.type === 'local') {
-  return item.description || `Descubra música de ${item.name}`
-}
+        return item.description || `Descubra música de ${item.name}`
+      }
 
       return ''
     },
@@ -2919,35 +3097,34 @@ async searchDeezerAndLocal(query) {
       return typeMap[item.type] || item.type
     },
 
-   getBestImage(item) {
-  // Se for um local sem imagem, retorna vazio (o gradient será usado)
-  if (item.type === 'local') return ''
- 
-  if (item.source === 'deezer') {
-    if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
-    if (item.type === 'artist') return item.picture_medium || item.picture
-    if (item.type === 'album') return item.cover_medium || item.cover
-    return item.picture_medium || item.cover_medium || item.cover || ''
-  }
+    getBestImage(item) {
+      if (item.type === 'local') return ''
+     
+      if (item.source === 'deezer') {
+        if (item.type === 'track') return item.album?.cover_medium || item.cover || item.album?.cover
+        if (item.type === 'artist') return item.picture_medium || item.picture
+        if (item.type === 'album') return item.cover_medium || item.cover
+        return item.picture_medium || item.cover_medium || item.cover || ''
+      }
 
-  if (item.source === 'spotify') {
-    if (item.type === 'track') return item.album?.cover || item.cover
-    if (item.type === 'artist') return item.picture
-    if (item.type === 'album') return item.cover
-    return item.cover || item.picture || ''
-  }
+      if (item.source === 'spotify') {
+        if (item.type === 'track') return item.album?.cover || item.cover
+        if (item.type === 'artist') return item.picture
+        if (item.type === 'album') return item.cover
+        return item.cover || item.picture || ''
+      }
 
-  if (item.source === 'local') {
-    if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
-    if (item.type === 'artist') return item.picture || item.foto || ''
-    if (item.type === 'album') return item.cover || item.foto || ''
-    if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
-    if (item.type === 'genre') return item.foto || '/default-genre.png'
-    return item.foto || item.cover || item.picture || ''
-  }
+      if (item.source === 'local') {
+        if (item.type === 'track') return item.cover || item.album?.cover || item.foto || ''
+        if (item.type === 'artist') return item.picture || item.foto || ''
+        if (item.type === 'album') return item.cover || item.foto || ''
+        if (item.type === 'user') return item.picture || item.avatar || item.foto || '/default-avatar.png'
+        if (item.type === 'genre') return item.foto || '/default-genre.png'
+        return item.foto || item.cover || item.picture || ''
+      }
 
-  return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
-},
+      return item.cover || item.picture || item.foto || item.album?.cover || item.album?.cover_medium || ''
+    },
 
     getIconForType(type) {
       const icons = {
@@ -2972,7 +3149,7 @@ async searchDeezerAndLocal(query) {
       return this.trendGradients[index % this.trendGradients.length]
     },
 
-handleClickOutside(event) {
+    handleClickOutside(event) {
       const categoriesEl = this.$refs.categoriesContainer
       if (categoriesEl && !categoriesEl.contains(event.target)) {
         this.showCategoriesDropdown = false
@@ -2996,7 +3173,7 @@ handleClickOutside(event) {
       this.searchTimeout = setTimeout(() => {
         const query = this.searchQuery.trim()
        
-        if (/^\\d{4}$/.test(query)) {
+        if (/^\d{4}$/.test(query)) {
           const year = parseInt(query)
           if (year >= 1900 && year <= 2100) {
             this.searchByYear(query)
@@ -3043,19 +3220,19 @@ handleClickOutside(event) {
       this.showHistory = false
     },
 
-   async performSearch() {
-    try {
+    async performSearch() {
+      try {
         const query = this.searchQuery.trim()
         if (!query) return
        
         if (/^\d{4}$/.test(query)) {
-            const year = parseInt(query)
-            if (year >= 1900 && year <= 2100) {
-                this.searchByYear(query)
-                await this.saveHistory(query)
-                await this.loadHistory()
-                return
-            }
+          const year = parseInt(query)
+          if (year >= 1900 && year <= 2100) {
+            this.searchByYear(query)
+            await this.saveHistory(query)
+            await this.loadHistory()
+            return
+          }
         }
        
         this.lastSearch = query
@@ -3068,11 +3245,10 @@ handleClickOutside(event) {
         await this.loadHistory()
        
         await this.searchAll(query)
-    } catch (err) {
-        console.error("Erro ao realizar busca:", err)
+      } catch (err) {
         this.showToast("Erro ao realizar busca", "error")
-    }
-  },
+      }
+    },
    
     async saveHistory(termo) {
       try {
@@ -3090,9 +3266,6 @@ handleClickOutside(event) {
       } catch (err) {
         console.error("Erro ao salvar histórico:", err)
       }
-    },
-    toggleGenreDropdown() {
-      this.showGenreDropdown = !this.showGenreDropdown
     },
 
     closeGenreDropdown() {
@@ -3118,8 +3291,7 @@ handleClickOutside(event) {
       this.loadTopTracksByCategory(genre)
     },
 
-
-  getLocalGradient(loc) {
+    getLocalGradient(loc) {
       const colors = [
         'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -3138,29 +3310,30 @@ handleClickOutside(event) {
       return { background: colors[index] }
     },
 
+    // ===== ATUALIZADO: searchAndGo com redirecionamento para local =====
+    async searchAndGo(term) {
+      try {
+        // ✅ SE FOR LOCAL: vai direto pra playlist do local
+        if (this.localizacoes.includes(term)) {
+          this.goToLocalPlaylist(term)
+          return
+        }
 
-async searchAndGo(term) {
-    try {
         this.currentTopCategory = term || 'Brasil'
         this.searchQuery = term
         this.hasSearched = true
         this.showSuggestions = false
         this.isLoading = true
        
-        if (this.localizacoes.includes(term)) {
-            await this.loadLocalMusicas(term)
-            await this.searchAll(term)
-        } else {
-            await this.loadTopTracksByCategory(this.currentTopCategory)
-            await this.searchAll(term)
-        }
-    } catch (err) {
+        await this.loadTopTracksByCategory(this.currentTopCategory)
+        await this.searchAll(term)
+      } catch (err) {
         console.error("Erro em searchAndGo:", err)
         this.showToast("Erro ao carregar resultados", "error")
-    } finally {
+      } finally {
         this.isLoading = false
-    }
-},
+      }
+    },
 
     searchArtist(artistName, artistId) {
       if (artistId) {
@@ -3175,7 +3348,12 @@ async searchAndGo(term) {
       this.searchQuery = ''
       this.hasSearched = false
       this.searchResults = []
+      this.showSuggestions = false
+      this.activeFilter = 'Todos'
+      this.lastSearch = ''
       this.$refs.searchInput.focus()
+      // Volta para o estado inicial
+      this.loadInitialData('Brasil')
     },
 
     async clearHistory() {
@@ -3184,9 +3362,7 @@ async searchAndGo(term) {
 
         await fetch("http://localhost:3002/historico", {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         })
 
         this.searchHistory = []
@@ -3196,32 +3372,28 @@ async searchAndGo(term) {
       }
     },
 
-    playTrack(track) {
-      const playerSong = this.convertToPlayerFormat(track)
+    convertToPlayerFormat(track) {
+      let url = track.preview || track.link || track.url || ''
      
-      window.dispatchEvent(new CustomEvent('play-song', {
-        detail: {
-          song: playerSong,
-          playlist: [playerSong],
-          index: 0,
-          context: 'search'
-        }
-      }))
+      const isSpotifyFull = track.source === 'spotify' && (!url || url === 'null')
+      if (isSpotifyFull) {
+        url = ''
+      }
+     
+      return {
+        id: track.id,
+        title: track.title || this.getResultTitle(track),
+        artist: track.artist?.name || 'Artista desconhecido',
+        cover: this.getBestImage(track) || track.album?.cover_medium,
+        url: url,
+        preview: track.preview || track.link || '',
+        duration: track.duration || 30,
+        type: track.type || 'search',
+        source: track.source || 'deezer',
+        _fullTrack: isSpotifyFull || track._fullTrack || false
+      }
     },
 
-convertToPlayerFormat(track) {
-  return {
-    id: track.id,
-    title: track.title || this.getResultTitle(track),
-    artist: track.artist?.name || 'Artista desconhecido',
-    cover: this.getBestImage(track) || track.album?.cover_medium,
-    url: track.preview || track.link || '',
-    preview: track.preview || track.link || '',  // ← ADICIONAR preview
-    duration: track.duration || 30,
-    type: track.type || 'search',
-    source: track.source || 'deezer'  // ← ADICIONAR source
-  }
-},
     // ===== TOAST =====
     showToast(message, type = "success") {
       const icons = {
@@ -3293,6 +3465,62 @@ html, body, #app {
   font-size: 24px;
   font-weight: 700;
   color: #fff;
+}
+
+/* ===== SPOTIFY CONNECT BANNER ===== */
+.spotify-connect-banner {
+  background: linear-gradient(90deg, rgba(29,185,84,0.1) 0%, rgba(25,20,20,0.8) 100%);
+  border: 1px solid rgba(29,185,84,0.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.spotify-connect-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.spotify-connect-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.spotify-connect-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.spotify-connect-sub {
+  font-size: 12px;
+  color: #888;
+}
+
+.btn-connect-spotify {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  border: none;
+  border-radius: 20px;
+  color: #000;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-connect-spotify:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(29,185,84,0.4);
 }
 
 /* ===== SEARCH BOX ===== */
@@ -3625,6 +3853,7 @@ html, body, #app {
 .item-thumb-placeholder.musica { background: rgba(33, 150, 243, 0.1); color: #2196F3; }
 .item-thumb-placeholder.album { background: rgba(156, 39, 176, 0.1); color: #9C27B0; }
 .item-thumb-placeholder.usuario { background: rgba(29, 185, 84, 0.1); color: #1db954; }
+.item-thumb-placeholder.local { background: rgba(102, 126, 234, 0.1); color: #667eea; }
 .item-thumb-placeholder.genero { background: rgba(255, 152, 0, 0.1); color: #FF9800; }
 
 .item-details {
@@ -3924,862 +4153,7 @@ html, body, #app {
   cursor: pointer;
   transition: all 0.2s;
 }
-/* ===== DROPDOWN WRAPPER ===== */
-.custom-dropdown-wrapper {
-  position: relative;
-  display: inline-block;
-}
 
-/* ===== TRIGGER BUTTON ===== */
-.custom-dropdown-trigger {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px 10px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 500px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  min-width: 180px;
-  justify-content: space-between;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  position: relative;
-  overflow: hidden;
-}
-
-.custom-dropdown-trigger::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(29, 185, 84, 0) 0%, rgba(29, 185, 84, 0) 100%);
-  border-radius: 500px;
-  transition: all 0.3s ease;
-  opacity: 0;
-}
-
-.custom-dropdown-trigger:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-.custom-dropdown-trigger.active {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  border-color: #1db954;
-  color: #000;
-  box-shadow: 0 4px 24px rgba(29, 185, 84, 0.4), 0 0 0 1px rgba(29, 185, 84, 0.3);
-  transform: translateY(-1px);
-}
-
-.custom-dropdown-trigger.active:hover {
-  background: linear-gradient(135deg, #1ed760 0%, #2ebd75 100%);
-  box-shadow: 0 6px 32px rgba(29, 185, 84, 0.5), 0 0 0 1px rgba(29, 185, 84, 0.4);
-  transform: translateY(-2px);
-}
-
-/* Current selection display */
-.dropdown-current {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dropdown-icon-wrap {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.dropdown-icon-wrap.icon-brasil {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  color: #fff;
-  font-size: 16px;
-}
-
-.dropdown-icon-wrap.icon-location {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.dropdown-icon-wrap.icon-genre {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: #fff;
-}
-
-.custom-dropdown-trigger.active .dropdown-icon-wrap {
-  background: rgba(0, 0, 0, 0.15) !important;
-  color: #000 !important;
-}
-
-.dropdown-text {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-/* Chevron */
-.dropdown-chevron-wrap {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.dropdown-chevron {
-  font-size: 10px;
-  color: currentColor;
-  opacity: 0.6;
-  transition: all 0.3s ease;
-}
-
-.custom-dropdown-trigger:hover .dropdown-chevron {
-  opacity: 0.9;
-}
-
-.custom-dropdown-trigger.active .dropdown-chevron {
-  opacity: 1;
-  transform: rotate(180deg);
-}
-
-/* ===== DROPDOWN MENU ===== */
-.custom-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  width: 380px;
-  max-height: 520px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: rgba(18, 18, 18, 0.98);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 32px 64px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 0 40px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  padding: 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.12) transparent;
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
-}
-
-.custom-dropdown-menu::-webkit-scrollbar {
-  width: 5px;
-}
-
-.custom-dropdown-menu::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 8px 0;
-}
-
-.custom-dropdown-menu::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
-  border-radius: 10px;
-}
-
-.custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.2);
-}
-
-/* ===== DROPDOWN HEADER ===== */
-.dropdown-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 20px 16px;
-  background: linear-gradient(180deg, rgba(29,185,84,0.08) 0%, transparent 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  backdrop-filter: blur(20px);
-}
-
-.dropdown-header-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
-}
-
-.dropdown-header-icon i {
-  font-size: 16px;
-  color: #000;
-}
-
-.dropdown-header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.dropdown-header-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.01em;
-}
-
-.dropdown-header-subtitle {
-  font-size: 11px;
-  color: #888;
-  font-weight: 500;
-}
-
-.dropdown-close-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: #888;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.dropdown-close-btn:hover {
-  background: rgba(255, 68, 68, 0.9);
-  color: #fff;
-  transform: rotate(90deg);
-}
-
-/* ===== SEARCH BOX ===== */
-.dropdown-search-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 12px 16px 8px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  transition: all 0.25s ease;
-}
-
-.dropdown-search-box:focus-within {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(29, 185, 84, 0.4);
-  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1), 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.search-icon-wrap {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.search-icon-wrap i {
-  font-size: 14px;
-  color: #666;
-  transition: color 0.2s;
-}
-
-.dropdown-search-box:focus-within .search-icon-wrap i {
-  color: #1db954;
-}
-
-.dropdown-search-box input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  min-width: 0;
-  letter-spacing: -0.01em;
-}
-
-.dropdown-search-box input::placeholder {
-  color: #555;
-  font-weight: 400;
-}
-.btn-like-artist.disabled,
-.btn-like-album.disabled,
-.btn-like-list.disabled,
-.btn-like-track.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: auto;
-}
-
-.btn-like-artist.disabled:hover,
-.btn-like-album.disabled:hover,
-.btn-like-list.disabled:hover,
-.btn-like-track.disabled:hover {
-  transform: none;
-  background: rgba(0,0,0,0.7);
-  color: #888;
-}
-.clear-search {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #888;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  opacity: 0;
-  transform: scale(0.8);
-  pointer-events: none;
-}
-
-.dropdown-search-box:focus-within .clear-search,
-.clear-search:not([style*="display: none"]) {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
-}
-
-.clear-search:hover {
-  background: rgba(255, 68, 68, 0.8);
-  color: #fff;
-}
-
-/* ===== SECTIONS ===== */
-.dropdown-section {
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  position: relative;
-}
-
-.dropdown-section:last-child {
-  border-bottom: none;
-}
-
-.dropdown-section.highlight-section {
-  background: linear-gradient(180deg, rgba(29,185,84,0.03) 0%, transparent 100%);
-  padding-top: 12px;
-}
-
-.section-accent-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #1db954 0%, #1ed760 50%, transparent 100%);
-  opacity: 0.6;
-}
-
-.dropdown-section-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px 6px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: #666;
-}
-
-.label-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* ===== RECENT CHIPS ===== */
-.recent-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 4px 16px 12px;
-}
-
-.recent-chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.recent-chip:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.recent-chip.active {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  border-color: #1db954;
-  color: #000;
-  box-shadow: 0 4px 16px rgba(29, 185, 84, 0.3);
-}
-
-.chip-icon {
-  font-size: 14px;
-}
-
-.chip-text {
-  white-space: nowrap;
-}
-
-/* ===== DROPDOWN ITEMS ===== */
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: calc(100% - 24px);
-  margin: 3px 12px;
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.85);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: left;
-  position: relative;
-}
-
-.dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  transform: translateX(2px);
-}
-
-.dropdown-item:active {
-  transform: scale(0.98) translateX(0);
-}
-
-/* Active/Selected state */
-.dropdown-item.active {
-  background: rgba(29, 185, 84, 0.1);
-  color: #1db954;
-}
-
-.dropdown-item.active:hover {
-  background: rgba(29, 185, 84, 0.15);
-}
-
-/* Featured item (Brasil) */
-.featured-item {
-  padding: 14px 12px;
-  margin: 4px 12px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1.5px solid rgba(255, 255, 255, 0.06);
-}
-
-.featured-item:hover {
-  background: rgba(29, 185, 84, 0.08);
-  border-color: rgba(29, 185, 84, 0.2);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-}
-
-.featured-item.active {
-  background: rgba(29, 185, 84, 0.12);
-  border-color: rgba(29, 185, 84, 0.3);
-}
-
-/* Item visual (avatar/icon) */
-.item-visual {
-  flex-shrink: 0;
-}
-
-.item-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.item-avatar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
-  border-radius: 10px;
-}
-
-.brasil-avatar {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
-  font-size: 22px;
-  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
-}
-
-.brasil-flag {
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-}
-
-.location-avatar {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.genre-avatar {
-  color: #fff;
-  font-size: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.api-avatar {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: #fff;
-  font-size: 16px;
-  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
-}
-
-/* Item info */
-.item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-
-.item-text {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #fff;
-  transition: color 0.2s;
-}
-
-.dropdown-item:hover .item-text {
-  color: #fff;
-}
-
-.dropdown-item.active .item-text {
-  color: #1db954;
-}
-
-.item-sub {
-  font-size: 11px;
-  color: #666;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.2s;
-}
-
-.dropdown-item:hover .item-sub {
-  color: #888;
-}
-
-.dropdown-item.active .item-sub {
-  color: rgba(29, 185, 84, 0.7);
-}
-
-.item-sub i {
-  font-size: 10px;
-  margin-right: 3px;
-}
-
-/* Item action/status */
-.item-action {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-.item-status {
-  flex-shrink: 0;
-}
-
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  transition: all 0.2s;
-}
-
-.status-badge.active {
-  background: rgba(29, 185, 84, 0.15);
-  color: #1db954;
-}
-
-.status-badge i {
-  font-size: 9px;
-}
-
-.active-check {
-  font-size: 18px;
-  color: #1db954;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(29, 185, 84, 0.1);
-  border-radius: 50%;
-}
-
-.action-arrow {
-  font-size: 11px;
-  color: #555;
-  transition: all 0.2s;
-}
-
-.dropdown-item:hover .action-arrow {
-  color: #888;
-  transform: translateX(2px);
-}
-
-/* ===== SCROLLABLE AREA ===== */
-.dropdown-scrollable {
-  max-height: 180px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 4px 0;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.08) transparent;
-}
-
-.dropdown-scrollable::-webkit-scrollbar {
-  width: 4px;
-}
-
-.dropdown-scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.dropdown-scrollable::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.08);
-  border-radius: 10px;
-}
-
-.dropdown-scrollable::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.15);
-}
-
-.locations-scroll,
-.genres-scroll {
-  padding: 2px 0 6px;
-}
-
-/* ===== EMPTY STATE ===== */
-.dropdown-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  gap: 12px;
-  color: #555;
-  text-align: center;
-}
-
-.empty-illustration {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 4px;
-}
-
-.empty-illustration i {
-  font-size: 24px;
-  color: #444;
-}
-
-.empty-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #888;
-}
-
-.empty-subtitle {
-  font-size: 12px;
-  color: #555;
-  font-weight: 500;
-}
-
-/* ===== ANIMATIONS ===== */
-.dropdown-fancy-enter-active {
-  animation: dropdownFancyIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.dropdown-fancy-leave-active {
-  animation: dropdownFancyOut 0.2s cubic-bezier(0.4, 0, 1, 1);
-}
-
-@keyframes dropdownFancyIn {
-  from {
-    opacity: 0;
-    transform: translateY(-12px) scale(0.96);
-    filter: blur(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes dropdownFancyOut {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.98);
-    filter: blur(4px);
-  }
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  .custom-dropdown-menu {
-    position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    max-height: 75vh;
-    border-radius: 24px 24px 0 0;
-    animation: dropdownSlideUpMobile 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  @keyframes dropdownSlideUpMobile {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .dropdown-fancy-leave-active {
-    animation: dropdownSlideDownMobile 0.25s ease;
-  }
-
-  @keyframes dropdownSlideDownMobile {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-  }
-
-  .custom-dropdown-trigger {
-    min-width: 150px;
-    padding: 8px 12px 8px 10px;
-    font-size: 12px;
-  }
-
-  .dropdown-icon-wrap {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-  }
-
-  .recent-chips {
-    gap: 6px;
-  }
-
-  .recent-chip {
-    padding: 6px 12px;
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 480px) {
-  .custom-dropdown-trigger {
-    min-width: auto;
-    padding: 8px 10px;
-  }
-
-  .dropdown-text {
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .custom-dropdown-menu {
-    border-radius: 20px 20px 0 0;
-  }
-
-  .item-avatar {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
-  }
-
-  .featured-item {
-    padding: 12px 10px;
-  }
-}
 .tag-btn.detailed:hover {
   background: rgba(255,255,255,0.05);
   transform: translateY(-2px);
@@ -4807,10 +4181,6 @@ html, body, #app {
   background: rgba(255,255,255,0.03);
   border-radius: 8px;
   margin: 8px 0;
-}
-
-.empty-text {
-  font-style: italic;
 }
 
 /* ===== MOOD GRID ===== */
@@ -5108,40 +4478,862 @@ html, body, #app {
   transform: scale(1.1);
 }
 
-/* ===== ARTISTS ROW ===== */
-.artists-row {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 20px;
+/* ===== CUSTOM DROPDOWN (GÊNEROS/LOCAIS) ===== */
+.top-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.artist-item {
+.custom-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.custom-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 500px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 180px;
+  justify-content: space-between;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+}
+
+.custom-dropdown-trigger::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0) 0%, rgba(29, 185, 84, 0) 100%);
+  border-radius: 500px;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.custom-dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.custom-dropdown-trigger.active {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  border-color: #1db954;
+  color: #000;
+  box-shadow: 0 4px 24px rgba(29, 185, 84, 0.4), 0 0 0 1px rgba(29, 185, 84, 0.3);
+  transform: translateY(-1px);
+}
+
+.custom-dropdown-trigger.active:hover {
+  background: linear-gradient(135deg, #1ed760 0%, #2ebd75 100%);
+  box-shadow: 0 6px 32px rgba(29, 185, 84, 0.5), 0 0 0 1px rgba(29, 185, 84, 0.4);
+  transform: translateY(-2px);
+}
+
+.dropdown-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.dropdown-icon-wrap.icon-brasil {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  color: #fff;
+  font-size: 16px;
+}
+
+.dropdown-icon-wrap.icon-location {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.dropdown-icon-wrap.icon-genre {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #fff;
+}
+
+.custom-dropdown-trigger.active .dropdown-icon-wrap {
+  background: rgba(0, 0, 0, 0.15) !important;
+  color: #000 !important;
+}
+
+.dropdown-text {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dropdown-chevron-wrap {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dropdown-chevron {
+  font-size: 10px;
+  color: currentColor;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.custom-dropdown-trigger:hover .dropdown-chevron {
+  opacity: 0.9;
+}
+
+.custom-dropdown-trigger.active .dropdown-chevron {
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+/* ===== DROPDOWN MENU ===== */
+.custom-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 380px;
+  max-height: 520px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: rgba(18, 18, 18, 0.98);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 32px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 40px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+}
+
+.custom-dropdown-menu::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 10px;
+}
+
+.custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ===== DROPDOWN HEADER ===== */
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  background: linear-gradient(180deg, rgba(29,185,84,0.08) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(20px);
+}
+
+.dropdown-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.dropdown-header-icon i {
+  font-size: 16px;
+  color: #000;
+}
+
+.dropdown-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.dropdown-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.dropdown-header-subtitle {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+}
+
+.dropdown-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-close-btn:hover {
+  background: rgba(255, 68, 68, 0.9);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* ===== SEARCH BOX DROPDOWN ===== */
+.dropdown-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+}
+
+.dropdown-search-box:focus-within {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(29, 185, 84, 0.4);
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.1), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.search-icon-wrap {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.search-icon-wrap i {
+  font-size: 14px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.dropdown-search-box:focus-within .search-icon-wrap i {
+  color: #1db954;
+}
+
+.dropdown-search-box input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 0;
+  letter-spacing: -0.01em;
+}
+
+.dropdown-search-box input::placeholder {
+  color: #555;
+  font-weight: 400;
+}
+
+.clear-search {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.dropdown-search-box:focus-within .clear-search,
+.clear-search:not([style*="display: none"]) {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.clear-search:hover {
+  background: rgba(255, 68, 68, 0.8);
+  color: #fff;
+}
+
+/* ===== DROPDOWN SECTIONS ===== */
+.dropdown-section {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  position: relative;
+}
+
+.dropdown-section:last-child {
+  border-bottom: none;
+}
+
+.dropdown-section.highlight-section {
+  background: linear-gradient(180deg, rgba(29,185,84,0.03) 0%, transparent 100%);
+  padding-top: 12px;
+}
+
+.section-accent-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #1db954 0%, #1ed760 50%, transparent 100%);
+  opacity: 0.6;
+}
+
+.dropdown-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #666;
+}
+
+.label-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ===== RECENT CHIPS ===== */
+.recent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 16px 12px;
+}
+
+.recent-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recent-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.recent-chip.active {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  border-color: #1db954;
+  color: #000;
+  box-shadow: 0 4px 16px rgba(29, 185, 84, 0.3);
+}
+
+.chip-icon {
+  font-size: 14px;
+}
+
+.chip-text {
+  white-space: nowrap;
+}
+
+/* ===== DROPDOWN ITEMS ===== */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 24px);
+  margin: 3px 12px;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  position: relative;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateX(2px);
+}
+
+.dropdown-item:active {
+  transform: scale(0.98) translateX(0);
+}
+
+.dropdown-item.active {
+  background: rgba(29, 185, 84, 0.1);
+  color: #1db954;
+}
+
+.dropdown-item.active:hover {
+  background: rgba(29, 185, 84, 0.15);
+}
+
+.featured-item {
+  padding: 14px 12px;
+  margin: 4px 12px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.06);
+}
+
+.featured-item:hover {
+  background: rgba(29, 185, 84, 0.08);
+  border-color: rgba(29, 185, 84, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.featured-item.active {
+  background: rgba(29, 185, 84, 0.12);
+  border-color: rgba(29, 185, 84, 0.3);
+}
+
+/* Item visual (avatar/icon) */
+.item-visual {
+  flex-shrink: 0;
+}
+
+.item-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.item-avatar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+  border-radius: 10px;
+}
+
+.brasil-avatar {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.brasil-flag {
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.location-avatar {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.genre-avatar {
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.api-avatar {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #fff;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+}
+
+/* Item info */
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-text {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  transition: color 0.2s;
+}
+
+.dropdown-item:hover .item-text {
+  color: #fff;
+}
+
+.dropdown-item.active .item-text {
+  color: #1db954;
+}
+
+.item-sub {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.dropdown-item:hover .item-sub {
+  color: #888;
+}
+
+.dropdown-item.active .item-sub {
+  color: rgba(29, 185, 84, 0.7);
+}
+
+.item-sub i {
+  font-size: 10px;
+  margin-right: 3px;
+}
+
+/* Item action/status */
+.item-action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.item-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  transition: all 0.2s;
+}
+
+.status-badge.active {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+}
+
+.status-badge i {
+  font-size: 9px;
+}
+
+.active-check {
+  font-size: 18px;
+  color: #1db954;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(29, 185, 84, 0.1);
+  border-radius: 50%;
+}
+
+.action-arrow {
+  font-size: 11px;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.dropdown-item:hover .action-arrow {
+  color: #888;
+  transform: translateX(2px);
+}
+
+/* ===== SCROLLABLE AREA ===== */
+.dropdown-scrollable {
+  max-height: 180px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+
+.dropdown-scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+
+.dropdown-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.locations-scroll,
+.genres-scroll {
+  padding: 2px 0 6px;
+}
+
+/* ===== EMPTY STATE ===== */
+.dropdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 12px;
+  color: #555;
+  text-align: center;
+}
+
+.empty-illustration {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.empty-illustration i {
+  font-size: 24px;
+  color: #444;
+}
+
+.empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+}
+
+.empty-subtitle {
+  font-size: 12px;
+  color: #555;
+  font-weight: 500;
+}
+
+/* ===== ANIMATIONS ===== */
+.dropdown-fancy-enter-active {
+  animation: dropdownFancyIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-fancy-leave-active {
+  animation: dropdownFancyOut 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes dropdownFancyIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dropdownFancyOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+
+/* ===== LOCAL SECTION ===== */
+.local-section {
+  margin-bottom: 32px;
+}
+
+.local-header {
+  margin-bottom: 16px;
+}
+
+.local-subtitle {
+  font-size: 13px;
+  color: #888;
+  margin: 4px 0 0 0;
+}
+
+.local-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.local-card {
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 12px;
+  border-radius: 12px;
+  background: #181818;
 }
 
-.artist-item:hover {
+.local-card:hover {
+  background: #282828;
   transform: translateY(-4px);
 }
 
-.artist-item img {
+.local-card-bg {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 12px;
-  border: 2px solid transparent;
-  transition: all 0.2s;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  overflow: hidden;
 }
 
-.artist-item:hover img {
-  border-color: #1db954;
+.local-emoji {
+  font-size: 32px;
 }
 
-.artist-name {
+.local-name {
   display: block;
   font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.local-desc {
+  font-size: 11px;
+  color: #888;
+}
+
+/* ===== LOCAIS GRID (RESULTADOS) ===== */
+.locals-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+}
+
+.local-result-card {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 16px;
+  border-radius: 8px;
+  background: #181818;
+}
+
+.local-result-card:hover {
+  background: #282828;
+  transform: translateY(-4px);
+}
+
+.local-result-bg {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.local-result-emoji {
+  font-size: 32px;
+}
+
+.local-result-name {
+  display: block;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
   margin-bottom: 4px;
@@ -5150,8 +5342,8 @@ html, body, #app {
   text-overflow: ellipsis;
 }
 
-.artist-fans {
-  font-size: 11px;
+.local-result-desc {
+  font-size: 12px;
   color: #888;
 }
 
@@ -5176,35 +5368,7 @@ html, body, #app {
   gap: 8px;
   flex-wrap: wrap;
 }
-/* Estado vazio para locais */
-.empty-local {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  gap: 16px;
-  color: #888;
-  text-align: center;
-}
 
-.empty-local i {
-  font-size: 48px;
-  color: #1db954;
-  opacity: 0.5;
-}
-
-.empty-local h4 {
-  font-size: 18px;
-  color: #fff;
-  margin: 0;
-}
-
-.empty-local p {
-  font-size: 14px;
-  color: #666;
-  max-width: 400px;
-}
 .filter-tabs button {
   padding: 8px 20px;
   border-radius: 20px;
@@ -5362,56 +5526,8 @@ html, body, #app {
   width: 40px;
   text-align: right;
 }
-.locals-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 24px;
-}
 
-.local-result-card {
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 16px;
-  border-radius: 8px;
-  background: #181818;
-}
-
-.local-result-card:hover {
-  background: #282828;
-  transform: translateY(-4px);
-}
-
-.local-result-bg {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-
-.local-result-emoji {
-  font-size: 32px;
-}
-
-.local-result-name {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.local-result-desc {
-  font-size: 12px;
-  color: #888;
-}
+/* ===== BOTÕES DE CURTIR ===== */
 .btn-like-list {
   width: 32px;
   height: 32px;
@@ -5441,160 +5557,25 @@ html, body, #app {
   opacity: 1;
   color: #ec4899;
 }
-/* ===== CUSTOM DROPDOWN ===== */
-.top-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+
+.btn-like-artist.disabled,
+.btn-like-album.disabled,
+.btn-like-list.disabled,
+.btn-like-track.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: auto;
 }
 
-
-
-
-
-.dropdown-section {
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.dropdown-section:last-child {
-  border-bottom: none;
-}
-
-.dropdown-section-label {
-  display: block;
-  padding: 8px 16px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.btn-like-artist.disabled:hover,
+.btn-like-album.disabled:hover,
+.btn-like-list.disabled:hover,
+.btn-like-track.disabled:hover {
+  transform: none;
+  background: rgba(0,0,0,0.7);
   color: #888;
 }
 
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 16px;
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-align: left;
-}
-
-.dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.dropdown-item.active {
-  background: rgba(29, 185, 84, 0.1);
-  color: #1db954;
-}
-
-.item-icon {
-  font-size: 14px;
-  width: 20px;
-  text-align: center;
-}
-
-.item-text {
-  flex: 1;
-}
-
-.item-check {
-  font-size: 12px;
-  color: #1db954;
-}
-
-/* Animação do dropdown */
-.dropdown-slide-enter-active {
-  animation: dropdownSlideIn 0.2s ease;
-}
-
-.dropdown-slide-leave-active {
-  animation: dropdownSlideOut 0.15s ease;
-}
-
-@keyframes dropdownSlideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes dropdownSlideOut {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-8px); }
-}
-
-/* ===== LOCAL SECTION ===== */
-.local-section {
-  margin-bottom: 32px;
-}
-
-.local-header {
-  margin-bottom: 16px;
-}
-
-.local-subtitle {
-  font-size: 13px;
-  color: #888;
-  margin: 4px 0 0 0;
-}
-
-.local-grid {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 16px;
-}
-
-.local-card {
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 12px;
-  border-radius: 12px;
-  background: #181818;
-}
-
-.local-card:hover {
-  background: #282828;
-  transform: translateY(-4px);
-}
-
-.local-card-bg {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-
-.local-emoji {
-  font-size: 32px;
-}
-
-.local-name {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.local-desc {
-  font-size: 11px;
-  color: #888;
-}
 /* ===== ARTISTS GRID ===== */
 .artists-grid {
   display: grid;
@@ -5978,20 +5959,144 @@ html, body, #app {
   transform: translateX(-50%) translateY(20px);
 }
 
+/* ===== MODAL DE LOGIN ===== */
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease;
+}
+
+.login-modal {
+  background: #181818;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(29, 185, 84, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.modal-icon i {
+  font-size: 28px;
+  color: #1db954;
+}
+
+.login-modal h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.login-modal p {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-primary {
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  border: none;
+  border-radius: 500px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(29, 185, 84, 0.4);
+}
+
+.btn-secondary {
+  padding: 14px 24px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 500px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== ESTADO VAZIO PARA LOCAIS ===== */
+.empty-local {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: #888;
+  text-align: center;
+}
+
+.empty-local i {
+  font-size: 48px;
+  color: #1db954;
+  opacity: 0.5;
+}
+
+.empty-local h4 {
+  font-size: 18px;
+  color: #fff;
+  margin: 0;
+}
+
+.empty-local p {
+  font-size: 14px;
+  color: #666;
+  max-width: 400px;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
   .artists-grid,
   .albums-grid,
-  .users-grid {
+  .users-grid,
+  .locals-grid {
     grid-template-columns: repeat(4, 1fr);
   }
  
   .suggested-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
- 
-  .artists-row {
-    grid-template-columns: repeat(4, 1fr);
   }
  
   .categories-dropdown {
@@ -6007,7 +6112,8 @@ html, body, #app {
  
   .artists-grid,
   .albums-grid,
-  .users-grid {
+  .users-grid,
+  .locals-grid {
     grid-template-columns: repeat(3, 1fr);
   }
  
@@ -6039,13 +6145,10 @@ html, body, #app {
  
   .artists-grid,
   .albums-grid,
-  .users-grid {
+  .users-grid,
+  .locals-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
-  }
- 
-  .artists-row {
-    grid-template-columns: repeat(3, 1fr);
   }
  
   .suggested-grid {

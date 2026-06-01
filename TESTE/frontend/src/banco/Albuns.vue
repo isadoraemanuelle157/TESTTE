@@ -626,12 +626,16 @@ totalTracks() {
     }
   },
 
-  normalizeIds(list) {
+ normalizeIds(list) {
   if (!Array.isArray(list)) return []
   return list.map(item => {
+    if (!item) return null
     if (typeof item === 'string') return item
-    if (item && typeof item === 'object') return item._id || item.id
-    return item
+    if (typeof item === 'object') {
+      // 🔥 Mongoose ObjectId ou objeto populado
+      return item._id?.toString?.() || item.id?.toString?.() || item.toString?.()
+    }
+    return item?.toString?.() || null
   }).filter(Boolean)
 },
 
@@ -663,24 +667,29 @@ async carregarGeneros() {
     this.showToast('Erro ao carregar gêneros', 'error')
   }
 },
+async carregarMusicas() {
+  try {
+    const res = await axios.get(API_MUSICAS)
+    // 🔥 Extrai o array corretamente (suporta tanto paginado quanto array direto)
+    this.musicas = Array.isArray(res.data) ? res.data : (res.data.results || [])
+  } catch {
+    this.showToast('Erro ao carregar músicas', 'error')
+  }
+},
 
-    async carregarMusicas() {
-      try {
-        const res = await axios.get(API_MUSICAS)
-        this.musicas = res.data
-      } catch {
-        this.showToast('Erro ao carregar músicas', 'error')
-      }
-    },
-
-    async carregarAlbuns() {
-      try {
-        const res = await axios.get(API)
-        this.albuns = res.data
-      } catch {
-        this.showToast('Erro ao carregar álbuns', 'error')
-      }
-    },
+async carregarAlbuns() {
+  try {
+    const res = await axios.get(API)
+    // 🔥 GARANTE QUE CADA ÁLBUM TEM ARRAYS
+    this.albuns = (res.data || []).map(album => ({
+      ...album,
+      musicas: Array.isArray(album.musicas) ? album.musicas : [],
+      generos: Array.isArray(album.generos) ? album.generos : []
+    }))
+  } catch {
+    this.showToast('Erro ao carregar álbuns', 'error')
+  }
+},
 
     async carregarAlbumPorId(id) {
   const res = await axios.get(`${API}/${id}`)
@@ -712,24 +721,36 @@ async carregarGeneros() {
       return this.cantores.find(c => c._id === id)?.nome || 'Desconhecido'
     },
 
-    getMusicaNome(id) {
-      return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
-    },
+  getMusicaNome(id) {
+  // 🔥 DEFESA: garante que musicas é array
+  if (!Array.isArray(this.musicas)) {
+    console.warn('this.musicas não é array:', this.musicas)
+    return 'Desconhecida'
+  }
+  return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
+},
 
 getGeneroNome(id) {
+  // 🔥 DEFESA: garante que generos é array
+  if (!Array.isArray(this.generos)) {
+    console.warn('this.generos não é array:', this.generos)
+    return 'Desconhecido'
+  }
   return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
 },
 
-    getGeneroColor(id) {
-      const colors = [
-        'linear-gradient(135deg, #8b5cf6, #ec4899)',
-        'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-        'linear-gradient(135deg, #10b981, #3b82f6)',
-        'linear-gradient(135deg, #f59e0b, #ef4444)'
-      ]
-    const index = this.generos.findIndex(g => g._id === id)
-      return colors[index % colors.length]
-    },
+getGeneroColor(id) {
+  const colors = [
+    'linear-gradient(135deg, #8b5cf6, #ec4899)',
+    'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+    'linear-gradient(135deg, #10b981, #3b82f6)',
+    'linear-gradient(135deg, #f59e0b, #ef4444)'
+  ]
+  // 🔥 DEFESA
+  if (!Array.isArray(this.generos)) return colors[0]
+  const index = this.generos.findIndex(g => g._id === id)
+  return colors[index % colors.length]
+},
 
    removeCantor() {
   this.form.cantor = ''
@@ -752,7 +773,7 @@ getGeneroNome(id) {
       nome: this.form.nome?.trim(),
       descricao: this.form.descricao?.trim(),
       foto: this.form.foto?.trim(),
-      ano: this.form.ano ? Number(this.form.ano) : null,  // ← converter para número
+ano: this.form.ano ? parseInt(this.form.ano, 10) : null,
       cantor: this.form.cantor || null,                    // ← null se vazio
       musicas: Array.isArray(this.form.musicas) ? this.form.musicas.filter(Boolean) : [],
       generos: Array.isArray(this.form.generos) ? this.form.generos.filter(Boolean) : []
@@ -819,11 +840,12 @@ this.form = {
       descricao: albumCompleto.descricao || "",
       foto: albumCompleto.foto === this.defaultCover ? "" : (albumCompleto.foto || ""),
       ano: albumCompleto.ano || "",
-      cantor:
-        albumCompleto.cantor && typeof albumCompleto.cantor === 'object'
-          ? albumCompleto.cantor._id
-          : (albumCompleto.cantor || ""),
-      musicas: this.normalizeIds(albumCompleto.musicas),
+   cantor: albumCompleto.cantor
+  ? (typeof albumCompleto.cantor === 'object'
+      ? albumCompleto.cantor._id?.toString?.() || albumCompleto.cantor.toString()
+      : albumCompleto.cantor.toString())
+  : "",
+      musicas: this.normalizeIds(albumCompleto.musicas || []),
       generos: this.normalizeIds(albumCompleto.generos)
     }
 

@@ -423,6 +423,31 @@ export default {
     window.removeEventListener("focus", this.carregarFavoritas)
   },
   methods: {
+    async registrarHistorico(item) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) return
+    
+    await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        musicaId: item.id,
+        titulo: item.title,
+        artista: item.subtitle || 'Desconhecido',
+        capa: item.cover,
+        source: item.source || 'local',
+        tipo: item.type || 'musica'
+      })
+    })
+  } catch (err) {
+    console.error('Erro ao registrar histórico:', err)
+  }
+},
+
     handleImageError(event) {
   event.target.src = this.fallbackImage
 },
@@ -660,7 +685,9 @@ async remover(item) {
 
     play(item) {
       if (item.type !== "musica") return
-      window.dispatchEvent(new CustomEvent("play-song", {
+this.registrarHistorico(item)
+
+window.dispatchEvent(new CustomEvent("play-song", {
         detail: {
           song: {
             id: item.id,

@@ -146,17 +146,43 @@
           <div class="context-item" @click="shareProfile">
             <i class="fa fa-share"></i> Compartilhar perfil
           </div>
-          <div class="context-item" @click="reportUser">
-            <i class="fa fa-flag"></i> Denunciar usuário
-          </div>
-          <div class="context-item" @click="blockUser">
-            <i class="fa fa-ban"></i> Bloquear usuário
-          </div>
+<div class="context-item" @click="openReportModal">
+  <i class="fa fa-flag"></i> Denunciar usuário
+</div>
+
+<div class="context-item" @click="toggleUserBlock">
+  <i :class="blockActionIcon"></i> {{ blockActionLabel }}
+</div>
         </div>
       </transition>
 
+      <div v-if="isBlockedProfile" class="blocked-profile-state">
+  <div class="blocked-profile-card">
+    <i class="fa fa-ban"></i>
+    <h3>{{ blockedProfileMessage }}</h3>
+    <p v-if="isBlockedByMe">
+      Você bloqueou este usuário. Enquanto o bloqueio estiver ativo, o perfil fica indisponível.
+    </p>
+    <p v-else>
+      Este perfil não está disponível para visualização.
+    </p>
+
+    <button
+      v-if="isBlockedByMe"
+      class="btn-follow"
+      @click="toggleUserBlock"
+    >
+      <i class="fa fa-unlock"></i>
+      Desbloquear
+    </button>
+  </div>
+</div>
+
       <!-- Tabs de Navegação - Só Visão Geral aparece quando bloqueado -->
-    <div class="tabs-nav-container" v-if="canViewContent || !canViewActivities">
+   <div
+  v-if="canViewContent || !canViewActivities"
+  class="tabs-nav-container"
+>
   <div class="tabs-nav">
     <button
       v-for="tab in allTabs"
@@ -180,7 +206,10 @@
 </div>
 
       <!-- Conteúdo das Tabs -->
-      <div class="profile-content" v-if="canViewContent || !canViewActivities">
+  <div
+  v-if="canViewContent || !canViewActivities"
+  class="profile-content"
+>
          <div v-if="isCurrentTabLocked" class="tab-content">
     <div class="locked-tab-content">
       <div class="locked-blur-container">
@@ -263,7 +292,7 @@
             <div class="content-section" :class="{ 'blurred-section': !canViewActivities, 'compact-section': !canViewActivities }">
               <div class="section-header">
                 <h3><i class="fa fa-list"></i> Playlists Públicas</h3>
-                <button class="btn-view-all" @click="handleStatClick('playlists')" v-if="canViewActivities && playlistsPublicas.length > 3">
+               <button class="btn-view-all" @click="handleStatClick('playlists')" v-if="canViewPlaylists && visiblePlaylists.length > 3">
                   Ver todas <i class="fa fa-arrow-right"></i>
                 </button>
                 <i v-else-if="!canViewActivities" class="fa fa-lock lock-icon"></i>
@@ -271,16 +300,22 @@
               
               <!-- Conteúdo normal quando pode ver -->
               <div v-if="canViewActivities" class="playlist-grid">
-                <div
-                  v-for="playlist in playlistsPublicas.slice(0, 3)"
-                  :key="playlist._id"
-                  class="playlist-card"
-                  @click="openPlaylist(playlist)"
-                >
-                  <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
-                  <h4>{{ playlist.nome }}</h4>
-                  <p>{{ playlist.totalMusicas }} músicas</p>
-                </div>
+<div
+  v-for="playlist in visiblePlaylists.slice(0, 3)"
+  :key="playlist._id || playlist.id"
+  class="playlist-card"
+  @click="openPlaylist(playlist)"
+>
+  <div style="position: relative;">
+    <img :src="playlist.cover || playlist.capa || blackCover" :alt="playlist.nome" />
+    <div v-if="isPlaylistPrivate(playlist)" class="playlist-private-badge">
+      <i class="fa fa-lock"></i>
+    </div>
+  </div>
+
+  <h4>{{ playlist.nome }}</h4>
+  <p>{{ getPlaylistSongCount(playlist) }} {{ getPlaylistSongCount(playlist) === 1 ? 'música' : 'músicas' }}</p>
+</div>
               </div>
 
               <!-- Conteúdo bloqueado quando não pode ver -->
@@ -293,46 +328,6 @@
                 <div class="blur-overlay">
                   <i class="fa fa-lock"></i>
                   <span>Conteúdo privado</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Atividades - Sempre aparece mas bloqueada se não puder ver -->
-            <div class="content-section full-width" :class="{ 'blurred-section': !canViewActivities, 'compact-section': !canViewActivities }">
-              <div class="section-header">
-                <h3><i class="fa fa-pulse"></i> Atividade Recente</h3>
-                <i v-if="!canViewActivities" class="fa fa-lock lock-icon"></i>
-              </div>
-              
-              <!-- Conteúdo normal quando pode ver -->
-              <div v-if="canViewActivities" class="activity-list">
-                <div
-                  v-for="atividade in atividadesRecentes.slice(0, 5)"
-                  :key="atividade.id"
-                  class="activity-item"
-                >
-                  <div class="activity-icon" :class="atividade.tipo">
-                    <i :class="getActivityIcon(atividade.tipo)"></i>
-                  </div>
-                  <div class="activity-content">
-                    <p class="activity-text" v-html="atividade.texto"></p>
-                    <span class="activity-time">{{ timeAgo(atividade.data) }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Conteúdo bloqueado quando não pode ver -->
-              <div v-else class="blurred-content activity-blur">
-                <div class="blur-activity" v-for="n in 3" :key="n">
-                  <div class="blur-activity-icon"></div>
-                  <div class="blur-activity-content">
-                    <p class="blur-text">████████████████████</p>
-                    <span class="blur-text">██ horas atrás</span>
-                  </div>
-                </div>
-                <div class="blur-overlay">
-                  <i class="fa fa-lock"></i>
-                  <span>Atividades privadas</span>
                 </div>
               </div>
             </div>
@@ -350,7 +345,7 @@
           <div class="content-section">
             <div class="section-header">
               <h3><i class="fa fa-heart"></i> Músicas Curtidas</h3>
-              <span class="count-badge">{{ formatNumber(musicasFavoritas.length) }} músicas</span>
+             <span class="count-badge">{{ formatNumber(estatisticas.musicasCurtidas) }} músicas</span>
             </div>
             <div class="music-grid" v-if="musicasFavoritas.length > 0">
               <div
@@ -378,14 +373,17 @@
         <!-- Tab: Playlists -->
         <div v-if="activeTab === 'playlists'" class="tab-content">
           <div class="playlists-full-grid">
-            <div
-              v-for="playlist in playlistsPublicas"
-              :key="playlist._id"
-              class="playlist-card-large"
-              @click="openPlaylist(playlist)"
-            >
+<div
+  v-for="playlist in visiblePlaylists"
+  :key="playlist._id || playlist.id"
+  class="playlist-card-large"
+  @click="openPlaylist(playlist)"
+>
               <div class="playlist-cover-large">
-                <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                <img :src="playlist.cover || playlist.capa || blackCover" :alt="playlist.nome" />
+        <div v-if="isPlaylistPrivate(playlist)" class="playlist-private-badge large">
+  <i class="fa fa-lock"></i>
+</div>
                 <div class="playlist-overlay">
                   <button class="btn-play-playlist-large">
                     <i class="fa fa-play"></i>
@@ -396,8 +394,12 @@
                 <h4>{{ playlist.nome }}</h4>
                 <p>{{ playlist.descricao || 'Sem descrição' }}</p>
                 <div class="playlist-meta-large">
-                  <span><i class="fa fa-music"></i> {{ playlist.musicas?.length || 0 }} músicas</span>
-                  <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
+                <span>
+  <i class="fa fa-music"></i>
+  {{ getPlaylistSongCount(playlist) }}
+  {{ getPlaylistSongCount(playlist) === 1 ? 'música' : 'músicas' }}
+</span>
+
                 </div>
               </div>
             </div>
@@ -413,11 +415,16 @@
               class="user-card"
               @click="goToProfile(user)"
             >
-              <div class="user-avatar-wrapper">
-                <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
-              </div>
-              <h4>{{ user.nome }}</h4>
-              <p>@{{ user.username }}</p>
+   <div class="user-avatar-wrapper">
+  <img
+    :src="user.avatar || user.foto || defaultAvatar"
+    :alt="user.nome || user.username"
+    class="user-avatar-large"
+    @error="$event.target.src = defaultAvatar"
+  />
+</div>
+<h4>{{ user.nome || user.username }}</h4>
+<p>@{{ user.username }}</p>
               <button
                 v-if="!isOwnProfile && String(user._id) !== String(loggedUserId)"
                 class="btn-follow-small"
@@ -426,6 +433,31 @@
               >
                 {{ user.isFollowing ? 'Seguindo' : 'Seguir' }}
               </button>
+
+              <button
+  v-if="!isOwnProfile && isBlockedByMe"
+  class="btn-follow following"
+  @click="toggleUserBlock"
+>
+  <i class="fa fa-unlock"></i>
+  Desbloquear
+</button>
+
+<button
+  v-else-if="!isOwnProfile && !blockedMe"
+  class="btn-follow"
+  @click="handleFollowAction"
+  :disabled="solicitacaoPendente"
+  :class="{
+    following: isFollowing,
+    pending: solicitacaoPendente,
+    private: isLockedPrivateProfile && !isFollowing && !solicitacaoPendente
+  }"
+>
+  <i :class="followButtonIcon"></i>
+  {{ followButtonText }}
+</button>
+
             </div>
           </div>
           <div class="empty-state large" v-else>
@@ -442,12 +474,16 @@
               class="user-card"
               @click="goToProfile(item)"
             >
-              <div class="user-avatar-wrapper">
-                <img :src="item.avatar || item.foto || defaultAvatar" class="user-avatar-large" />
-              </div>
-              <h4>{{ item.nome }}</h4>
-              <p v-if="item.tipo === 'usuario'">@{{ item.username }}</p>
-              <p v-else class="cantor-label">Cantor</p>
+   <div class="user-avatar-wrapper">
+  <img 
+    :src="item.avatar || item.foto || defaultAvatar" 
+    class="user-avatar-large"
+    @error="$event.target.src = defaultAvatar"
+  />
+</div>
+<h4>{{ item.nome || item.username || 'Usuário' }}</h4>
+<p v-if="item.tipo === 'usuario'">@{{ item.username }}</p>
+<p v-else class="cantor-label">{{ item.nome || 'Cantor' }}</p>
             </div>
           </div>
           <div class="empty-state large" v-else>
@@ -462,9 +498,247 @@
         <h4>Conteúdo limitado</h4>
         <p>Este usuário desativou a visualização de atividades e playlists.</p>
       </div>
+    </div> <!-- fecha profile-content-wrapper (v-else) -->
+
+    <!-- ============================================ -->
+    <!-- MODAIS GLOBAIS — FORA DE QUALQUER v-if/v-else -->
+    <!-- ============================================ -->
+
+    <!-- MODAL PLAYLIST -->
+    <transition name="fade">
+      <div
+        v-if="showPlaylistModal && selectedPlaylist"
+        class="playlist-modal-overlay"
+        @click.self="showPlaylistModal = false"
+      >
+      <div class="playlist-modal">
+
+  <button class="playlist-modal-close" @click="showPlaylistModal = false">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <!-- Loading -->
+  <div v-if="loading" style="text-align: center; padding: 60px;">
+    <div class="spinner-small" style="margin: 0 auto 16px;"></div>
+    <p style="color: #94a3b8;">Carregando playlist...</p>
+  </div>
+
+  <template v-else>
+    <img
+      :src="selectedPlaylist.cover || selectedPlaylist.capa || blackCover"
+      class="playlist-modal-cover"
+    />
+
+    <h2>{{ selectedPlaylist.nome || 'Playlist' }}</h2>
+
+    <p>
+      {{ selectedPlaylist.musicas?.length || 0 }}
+      {{ (selectedPlaylist.musicas?.length || 0) === 1 ? 'música' : 'músicas' }}
+    </p>
+
+    <!-- Lista de músicas -->
+    <div class="playlist-modal-list" v-if="selectedPlaylist.musicas?.length > 0">
+      <div
+        v-for="(musica, index) in selectedPlaylist.musicas"
+        :key="musica.id || index"
+        class="playlist-modal-song"
+      >
+        <span class="song-index">{{ index + 1 }}</span>
+
+        <img
+          :src="musica.cover || blackCover"
+          class="song-thumb"
+          @error="$event.target.src = blackCover"
+        />
+
+        <div class="playlist-modal-song-info" @click="playMusic(musica)">
+          <h4>{{ musica.nome || 'Sem nome' }}</h4>
+          <p>{{ musica.artist || 'Desconhecido' }}</p>
+        </div>
+
+        <div class="playlist-modal-song-actions">
+          <button 
+            class="btn-modal-action btn-like" 
+            @click.stop="curtirMusica(musica, $event)"
+            title="Curtir"
+          >
+            <i class="fa fa-heart-o"></i>
+          </button>
+          <button 
+            class="btn-modal-action btn-star" 
+            @click.stop="favoritarMusica(musica, $event)"
+            title="Favoritar"
+          >
+            <i class="fa fa-star-o"></i>
+          </button>
+          <button 
+            class="btn-modal-action btn-add" 
+            @click.stop="abrirModalAdicionarPlaylist(musica, $event)"
+            title="Adicionar à playlist"
+          >
+            <i class="fa fa-plus"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
-    <!-- Toast -->
+    <!-- Empty state -->
+    <div v-else class="empty-state" style="padding: 40px; text-align: center;">
+      <i class="fa fa-music" style="font-size: 48px; color: #64748b; margin-bottom: 16px; display: block;"></i>
+      <p style="color: #94a3b8;">Esta playlist ainda não tem músicas</p>
+    </div>
+  </template>
+</div>
+      </div>
+    </transition>
+
+  <!-- MODAL ADICIONAR À PLAYLIST -->
+    <transition name="fade">
+      <div
+        v-if="showAddToPlaylistModal"
+        class="playlist-modal-overlay"
+        @click.self="fecharModalAddPlaylist"
+      >
+        <div class="playlist-modal add-to-playlist-modal">
+          <button class="playlist-modal-close" @click="fecharModalAddPlaylist">
+            <i class="fa fa-times"></i>
+          </button>
+
+          <div class="modal-header-playlist">
+            <div class="modal-music-preview">
+              <img :src="musicaParaAdicionar?.cover || blackCover" />
+              <div class="modal-music-info">
+                <span class="modal-music-label">Adicionar à playlist</span>
+                <h3 class="modal-music-title">{{ musicaParaAdicionar?.title }}</h3>
+                <p class="modal-music-artist">{{ musicaParaAdicionar?.artist }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions-bar">
+            <div class="search-playlist-box">
+              <i class="fa fa-search"></i>
+              <input
+                type="text"
+                v-model="playlistSearchQuery"
+                placeholder="Buscar playlist..."
+              />
+            </div>
+          </div>
+
+          <div class="modal-body-playlist">
+            <div v-if="isLoadingUserPlaylists" class="modal-loading">
+              <div class="spinner-small"></div>
+              <span>Carregando playlists...</span>
+            </div>
+
+            <div v-else-if="filteredUserPlaylists.length === 0" class="empty-playlists-modern">
+              <div class="empty-playlist-icon">
+                <i class="fa fa-list-ul"></i>
+              </div>
+              <p v-if="playlistSearchQuery">Nenhuma playlist encontrada</p>
+              <p v-else>Você ainda não tem playlists</p>
+            </div>
+
+            <div v-else class="playlist-grid-modern">
+              <div
+                v-for="playlist in filteredUserPlaylists"
+                :key="playlist._id"
+                class="playlist-card-modern"
+                :class="{ adding: playlistBeingAdded === playlist._id, added: playlistJustAdded === playlist._id }"
+                @click="adicionarMusicaNaPlaylist(playlist._id)"
+              >
+                <div class="playlist-card-cover">
+                  <img
+                    v-if="playlist.capa || playlist.musicas?.[0]?.cover"
+                    :src="playlist.capa || playlist.musicas[0].cover"
+                  />
+                  <div v-else class="playlist-cover-placeholder">
+                    <i class="fa fa-music"></i>
+                  </div>
+                  <div v-if="playlistBeingAdded === playlist._id" class="playlist-overlay-loading">
+                    <div class="spinner-tiny"></div>
+                  </div>
+                  <div v-if="playlistJustAdded === playlist._id" class="playlist-overlay-success">
+                    <i class="fa fa-check"></i>
+                  </div>
+                </div>
+                <div class="playlist-card-info">
+                  <strong class="playlist-card-name">{{ playlist.nome }}</strong>
+                  <span class="playlist-card-count">
+                    {{ playlist.musicas?.length || 0 }} músicas
+                    <span v-if="playlist.privada" class="playlist-private-badge"><i class="fa fa-lock"></i></span>
+                  </span>
+                </div>
+                <button
+                  class="btn-add-modern"
+                  :class="{ added: playlistJustAdded === playlist._id }"
+                  :disabled="playlistBeingAdded === playlist._id"
+                >
+                  <i v-if="playlistJustAdded === playlist._id" class="fa fa-check"></i>
+                  <i v-else class="fa fa-plus"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer-playlist">
+            <button class="btn-cancel-modal" @click="fecharModalAddPlaylist">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+<transition name="fade">
+  <div
+    v-if="showReportModal"
+    class="playlist-modal-overlay"
+    @click.self="closeReportModal"
+  >
+    <div class="playlist-modal report-modal">
+      <button class="playlist-modal-close" @click="closeReportModal">
+        <i class="fa fa-times"></i>
+      </button>
+
+      <h2>Denunciar usuário</h2>
+      <p class="report-subtitle">Escolha o motivo da denúncia</p>
+
+      <div class="report-options">
+        <button
+          v-for="option in reportOptions"
+          :key="option.value"
+          type="button"
+          class="report-option"
+          :class="{ active: selectedReportReason === option.value }"
+          @click="selectedReportReason = option.value"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+
+      <textarea
+        v-model="reportDescription"
+        class="report-textarea"
+        rows="4"
+        placeholder="Descreva rapidamente o problema (opcional)"
+      ></textarea>
+
+      <button
+        class="btn-follow"
+        @click="submitReport"
+        :disabled="reporting"
+      >
+        <i v-if="reporting" class="fa fa-spinner fa-spin"></i>
+        <i v-else class="fa fa-flag"></i>
+        {{ reporting ? 'Enviando...' : 'Enviar denúncia' }}
+      </button>
+    </div>
+  </div>
+</transition>
+
+   <!-- Toast -->
     <transition name="toast">
       <div v-if="toast.show" class="toast-notification" :class="toast.type">
         <div class="toast-content">
@@ -502,8 +776,30 @@ export default {
       activeTab: 'overview',
       showContextMenu: false,
       notFound: false,
+      showAddToPlaylistModal: false,
+musicaParaAdicionar: null,
+playlistsDoUsuario: [],
+isLoadingUserPlaylists: false,
+playlistSearchQuery: '',
+playlistBeingAdded: null,
+playlistJustAdded: null,
       defaultAvatar: '/default-avatar.png',
       loggedUserId: null,
+
+      isBlockedByMe: false,
+blockedMe: false,
+
+showReportModal: false,
+reporting: false,
+selectedReportReason: '',
+reportDescription: '',
+reportOptions: [
+  { value: 'spam', label: 'Spam ou golpe' },
+  { value: 'assedio', label: 'Assédio ou ofensa' },
+  { value: 'conteudo', label: 'Conteúdo impróprio' },
+  { value: 'fake', label: 'Perfil falso ou personificação' },
+  { value: 'outro', label: 'Outro' }
+],
       
       tabs: [
         { id: 'overview', label: 'Visão Geral', icon: 'fa fa-home', count: null, requiresActivity: false },
@@ -528,6 +824,9 @@ export default {
   seguindo: true,
   estatisticas: true
 },
+showPlaylistModal: false,
+selectedPlaylist: null,
+blackCover: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiMwMDAiLz48L3N2Zz4=',
 solicitacaoPendente: false,
 
     }
@@ -542,6 +841,34 @@ solicitacaoPendente: false,
   if (this.notFound) return true
   if (this.isOwnProfile) return false
   return this.usuario?.perfilPrivado === true && this.usuario?.acessoLiberado === false
+},
+
+visiblePlaylists() {
+  return (this.playlistsPublicas || []).filter(playlist => this.isPlaylistPublic(playlist))
+},
+
+filteredUserPlaylists() {
+  if (!this.playlistSearchQuery) return this.playlistsDoUsuario
+  const query = this.playlistSearchQuery.toLowerCase()
+  return this.playlistsDoUsuario.filter(p => p.nome?.toLowerCase().includes(query))
+},
+
+isBlockedProfile() {
+  return !!this.usuario?.perfilBloqueado || this.isBlockedByMe || this.blockedMe
+},
+
+blockActionLabel() {
+  return this.isBlockedByMe ? 'Desbloquear usuário' : 'Bloquear usuário'
+},
+
+blockActionIcon() {
+  return this.isBlockedByMe ? 'fa fa-unlock' : 'fa fa-ban'
+},
+
+blockedProfileMessage() {
+  if (this.blockedMe) return 'Este usuário bloqueou você'
+  if (this.isBlockedByMe) return 'Você bloqueou este usuário'
+  return 'Perfil indisponível'
 },
  
 canViewActivities() {
@@ -595,7 +922,7 @@ followButtonIcon() {
     
     hasVisibleContent() {
       return (this.canViewActivities && this.musicasFavoritas.length > 0) ||
-             (this.canViewPlaylists && this.playlistsPublicas.length > 0) ||
+            (this.canViewPlaylists && this.visiblePlaylists.length > 0) ||
              (this.canViewActivities && this.atividadesRecentes.length > 0)
     },
     
@@ -621,7 +948,7 @@ allTabs() {
       id: 'playlists', 
       label: 'Playlists', 
       icon: 'fa fa-list', 
-      count: this.playlistsPublicas.length, 
+    count: this.visiblePlaylists.length,
       locked: lockedByPrivate || !this.permissions.playlists
     },
     { 
@@ -714,6 +1041,304 @@ isCurrentTabLocked() {
   },
 
   methods: {
+   async curtirMusica(musica, event) {
+  event.stopPropagation()
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      this.showToast('Faça login para curtir músicas', 'info')
+      return
+    }
+
+    const body = { source: musica.source || 'local' }
+    if (musica.source && musica.source !== 'local') {
+      body.dadosMusica = {
+        titulo: musica.nome || musica.title,
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: musica.duration || 30,
+        ano: musica.ano || null,
+        album: musica.album || ''
+      }
+    }
+
+    const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+
+    const data = await res.json()
+    if (data.liked) {
+      this.showToast(`"${musica.nome || musica.title}" curtida!`, 'success')
+      window.dispatchEvent(new Event('likes-updated'))
+    } else {
+      this.showToast(`"${musica.nome || musica.title}" descurtida`, 'info')
+    }
+  } catch (err) {
+    this.showToast('Erro ao curtir música', 'error')
+  }
+},
+
+async favoritarMusica(musica, event) {
+  event.stopPropagation()
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      this.showToast('Faça login para favoritar', 'info')
+      return
+    }
+
+    const body = {
+      tipo: 'musica',
+      tipoItem: 'musica'
+    }
+
+    if (musica.source && musica.source !== 'local') {
+      body.source = musica.source
+      body.dadosItem = {
+        titulo: musica.nome || musica.title,
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: musica.duration || 30,
+        ano: musica.ano || null,
+        album: musica.album || ''
+      }
+    }
+
+    const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+
+    const data = await res.json()
+    if (data.favorited) {
+      this.showToast(`"${musica.nome || musica.title}" favoritada! ⭐`, 'success')
+      window.dispatchEvent(new Event('favoritas-updated'))
+    } else {
+      this.showToast(`"${musica.nome || musica.title}" removida dos favoritos`, 'info')
+    }
+  } catch (err) {
+    this.showToast('Erro ao favoritar música', 'error')
+  }
+},
+
+abrirModalAdicionarPlaylist(musica, event) {
+  event.stopPropagation()
+  this.musicaParaAdicionar = {
+    id: musica.id,
+    title: musica.nome || musica.title,
+    artist: musica.artist,
+    cover: musica.cover,
+    url: musica.url,
+    source: musica.source || 'local',
+    duration: musica.duration,
+    album: musica.album,
+    ano: musica.ano
+  }
+  this.showAddToPlaylistModal = true
+  this.playlistSearchQuery = ''
+  this.playlistBeingAdded = null
+  this.playlistJustAdded = null
+  this.carregarPlaylistsDoUsuario()
+},
+
+async carregarPlaylistsDoUsuario() {
+  this.isLoadingUserPlaylists = true
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('http://localhost:3002/playlists', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    this.playlistsDoUsuario = Array.isArray(data) ? data : []
+  } catch (err) {
+    console.error(err)
+    this.showToast('Erro ao carregar playlists', 'error')
+  } finally {
+    this.isLoadingUserPlaylists = false
+  }
+},
+
+async adicionarMusicaNaPlaylist(playlistId) {
+  if (this.playlistBeingAdded) return
+  this.playlistBeingAdded = playlistId
+
+  try {
+    const token = localStorage.getItem('token')
+    const musica = this.musicaParaAdicionar
+
+    const body = {
+      source: musica.source || 'local'
+    }
+
+    if (musica.source && musica.source !== 'local') {
+      body.dadosMusica = {
+        titulo: musica.title || 'Sem título',
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: musica.duration || 30,
+        ano: musica.ano || null,
+        album: musica.album || ''
+      }
+    }
+
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      }
+    )
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    this.playlistBeingAdded = null
+    this.playlistJustAdded = playlistId
+
+    this.showToast(`"${musica.title}" adicionada à playlist!`, 'success')
+
+    setTimeout(() => {
+      this.showAddToPlaylistModal = false
+      this.playlistJustAdded = null
+      this.musicaParaAdicionar = null
+    }, 1200)
+
+  } catch (err) {
+    this.playlistBeingAdded = null
+    this.showToast(err.message || 'Erro ao adicionar', 'error')
+  }
+},
+
+fecharModalAddPlaylist() {
+  this.showAddToPlaylistModal = false
+  this.musicaParaAdicionar = null
+  this.playlistSearchQuery = ''
+  this.playlistBeingAdded = null
+  this.playlistJustAdded = null
+},
+
+    openReportModal() {
+  this.selectedReportReason = ''
+  this.reportDescription = ''
+  this.showReportModal = true
+  this.closeContextMenu()
+},
+
+closeReportModal() {
+  this.showReportModal = false
+},
+
+async submitReport() {
+  try {
+    if (!this.selectedReportReason) {
+      this.showToast('Selecione um motivo para denunciar', 'error')
+      return
+    }
+
+    const baseReason =
+      this.reportOptions.find(item => item.value === this.selectedReportReason)?.label || ''
+
+    const motivo = [baseReason, this.reportDescription?.trim()]
+      .filter(Boolean)
+      .join(' - ')
+
+    this.reporting = true
+
+    await axios.post(
+      `http://localhost:3002/usuarios/${this.userId}/denunciar`,
+      { motivo },
+      this.getAuthConfig()
+    )
+
+    this.showToast('Denúncia enviada com sucesso', 'success')
+    this.closeReportModal()
+  } catch (error) {
+    this.showToast(
+      error.response?.data?.error || 'Não foi possível enviar a denúncia',
+      'error'
+    )
+  } finally {
+    this.reporting = false
+  }
+},
+
+async toggleUserBlock() {
+  try {
+    if (this.isBlockedByMe) {
+      await axios.delete(
+        `http://localhost:3002/usuarios/${this.userId}/bloquear`,
+        this.getAuthConfig()
+      )
+
+      this.showToast('Usuário desbloqueado', 'success')
+    } else {
+      await axios.post(
+        `http://localhost:3002/usuarios/${this.userId}/bloquear`,
+        {},
+        this.getAuthConfig()
+      )
+
+      this.showToast('Usuário bloqueado', 'success')
+    }
+
+    await this.carregarPerfil()
+    this.closeContextMenu()
+  } catch (error) {
+    this.showToast(
+      error.response?.data?.error || 'Não foi possível atualizar o bloqueio',
+      'error'
+    )
+  }
+},
+
+    getPlaylistSongCount(playlist) {
+  if (!playlist) return 0
+
+  const total =
+    playlist.totalMusicas ??
+    playlist.quantidadeMusicas ??
+    playlist.trackCount ??
+    (
+      (Array.isArray(playlist.songs) ? playlist.songs.length : 0) +
+      (Array.isArray(playlist.musicas) ? playlist.musicas.length : 0) +
+      (Array.isArray(playlist.musicasExternas) ? playlist.musicasExternas.length : 0)
+    )
+
+  return Number(total) || 0
+},
+
+    isPlaylistPrivate(playlist) {
+  if (!playlist) return false
+
+  if (playlist.privada === true) return true
+  if ('publica' in playlist) return playlist.publica === false
+  if ('isPublic' in playlist) return playlist.isPublic === false
+
+  return false
+},
+
+isPlaylistPublic(playlist) {
+  return !this.isPlaylistPrivate(playlist)
+},
+
     resetState() {
       this.loading = true
       this.usuario = {}
@@ -818,12 +1443,21 @@ async carregarPerfil() {
   this.loading = true
 
   try {
-    const res = await axios.get(
-      `http://localhost:3002/usuarios/${this.userId}`,
-      this.getAuthConfigOptional()
-    )
+    const [perfilRes, bloqueioRes] = await Promise.all([
+      axios.get(
+        `http://localhost:3002/usuarios/${this.userId}`,
+        this.getAuthConfigOptional()
+      ),
+      axios.get(
+        `http://localhost:3002/usuarios/${this.userId}/bloqueio-status`,
+        this.getAuthConfigOptional()
+      ).catch(() => ({ data: { blocked: false, blockedByMe: false, blockedMe: false } }))
+    ])
 
-    this.usuario = res.data || {}
+    this.usuario = perfilRes.data || {}
+    this.isBlockedByMe = !!bloqueioRes.data?.blockedByMe
+    this.blockedMe = !!bloqueioRes.data?.blockedMe
+
     this.isOwnProfile = String(this.usuario.id) === String(this.loggedUserId)
     this.solicitacaoPendente = !!this.usuario.solicitacaoPendente
 
@@ -832,7 +1466,30 @@ async carregarPerfil() {
       return
     }
 
-    // Se perfil privado e ainda não liberado → só dados públicos (bio, avatar, nome)
+    if (this.isBlockedProfile) {
+      this.permissions = {
+        perfil: true,
+        curtidas: false,
+        playlists: false,
+        atividades: false,
+        seguidores: false,
+        seguindo: false,
+        estatisticas: false
+      }
+
+      this.musicasFavoritas = []
+      this.playlistsPublicas = []
+      this.seguidoresList = []
+      this.seguindoList = []
+      this.seguidoresCount = 0
+      this.seguindoCount = 0
+      this.estatisticas = {
+        musicasCurtidas: 0,
+        playlists: 0
+      }
+      return
+    }
+
     if (this.usuario.perfilPrivado && this.usuario.acessoLiberado === false) {
       this.permissions = {
         perfil: true,
@@ -843,9 +1500,7 @@ async carregarPerfil() {
         seguindo: false,
         estatisticas: false
       }
-      // ❌ NÃO chama nada aqui — mantém bio visível, resto bloqueado
     } else {
-      // ✅ Só carrega o resto se tiver acesso liberado
       await Promise.allSettled([
         this.carregarEstatisticas(),
         this.carregarFollows(),
@@ -855,7 +1510,6 @@ async carregarPerfil() {
       ])
     }
 
-    // Garante que a tab ativa seja válida
     const allowedTabs = this.allTabs.filter(t => !t.locked).map(t => t.id)
     if (!allowedTabs.includes(this.activeTab)) {
       this.activeTab = 'overview'
@@ -900,12 +1554,17 @@ async carregarPerfil() {
   }
 },
     
-    async carregarFollows() {
+  async carregarFollows() {
   try {
-    const [resSeguidores, resSeguindoUsuarios, resSeguindoCantores] = await Promise.allSettled([
-      axios.get(`http://localhost:3002/follows/seguidores/${this.userId}?tipo=usuario`),
-      axios.get(`http://localhost:3002/follows/seguindo/${this.userId}?tipo=usuario`),
-      axios.get(`http://localhost:3002/follows/seguindo/${this.userId}?tipo=cantor`)
+    const [resSeguidores, resSeguindo] = await Promise.allSettled([
+      axios.get(
+        `http://localhost:3002/usuarios/${this.userId}/seguidores/publicos`,
+        this.getAuthConfigOptional()
+      ),
+      axios.get(
+        `http://localhost:3002/usuarios/${this.userId}/seguindo/publicos`,
+        this.getAuthConfigOptional()
+      )
     ])
 
     if (resSeguidores.status === 'fulfilled') {
@@ -915,7 +1574,7 @@ async carregarPerfil() {
 
       if (this.loggedUserId) {
         this.isFollowing = this.seguidoresList.some(
-          s => String(s.seguidor_id?._id || s.seguidor_id) === String(this.loggedUserId)
+          s => String(s._id || s.id) === String(this.loggedUserId)
         )
       }
     } else {
@@ -924,23 +1583,22 @@ async carregarPerfil() {
       this.seguidoresCount = 0
     }
 
-    const seguindoUsuarios = resSeguindoUsuarios.status === 'fulfilled'
-      ? (resSeguindoUsuarios.value.data || []).map(u => ({ ...u, tipo: 'usuario' }))
-      : []
+    if (resSeguindo.status === 'fulfilled') {
+      this.seguindoList = resSeguindo.value.data || []
+      this.seguindoCount = this.seguindoList.length
+      this.permissions.seguindo = true
+    } else {
+      this.permissions.seguindo = false
+      this.seguindoList = []
+      this.seguindoCount = 0
+    }
 
-    const seguindoCantores = resSeguindoCantores.status === 'fulfilled'
-      ? (resSeguindoCantores.value.data || []).map(c => ({ ...c, tipo: 'cantor' }))
-      : []
-
-    this.seguindoList = [...seguindoUsuarios, ...seguindoCantores]
-    this.seguindoCount = this.seguindoList.length
-    this.permissions.seguindo = resSeguindoUsuarios.status === 'fulfilled' || resSeguindoCantores.status === 'fulfilled'
   } catch (error) {
     console.error('Erro ao carregar follows:', error)
   }
 },
     
-    async carregarCurtidas() {
+ async carregarCurtidas() {
   try {
     const res = await axios.get(
       `http://localhost:3002/usuarios/${this.userId}/curtidas/publicas`,
@@ -960,19 +1618,31 @@ async carregarPerfil() {
   }
 },
     
-    async carregarPlaylists() {
+   async carregarPlaylists() {
   try {
     const res = await axios.get(
       `http://localhost:3002/usuarios/${this.userId}/playlists/publicas`,
       this.getAuthConfigOptional()
     )
 
-    this.playlistsPublicas = Array.isArray(res.data) ? res.data : []
+    const rawPlaylists = Array.isArray(res.data) ? res.data : []
+
+    // Segurança extra no frontend:
+    // mesmo que venha algo indevido do backend, privada não aparece no perfil
+    this.playlistsPublicas = rawPlaylists
+      .filter(playlist => this.isPlaylistPublic(playlist))
+      .map(playlist => ({
+        ...playlist,
+        totalMusicas: this.getPlaylistSongCount(playlist)
+      }))
+
+    this.estatisticas.playlists = this.playlistsPublicas.length
     this.permissions.playlists = true
   } catch (error) {
     if (error.response?.status === 403) {
       this.permissions.playlists = false
       this.playlistsPublicas = []
+      this.estatisticas.playlists = 0
       return
     }
 
@@ -1007,6 +1677,10 @@ async carregarPerfil() {
 },
 
 async toggleFollow() {
+    if (String(this.userId) === String(this.loggedUserId)) {
+    this.showToast('Você não pode seguir a si mesmo', 'error')
+    return
+  }
   try {
     const token = localStorage.getItem('token')
 
@@ -1080,10 +1754,72 @@ async toggleFollow() {
       }))
     },
     
-    openPlaylist(playlist) {
-      this.$router.push(`/playlist/${playlist._id}`)
-    },
-    
+async openPlaylist(playlist) {
+  if (this.isPlaylistPrivate(playlist)) {
+    this.showToast('Esta playlist é privada', 'error')
+    return
+  }
+
+  // Se a playlist já tem músicas carregadas, usa direto
+  const jaTemMusicas = Array.isArray(playlist.musicas) && playlist.musicas.length > 0
+
+  if (jaTemMusicas) {
+    this.selectedPlaylist = this.normalizarPlaylist(playlist)
+    this.showPlaylistModal = true
+    return
+  }
+
+  // Senão, busca do backend
+  this.loading = true
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlist._id || playlist.id}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      }
+    )
+    const data = await res.json()
+
+    const playlistCompleta = {
+      ...playlist,
+      ...data,
+      musicas: data.musicas || data.songs || playlist.musicas || playlist.songs || []
+    }
+
+    this.selectedPlaylist = this.normalizarPlaylist(playlistCompleta)
+    this.showPlaylistModal = true
+  } catch (err) {
+    console.error('Erro ao carregar playlist:', err)
+    // Mesmo com erro, tenta abrir com o que tem
+    this.selectedPlaylist = this.normalizarPlaylist(playlist)
+    this.showPlaylistModal = true
+  } finally {
+    this.loading = false
+  }
+},
+
+normalizarPlaylist(playlist) {
+  const rawMusicas = playlist.musicas || playlist.songs || []
+
+  return {
+    ...playlist,
+    nome: playlist.nome || playlist.name || 'Playlist sem nome',
+    cover: playlist.cover || playlist.capa || this.blackCover,
+    musicas: rawMusicas.map(m => ({
+      id: m.id || m._id || m.trackId || Math.random().toString(36).substr(2, 9),
+      nome: m.nome || m.title || m.titulo || 'Música sem nome',
+      artist: m.artist || m.artista || 'Desconhecido',
+      cover: m.cover || m.capa || this.blackCover,
+      url: m.url || m.previewUrl || '',
+      source: m.source || 'local',
+      duration: m.duration || m.duracao || 30,
+      album: m.album || '',
+      ano: m.ano || null
+    }))
+  }
+},
+
     goToProfile(item) {
       const id = item._id || item.id
 
@@ -2096,7 +2832,130 @@ async toggleFollow() {
   overflow: hidden;
   min-height: 400px;
 }
+.playlist-private-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  z-index: 5;
+  backdrop-filter: blur(6px);
+}
 
+.playlist-private-badge.large {
+  width: 40px;
+  height: 40px;
+}
+.playlist-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.playlist-modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+  border-radius: 24px;
+  padding: 28px;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+}
+
+.playlist-modal-cover {
+  width: 100%;
+  aspect-ratio: 16/7;
+  object-fit: cover;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+.playlist-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.2s;
+}
+
+.playlist-modal-close:hover {
+  background: rgba(255,255,255,0.2);
+  transform: rotate(90deg);
+}
+
+.playlist-modal > h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.playlist-modal > p {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 0 0 20px 0;
+}
+
+
+.playlist-modal-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playlist-modal-song:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.song-index {
+  width: 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.song-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.playlist-modal-song img {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+}
 .locked-mock-content {
   filter: blur(8px) grayscale(0.6);
   opacity: 0.4;
@@ -2457,7 +3316,465 @@ async toggleFollow() {
 .empty-state.large {
   padding: 60px;
 }
+/* Ações da música no modal de playlist */
+.playlist-modal-song {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: .2s;
+  position: relative;
+}
 
+.playlist-modal-song-info {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.playlist-modal-song-info h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 3px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #f8fafc;
+}
+
+.playlist-modal-song-info p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-modal-song-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  opacity: 1;
+}
+
+.playlist-modal-song:hover .playlist-modal-song-actions {
+  opacity: 1;
+}
+
+.btn-modal-action {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.06);
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.btn-modal-action:hover {
+  transform: scale(1.15);
+}
+
+.btn-modal-action.btn-like:hover {
+  background: rgba(236, 72, 153, 0.2);
+  color: #ec4899;
+}
+
+.btn-modal-action.btn-star:hover {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.btn-modal-action.btn-add:hover {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+}
+
+/* ========== MODAL ADICIONAR À PLAYLIST ========== */
+.add-to-playlist-modal {
+  max-width: 480px;
+}
+
+.modal-header-playlist {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.12), rgba(124, 58, 237, 0.08));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin: -28px -28px 0 -28px;
+  border-radius: 24px 24px 0 0;
+}
+
+.modal-music-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-music-preview img {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.modal-music-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modal-music-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #ec4899;
+  font-weight: 600;
+}
+
+.modal-music-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-music-artist {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.search-playlist-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: all 0.2s;
+}
+
+.search-playlist-box:focus-within {
+  border-color: rgba(236, 72, 153, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.search-playlist-box i {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.search-playlist-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-size: 14px;
+  width: 100%;
+}
+
+.search-playlist-box input::placeholder {
+  color: #64748b;
+}
+
+.modal-body-playlist {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px 0;
+  margin: 0 -12px;
+}
+
+.modal-body-playlist::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body-playlist::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body-playlist::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 12px;
+  color: #94a3b8;
+}
+
+.spinner-small {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(236, 72, 153, 0.2);
+  border-top-color: #ec4899;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-playlists-modern {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 16px;
+}
+
+.empty-playlist-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(124, 58, 237, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(236, 72, 153, 0.2);
+}
+
+.empty-playlist-icon i {
+  font-size: 28px;
+  color: #ec4899;
+  opacity: 0.8;
+}
+
+.empty-playlists-modern p {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 0;
+}
+
+.playlist-grid-modern {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.playlist-card-modern {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.playlist-card-modern:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  transform: translateX(4px);
+}
+
+.playlist-card-modern.adding {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.playlist-card-modern.added {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.playlist-card-cover {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.playlist-card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playlist-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(124, 58, 237, 0.2));
+}
+
+.playlist-cover-placeholder i {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.playlist-overlay-loading,
+.playlist-overlay-success {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-overlay-loading {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.playlist-overlay-success {
+  background: rgba(16, 185, 129, 0.9);
+}
+
+.playlist-overlay-success i {
+  color: white;
+  font-size: 22px;
+}
+
+.spinner-tiny {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.playlist-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.playlist-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-card-count {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playlist-private-badge {
+  font-size: 10px;
+  color: #fbbf24;
+}
+
+.btn-add-modern {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.btn-add-modern:hover {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  transform: scale(1.1);
+}
+
+.btn-add-modern.added {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.btn-add-modern:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modal-footer-playlist {
+  padding: 16px 0 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-cancel-modal {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel-modal:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+}
+
+/* Responsivo: ações sempre visíveis em mobile */
+@media (max-width: 768px) {
+  .playlist-modal-song-actions {
+    opacity: 1;
+  }
+  
+  .btn-modal-action {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+}
 /* Toast */
 .toast-notification {
   position: fixed;
@@ -2491,6 +3808,83 @@ async toggleFollow() {
   align-items: center;
   gap: 12px;
   color: #f8fafc;
+}
+.blocked-profile-state {
+  padding: 24px 40px;
+}
+
+.blocked-profile-card {
+  min-height: 320px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  padding: 32px;
+}
+
+.blocked-profile-card i {
+  font-size: 42px;
+  color: #ef4444;
+}
+
+.blocked-profile-card h3 {
+  margin: 0;
+  font-size: 24px;
+  color: #fff;
+}
+
+.blocked-profile-card p {
+  margin: 0;
+  color: #94a3b8;
+  max-width: 420px;
+}
+
+.report-modal {
+  max-width: 520px;
+}
+
+.report-subtitle {
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.report-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.report-option {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.report-option.active {
+  border-color: #ec4899;
+  background: rgba(236,72,153,0.12);
+}
+
+.report-textarea {
+  width: 100%;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  margin-bottom: 16px;
+  resize: vertical;
 }
 
 /* Animações */

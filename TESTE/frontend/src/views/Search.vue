@@ -1298,7 +1298,7 @@ export default {
   try {
     const token = localStorage.getItem('token')
     if (!token) return
-    
+   
     await fetch('http://localhost:3002/historico/reproducao', {
       method: 'POST',
       headers: {

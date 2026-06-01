@@ -338,6 +338,31 @@ computed: {
   }
 },
   methods: {
+    async registrarHistorico(musica) {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    
+    await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        musicaId: musica.id,
+        titulo: musica.title,
+        artista: musica.artist,
+        capa: musica.cover,
+        source: musica.source || 'local',
+        tipo: 'musica'
+      })
+    })
+  } catch (err) {
+    console.error('Erro ao registrar histórico:', err)
+  }
+},
+
     getSourceIcon(source) {
   const icons = {
     spotify: 'fa fa-spotify',
@@ -401,6 +426,7 @@ async carregarCurtidas() {
         duration: c.duration || 180,
         ano: c.ano || null
       }))
+      
 
   } catch (err) {
     console.error("Erro ao carregar curtidas:", err)
@@ -813,8 +839,9 @@ const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
         source: musica.source,
         type: 'liked'
       }
-      
-      window.dispatchEvent(new CustomEvent('play-song', {
+  this.registrarHistorico(musica)
+
+window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
           playlist: this.musicas.map(m => ({

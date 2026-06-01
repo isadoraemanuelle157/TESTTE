@@ -371,6 +371,33 @@ const reportUser = async (req, res) => {
   }
 }
 
+// 🎯 NOVO: GET RECOMENDAÇÕES COMPLETAS (Feito para Você - Modal)
+const getRecomendacoes = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tipo = 'tudo', limit = 50 } = req.query
+    const viewerId = req.user?.id
+
+    // Verificar permissão de acesso ao perfil
+    const podeAcessar = await userService.canAccessProfile(id, viewerId)
+    if (!podeAcessar) {
+      return res.status(403).json({ message: "Perfil privado" })
+    }
+
+    const bloqueado = await userService.isResourceBlocked(id, viewerId, 'mixes')
+    if (bloqueado) {
+      return res.status(403).json({ message: "Recomendações ocultas para você" })
+    }
+
+    const recomendacoes = await userService.buscarRecomendacoesCompletas(id, tipo, parseInt(limit))
+    res.json(recomendacoes)
+
+  } catch (error) {
+    console.error('❌ Erro getRecomendacoes:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 const RECURSOS_VALIDOS = [
   'curtidas',
   'playlists',
@@ -390,16 +417,16 @@ module.exports = {
   update,
   remove,
   search,
-  getMixes,           // 🎯 NOVO
+  getMixes,
+  getRecomendacoes,
   getPublicCurtidas,
   getPublicPlaylists,
   getEstatisticas,
   recuperarSenha,
-    getPublicSeguidores,
+  getPublicSeguidores,
   getPublicSeguindo,
   getBlockStatus,
   blockUser,
   unblockUser,
   reportUser
-
 }

@@ -43,6 +43,19 @@ const getGeneros = async () => {
     .populate('albuns')
     .populate('cantores')
 
+  // 🔥 RETORNA ARRAY PLANO TAMBÉM (para o dropdown do cantor)
+  const listaSimples = generos.map(g => ({
+    _id: g._id,
+    nome: g.nome,
+    descricao: g.descricao,
+    categoria: g.categoria,
+    icon: g.icon,
+    color: g.color,
+    quantidade: g.musicas?.length || 0,
+    totalAlbuns: g.albuns?.length || 0,
+    totalCantores: g.cantores?.length || 0
+  }))
+
   const agrupado = {
     popular: [],
     regional: [],
@@ -65,11 +78,15 @@ const getGeneros = async () => {
     agrupado[g.categoria].push(generoFormatado)
   })
 
-  Object.keys(agrupado).forEach(cat=>{
-    agrupado[cat].sort((a,b)=> b.popularidade - a.popularidade)
+  Object.keys(agrupado).forEach(cat => {
+    agrupado[cat].sort((a, b) => b.popularidade - a.popularidade)
   })
 
-  return agrupado
+  // 🔥 RETORNA OS DOIS FORMATOS
+  return {
+    agrupado,
+    lista: listaSimples
+  }
 }
 
 

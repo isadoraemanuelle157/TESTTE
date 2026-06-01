@@ -524,8 +524,8 @@
   </div>
 
   <template v-else>
-    <img
-      :src="selectedPlaylist.cover || selectedPlaylist.capa || blackCover"
+        <img
+      :src="selectedPlaylist.cover || selectedPlaylist.capa || selectedPlaylist.foto || blackCover"
       class="playlist-modal-cover"
     />
 
@@ -545,40 +545,38 @@
       >
         <span class="song-index">{{ index + 1 }}</span>
 
-        <img
-          :src="musica.cover || blackCover"
-          class="song-thumb"
-          @error="$event.target.src = blackCover"
-        />
+              <img :src="getMusicaCover(musica)" class="song-thumb" @error="$event.target.src = blackCover" :key="musica.id || musica._id" />
 
         <div class="playlist-modal-song-info" @click="playMusic(musica)">
           <h4>{{ musica.nome || 'Sem nome' }}</h4>
           <p>{{ musica.artist || 'Desconhecido' }}</p>
         </div>
 
-        <div class="playlist-modal-song-actions">
-          <button 
-            class="btn-modal-action btn-like" 
-            @click.stop="curtirMusica(musica, $event)"
-            title="Curtir"
-          >
-            <i class="fa fa-heart-o"></i>
-          </button>
-          <button 
-            class="btn-modal-action btn-star" 
-            @click.stop="favoritarMusica(musica, $event)"
-            title="Favoritar"
-          >
-            <i class="fa fa-star-o"></i>
-          </button>
-          <button 
-            class="btn-modal-action btn-add" 
-            @click.stop="abrirModalAdicionarPlaylist(musica, $event)"
-            title="Adicionar à playlist"
-          >
-            <i class="fa fa-plus"></i>
-          </button>
-        </div>
+     <div class="playlist-modal-song-actions">
+  <button 
+    class="btn-modal-action btn-like"
+    :class="{ active: isMusicaCurtida(musica) }"
+    @click.stop="curtirMusica(musica, $event)"
+    :title="isMusicaCurtida(musica) ? 'Descurtir' : 'Curtir'"
+  >
+    <i :class="isMusicaCurtida(musica) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+  </button>
+  <button 
+    class="btn-modal-action btn-star"
+    :class="{ active: isMusicaFavoritada(musica) }"
+    @click.stop="favoritarMusica(musica, $event)"
+    :title="isMusicaFavoritada(musica) ? 'Remover dos favoritos' : 'Favoritar'"
+  >
+    <i :class="isMusicaFavoritada(musica) ? 'fa fa-star' : 'fa fa-star-o'"></i>
+  </button>
+  <button 
+    class="btn-modal-action btn-add"
+    @click.stop="abrirModalAdicionarPlaylist(musica, $event)"
+    title="Adicionar à playlist"
+  >
+    <i class="fa fa-plus"></i>
+  </button>
+</div>
       </div>
     </div>
 
@@ -641,44 +639,63 @@
             </div>
 
             <div v-else class="playlist-grid-modern">
-              <div
-                v-for="playlist in filteredUserPlaylists"
-                :key="playlist._id"
-                class="playlist-card-modern"
-                :class="{ adding: playlistBeingAdded === playlist._id, added: playlistJustAdded === playlist._id }"
-                @click="adicionarMusicaNaPlaylist(playlist._id)"
-              >
-                <div class="playlist-card-cover">
-                  <img
-                    v-if="playlist.capa || playlist.musicas?.[0]?.cover"
-                    :src="playlist.capa || playlist.musicas[0].cover"
-                  />
-                  <div v-else class="playlist-cover-placeholder">
-                    <i class="fa fa-music"></i>
-                  </div>
-                  <div v-if="playlistBeingAdded === playlist._id" class="playlist-overlay-loading">
-                    <div class="spinner-tiny"></div>
-                  </div>
-                  <div v-if="playlistJustAdded === playlist._id" class="playlist-overlay-success">
-                    <i class="fa fa-check"></i>
-                  </div>
-                </div>
-                <div class="playlist-card-info">
-                  <strong class="playlist-card-name">{{ playlist.nome }}</strong>
-                  <span class="playlist-card-count">
-                    {{ playlist.musicas?.length || 0 }} músicas
-                    <span v-if="playlist.privada" class="playlist-private-badge"><i class="fa fa-lock"></i></span>
-                  </span>
-                </div>
-                <button
-                  class="btn-add-modern"
-                  :class="{ added: playlistJustAdded === playlist._id }"
-                  :disabled="playlistBeingAdded === playlist._id"
-                >
-                  <i v-if="playlistJustAdded === playlist._id" class="fa fa-check"></i>
-                  <i v-else class="fa fa-plus"></i>
-                </button>
-              </div>
+             <div
+  v-for="playlist in filteredUserPlaylists"
+  :key="playlist._id"
+  class="playlist-card-modern"
+  :class="{ 
+    adding: playlistBeingAdded === playlist._id, 
+    added: playlistJustAdded === playlist._id,
+    'already-in': isMusicaJaNaPlaylist(playlist._id)
+  }"
+  @click="handleClickPlaylistCard(playlist)"
+>
+  <div class="playlist-card-cover">
+    <img
+      v-if="getPlaylistCardCover(playlist)"
+      :src="getPlaylistCardCover(playlist)"
+    />
+    <div v-else class="playlist-cover-placeholder">
+      <i class="fa fa-music"></i>
+    </div>
+    <div v-if="playlistBeingAdded === playlist._id" class="playlist-overlay-loading">
+      <div class="spinner-tiny"></div>
+    </div>
+    <div v-if="playlistJustAdded === playlist._id" class="playlist-overlay-success">
+      <i class="fa fa-check"></i>
+    </div>
+    <!-- ✅ Badge fixo quando música já está na playlist -->
+    <div 
+      v-if="isMusicaJaNaPlaylist(playlist._id) && playlistJustAdded !== playlist._id" 
+      class="playlist-overlay-already"
+    >
+      <i class="fa fa-check"></i>
+    </div>
+  </div>
+  <div class="playlist-card-info">
+    <strong class="playlist-card-name">
+      {{ playlist.nome }}
+      <span v-if="isMusicaJaNaPlaylist(playlist._id)" class="already-tag">
+        já adicionada
+      </span>
+    </strong>
+    <span class="playlist-card-count">
+      {{ playlist.musicas?.length || 0 }} músicas
+      <span v-if="playlist.privada" class="playlist-private-badge"><i class="fa fa-lock"></i></span>
+    </span>
+  </div>
+  <button
+    class="btn-add-modern"
+    :class="{ 
+      added: playlistJustAdded === playlist._id || isMusicaJaNaPlaylist(playlist._id)
+    }"
+    :disabled="playlistBeingAdded === playlist._id"
+  >
+    <i v-if="playlistJustAdded === playlist._id || isMusicaJaNaPlaylist(playlist._id)" class="fa fa-check"></i>
+    <i v-else class="fa fa-plus"></i>
+  </button>
+</div>
+
             </div>
           </div>
 
@@ -776,6 +793,10 @@ export default {
       activeTab: 'overview',
       showContextMenu: false,
       notFound: false,
+      // === ESTADOS DE INTERAÇÃO DAS MÚSICAS ===
+musicasCurtidasIds: new Set(),      // IDs das músicas já curtidas
+musicasFavoritadasIds: new Set(),   // IDs das músicas já favoritadas
+musicasEmPlaylists: new Map(),      // Map<musicaId, Set<playlistId>>
       showAddToPlaylistModal: false,
 musicaParaAdicionar: null,
 playlistsDoUsuario: [],
@@ -1041,7 +1062,278 @@ isCurrentTabLocked() {
   },
 
   methods: {
-   async curtirMusica(musica, event) {
+  // ✅ NOVO: Verifica se a música atual já está em determinada playlist
+isMusicaJaNaPlaylist(playlistId) {
+  if (!this.musicaParaAdicionar?.id) return false
+  // Tenta com String() para garantir match
+  const musicaId = String(this.musicaParaAdicionar.id)
+  const playlists = this.musicasEmPlaylists.get(musicaId)
+  // Também tenta sem String() como fallback
+  if (!playlists) {
+    const playlistsRaw = this.musicasEmPlaylists.get(this.musicaParaAdicionar.id)
+    return playlistsRaw ? playlistsRaw.has(playlistId) : false
+  }
+  return playlists.has(playlistId)
+},
+
+// ✅ NOVO: Bloqueia o clique se já estiver adicionada
+handleClickPlaylistCard(playlist) {
+  if (this.isMusicaJaNaPlaylist(playlist._id)) {
+    this.showToast('Essa música já está nessa playlist', 'info')
+    return
+  }
+  this.adicionarMusicaNaPlaylist(playlist._id)
+},
+
+// ✅ NOVO: Pega a melhor cover possível para o card da playlist no modal
+getPlaylistCardCover(playlist) {
+  if (playlist.capa && playlist.capa !== this.blackCover) return playlist.capa
+  if (playlist.cover && playlist.cover !== this.blackCover) return playlist.cover
+
+  const musicas = playlist.musicas || playlist.songs || []
+  for (const m of musicas) {
+    const c = m.cover || m.capa || m.album?.cover || m.album?.capa
+    if (c && c !== this.blackCover) return c
+  }
+  return null
+},
+
+// ✅ SUBSTITUIR: abrirModalAdicionarPlaylist (agora recarrega estado de playlists)
+async abrirModalAdicionarPlaylist(musica, event) {
+  event.stopPropagation()
+  this.musicaParaAdicionar = {
+    id: musica.id,
+    title: musica.nome || musica.title,
+    artist: musica.artist,
+    cover: this.getMusicaCover(musica),  // 🔥 garante cover correta
+    url: musica.url,
+    source: musica.source || 'local',
+    duration: musica.duration,
+    album: musica.album,
+    ano: musica.ano
+  }
+  this.showAddToPlaylistModal = true
+  this.playlistSearchQuery = ''
+  this.playlistBeingAdded = null
+  this.playlistJustAdded = null
+  
+  // Carrega playlists e atualiza o mapa de "música está em quais playlists"
+  await this.carregarPlaylistsDoUsuario()
+  this.atualizarMapaPlaylists()
+},
+
+// ✅ NOVO: Atualiza o Map musicasEmPlaylists a partir de playlistsDoUsuario
+atualizarMapaPlaylists() {
+  this.musicasEmPlaylists = new Map()
+  for (const pl of this.playlistsDoUsuario) {
+    const plMusicas = pl.musicas || pl.songs || []
+    for (const m of plMusicas) {
+      const mId = m.id || m._id || m.trackId
+      if (!mId) continue
+      if (!this.musicasEmPlaylists.has(mId)) {
+        this.musicasEmPlaylists.set(mId, new Set())
+      }
+      this.musicasEmPlaylists.get(mId).add(pl._id || pl.id)
+    }
+  }
+},
+
+// ✅ SUBSTITUIR: adicionarMusicaNaPlaylist (atualiza o Map ao final)
+async adicionarMusicaNaPlaylist(playlistId) {
+  if (this.playlistBeingAdded) return
+  this.playlistBeingAdded = playlistId
+
+  try {
+    const token = localStorage.getItem('token')
+    const musica = this.musicaParaAdicionar
+
+    const body = { source: musica.source || 'local' }
+
+    if (musica.source && musica.source !== 'local') {
+      body.dadosMusica = {
+        titulo: musica.title || 'Sem título',
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: musica.duration || 30,
+        ano: musica.ano || null,
+        album: musica.album || ''
+      }
+    }
+
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      }
+    )
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    this.playlistBeingAdded = null
+    this.playlistJustAdded = playlistId
+
+    // 🔥 Atualiza o Map em tempo real para marcar como "já adicionada"
+    if (!this.musicasEmPlaylists.has(musica.id)) {
+      this.musicasEmPlaylists.set(musica.id, new Set())
+    }
+    this.musicasEmPlaylists.get(musica.id).add(playlistId)
+
+    this.showToast(`"${musica.title}" adicionada à playlist!`, 'success')
+
+    setTimeout(() => {
+      this.showAddToPlaylistModal = false
+      this.playlistJustAdded = null
+      this.musicaParaAdicionar = null
+    }, 1200)
+
+  } catch (err) {
+    this.playlistBeingAdded = null
+    this.showToast(err.message || 'Erro ao adicionar', 'error')
+  }
+},
+
+normalizarPlaylist(playlist) {
+  const rawMusicas = playlist.musicas || playlist.songs || []
+  const playlistCover = playlist.cover || playlist.capa || playlist.foto || null
+
+  return {
+    ...playlist,
+    nome: playlist.nome || playlist.name || 'Playlist sem nome',
+    cover: playlistCover || this.blackCover,
+    capa: playlistCover || this.blackCover,
+    musicas: rawMusicas.map(m => {
+      // 🔥 PRIORIDADE MÁXIMA: foto do backend (playlistService retorna 'foto')
+      let musicaCover = 
+        m.foto ||              // ← ADICIONADO PRIMEIRO: backend usa 'foto'
+        m.cover || 
+        m.capa || 
+        m.thumbnail ||
+        m.image ||
+        m.imagem ||
+        m.album?.cover || 
+        m.album?.capa ||
+        m.album?.foto ||     // ← ADICIONADO
+        m.album?.imagem ||
+        (typeof m.album === 'object' ? m.album?.image : null)
+      
+      // Se ainda não achou, tenta dadosMusica (músicas externas vindas do backend)
+      if (!musicaCover && m.dadosMusica) {
+        musicaCover = m.dadosMusica.capa || m.dadosMusica.cover || m.dadosMusica.foto
+      }
+      
+      // Fallback pra capa da playlist SÓ DEPOIS
+      if (!musicaCover) musicaCover = playlistCover
+      if (!musicaCover) musicaCover = this.blackCover
+
+      return {
+        id: m.id || m._id || m.trackId || Math.random().toString(36).substr(2, 9),
+        nome: m.nome || m.title || m.titulo || 'Música sem nome',
+        artist: m.artist || m.artista || 'Desconhecido',
+        cover: musicaCover,
+        capa: musicaCover,
+        foto: musicaCover,    // ← ADICIONADO: garante consistência
+        url: m.url || m.previewUrl || m.link || '',
+        source: m.source || 'local',
+        duration: m.duration || m.duracao || 30,
+        album: m.album || '',
+        ano: m.ano || null
+      }
+    })
+  }
+},
+
+// ✅ SUBSTITUIR o método getMusicaCover existente por este:
+getMusicaCover(musica) {
+  if (!musica) return this.blackCover
+  
+  // 🔥 PRIORIDADE 1: Capas diretas da música (TODAS as variações possíveis)
+  const cover = 
+    musica.cover || 
+    musica.capa || 
+    musica.foto ||           // ← ADICIONADO: backend playlistService usa 'foto'
+    musica.thumbnail ||
+    musica.image ||
+    musica.imagem ||
+    musica.album?.cover || 
+    musica.album?.capa || 
+    musica.album?.image ||
+    musica.album?.imagem ||
+    musica.album?.foto ||    // ← ADICIONADO
+    (typeof musica.album === 'object' ? musica.album?.image : null)
+  
+  if (cover && cover !== this.blackCover && cover.startsWith('http')) return cover
+  
+  // 🔥 PRIORIDADE 2: Capa da playlist selecionada (fallback)
+  if (this.selectedPlaylist) {
+    const plCover = this.selectedPlaylist.cover || this.selectedPlaylist.capa
+    if (plCover && plCover !== this.blackCover && plCover.startsWith('http')) return plCover
+  }
+  
+  // 🔥 PRIORIDADE 3: Tentar extrair de dadosMusica (músicas externas)
+  if (musica.dadosMusica) {
+    const dmCover = musica.dadosMusica.capa || musica.dadosMusica.cover || musica.dadosMusica.image || musica.dadosMusica.foto
+    if (dmCover && dmCover !== this.blackCover) return dmCover
+  }
+  
+  // 🔥 PRIORIDADE 4: Para músicas da playlist que vêm do backend com 'foto'
+  if (musica.foto && musica.foto.startsWith('http')) return musica.foto
+  
+  return this.blackCover
+},
+
+async openPlaylist(playlist) {
+  if (this.isPlaylistPrivate(playlist)) {
+    this.showToast('Esta playlist é privada', 'error')
+    return
+  }
+
+  const jaTemMusicas = Array.isArray(playlist.musicas) && playlist.musicas.length > 0
+
+  if (jaTemMusicas) {
+    // 🔥 PRIMEIRO normaliza, DEPOIS carrega interações, DEPOIS mostra modal
+    this.selectedPlaylist = this.normalizarPlaylist(playlist)
+    await this.carregarEstadoInteracoes(this.selectedPlaylist)
+    this.showPlaylistModal = true
+    return
+  }
+
+  this.loading = true
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlist._id || playlist.id}`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    )
+    const data = await res.json()
+
+    const playlistCompleta = {
+      ...playlist,
+      ...data,
+      musicas: data.musicas || data.songs || playlist.musicas || playlist.songs || []
+    }
+
+    this.selectedPlaylist = this.normalizarPlaylist(playlistCompleta)
+    await this.carregarEstadoInteracoes(this.selectedPlaylist)
+    this.showPlaylistModal = true
+  } catch (err) {
+    console.error('Erro ao carregar playlist:', err)
+    this.selectedPlaylist = this.normalizarPlaylist(playlist)
+    this.showPlaylistModal = true
+  } finally {
+    this.loading = false
+  }
+},
+
+ async curtirMusica(musica, event) {
   event.stopPropagation()
   try {
     const token = localStorage.getItem('token')
@@ -1073,12 +1365,20 @@ isCurrentTabLocked() {
     })
 
     const data = await res.json()
+    
+    // 🔥 ATUALIZA O SET EM TEMPO REAL para o ícone mudar instantaneamente
+    const musicaId = String(musica.id || musica._id || musica.trackId || musica.musicaId)
     if (data.liked) {
+      this.musicasCurtidasIds.add(musicaId)
       this.showToast(`"${musica.nome || musica.title}" curtida!`, 'success')
       window.dispatchEvent(new Event('likes-updated'))
     } else {
+      this.musicasCurtidasIds.delete(musicaId)
       this.showToast(`"${musica.nome || musica.title}" descurtida`, 'info')
     }
+    // 🔥 Força reatividade do Vue para o Set (Vue 2 não detecta mudanças em Set nativo)
+    this.musicasCurtidasIds = new Set(this.musicasCurtidasIds)
+    
   } catch (err) {
     this.showToast('Erro ao curtir música', 'error')
   }
@@ -1121,35 +1421,23 @@ async favoritarMusica(musica, event) {
     })
 
     const data = await res.json()
+    
+    // 🔥 ATUALIZA O SET EM TEMPO REAL para o ícone mudar instantaneamente
+    const musicaId = String(musica.id || musica._id || musica.trackId || musica.musicaId)
     if (data.favorited) {
+      this.musicasFavoritadasIds.add(musicaId)
       this.showToast(`"${musica.nome || musica.title}" favoritada! ⭐`, 'success')
       window.dispatchEvent(new Event('favoritas-updated'))
     } else {
+      this.musicasFavoritadasIds.delete(musicaId)
       this.showToast(`"${musica.nome || musica.title}" removida dos favoritos`, 'info')
     }
+    // 🔥 Força reatividade do Vue para o Set (Vue 2 não detecta mudanças em Set nativo)
+    this.musicasFavoritadasIds = new Set(this.musicasFavoritadasIds)
+    
   } catch (err) {
     this.showToast('Erro ao favoritar música', 'error')
   }
-},
-
-abrirModalAdicionarPlaylist(musica, event) {
-  event.stopPropagation()
-  this.musicaParaAdicionar = {
-    id: musica.id,
-    title: musica.nome || musica.title,
-    artist: musica.artist,
-    cover: musica.cover,
-    url: musica.url,
-    source: musica.source || 'local',
-    duration: musica.duration,
-    album: musica.album,
-    ano: musica.ano
-  }
-  this.showAddToPlaylistModal = true
-  this.playlistSearchQuery = ''
-  this.playlistBeingAdded = null
-  this.playlistJustAdded = null
-  this.carregarPlaylistsDoUsuario()
 },
 
 async carregarPlaylistsDoUsuario() {
@@ -1166,64 +1454,6 @@ async carregarPlaylistsDoUsuario() {
     this.showToast('Erro ao carregar playlists', 'error')
   } finally {
     this.isLoadingUserPlaylists = false
-  }
-},
-
-async adicionarMusicaNaPlaylist(playlistId) {
-  if (this.playlistBeingAdded) return
-  this.playlistBeingAdded = playlistId
-
-  try {
-    const token = localStorage.getItem('token')
-    const musica = this.musicaParaAdicionar
-
-    const body = {
-      source: musica.source || 'local'
-    }
-
-    if (musica.source && musica.source !== 'local') {
-      body.dadosMusica = {
-        titulo: musica.title || 'Sem título',
-        artista: musica.artist || 'Desconhecido',
-        capa: musica.cover || '',
-        previewUrl: musica.url || '',
-        duration: musica.duration || 30,
-        ano: musica.ano || null,
-        album: musica.album || ''
-      }
-    }
-
-    const res = await fetch(
-      `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      }
-    )
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
-      throw new Error(errData.error || `Erro ${res.status}`)
-    }
-
-    this.playlistBeingAdded = null
-    this.playlistJustAdded = playlistId
-
-    this.showToast(`"${musica.title}" adicionada à playlist!`, 'success')
-
-    setTimeout(() => {
-      this.showAddToPlaylistModal = false
-      this.playlistJustAdded = null
-      this.musicaParaAdicionar = null
-    }, 1200)
-
-  } catch (err) {
-    this.playlistBeingAdded = null
-    this.showToast(err.message || 'Erro ao adicionar', 'error')
   }
 },
 
@@ -1753,72 +1983,164 @@ async toggleFollow() {
         }
       }))
     },
-    
-async openPlaylist(playlist) {
-  if (this.isPlaylistPrivate(playlist)) {
-    this.showToast('Esta playlist é privada', 'error')
+
+// ========== ESTADO DE INTERAÇÃO DAS MÚSICAS ==========
+
+async carregarEstadoInteracoes(playlist) {
+  const token = localStorage.getItem('token')
+  if (!token || !playlist?.musicas?.length) return
+
+  // 🔥 Extrai os IDs das músicas da playlist já normalizadas
+  // Agora também inclui _id para músicas locais e musicaId para externas
+  const ids = playlist.musicas.map(m => {
+    return m.id || m._id || m.trackId || m.musicaId
+  }).filter(Boolean)
+  
+  console.log('🔍 IDs das músicas na playlist:', ids)
+  
+  if (ids.length === 0) {
+    console.warn('Nenhum ID de música encontrado na playlist')
     return
   }
 
-  // Se a playlist já tem músicas carregadas, usa direto
-  const jaTemMusicas = Array.isArray(playlist.musicas) && playlist.musicas.length > 0
-
-  if (jaTemMusicas) {
-    this.selectedPlaylist = this.normalizarPlaylist(playlist)
-    this.showPlaylistModal = true
-    return
-  }
-
-  // Senão, busca do backend
-  this.loading = true
   try {
-    const token = localStorage.getItem('token')
-    const res = await fetch(
-      `http://localhost:3002/playlists/${playlist._id || playlist.id}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      }
-    )
-    const data = await res.json()
+    // Carrega curtidas, favoritas e playlists do usuário logado
+    // Carrega curtidas, favoritas e playlists do usuário logado
+    // 🔥 Usa os endpoints corretos que existem nas rotas
+    const [curtidasRes, favoritasRes, playlistsRes] = await Promise.allSettled([
+      fetch('http://localhost:3002/curtidas', {           // ← GET /curtidas (listar minhas)
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch('http://localhost:3002/favoritas', {          // ← GET /favoritas (listar minhas)
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch('http://localhost:3002/playlists', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ])
 
-    const playlistCompleta = {
-      ...playlist,
-      ...data,
-      musicas: data.musicas || data.songs || playlist.musicas || playlist.songs || []
+    // ========== HELPERS ==========
+    const safeJson = async (response, label) => {
+      if (!response || !response.ok) {
+        console.warn(`[${label}] Resposta não-OK:`, response?.status)
+        return null
+      }
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn(`[${label}] Content-Type inválido:`, contentType)
+        // consome o body para não travar, mas ignora
+        await response.text()
+        return null
+      }
+      try {
+        return await response.json()
+      } catch (e) {
+        console.warn(`[${label}] Erro ao fazer parse JSON:`, e.message)
+        return null
+      }
     }
 
-    this.selectedPlaylist = this.normalizarPlaylist(playlistCompleta)
-    this.showPlaylistModal = true
+    // ========== PROCESSA CURTIDAS ==========
+    // ========== PROCESSA CURTIDAS ==========
+    if (curtidasRes.status === 'fulfilled' && curtidasRes.value) {
+      const data = await safeJson(curtidasRes.value, 'curtidas')
+      if (data) {
+        const curtidas = Array.isArray(data) ? data : (data.curtidas || data.data || [])
+        this.musicasCurtidasIds = new Set()
+        
+        curtidas.forEach(c => {
+          // Tenta TODAS as variações de ID possíveis
+          const id = c.musicaId || c.id || c.trackId || c.musica?._id || c.musica?.id
+          if (id) this.musicasCurtidasIds.add(String(id))
+        })
+        
+        console.log('✅ Curtidas carregadas:', this.musicasCurtidasIds.size)
+        console.log('🎵 IDs curtidos:', [...this.musicasCurtidasIds])
+      }
+    } else if (curtidasRes.status === 'rejected') {
+      console.warn('❌ Fetch curtidas falhou:', curtidasRes.reason?.message)
+    }
+
+    // ========== PROCESSA FAVORITAS ==========
+     // ========== PROCESSA FAVORITAS ==========
+    if (favoritasRes.status === 'fulfilled' && favoritasRes.value) {
+      const data = await safeJson(favoritasRes.value, 'favoritas')
+      if (data) {
+        const favoritas = Array.isArray(data) ? data : (data.favoritas || data.data || [])
+        this.musicasFavoritadasIds = new Set()
+        
+        favoritas.forEach(f => {
+          // Para favoritas locais: f.musica?._id
+          // Para favoritas externas: f.musicaExterna?.id ou f.itemId
+          const id = f.musicaId || f.id || f.trackId || 
+                     f.musica?._id || f.musica?.id ||
+                     f.musicaExterna?.id || f.itemId ||
+                     f.albumExterno?.id || f.cantorExterno?.id
+          if (id) this.musicasFavoritadasIds.add(String(id))
+        })
+        
+        console.log('✅ Favoritas carregadas:', this.musicasFavoritadasIds.size)
+        console.log('⭐ IDs favoritados:', [...this.musicasFavoritadasIds])
+      }
+    } else if (favoritasRes.status === 'rejected') {
+      console.warn('❌ Fetch favoritas falhou:', favoritasRes.reason?.message)
+    }
+
+    // ========== PROCESSA PLAYLISTS ==========
+     // ========== PROCESSA PLAYLISTS ==========
+    if (playlistsRes.status === 'fulfilled' && playlistsRes.value) {
+      const data = await safeJson(playlistsRes.value, 'playlists')
+      if (data) {
+        const playlists = Array.isArray(data) ? data : (data.playlists || data.data || [])
+        this.musicasEmPlaylists = new Map()
+        
+        for (const pl of playlists) {
+          const plMusicas = pl.musicas || pl.songs || []
+          for (const m of plMusicas) {
+            // Tenta TODAS as variações de ID
+            const mId = m.id || m._id || m.trackId || m.musicaId
+            if (!mId) continue
+            
+            // Armazena com String() para garantir consistência
+            const mIdStr = String(mId)
+            
+            if (!this.musicasEmPlaylists.has(mIdStr)) {
+              this.musicasEmPlaylists.set(mIdStr, new Set())
+            }
+            this.musicasEmPlaylists.get(mIdStr).add(pl._id || pl.id)
+          }
+        }
+        console.log('✅ Playlists carregadas:', this.musicasEmPlaylists.size, 'músicas mapeadas')
+      }
+    } else if (playlistsRes.status === 'rejected') {
+      console.warn('❌ Fetch playlists falhou:', playlistsRes.reason?.message)
+    }
+
   } catch (err) {
-    console.error('Erro ao carregar playlist:', err)
-    // Mesmo com erro, tenta abrir com o que tem
-    this.selectedPlaylist = this.normalizarPlaylist(playlist)
-    this.showPlaylistModal = true
-  } finally {
-    this.loading = false
+    console.error('Erro geral ao carregar estados de interação:', err)
   }
 },
 
-normalizarPlaylist(playlist) {
-  const rawMusicas = playlist.musicas || playlist.songs || []
-
-  return {
-    ...playlist,
-    nome: playlist.nome || playlist.name || 'Playlist sem nome',
-    cover: playlist.cover || playlist.capa || this.blackCover,
-    musicas: rawMusicas.map(m => ({
-      id: m.id || m._id || m.trackId || Math.random().toString(36).substr(2, 9),
-      nome: m.nome || m.title || m.titulo || 'Música sem nome',
-      artist: m.artist || m.artista || 'Desconhecido',
-      cover: m.cover || m.capa || this.blackCover,
-      url: m.url || m.previewUrl || '',
-      source: m.source || 'local',
-      duration: m.duration || m.duracao || 30,
-      album: m.album || '',
-      ano: m.ano || null
-    }))
-  }
+isMusicaCurtida(musica) {
+  if (!musica) return false
+  // Tenta todos os IDs possíveis da música
+  const id = musica.id || musica._id || musica.trackId || musica.musicaId
+  return id ? this.musicasCurtidasIds.has(String(id)) : false
 },
+
+isMusicaFavoritada(musica) {
+  if (!musica) return false
+  // Tenta todos os IDs possíveis da música
+  const id = musica.id || musica._id || musica.trackId || musica.musicaId
+  return id ? this.musicasFavoritadasIds.has(String(id)) : false
+},
+
+isMusicaEmPlaylist(musica, playlistId) {
+  const playlists = this.musicasEmPlaylists.get(musica.id)
+  return playlists ? playlists.has(playlistId) : false
+},
+
+// ========== AJUSTE DE CAPA DAS MÚSICAS ==========
 
     goToProfile(item) {
       const id = item._id || item.id
@@ -2141,6 +2463,92 @@ normalizarPlaylist(playlist) {
   background: #22c55e;
   border: 3px solid #0f172a;
   border-radius: 50%;
+}
+/* ========== ESTADO "JÁ ADICIONADA" NO MODAL DE PLAYLIST ========== */
+.playlist-card-modern.already-in {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.15);
+  cursor: default;
+}
+
+.playlist-card-modern.already-in:hover {
+  background: rgba(16, 185, 129, 0.1);
+  transform: none;
+}
+
+.playlist-overlay-already {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.85);
+  backdrop-filter: blur(2px);
+}
+
+.playlist-overlay-already i {
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.already-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Botão "+" pintado quando já está na playlist */
+.btn-add-modern.added {
+  background: rgba(16, 185, 129, 0.25);
+  color: #10b981;
+  cursor: default;
+}
+
+.btn-add-modern.added:hover {
+  transform: none;
+}
+
+/* Reforço dos estados ativos dos botões no modal (curtido/favoritado) */
+.btn-modal-action.btn-like.active {
+  background: rgba(236, 72, 153, 0.25) !important;
+  color: #ec4899 !important;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.3);
+}
+
+.btn-modal-action.btn-like.active i {
+  color: #ec4899 !important;
+  animation: heartBeat 0.4s ease;
+}
+
+.btn-modal-action.btn-star.active {
+  background: rgba(251, 191, 36, 0.25) !important;
+  color: #fbbf24 !important;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3);
+}
+
+.btn-modal-action.btn-star.active i {
+  color: #fbbf24 !important;
+  animation: starPulse 0.4s ease;
+}
+
+@keyframes heartBeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.3) rotate(15deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
 .user-details {
@@ -3073,7 +3481,29 @@ normalizarPlaylist(playlist) {
   z-index: 10;
   transition: all 0.3s ease;
 }
+/* Estados ativos dos botões no modal */
+.btn-modal-action.btn-like.active {
+  background: rgba(236, 72, 153, 0.2);
+  color: #ec4899;
+}
 
+.btn-modal-action.btn-like.active i {
+  color: #ec4899;
+}
+
+.btn-modal-action.btn-star.active {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+.btn-modal-action.btn-star.active i {
+  color: #fbbf24;
+}
+
+/* Transição suave dos ícones */
+.btn-modal-action i {
+  transition: all 0.2s ease;
+}
 .blur-overlay i {
   font-size: 36px;
   color: #ef4444;

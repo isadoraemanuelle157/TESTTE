@@ -37,6 +37,7 @@ import Contato from '@/components/Contato.vue'
 import Ajuda from '@/components/Ajuda.vue'
 import Suporte from '@/components/Suporte.vue'
 import SpotifyConnected from '@/components/SpotifyConnected.vue'
+import LocalPlaylist from '@/views/LocalPlaylist.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -131,6 +132,11 @@ const router = createRouter({
       path: '/salademusica',
       name: 'salademusica',
       component: SaladeMusica,
+    },
+     {
+      path: '/local/:nome',
+      name: 'LocalPlaylist',
+      component: LocalPlaylist,
     },
     {
       path: '/matchmusical',

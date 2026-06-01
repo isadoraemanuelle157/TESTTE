@@ -109,6 +109,7 @@ app.use('/game', gameRoutes)
 app.use('/suporte', suporteRoutes)
 app.use('/api/karaoke', karaokeRoutes)
 
+
 app.post('/chat/message', checkChatLimit, async (req, res) => {
   try {
     const { message, context } = req.body

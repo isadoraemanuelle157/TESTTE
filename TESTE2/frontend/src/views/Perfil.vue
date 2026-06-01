@@ -106,7 +106,8 @@
             </div>
            
             <h1 class="user-name">{{ usuario.nome || 'Usuário' }}</h1>
-            <p class="user-handle">@{{ usuario.username || 'usuario' }}</p>
+            <p class="user-handle" v-if="usuario.username">@{{ usuario.username }}</p>
+<p class="user-handle empty" v-else>@usuario</p>
            
             <div class="user-meta">
               <span class="meta-item" v-if="usuario.localizacao">
@@ -126,11 +127,15 @@
             </p>
 
             <!-- Gêneros favoritos -->
-            <div class="user-genres" v-if="usuario.generos && usuario.generos.length">
-              <span v-for="genre in usuario.generos.slice(0, 4)" :key="genre" class="genre-tag">
-                {{ genre }}
-              </span>
-            </div>
+<div class="user-genres" v-if="usuarioGenerosList.length">
+  <span
+    v-for="genre in usuarioGenerosList.slice(0, 4)"
+    :key="genre"
+    class="genre-tag"
+  >
+    {{ genre }}
+  </span>
+</div>
            
             <div class="user-stats">
               <div class="stat-item" @click="activeTab = 'likes'">
@@ -167,9 +172,6 @@
            
             <button class="btn-secondary" @click="shareProfile" title="Compartilhar">
               <i class="fa fa-share-alt"></i>
-            </button>
-            <button class="btn-secondary" @click="showMoreOptions" title="Mais opções">
-              <i class="fa fa-ellipsis-h"></i>
             </button>
           </div>
         </div>
@@ -268,7 +270,7 @@
               </div>
               <div class="highlight-content" @click="playMusic(topTrack)">
                 <div class="highlight-image-wrapper">
-                  <img :src="topTrack.cover" :alt="topTrack.title" />
+                  <img :src="topTrack.cover || blackPlaceholder" :alt="topTrack.title" />
                   <div class="highlight-glow"></div>
                 </div>
                 <div class="highlight-info">
@@ -303,7 +305,7 @@
                   </div>
                   <span class="mini-number" v-else>{{ index + 1 }}</span>
                   <div class="mini-image-wrapper">
-                    <img :src="musica.cover" :alt="musica.nome" />
+                    <img :src="musica.cover || blackPlaceholder" :alt="musica.nome" />
                     <div class="mini-overlay">
                       <i class="fa fa-play"></i>
                     </div>
@@ -343,18 +345,37 @@
                   :key="playlist._id"
                   class="playlist-row"
                 >
-                  <div class="playlist-header" @click="togglePlaylist(playlist._id)">
+<div class="playlist-header" @click="togglePlaylist(playlist._id)">
                     <div class="playlist-left">
-                      <i
-                        class="fa"
-                        :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
-                      ></i>
-                      <div class="playlist-thumb-wrapper">
-                        <img :src="playlist.cover || playlist.capa" class="playlist-thumb" />
+                      <div class="playlist-chevron">
+                        <i
+                          class="fa"
+                          :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
+                        ></i>
                       </div>
-                      <div>
+    <div class="playlist-thumb-wrapper" :class="{ 'no-cover': !playlist.cover && !playlist.capa }">
+  <img 
+    v-if="playlist.cover || playlist.capa"
+    :src="playlist.cover || playlist.capa" 
+    class="playlist-thumb" 
+  />
+  <div v-else class="playlist-thumb-fallback"></div>
+  <div class="playlist-thumb-overlay">
+    <i class="fa fa-list-ul"></i>
+  </div>
+</div>
+                      <div class="playlist-header-info">
                         <h4>{{ playlist.nome }}</h4>
-                        <p>{{ playlist.totalMusicas }} músicas • {{ playlist.privacidade }}</p>
+                        <p>
+                          <span class="playlist-meta-badge">
+                            <i class="fa fa-music"></i> {{ playlist.totalMusicas }}
+                          </span>
+                          <span class="playlist-meta-divider">•</span>
+                          <span :class="['playlist-privacy-text', (playlist.privacidade || 'Pública').toLowerCase()]">
+                            <i :class="playlist.privacidade === 'Privada' ? 'fa fa-lock' : 'fa fa-globe'"></i>
+                            {{ playlist.privacidade || 'Pública' }}
+                          </span>
+                        </p>
                       </div>
                     </div>
                     <button class="btn-play-mini">
@@ -371,14 +392,18 @@
                         @click="playMusic(musica)"
                       >
                         <span>{{ index + 1 }}</span>
-                        <img :src="musica.foto" />
+                        <img :src="musica.foto || blackPlaceholder" />
                         <div>
                           <h5>{{ musica.nome }}</h5>
                           <p>{{ musica.duracao }}</p>
                         </div>
-                        <button @click.stop="playMusic(musica)">
-                          <i class="fa fa-play"></i>
-                        </button>
+               <button 
+  class="btn-play-song"
+  @click.stop="playMusic(musica)"
+  title="Tocar música"
+>
+  <i class="fa fa-play"></i>
+</button>
                       </div>
                     </div>
                   </transition>
@@ -397,20 +422,25 @@
               <div class="section-header">
                 <h3><i class="fa fa-star"></i> Artistas Favoritos</h3>
               </div>
-              <div class="artists-list" v-if="artistasFavoritos.length > 0">
-                <div
-                  v-for="artista in artistasFavoritos.slice(0, 6)"
-                  :key="artista.id"
-                  class="artist-item"
-                  @click="goToArtist(artista)"
-                >
-                  <div class="artist-image-wrapper">
-                    <img :src="artista.image" :alt="artista.name" class="artist-avatar" />
-                  </div>
-                  <span class="artist-name">{{ artista.name }}</span>
-                  <span class="artist-plays">{{ formatNumber(artista.plays) }} plays</span>
-                </div>
-              </div>
+ <div class="artists-list" v-if="artistasFavoritos.length > 0">
+  <div
+    v-for="artista in artistasFavoritos.slice(0, 6)"
+    :key="artista.id"
+    class="artist-item"
+    @click="goToArtist(artista)"
+  >
+    <div class="artist-image-wrapper">
+      <img 
+        :src="artista.image || blackPlaceholder"
+        :alt="artista.name" 
+        class="artist-avatar"
+        @error="handleAvatarError"
+      />
+    </div>
+    <span class="artist-name">{{ artista.name }}</span>
+    <span class="artist-plays">{{ formatNumber(artista.plays) }} plays</span>
+  </div>
+</div>
               <div class="empty-state compact" v-else>
                 <p>Nenhum artista favorito ainda</p>
               </div>
@@ -436,7 +466,7 @@
                   </div>
                   <span class="mini-number" v-else>{{ index + 1 }}</span>
                   <div class="mini-image-wrapper">
-                    <img :src="item.cover" :alt="item.nome" />
+                    <img :src="item.cover || blackPlaceholder":alt="item.nome" />
                     <div class="mini-overlay">
                       <i :class="item.type === 'musica' ? 'fa fa-play' : 'fa fa-list'"></i>
                     </div>
@@ -456,34 +486,6 @@
               </div>
             </div>
            
-            <!-- Atividade Recente -->
-            <div class="content-section full-width">
-              <div class="section-header">
-                <h3><i class="fa fa-pulse"></i> Atividade Recente</h3>
-                <button class="btn-view-all" @click="activeTab = 'activity'" v-if="atividadesRecentes.length > 0">
-                  Ver tudo <i class="fa fa-arrow-right"></i>
-                </button>
-              </div>
-<div class="activity-list" v-if="filteredAtividades.length > 0">
-  <div
-    v-for="atividade in filteredAtividades.slice(0, 5)"
-                  :key="atividade.id"
-                  class="activity-item"
-                >
-                  <div class="activity-icon" :class="atividade.tipo">
-                    <i :class="getActivityIcon(atividade.tipo)"></i>
-                  </div>
-                  <div class="activity-content">
-                    <p class="activity-text" v-html="atividade.texto"></p>
-                    <span class="activity-time">{{ timeAgo(atividade.data) }}</span>
-                  </div>
-                  <img :src="atividade.imagem" alt="" class="activity-image" v-if="atividade.imagem" />
-                </div>
-              </div>
-              <div class="empty-state compact" v-else>
-                <p>Sem atividades recentes</p>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -574,7 +576,7 @@
           </div>
         </div>
 
-        <!-- Tab: Playlists -->
+              <!-- Tab: Playlists - VERSÃO MELHORADA -->
         <div v-if="activeTab === 'playlists'" class="tab-content">
           <div class="playlists-full-grid">        
             <div
@@ -584,85 +586,127 @@
               @click="openPlaylist(playlist)"
             >
               <div class="playlist-cover-large">
-                <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                <img :src="playlist.cover || playlist.capa || blackPlaceholder" :alt="playlist.nome" />
                 <div class="playlist-overlay">
-                  <button class="btn-play-playlist-large">
+                  <button class="btn-play-playlist-large" @click.stop="playPlaylist(playlist)">
                     <i class="fa fa-play"></i>
                   </button>
                 </div>
-                <div class="playlist-privacy-badge" :class="playlist.privacidade.toLowerCase()">
-                  <i :class="playlist.privacidade === 'Pública' ? 'fa fa-globe' : 'fa fa-lock'"></i>
-                  {{ playlist.privacidade }}
+                <div class="playlist-privacy-badge" :class="(playlist.privacidade || 'Pública').toLowerCase()">
+                  <i :class="playlist.privacidade === 'Privada' ? 'fa fa-lock' : 'fa fa-globe'"></i>
+                  {{ playlist.privacidade || 'Pública' }}
+                </div>
+                <div class="playlist-track-count">
+                  <i class="fa fa-music"></i>
+                  {{ playlist.totalMusicas || 0 }}
                 </div>
               </div>
               <div class="playlist-info-large">
                 <h4>{{ playlist.nome }}</h4>
                 <p>{{ playlist.descricao || 'Sem descrição' }}</p>
                 <div class="playlist-meta-large">
-                <span><i class="fa fa-music"></i> {{ playlist.totalMusicas }} músicas</span>
                   <span><i class="fa fa-clock-o"></i> {{ playlist.duracaoTotal || '0 min' }}</span>
-                  <span><i class="fa fa-heart"></i> {{ playlist.curtidas || 0 }} curtidas</span>
+                  <span><i class="fa fa-calendar"></i> {{ timeAgo(playlist.createdAt) }}</span>
                 </div>
-                <div class="playlist-tags" v-if="playlist.tags">
+                <div class="playlist-tags" v-if="playlist.tags && playlist.tags.length">
                   <span v-for="tag in playlist.tags" :key="tag" class="tag">{{ tag }}</span>
                 </div>
               </div>
-              <div class="playlist-actions">
-                <button class="btn-icon" @click.stop="togglePlaylistLike(playlist)" :class="{ 'active': playlist.curtida }">
-                  <i :class="playlist.curtida ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                </button>
-                <button class="btn-icon" @click.stop="showPlaylistOptions(playlist)">
-                  <i class="fa fa-ellipsis-v"></i>
-                </button>
-              </div>
             </div>
+          </div>
+          
+          <!-- Estado vazio melhorado -->
+          <div class="empty-state large" v-if="filteredPlaylists.length === 0">
+            <div class="empty-icon large">
+              <i class="fa fa-list-ul"></i>
+            </div>
+            <h4>Nenhuma playlist encontrada</h4>
+            <p>Crie sua primeira playlist ou ajuste os filtros</p>
+            <button class="btn-create" @click="$router.push('/playlists/criar')" v-if="isOwnProfile">
+              <i class="fa fa-plus"></i> Criar playlist
+            </button>
           </div>
         </div>
 
-        <!-- Tab: Histórico -->
+        <!-- Tab: Histórico - VERSÃO MELHORADA -->
         <div v-if="activeTab === 'history'" class="tab-content">
-          <div class="content-section">
+          <div class="content-section history-section">
             <div class="section-header">
               <div class="header-title">
                 <h3><i class="fa fa-history"></i> Histórico de Reprodução</h3>
-              <span class="count-badge">{{ formatNumber(filteredHistorico.length) }} reproduções</span>
+                <span class="count-badge">{{ formatNumber(filteredHistorico.length) }} reproduções</span>
               </div>
               <div class="header-actions">
-                <button class="btn-clear" @click="clearHistory" v-if="historicoCompleto.length > 0 && isOwnProfile">
-                  <i class="fa fa-trash"></i> Limpar
+          <button class="btn-clear" @click="confirmClearHistory" v-if="historicoReproducao.length > 0 && isOwnProfile">
+                  <i class="fa fa-trash-o"></i> Limpar histórico
                 </button>
               </div>
             </div>
            
-          <div class="history-timeline" v-if="filteredHistorico.length > 0">
+            <div class="history-timeline" v-if="filteredHistorico.length > 0">
               <div
-                v-for="(item, index) in groupedHistory"
-                :key="index"
+                v-for="(group, groupIndex) in groupedHistory"
+                :key="groupIndex"
                 class="history-group"
               >
-                <div class="history-date-header">
-                  <span class="date-label">{{ item.date }}</span>
-                  <span class="date-count">{{ item.items.length }} músicas</span>
-                </div>
+<div class="history-date-header">
+  <div class="date-icon">
+    <i class="fa fa-calendar-o"></i>
+  </div>
+  <div class="date-info">
+    <span class="date-label">{{ group.date }}</span>
+    <span class="date-count">{{ group.items.length }} {{ group.items.length === 1 ? 'música' : 'músicas' }}</span>
+  </div>
+  <div class="date-actions">
+    <button class="btn-toggle-date" @click.stop="toggleDateGroup(groupIndex)" :title="isDateExpanded(groupIndex) ? 'Minimizar' : 'Expandir'">
+      <i :class="isDateExpanded(groupIndex) ? 'fa fa-chevron-up' : 'fa fa-chevron-down'"></i>
+    </button>
+    <button class="btn-play-date" @click="playDateGroup(group.items)">
+      <i class="fa fa-play"></i>
+    </button>
+  </div>
+</div>
                
-                <div class="history-items">
-                  <div
-                    v-for="music in item.items"
-                    :key="music.id"
+             <div class="history-items" v-show="isDateExpanded(groupIndex)">
+  <div
+    v-for="(music, idx) in group.items"
+                    :key="`${groupIndex}-${music.id}-${idx}`"
                     class="history-item-detailed"
+                    :class="{ 'playing': currentPlayingId === music.id }"
                     @click="playMusic(music)"
                   >
+                    <div class="history-number">{{ idx + 1 }}</div>
                     <div class="history-image-wrapper">
-                      <img :src="music.cover" :alt="music.title" />
+                      <img :src="music.cover || blackPlaceholder" :alt="music.title" />
+                      <div class="history-play-overlay">
+                        <i class="fa fa-play"></i>
+                      </div>
                     </div>
                     <div class="history-item-info">
-                      <h4>{{ music.title }}</h4>
+                      <h4 :class="{ 'playing': currentPlayingId === music.id }">{{ music.title }}</h4>
                       <p>{{ music.artist }}</p>
                     </div>
-                    <span class="history-time">{{ music.hora }}</span>
-                    <button class="btn-like" @click.stop="toggleLike(music)">
-                      <i :class="music.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                    </button>
+                    <div class="history-meta">
+ <span class="history-time">
+  <i class="fa fa-clock-o"></i> {{ formatTimeFromDate(music.dataReproducao) }}
+</span>
+                    </div>
+                    <div class="history-actions">
+<button 
+  class="btn-like-sm" 
+  @click.stop="curtirDoHistorico(music)" 
+  :class="{ 'active': music.curtido }"
+>
+  <i :class="music.curtido ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+</button>
+  <button 
+  class="btn-more-sm" 
+  @click.stop="removerDoHistorico(music, groupIndex, idx)" 
+  title="Remover do histórico"
+>
+  <i class="fa fa-trash-o"></i>
+</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -677,7 +721,6 @@
             </div>
           </div>
         </div>
-
         <!-- Tab: Seguidores -->
         <div v-if="activeTab === 'followers'" class="tab-content">
           <div class="users-grid" v-if="seguidoresList.length">
@@ -688,7 +731,7 @@
               @click="goToProfile(user)"
             >
               <div class="user-avatar-wrapper">
-                <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
+                <img :src="user.avatar || blackPlaceholder" :alt="user.nome" class="user-avatar-large" />
               </div>
               <h4>{{ user.nome }}</h4>
               <p>@{{ user.username }}</p>
@@ -787,16 +830,23 @@
                     'Outro'
                   }}
                 </span>
-                <div class="row-actions">
-                  <button @click.stop="abrirFavorito(item)">
-                    <i :class="{
-                      'fa fa-play': item.type === 'musica',
-                      'fa fa-list': item.type === 'playlist',
-                      'fa fa-book': item.type === 'album',
-                      'fa fa-microphone': item.type === 'cantor'
-                    }"></i>
-                  </button>
-                </div>
+  <div class="row-actions">
+  <button 
+    class="btn-like active" 
+    @click.stop="removerFavorito(item)"
+    title="Remover dos favoritos"
+  >
+    <i class="fa fa-star"></i>
+  </button>
+  <button @click.stop="abrirFavorito(item)">
+    <i :class="{
+      'fa fa-play': item.type === 'musica',
+      'fa fa-list': item.type === 'playlist',
+      'fa fa-book': item.type === 'album',
+      'fa fa-microphone': item.type === 'cantor'
+    }"></i>
+  </button>
+</div>
               </div>
             </div>
 
@@ -862,7 +912,7 @@
   {{ userInitials }}
 </div>
 
-                  <button type="button" class="btn-change-avatar" @click="openAvatarEditorFlow">
+<button type="button" class="btn-change-avatar" @click="openAvatarSelector">
   <i class="fa fa-camera"></i>
 </button>
 
@@ -1027,6 +1077,9 @@
                 <i v-else class="fa fa-check"></i>
                 {{ saving ? 'Salvando...' : 'Salvar alterações' }}
               </button>
+
+              <input type="file" ref="editCoverInput" accept="image/*" style="display: none" @change="handleCoverChange" />
+<input type="file" ref="editAvatarInput" accept="image/*" style="display: none" @change="handleAvatarChange" />
             </div>
           </div>
         </div>
@@ -1079,7 +1132,7 @@
             <div class="privacy-user-header">
               <div class="privacy-user-left">
                 <img
-                  :src="person.avatar || defaultAvatar"
+                  :src="person.avatar || blackPlaceholder"
                   class="privacy-user-avatar"
                   alt="avatar"
                 />
@@ -1366,6 +1419,30 @@
           </div>
         </div>
       </transition> 
+
+            <!-- Modal de Confirmação Genérica (substitui window.confirm) -->
+      <transition name="modal">
+        <div v-if="showConfirmModal" class="modal-overlay" @click.self="closeConfirmModal">
+          <div class="modal-content modal-confirm">
+            <div class="modal-header">
+              <div class="confirm-icon" :class="confirmModal.type">
+                <i :class="confirmModal.icon"></i>
+              </div>
+              <h3>{{ confirmModal.title }}</h3>
+            </div>
+            <div class="modal-body">
+              <p>{{ confirmModal.message }}</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" @click="closeConfirmModal">{{ confirmModal.cancelText }}</button>
+              <button :class="['btn-danger', confirmModal.confirmClass]" @click="executeConfirm">
+                {{ confirmModal.confirmText }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+
 </div> <!-- fecha v-else -->
   </div> <!-- fecha .perfil -->
 </template>
@@ -1403,11 +1480,27 @@ export default {
       openedPlaylist: null,
       showAvatarSelector: false,
       activeAvatarTab: 'initials',
+      expandedDates: {},
       isDragging: false,
       hoveredRow: null,
+      historicoReproducao: [],
+loadingHistory: false,
       hasStory: false,
       storyProgress: 0,
-      defaultAvatar: null,
+       blackPlaceholder: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">
+          <rect width="100%" height="100%" fill="#0f0f0f"/>
+          <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+            font-size="48" font-family="Arial" fill="#333">♪</text>
+        </svg>
+      `),
+      defaultAvatar: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
+    <rect width="100%" height="100%" fill="#334155"/>
+    <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
+      font-size="42" font-family="Arial" fill="#fff">U</text>
+  </svg>
+`),
      
       avatarTabs: [
         { id: 'initials', label: 'Iniciais', icon: 'fa fa-font' },
@@ -1483,7 +1576,6 @@ activityResources: [
   { key: 'atividades', label: 'Atividades', icon: 'fa fa-pulse' },
   { key: 'seguidores', label: 'Seguidores', icon: 'fa fa-users' },
   { key: 'seguindo', label: 'Seguindo', icon: 'fa fa-user-plus' },
-  { key: 'estatisticas', label: 'Estatísticas', icon: 'fa fa-bar-chart' },
   { key: 'tudo', label: 'Tudo', icon: 'fa fa-lock' }
 ],
    
@@ -1492,8 +1584,6 @@ activityResources: [
       playlistsRecentes: [],
       todasPlaylists: [],
       minhasPlaylists: [],
-      historicoRecente: [],
-      historicoCompleto: [],
       artistasFavoritos: [],
       favoritos: [],
       favoritosRecentes: [],
@@ -1502,7 +1592,7 @@ activityResources: [
       topTrack: null,
      
       // Filtros e Ordenação
-      showFilters: true,
+      showFilters: false,
       activeFilter: 'all',
       selectedGenres: [],
       sortDesc: true,
@@ -1530,6 +1620,20 @@ activityResources: [
       showDeletePassword: false,
       deleting: false,
       deleteError: '',
+       showConfirmModal: false,
+      confirmModal: {
+        title: '',
+        message: '',
+        icon: 'fa fa-question-circle',
+        type: 'warning',
+        confirmText: 'Confirmar',
+        cancelText: 'Cancelar',
+        confirmClass: '',
+        onConfirm: null
+      },
+      
+      // Modal limpar histórico
+      showClearHistoryModal: false,
      
       // Modal de playlist
       showAddToPlaylistModal: false,
@@ -1550,6 +1654,30 @@ activityResources: [
   },
 
   computed: {
+usuarioGenerosList() {
+  const generos = this.usuario?.generos
+
+  // Se for array simples (legado)
+  if (Array.isArray(generos)) {
+    return generos
+      .map(g => typeof g === 'string' ? g : g?.nome)
+      .filter(Boolean)
+  }
+
+  // Se for objeto novo { locais, externos, todos }
+  if (generos && typeof generos === 'object') {
+    const todos = generos.todos || []
+    const locais = generos.locais || []
+    const externos = generos.externos || []
+    
+    return [...todos, ...locais, ...externos]
+      .map(g => typeof g === 'string' ? g : g?.nome)
+      .filter(Boolean)
+  }
+
+  return []
+},
+
     filteredOverviewMusicas() {
   return this.filteredMusicas.slice(0, 5)
 },
@@ -1687,11 +1815,11 @@ isDefaultAvatar() {
           }
     },
    
-    isNewMember() {
-      if (!this.usuario.membroDesde) return false
-      const dias = Math.floor((Date.now() - new Date(this.usuario.membroDesde)) / (1000 * 60 * 60 * 24))
-      return dias <= 30
-    },
+isNewMember() {
+  if (!this.usuario.membroDesde) return false
+  const dias = Math.floor((Date.now() - new Date(this.usuario.membroDesde)) / (1000 * 60 * 60 * 24))
+  return dias <= 7  // ← MUDADO: de 30 para 7 dias
+},
    
     isFormValid() {
       return this.editForm.nome?.length >= 2 &&
@@ -1722,7 +1850,7 @@ isDefaultAvatar() {
 },
 
 filteredHistorico() {
-  let historico = [...this.historicoCompleto]
+  let historico = [...this.historicoReproducao]  // ← MUDAR: era historicoCompleto
 
   historico = historico.filter(item => this.matchesActivePeriod(this.getItemDate(item)))
   historico = historico.filter(item => this.matchesSelectedGenres(item))
@@ -1739,7 +1867,7 @@ filteredFavoritos() {
   return this.sortByDate(favoritos)
 },
 
-   groupedHistory() {
+ groupedHistory() {
   const groups = {}
 
   this.filteredHistorico.forEach(item => {
@@ -1770,26 +1898,43 @@ filteredFavoritos() {
     }
   },
 
- mounted() {
+  // ADICIONAR watcher ou no método que carrega a tab history:
+watch: {
+  activeTab(newVal) {
+    if (newVal === 'history') {
+      this.carregarHistorico()
+    }
+  }
+},
+
+mounted() {
   setTimeout(() => {
     this.loading = false
   }, 800)
 
-this.carregarUsuarioLogado()
-this.loadCustomAvatarOptions()
-this.generateArtisticAvatars()
-this.generateFunAvatars()
+  this.carregarUsuarioLogado()
+  this.loadCustomAvatarOptions()
+  this.generateArtisticAvatars()
+  this.generateFunAvatars()
 
-this.carregarHistorico()
+  // 🔥 ORDEM CORRETA: curtidas primeiro, depois histórico (precisa dos curtidos)
+  this.carregarCurtidas().then(() => {
+    this.carregarHistorico()  // agora tem os curtidos disponíveis para sincronizar
+  })
+  
   this.carregarDados()
-  this.carregarCurtidas()
   this.carregarFavoritos()
   this.carregarArtistas()
   this.carregarAtividades()
   this.carregarFollows()
 
+  // Event listeners...
   this.onPlaylistUpdated = () => this.carregarDados()
-  this.onLikesUpdated = () => this.carregarCurtidas()
+  this.onLikesUpdated = () => {
+    this.carregarCurtidas().then(() => {
+      this.carregarHistorico()  // re-sincroniza curtidos no histórico
+    })
+  }
   this.onFavoritesUpdated = () => this.carregarFavoritos()
   this.onPerfilUpdated = () => {
     this.carregarUsuarioLogado()
@@ -1803,6 +1948,17 @@ this.carregarHistorico()
   window.addEventListener('perfil-updated', this.onPerfilUpdated)
   window.addEventListener('focus', this.handleFocus)
   window.addEventListener('storage', this.handleStorage)
+  
+  // 🔥 REMOVER este listener duplicado de focus — já está no handleFocus
+  // window.addEventListener('focus', () => { ... })  ← REMOVER
+
+  this.onPlaySong = (e) => {
+    const song = e.detail?.song
+    if (song) {
+      this.adicionarAoHistorico(song)
+    }
+  }
+  window.addEventListener('play-song', this.onPlaySong)
 },
 
   beforeUnmount() {
@@ -1814,11 +1970,407 @@ this.carregarHistorico()
     window.removeEventListener('perfil-updated', this.onPerfilUpdated)
     window.removeEventListener('focus', this.handleFocus)
     window.removeEventListener('storage', this.handleStorage)
+     window.removeEventListener('play-song', this.onPlaySong)
+     
   },
 
   methods: {
+    formatTimeFromDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+},
+
+ async carregarHistorico() {
+  this.loadingHistory = true
+  try {
+    const token = localStorage.getItem('token')
+    
+    // Fallback: array vazio se não logado
+    if (!token) {
+      this.historicoReproducao = []
+      return
+    }
+    
+    // Busca do backend
+    const res = await fetch('http://localhost:3002/historico/reproducao', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('Erro ao carregar histórico:', res.status, errText)
+      throw new Error('Erro ao carregar histórico')
+    }
+    
+    const data = await res.json()
+    
+    // Cria Set de IDs curtidos para lookup rápido
+    const curtidosIds = new Set(this.musicasFavoritas.map(m => String(m.id)))
+    
+    this.historicoReproducao = data.map(h => ({
+      id: h.musicaId || h.id || h._id,
+      title: h.titulo || h.title || 'Música',
+      artist: h.artista || h.artist || 'Artista desconhecido',
+      cover: h.capa || h.cover || '',
+      source: h.source || 'local',
+      // 🔥 PADRONIZAR CAMPO DE DATA: usar createdAt como principal
+      dataReproducao: h.createdAt || h.dataReproducao || h.data || new Date().toISOString(),
+      tempoOuvido: h.tempoOuvido || 0,
+      reproduzidaAteOFim: h.reproduzidaAteOFim || false,
+      // 🔥 SINCRONIZAR CURTIDA com base nas curtidas carregadas
+      curtido: curtidosIds.has(String(h.musicaId || h.id || h._id))
+    }))
+    
+  } catch (err) {
+    console.error('Erro ao carregar histórico:', err)
+    this.historicoReproducao = []
+  } finally {
+    this.loadingHistory = false
+  }
+},
+
+    isDateExpanded(groupIndex) {
+  // Por padrão, expanded = true (mostra tudo). Se explicitamente false, esconde.
+  return this.expandedDates[groupIndex] !== false
+},
+
+toggleDateGroup(groupIndex) {
+  this.expandedDates = {
+    ...this.expandedDates,
+    [groupIndex]: !this.isDateExpanded(groupIndex)
+  }
+},
+
+async curtirDoHistorico(music) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast({ title: "Erro", message: "Você precisa estar logado", type: "error", icon: "fa fa-exclamation-circle" })
+      return
+    }
+
+    // 🔥 CORREÇÃO: IDs externos (Deezer/Spotify) não são ObjectId válidos.
+    // Usar endpoint /curtidas/externas para músicas externas.
+// ✅ DEPOIS (correto):
+const source = music.source || 'local'
+const isExternal = source !== 'local'
+
+// SEMPRE usa a mesma rota /curtidas/:id, mas envia source + dadosMusica no body
+const endpoint = `http://localhost:3002/curtidas/${music.id}`
+
+const body = {
+  source: source
+}
+
+if (isExternal) {
+  body.dadosMusica = {
+    id: String(music.id),           // ID externo obrigatório
+    titulo: music.title || music.nome || 'Música',
+    artista: music.artist || 'Artista desconhecido',
+    capa: music.cover || '',
+    previewUrl: music.url || '',
+    duration: music.duration || 30
+  }
+}
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    const data = await res.json()
+    music.curtido = data.liked
+
+      try {
+    const historico = JSON.parse(localStorage.getItem('historico') || '[]')
+    const idx = historico.findIndex(h => String(h.id) === String(music.id))
+    if (idx !== -1) {
+      historico[idx].curtido = data.liked
+      localStorage.setItem('historico', JSON.stringify(historico))
+    }
+  } catch (e) { /* ignore */ }
+
+    this.showToast({
+      title: data.liked ? "Curtida! ❤️" : "Removida",
+      message: `"${music.title || music.nome}" ${data.liked ? 'adicionada aos curtidos' : 'removida dos curtidos'}`,
+      type: data.liked ? "success" : "info",
+      icon: data.liked ? "fa fa-heart" : "fa fa-heart-o"
+    })
+
+    if (data.liked) {
+      window.dispatchEvent(new CustomEvent('likes-updated'))
+    }
+
+  } catch (error) {
+    console.error("Erro ao curtir do histórico:", error)
+    this.showToast({ title: "Erro", message: "Não foi possível curtir a música", type: "error", icon: "fa fa-exclamation-circle" })
+  }
+},
+
+async removerDoHistorico(music, groupIndex, idx) {
+  try {
+    const token = localStorage.getItem('token')
+    
+    // Remove do backend
+    await fetch(`http://localhost:3002/historico/reproducao/${music.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    // Remove do estado visual
+    const group = this.groupedHistory[groupIndex]
+    if (group) {
+      group.items.splice(idx, 1)
+    }
+
+    // Atualiza o array principal
+    this.historicoReproducao = this.historicoReproducao.filter(h => h.id !== music.id)
+
+    this.showToast({
+      title: "Removido do histórico",
+      message: `"${music.title || music.nome}" removida`,
+      type: "info",
+      icon: "fa fa-trash-o"
+    })
+
+  } catch (error) {
+    console.error("Erro ao remover do histórico:", error)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível remover do histórico",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
+
+   shuffleHistory() {
+  if (this.filteredHistorico.length === 0) return
+
+  // Embaralha uma vez e guarda na memória (não readiciona)
+  if (!this._shuffledHistory || this._shuffledHistory.length === 0) {
+    const shuffled = [...this.filteredHistorico]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    this._shuffledHistory = shuffled
+    this._shuffledIndex = 0
+  }
+
+  // Pega a próxima música do array embaralhado
+  const nextMusic = this._shuffledHistory[this._shuffledIndex]
+  this._shuffledIndex = (this._shuffledIndex + 1) % this._shuffledHistory.length
+
+  // Se completou uma volta, reembaralha
+  if (this._shuffledIndex === 0) {
+    this._shuffledHistory = []
+  }
+
+  const playlist = this._shuffledHistory.map(m => ({
+    id: m.id || m._id,
+    title: m.title || m.nome || 'Música',
+    artist: m.artist || 'Artista desconhecido',
+    cover: m.cover || m.foto || '',
+    url: m.preview || m.url || m.link || '',
+    duration: m.duration || m.duracao || 30,
+    type: 'history'
+  }))
+
+  window.dispatchEvent(new CustomEvent('play-song', {
+    detail: {
+      song: {
+        id: nextMusic.id || nextMusic._id,
+        title: nextMusic.title || nextMusic.nome || 'Música',
+        artist: nextMusic.artist || 'Artista desconhecido',
+        cover: nextMusic.cover || nextMusic.foto || '',
+        url: nextMusic.preview || nextMusic.url || nextMusic.link || '',
+        duration: nextMusic.duration || nextMusic.duracao || 30,
+        type: 'history'
+      },
+      playlist: playlist.length > 0 ? playlist : [nextMusic].map(m => ({
+        id: m.id || m._id,
+        title: m.title || m.nome || 'Música',
+        artist: m.artist || 'Artista desconhecido',
+        cover: m.cover || m.foto || '',
+        url: m.preview || m.url || m.link || '',
+        duration: m.duration || m.duracao || 30,
+        type: 'history'
+      })),
+      index: 0,
+      context: 'historico-shuffle'
+    }
+  }))
+
+  this.showToast({
+    title: "Modo aleatório 🔀",
+    message: `Reproduzindo do histórico em ordem aleatória`,
+    type: "success",
+    icon: "fa fa-random"
+  })
+},
+    
+    playDateGroup(items) {
+      if (items.length === 0) return
+      this.playMusic(items[0])
+      this.showToast({
+        title: "Tocando dia",
+        message: `${items.length} músicas deste dia`,
+        type: "success",
+        icon: "fa fa-play-circle"
+      })
+    },
+
+        playPlaylist(playlist) {
+      if (playlist.musicas && playlist.musicas.length > 0) {
+        this.playMusic(playlist.musicas[0])
+        this.showToast({
+          title: "Tocando playlist",
+          message: `"${playlist.nome}" - ${playlist.musicas.length} músicas`,
+          type: "success",
+          icon: "fa fa-play-circle"
+        })
+      } else {
+        this.showToast({
+          title: "Playlist vazia",
+          message: "Esta playlist não possui músicas",
+          type: "info",
+          icon: "fa fa-info-circle"
+        })
+      }
+    },
+
+     showConfirm(options) {
+      this.confirmModal = {
+        title: options.title || 'Confirmar',
+        message: options.message || 'Tem certeza?',
+        icon: options.icon || 'fa fa-question-circle',
+        type: options.type || 'warning',
+        confirmText: options.confirmText || 'Confirmar',
+        cancelText: options.cancelText || 'Cancelar',
+        confirmClass: options.confirmClass || 'btn-danger',
+        onConfirm: options.onConfirm || (() => {})
+      }
+      this.showConfirmModal = true
+    },
+    
+    closeConfirmModal() {
+      this.showConfirmModal = false
+    },
+    
+    executeConfirm() {
+      if (this.confirmModal.onConfirm) {
+        this.confirmModal.onConfirm()
+      }
+      this.closeConfirmModal()
+    },
+
+   async removerFavorito(item) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast({
+        title: "Erro",
+        message: "Você precisa estar logado",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      })
+      return
+    }
+
+    const source = item.source || 'local'
+    const isExternal = source !== 'local'
+    const tipoItem = item.type  // 'musica', 'album', 'cantor', 'playlist'
+
+    const body = {
+      tipo: tipoItem,
+      source: source
+    }
+
+    // Se for externo, precisa enviar dadosItem
+    if (isExternal) {
+      body.dadosItem = {
+        titulo: item.nome || 'Item',
+        artista: item.artist || 'Artista',
+        capa: item.cover || '',
+        previewUrl: item.url || '',
+        duration: item.duration || 0
+      }
+      // Para álbuns/artistas, ajustar campos
+      if (tipoItem === 'album') {
+        body.dadosItem.ano = item.ano || null
+      }
+    }
+
+    const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    const data = await res.json()
+
+    // Se removeu (favorited: false)
+    if (!data.favorited) {
+      this.favoritos = this.favoritos.filter(
+        f => !(String(f.id) === String(item.id) && f.type === item.type)
+      )
+      
+      this.setTabCount('favorites', this.favoritos.length)
+
+      this.showToast({
+        title: "Removido dos favoritos",
+        message: `"${item.nome}" removido dos favoritos`,
+        type: "info",
+        icon: "fa fa-star-o"
+      })
+      
+      window.dispatchEvent(new CustomEvent('favoritas-updated'))
+    }
+
+  } catch (error) {
+    console.error("Erro ao remover favorito:", error)
+    this.showToast({
+      title: "Erro",
+      message: error.message || "Não foi possível remover dos favoritos",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
+
+adicionarAoHistorico(song) {
+  try {
+    // Não salva mais no localStorage — deixa o backend gerenciar
+    // Apenas recarrega da API para refletir a nova reprodução
+    this.carregarHistorico()
+  } catch (error) {
+    console.error('Erro ao adicionar ao histórico:', error)
+  }
+},
+
 getItemDate(item) {
+  // Prioridade para o campo padronizado do histórico
   return (
+    item?.dataReproducao ||  // ← CAMPO PADRONIZADO DO HISTÓRICO
     item?.dataCurtida ||
     item?.dataFavoritado ||
     item?.createdAt ||
@@ -1826,7 +2378,7 @@ getItemDate(item) {
     item?.adicionadoEm ||
     item?.data ||
     item?.membroDesde ||
-    null
+    new Date().toISOString()
   )
 },
 
@@ -1866,7 +2418,10 @@ matchesActivePeriod(dateValue) {
   if (this.activeFilter === 'all') return true
 
   const itemDate = this.parseValidDate(dateValue)
-  if (!itemDate) return false
+  if (!itemDate) {
+    // Se não conseguir parsear, inclui o item (não filtra fora)
+    return true
+  }
 
   const periodStart = this.getStartOfPeriod(this.activeFilter)
   if (!periodStart) return true
@@ -2242,16 +2797,18 @@ handleGeneratedOptionError(event) {
   event.target.src = this.defaultAvatar
 },
 
-    carregarUsuarioLogado() {
+      carregarUsuarioLogado() {
       const storedUser = localStorage.getItem('usuario')
       const storedProfile = localStorage.getItem('usuario_perfil')
      
       if (storedUser) {
         const userData = JSON.parse(storedUser)
+        // [MUDAR] Garante que username está definido
         this.usuario = {
           ...this.usuario,
           ...userData,
-          id: userData.id || userData._id || this.usuario.id
+          id: userData.id || userData._id || this.usuario.id,
+          username: userData.username || userData.user || userData.apelido || ''
         }
      
         if (storedProfile) {
@@ -2259,14 +2816,17 @@ handleGeneratedOptionError(event) {
           this.usuario = {
             ...this.usuario,
             ...profileData,
-            id: profileData.id || profileData._id || this.usuario.id
+            id: profileData.id || profileData._id || this.usuario.id,
+            username: profileData.username || profileData.user || this.usuario.username || ''
           }
         }
        
-        this.tabs[1].count = this.estatisticas.musicasCurtidas
-        this.tabs[2].count = this.estatisticas.playlists
-        this.tabs[4].count = this.estatisticas.seguidores
-        this.tabs[5].count = this.estatisticas.favoritos
+        this.setTabCount('likes', this.estatisticas.musicasCurtidas || 0)
+        this.setTabCount('playlists', this.estatisticas.playlists || 0)
+        this.setTabCount('followers', this.estatisticas.seguidores || 0)
+        this.setTabCount('following', this.estatisticas.seguindo || 0)
+        this.setTabCount('favorites', this.favoritos?.length || 0)
+
       } else {
         this.$router.push('/login')
       }
@@ -2360,13 +2920,16 @@ handleGeneratedOptionError(event) {
         }
       }
     },
-    openAvatarEditorFlow() {
-  if (!this.showEditModal) {
-    this.openEditModal()
-  }
-
+openAvatarEditorFlow() {
+  // Sempre abre o modal de edição primeiro
+  this.openEditModal()
+  
+  // Aguarda o DOM atualizar e abre o seletor
   this.$nextTick(() => {
-    this.openAvatarSelector()
+    // Pequeno delay para garantir que o modal renderizou
+    setTimeout(() => {
+      this.openAvatarSelector()
+    }, 100)
   })
 },
 
@@ -2414,30 +2977,44 @@ isAvatarGenerated(value) {
       }
     },
 
-    async removeAvatar() {
+     async removeAvatar() {
       if (!this.hasCustomAvatar) return
-      const confirmed = window.confirm("Deseja remover sua foto de perfil da conta?")
-      if (!confirmed) return
-
-      await this.updateProfileMediaField(
-        'avatar',
-        null,
-        "Foto removida",
-        "Sua foto de perfil foi removida da conta"
-      )
+      this.showConfirm({
+        title: 'Remover foto de perfil',
+        message: 'Deseja remover sua foto de perfil da conta?',
+        icon: 'fa fa-user-circle',
+        type: 'warning',
+        confirmText: 'Remover',
+        confirmClass: 'btn-danger',
+        onConfirm: async () => {
+          await this.updateProfileMediaField(
+            'avatar',
+            null,
+            "Foto removida",
+            "Sua foto de perfil foi removida da conta"
+          )
+        }
+      })
     },
 
-    async removeCover() {
+       async removeCover() {
       if (!this.hasCustomCover) return
-      const confirmed = window.confirm("Deseja remover o banner/capa da conta?")
-      if (!confirmed) return
-
-      await this.updateProfileMediaField(
-        'cover',
-        null,
-        "Capa removida",
-        "Seu banner foi removido da conta"
-      )
+      this.showConfirm({
+        title: 'Remover capa',
+        message: 'Deseja remover o banner/capa da conta?',
+        icon: 'fa fa-image',
+        type: 'warning',
+        confirmText: 'Remover',
+        confirmClass: 'btn-danger',
+        onConfirm: async () => {
+          await this.updateProfileMediaField(
+            'cover',
+            null,
+            "Capa removida",
+            "Seu banner foi removido da conta"
+          )
+        }
+      })
     },
 
     removeAvatarFromEdit() {
@@ -2463,8 +3040,12 @@ isAvatarGenerated(value) {
 openAvatarSelector() {
   this.showAvatarSelector = true
   this.activeAvatarTab = 'initials'
-  this.generateArtisticAvatars()
-  this.generateFunAvatars()
+  
+  // 🔥 GARANTE que os avatares são gerados com dados atualizados
+  this.$nextTick(() => {
+    this.generateArtisticAvatars()
+    this.generateFunAvatars()
+  })
 },
    
     closeAvatarSelector() {
@@ -2531,39 +3112,27 @@ selectFunAvatar(avatar) {
   }
 },
    
- async onAvatarSelect(avatarUrl) {
-  try {
-    if (!this.showEditModal) {
-      this.openEditModal()
-      await this.$nextTick()
-    }
-
-    this.editForm.avatar = avatarUrl || null
-
-    await this.updateProfileMediaField(
-      'avatar',
-      avatarUrl || null,
-      "Avatar atualizado",
-      "Sua foto de perfil foi atualizada com sucesso"
-    )
-
-    this.closeAvatarSelector()
-  } catch (error) {
-    this.showToast({
-      title: "Erro",
-      message: "Não foi possível atualizar o avatar",
-      type: "error",
-      icon: "fa fa-exclamation-circle"
-    })
+async onAvatarSelect(avatarUrl) {
+  if (!this.showEditModal) {
+    this.openEditModal()
+    await this.$nextTick()
   }
+
+  this.editForm.avatar = avatarUrl || null
+  this.closeAvatarSelector()
+
+  this.showToast({
+    title: "Avatar selecionado",
+    message: "Clique em salvar alterações para confirmar",
+    type: "success",
+    icon: "fa fa-check-circle"
+  })
 },
 
- handleAvatarError() {
-  this.usuario.avatar = null
-  if (this.showEditModal) {
-    this.editForm.avatar = null
+handleAvatarError(event) {
+  if (event?.target) {
+    event.target.style.display = 'none'
   }
-  this.persistUsuario(this.usuario)
 },
 
     async handleCoverChange(event) {
@@ -2625,24 +3194,28 @@ selectFunAvatar(avatar) {
       }
     },
 
-    abrirFavorito(item) {
-      if (item.type === 'musica') {
-        this.playMusic(item)
-        return
-      }
-      if (item.type === 'playlist') {
-        this.openPlaylist({ _id: item.id })
-        return
-      }
-      if (item.type === 'album') {
-        this.$router.push(`/album/${item.id}`)
-        return
-      }
-      if (item.type === 'cantor') {
-        this.$router.push(`/cantor/${item.id}`)
-        return
-      }
-    },
+abrirFavorito(item) {
+  if (item.type === 'musica') {
+    this.playMusic(item)
+    return
+  }
+  if (item.type === 'playlist') {
+    // 🔥 CORREÇÃO: Navegar para página de playlist com query param
+    this.$router.push({
+      path: '/playlist',
+      query: { id: String(item.id) }
+    })
+    return
+  }
+  if (item.type === 'album') {
+    this.$router.push(`/album/${item.id}`)
+    return
+  }
+  if (item.type === 'cantor') {
+    this.$router.push(`/cantor/${item.id}`)
+    return
+  }
+},
 
     async compressImage(file, {
       maxWidth = 1600,
@@ -2694,11 +3267,12 @@ selectFunAvatar(avatar) {
   }))
 },
 
-    handleFocus() {
-      this.carregarCurtidas()
-      this.carregarDados()
-      this.carregarFavoritos()
-    },
+handleFocus() {
+  this.carregarCurtidas()
+  this.carregarDados()
+  this.carregarFavoritos()
+  this.carregarHistorico()  // ← ADICIONAR/CONFIRMAR
+},
 
    handleStorage(e) {
   if (e.key === 'usuario_perfil') {
@@ -2748,152 +3322,184 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
       this.tabs[2].count = data.length
     },
    
-    async carregarCurtidas() {
-      try {
-        const token = localStorage.getItem("token")
-
-        const res = await fetch(`http://localhost:3002/curtidas`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-
-        if (!res.ok) throw new Error("Erro ao buscar curtidas")
-
-        const data = await res.json()
-
-        this.musicasFavoritas = data.map(c => ({
-          id: c.musica._id,
-          nome: c.musica.nome,
-          artist: (c.musica.cantores || []).filter(c => c && c.nome).map(c => c.nome).join(', ') || 'Artista desconhecido',
-          cover: c.musica.foto,
-          url: c.musica.link,
-          duration: c.musica.duracao,
-          curtido: true,
-          dataCurtida: c.createdAt
-        }))
-
-        this.estatisticas.musicasCurtidas = data.length
-        this.tabs[1].count = data.length
-
-      } catch (error) {
-        console.error(error)
-      }
-    },
-    
-carregarHistorico() {
+  async carregarCurtidas() {
   try {
-    const historico = JSON.parse(localStorage.getItem('historico') || '[]')
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.musicasFavoritas = []
+      return
+    }
 
-    this.historicoCompleto = historico.map((item, index) => {
-      const dataItem = item.data || item.createdAt || new Date()
-
-      return {
-        id: item.id || index,
-        title: item.title || item.nome || 'Música',
-        artist: item.artist || 'Artista desconhecido',
-        cover: item.cover || 'https://via.placeholder.com/80',
-        hora: new Date(dataItem).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit'
-        }),
-        data: dataItem,
-        genero: item.genero || null,
-        generos: item.generos || (item.genero ? [item.genero] : []),
-        curtido: !!item.curtido
-      }
+    const res = await fetch(`http://localhost:3002/curtidas`, {
+      headers: { Authorization: `Bearer ${token}` }
     })
 
-    this.historicoRecente = this.historicoCompleto.slice(0, 10)
+    if (!res.ok) throw new Error("Erro ao buscar curtidas")
+
+    const data = await res.json()
+
+    // 🔥 CORREÇÃO: O controller retorna array direto, não { musicas: [...] }
+    this.musicasFavoritas = data.map(c => ({
+      id: c.id || c._id,  // ← ID pode vir como 'id' (externo) ou '_id' (local)
+      nome: c.nome || c.title || 'Música',
+      artist: c.artist || c.artista || 'Artista desconhecido',
+      cover: c.cover || c.capa || 'https://via.placeholder.com/150',
+      url: c.url || c.previewUrl || c.link || '',
+      duration: c.duration || c.duracao || 30,
+      curtido: true,
+      dataCurtida: c.createdAt || c.dataCurtida || new Date(),
+      source: c.source || 'local',
+      album: c.album || ''
+    }))
+
+    this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
+    this.setTabCount('likes', this.musicasFavoritas.length)
+
+    // 🔥 DISPATCH EVENT para sincronizar com outras páginas
+    window.dispatchEvent(new CustomEvent('likes-updated'))
+
   } catch (error) {
-    console.error('Erro ao carregar histórico:', error)
-    this.historicoCompleto = []
-    this.historicoRecente = []
+    console.error("Erro ao carregar curtidas:", error)
+    this.musicasFavoritas = []
   }
 },
 
-    async carregarFavoritos() {
-      try {
-        const token = localStorage.getItem("token")
+ async carregarFavoritos() {
+  try {
+    const token = localStorage.getItem("token")
+    const res = await fetch("http://localhost:3002/favoritas", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
 
-        const res = await fetch("http://localhost:3002/favoritas", {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+    if (!res.ok) throw new Error("Erro ao buscar favoritas")
+    const data = await res.json()
 
-        if (!res.ok) throw new Error("Erro ao buscar favoritas")
-
-        const data = await res.json()
-
-        this.favoritos = data.map(f => {
-          if (f.musica) {
-            return {
-              id: f.musica._id,
-              type: "musica",
-              nome: f.musica.nome,
-              artist: f.musica.cantores?.length
-                ? f.musica.cantores.map(c => c.nome).join(', ')
-                : "Artista desconhecido",
-              cover: f.musica.foto,
-              url: f.musica.link,
-              duration: f.musica.duracao,
-              dataFavoritado: f.createdAt
-            }
-          }
-          if (f.playlist) {
-            return {
-              id: f.playlist._id,
-              type: "playlist",
-              nome: f.playlist.nome,
-              artist: f.playlist.descricao || "Playlist",
-              cover: f.playlist.capa || f.playlist.cover || "https://via.placeholder.com/150",
-              musicas: f.playlist.quantidadeMusicas || f.playlist.musicas?.length || 0,
-              duracaoTotal: f.playlist.duracaoTotal || "0 min",
-              dataFavoritado: f.createdAt
-            }
-          }
-          if (f.cantor && f.cantor._id) {
-            return {
-              id: f.cantor._id,
-              type: "cantor",
-              nome: f.cantor.nome,
-              artist: "Artista",
-              cover: f.cantor.foto,
-              dataFavoritado: f.createdAt
-            }
-          }
-          if (f.album) {
-            return {
-              id: f.album._id,
-              type: "album",
-              nome: f.album.nome,
-              artist: f.album.cantor?.nome || "Álbum",
-              cover: f.album.foto,
-              musicas: f.album.musicas?.length || 0,
-              dataFavoritado: f.createdAt
-            }
-          }
-          return null
-        }).filter(Boolean)
-
-        this.artistasFavoritos = this.favoritos
-          .filter(f => f.type === 'cantor')
-          .map(a => ({
-            id: a.id,
-            name: a.nome,
-            image: a.cover,
-            addedAt: a.dataFavoritado
-          }))
-
-        this.favoritosRecentes = [...this.favoritos]
-          .sort((a, b) => new Date(b.dataFavoritado) - new Date(a.dataFavoritado))
-          .slice(0, 6)
-
-        this.setTabCount('favorites', this.favoritos.length)
-
-      } catch (error) {
-        console.error(error)
-        this.favoritos = []
-        this.favoritosRecentes = []
+    this.favoritos = data.map(f => {
+      // Música externa (Spotify)
+      if (f.musicaExterna) {
+        return {
+          id: f.musicaExterna.id,
+          type: "musica",
+          nome: f.musicaExterna.nome,
+          artist: f.musicaExterna.artista,
+          cover: f.musicaExterna.capa,
+          url: f.musicaExterna.previewUrl,
+          duration: f.musicaExterna.duration,
+          dataFavoritado: f.createdAt,
+          source: f.musicaExterna.source || 'spotify'
+        }
       }
-    },
+      // Álbum externo
+      if (f.albumExterno) {
+        return {
+          id: f.albumExterno.id,
+          type: "album",
+          nome: f.albumExterno.nome,
+          artist: f.albumExterno.artista,
+          cover: f.albumExterno.capa,
+          dataFavoritado: f.createdAt,
+          source: f.albumExterno.source || 'spotify'
+        }
+      }
+      // Artista externo
+      if (f.cantorExterno) {
+        return {
+          id: f.cantorExterno.id,
+          type: "cantor",
+          nome: f.cantorExterno.nome,
+          artist: "Artista",
+          cover: f.cantorExterno.capa || f.cantorExterno.foto,
+          dataFavoritado: f.createdAt,
+          source: f.cantorExterno.source || 'spotify'
+        }
+      }
+      // Locais...
+      if (f.musica) {
+        return {
+          id: f.musica._id,
+          type: "musica",
+          nome: f.musica.nome,
+          artist: f.musica.cantores?.map(c => c.nome).join(', ') || "Artista desconhecido",
+          cover: f.musica.foto,
+          url: f.musica.link,
+          duration: f.musica.duracao,
+          dataFavoritado: f.createdAt,
+          source: 'local'
+        }
+      }
+ if (f.playlist) {
+        // 🔥 CORREÇÃO: Calcular total de músicas considerando locais + externas
+        const totalMusicas = 
+          f.playlist.quantidadeMusicas || 
+          f.playlist.totalMusicas || 
+          (Array.isArray(f.playlist.musicas) ? f.playlist.musicas.length : 0) +
+          (Array.isArray(f.playlist.musicasExternas) ? f.playlist.musicasExternas.length : 0)
+
+        return {
+          id: f.playlist._id,
+          type: "playlist",
+          nome: f.playlist.nome,
+          artist: f.playlist.descricao || "Playlist",
+          cover: f.playlist.capa || f.playlist.cover,
+          // 🔥 CORREÇÃO: Usar o total calculado
+          musicas: totalMusicas,
+          duracaoTotal: f.playlist.duracaoTotal || "0 min",
+          dataFavoritado: f.createdAt,
+          source: 'local'
+        }
+      }
+      if (f.cantor) {
+        return {
+          id: f.cantor._id,
+          type: "cantor",
+          nome: f.cantor.nome,
+          artist: "Artista",
+          cover: f.cantor.foto,
+          dataFavoritado: f.createdAt,
+          source: 'local'
+        }
+      }
+      if (f.album) {
+        return {
+          id: f.album._id,
+          type: "album",
+          nome: f.album.nome,
+          artist: f.album.cantor?.nome || "Álbum",
+          cover: f.album.foto,
+          musicas: f.album.musicas?.length || 0,
+          dataFavoritado: f.createdAt,
+          source: 'local'
+        }
+      }
+      return null
+    }).filter(Boolean)
+
+    // 🔥 CORREÇÃO: Popular artistasFavoritos com CANTORES (type === 'cantor')
+    this.artistasFavoritos = this.favoritos
+      .filter(f => f.type === 'cantor')
+      .map(a => ({
+        id: a.id,
+        name: a.nome,
+        image: a.cover,
+        plays: 0,  // ou buscar de estatísticas se disponível
+        addedAt: a.dataFavoritado
+      }))
+
+    // Favoritos recentes (todos os tipos exceto cantor para o overview)
+    this.favoritosRecentes = this.favoritos
+      .filter(f => f.type !== 'cantor')  // Cantores vão na seção de artistas
+      .sort((a, b) => new Date(b.dataFavoritado) - new Date(a.dataFavoritado))
+      .slice(0, 6)
+
+    this.setTabCount('favorites', this.favoritos.length)
+
+  } catch (error) {
+    console.error(error)
+    this.favoritos = []
+    this.artistasFavoritos = []
+    this.favoritosRecentes = []
+  }
+},
    
     carregarArtistas() {},
    
@@ -2906,17 +3512,22 @@ carregarHistorico() {
       ]
     },
 
-    triggerAvatarUpload() {
-      if (this.$refs.avatarInput) {
-        this.$refs.avatarInput.click()
-      }
-    },
+triggerCoverUpload() {
+  // Se o modal de edição está aberto, usa o input do modal
+  if (this.showEditModal && this.$refs.editCoverInput) {
+    this.$refs.editCoverInput.click()
+  } else if (this.$refs.coverInput) {
+    this.$refs.coverInput.click()
+  }
+},
 
-    triggerCoverUpload() {
-      if (this.$refs.coverInput) {
-        this.$refs.coverInput.click()
-      }
-    },
+triggerAvatarUpload() {
+  if (this.showEditModal && this.$refs.editAvatarInput) {
+    this.$refs.editAvatarInput.click()
+  } else if (this.$refs.avatarInput) {
+    this.$refs.avatarInput.click()
+  }
+},
 
     async handleAvatarChange(event) {
       const file = event.target.files?.[0]
@@ -2977,7 +3588,15 @@ carregarHistorico() {
       }
     },
 
-   openEditModal() {
+openEditModal() {
+  // 🔥 CORREÇÃO: Tratar generos como objeto, não array
+  const generosAtuais = this.usuario?.generos || {}
+  const generosTodos = [
+    ...(generosAtuais.todos || []),
+    ...(generosAtuais.locais || []),
+    ...(generosAtuais.externos || [])
+  ].map(g => typeof g === 'string' ? g : g?.nome).filter(Boolean)
+
   this.editForm = {
     nome: this.usuario.nome || '',
     username: this.usuario.username || '',
@@ -2987,10 +3606,11 @@ carregarHistorico() {
     cover: this.usuario.cover || null,
     localizacao: this.usuario.localizacao || '',
     website: this.usuario.website || '',
-    generos: [...(this.usuario.generos || [])],
-    perfilPrivado: !!this.usuario.perfilPrivado
+    // 🔥 CORREÇÃO: Usar array de strings para o seletor de chips
+    generos: generosTodos,
+    perfilPrivado: !!this.usuario.perfilPrivado,
+    mostrarAtividade: this.usuario.mostrarAtividade !== false
   }
-
   this.formErrors = {}
   this.usernameStatus = { type: '', message: '', icon: '' }
   this.showEditModal = true
@@ -3058,12 +3678,16 @@ carregarHistorico() {
           throw new Error("Usuário não identificado")
         }
 
-      const payload = {
+ const payload = {
   nome: this.editForm.nome,
   username: this.editForm.username,
   bio: this.editForm.bio,
   email: this.editForm.email,
-  localizacao: this.editForm.localizacao
+  localizacao: this.editForm.localizacao,
+  website: this.editForm.website ?? '',
+  generos: this.editForm.generos ?? [],
+  perfilPrivado: !!this.editForm.perfilPrivado,
+  mostrarAtividade: this.editForm.mostrarAtividade !== false
 }
 
 if (this.editForm.avatar !== this.usuario.avatar) {
@@ -3122,10 +3746,6 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       } finally {
         this.saving = false
       }
-    },
-
-    showMoreOptions() {
-      this.showContextMenu = !this.showContextMenu
     },
 
     closeContextMenu() {
@@ -3304,43 +3924,43 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       }
     },
 
-    playMusic(musica) {
-      this.currentPlayingId = musica.id
-     
-      const playerSong = {
-        id: musica.id,
-        title: musica.nome,
-        artist: musica.cantores?.length
-          ? musica.cantores
-              .filter(c => c && c.nome)
-              .map(c => c.nome)
-              .join(', ')
-          : 'Artista desconhecido',
-        cover: musica.cover,
-        url: musica.preview || musica.url,
-        duration: musica.duration || 30,
-        type: 'profile'
-      }
-     
-      window.dispatchEvent(new CustomEvent('play-song', {
-        detail: {
-          song: playerSong,
-          playlist: this.musicasFavoritas.map(m => ({
-            id: m.id,
-            title: m.nome,
-            artist: m.cantores && m.cantores.length
-              ? m.cantores.map(c => c.nome).join(', ')
-              : 'Artista desconhecido',
-            cover: m.cover,
-            url: m.preview || m.url,
-            duration: m.duration || 30,
-            type: 'profile'
-          })),
-          index: this.musicasFavoritas.findIndex(m => m.id === musica.id),
-          context: 'perfil'
-        }
-      }))
-    },
+playMusic(musica) {
+  this.currentPlayingId = musica.id || musica._id
+
+  const playerSong = {
+    id: musica.id || musica._id,
+    title: musica.title || musica.nome || 'Música',
+    artist: musica.artist || (
+      Array.isArray(musica.cantores)
+        ? musica.cantores.filter(c => c && c.nome).map(c => c.nome).join(', ')
+        : 'Artista desconhecido'
+    ),
+     cover: musica.cover || musica.foto || '',
+  url: musica.preview || musica.url || musica.link || '',
+  duration: musica.duration || musica.duracao || 30,
+  source: musica.source || 'local',   // ← ADICIONAR
+  type: 'profile'
+}
+
+  const playlist = this.musicasFavoritas.map(m => ({
+    id: m.id || m._id,
+    title: m.title || m.nome || 'Música',
+    artist: m.artist || 'Artista desconhecido',
+    cover: m.cover || m.foto || '',
+    url: m.preview || m.url || m.link || '',
+    duration: m.duration || m.duracao || 30,
+    type: 'profile'
+  }))
+
+  window.dispatchEvent(new CustomEvent('play-song', {
+    detail: {
+      song: playerSong,
+      playlist,
+      index: playlist.findIndex(m => m.id === playerSong.id),
+      context: 'perfil'
+    }
+  }))
+},
 
     shufflePlay() {
       if (this.musicasFavoritas.length === 0) return
@@ -3369,35 +3989,83 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       })
     },
 
-    async removerCurtida(musica) {
-      try {
-        const token = localStorage.getItem("token")
+  async removerCurtida(musica) {
+  try {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      this.showToast({
+        title: "Erro",
+        message: "Você precisa estar logado",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      })
+      return
+    }
 
-        await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
+    const source = musica.source || 'local'
+    const isExternal = source !== 'local'
 
-        this.musicasFavoritas = this.musicasFavoritas.filter(
-          m => m.id !== musica.id
-        )
+    const body = {
+      source: source
+    }
 
-        this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
-        this.tabs[1].count = this.musicasFavoritas.length
-
-        this.showToast({
-          title: "Removida dos curtidos 💔",
-          message: `"${musica.nome}" foi removida da sua coleção`,
-          type: "info",
-          icon: "fa fa-heart-broken"
-        })
-
-      } catch (error) {
-        console.error(error)
+    // Se for externa, precisa enviar dadosMusica para recriar se necessário
+    if (isExternal) {
+      body.dadosMusica = {
+        titulo: musica.nome || musica.title || 'Música',
+        artista: musica.artist || 'Artista desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || musica.preview || '',
+        duration: musica.duration || 30,
+        album: musica.album || ''
       }
-    },
+    }
+
+    const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    const data = await res.json()
+
+    // Se descurtiu (liked: false), remove da lista
+    if (!data.liked) {
+      this.musicasFavoritas = this.musicasFavoritas.filter(
+        m => String(m.id) !== String(musica.id)
+      )
+      
+      this.estatisticas.musicasCurtidas = this.musicasFavoritas.length
+      this.setTabCount('likes', this.musicasFavoritas.length)
+
+      this.showToast({
+        title: "Removida dos curtidos 💔",
+        message: `"${musica.nome || musica.title}" foi removida da sua coleção`,
+        type: "info",
+        icon: "fa fa-heart-o"
+      })
+      
+      window.dispatchEvent(new CustomEvent('likes-updated'))
+    }
+
+  } catch (error) {
+    console.error("Erro ao remover curtida:", error)
+    this.showToast({
+      title: "Erro",
+      message: error.message || "Não foi possível remover a curtida",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
 
     async toggleLike(musica) {
       try {
@@ -3445,27 +4113,70 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       this.selectedPlaylist = null
     },
 
-    addMusicToPlaylist(playlist) {
-      this.selectedPlaylist = playlist._id
-     
-      setTimeout(() => {
-        this.showToast({
-          title: "Adicionada! ✅",
-          message: `"${this.musicToAdd.nome}" foi adicionada à playlist "${playlist.nome}"`,
-          type: "success",
-          icon: "fa fa-check"
+   async addMusicToPlaylist(playlist) {
+  this.selectedPlaylist = playlist._id
+
+  try {
+    const token = localStorage.getItem("token")
+    
+    // 🔥 CORREÇÃO: Chamar API real para adicionar música
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlist._id}/musicas/${this.musicToAdd.id}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          source: this.musicToAdd.source || 'local',
+          dadosMusica: this.musicToAdd.source !== 'local' ? {
+            titulo: this.musicToAdd.nome || this.musicToAdd.title,
+            artista: this.musicToAdd.artist,
+            capa: this.musicToAdd.cover,
+            previewUrl: this.musicToAdd.url || this.musicToAdd.preview,
+            duration: this.musicToAdd.duration
+          } : undefined
         })
-        this.closeAddToPlaylistModal()
-      }, 500)
-    },
+      }
+    )
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || 'Erro ao adicionar')
+    }
+
+    this.showToast({
+      title: "Adicionada! ✅",
+      message: `"${this.musicToAdd.nome}" foi adicionada à playlist "${playlist.nome}"`,
+      type: "success",
+      icon: "fa fa-check"
+    })
+    
+    window.dispatchEvent(new Event('playlist-updated'))
+  } catch (error) {
+    this.showToast({
+      title: "Erro",
+      message: error.message || "Não foi possível adicionar à playlist",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  } finally {
+    this.closeAddToPlaylistModal()
+  }
+},
 
     createAndAdd() {
       this.closeAddToPlaylistModal()
     },
 
-    openPlaylist(playlist) {
-      this.$router.push(`/playlist/${playlist._id}`)
-    },
+openPlaylist(playlist) {
+  // 🔥 CORREÇÃO: Usar query param conforme o componente Playlist.vue espera
+  this.$router.push({
+    path: '/playlist',
+    query: { id: String(playlist._id) }
+  })
+},
 
     togglePlaylist(id) {
       this.openedPlaylist = this.openedPlaylist === id ? null : id
@@ -3495,24 +4206,61 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       console.log("Context menu for:", musica)
     },
 
-    clearHistory() {
-      if (confirm("Tem certeza que deseja limpar todo o histórico de reprodução? Esta ação não pode ser desfeita.")) {
-        this.historicoCompleto = []
-        this.historicoRecente = []
-        localStorage.removeItem('historico')
-       
-        this.showToast({
-          title: "Histórico limpo 🗑️",
-          message: "Seu histórico de reprodução foi completamente apagado",
-          type: "success",
-          icon: "fa fa-trash"
-        })
-      }
+        confirmClearHistory() {
+      this.showConfirm({
+        title: 'Limpar histórico',
+        message: 'Tem certeza que deseja limpar todo o histórico de reprodução? Esta ação não pode ser desfeita.',
+        icon: 'fa fa-history',
+        type: 'danger',
+        confirmText: 'Limpar',
+        confirmClass: 'btn-danger',
+        onConfirm: () => {
+          this.executeClearHistory()
+        }
+      })
     },
+    
+   async executeClearHistory() {
+  try {
+    const token = localStorage.getItem('token')
+    await fetch('http://localhost:3002/historico/reproducao', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    
+    this.historicoReproducao = []
+    this.showToast({
+      title: "Histórico limpo 🗑️",
+      message: "Seu histórico de reprodução foi completamente apagado",
+      type: "success",
+      icon: "fa fa-trash"
+    })
+  } catch (error) {
+    console.error('Erro ao limpar histórico:', error)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível limpar o histórico",
+      type: "error",
+      icon: "fa fa-exclamation-circle"
+    })
+  }
+},
 
-    goToArtist(artista) {
-      this.$router.push(`/artista/${artista.id}`)
-    },
+goToArtist(artista) {
+  // 🔥 CORREÇÃO: Verificar se é artista externo ou local
+  const artistId = artista.id || artista._id
+  
+  if (artista.source && artista.source !== 'local') {
+    // Artista externo (Spotify/Deezer) - usar rota com query
+    this.$router.push({
+      path: '/cantor',
+      query: { id: artistId, source: artista.source }
+    })
+  } else {
+    // Artista local
+    this.$router.push(`/cantor/${artistId}`)
+  }
+},
 
    goToProfile(user) {
   if (user.tipo === 'cantor') {
@@ -3620,9 +4368,9 @@ if (this.editForm.perfilPrivado !== this.usuario.perfilPrivado) {
       }
     },
 
-    toggleSort() {
-      this.sortDesc = !this.sortDesc
-    },
+toggleSort() {
+  this.sortDesc = !this.sortDesc
+},
 
     toggleGenre(genre) {
       const index = this.selectedGenres.indexOf(genre)
@@ -4576,13 +5324,31 @@ html, body {
 }
 
 .btn-shuffle {
-  background: rgba(255, 255, 255, 0.05);
-  color: #94a3b8;
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  background: rgba(168, 85, 247, 0.08);
+  color: #c084fc;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
 }
 
 .btn-shuffle:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(168, 85, 247, 0.18);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #d8b4fe;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.2);
+}
+
+.btn-shuffle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .btn-play-all {
@@ -4703,7 +5469,10 @@ html, body {
   color: #ec4899;
   font-weight: 600;
 }
-
+.user-handle.empty {
+  opacity: 0.5;
+  font-style: italic;
+}
 .btn-play-highlight {
   width: 56px;
   height: 56px;
@@ -4957,9 +5726,38 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 14px 16px;
   cursor: pointer;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
+
+.playlist-header:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(236, 72, 153, 0.15);
+  transform: translateX(4px);
+}
+
+.playlist-chevron {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.playlist-header:hover .playlist-chevron {
+  background: rgba(236, 72, 153, 0.15);
+  color: #ec4899;
+}
+
 
 .playlist-left {
   display: flex;
@@ -4968,16 +5766,89 @@ html, body {
 }
 
 .playlist-thumb-wrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
   overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .playlist-thumb {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.playlist-header:hover .playlist-thumb {
+  transform: scale(1.08);
+}
+
+.playlist-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.playlist-header:hover .playlist-thumb-overlay {
+  opacity: 1;
+}
+
+.playlist-thumb-overlay i {
+  color: white;
+  font-size: 18px;
+}
+
+.playlist-header-info h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0 0 6px 0;
+}
+
+.playlist-header-info p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.playlist-meta-badge {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 3px 10px;
+  border-radius: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.playlist-meta-divider {
+  color: #475569;
+}
+
+.playlist-privacy-text {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.playlist-privacy-text.pública {
+  color: #22c55e;
+}
+
+.playlist-privacy-text.privada {
+  color: #ef4444;
 }
 
 .playlist-musicas {
@@ -5642,7 +6513,282 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #94a3b8;
 }
+/* [MUDAR] Estilos melhorados para histórico */
+.history-section {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+}
 
+.history-group {
+  margin-bottom: 32px;
+}
+
+.history-group:last-child {
+  margin-bottom: 0;
+}
+
+.history-date-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.date-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+}
+
+.date-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.date-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f8fafc;
+  text-transform: capitalize;
+}
+
+.date-count {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.btn-play-date {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+}
+
+.btn-play-date:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+}
+
+.history-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 8px;
+}
+
+.history-item-detailed {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.history-item-detailed:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+/* [MUDAR] Modal de confirmação */
+.modal-confirm {
+  max-width: 420px;
+  text-align: center;
+}
+
+.confirm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 16px;
+}
+
+.confirm-icon.warning {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.confirm-icon.danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.confirm-icon.info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.modal-confirm .modal-header {
+  flex-direction: column;
+  text-align: center;
+}
+
+.modal-confirm .modal-header h3 {
+  margin: 0;
+}
+
+.modal-confirm .modal-body p {
+  font-size: 15px;
+  color: #cbd5e1;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modal-confirm .modal-footer {
+  justify-content: center;
+  gap: 16px;
+}
+.history-item-detailed.playing {
+  background: rgba(236, 72, 153, 0.08);
+  border-color: rgba(236, 72, 153, 0.2);
+}
+
+.history-number {
+  width: 28px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-image-wrapper {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.history-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.history-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.history-item-detailed:hover .history-play-overlay {
+  opacity: 1;
+}
+
+.history-play-overlay i {
+  color: white;
+  font-size: 16px;
+}
+
+.history-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-item-info h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item-info h4.playing {
+  color: #ec4899;
+}
+
+.history-item-info p {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-time {
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.history-item-detailed:hover .history-actions {
+  opacity: 1;
+}
+
+.btn-like-sm, .btn-more-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-like-sm:hover, .btn-more-sm:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.btn-like-sm.active {
+  color: #ec4899;
+}
 /* ===== MODAL ===== */
 .modal-overlay {
   position: fixed;
@@ -5723,7 +6869,189 @@ html, body {
   color: #64748b;
   margin: 0;
 }
+/* [MUDAR] Estilos melhorados para playlists */
+.playlist-cover-large {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+}
 
+.playlist-cover-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.playlist-card-large:hover .playlist-cover-large img {
+  transform: scale(1.08);
+}
+
+.playlist-track-count {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playlist-card-large {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+}
+
+.playlist-card-large:hover {
+  transform: translateY(-8px);
+  border-color: rgba(236, 72, 153, 0.25);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(236, 72, 153, 0.1);
+}
+.btn-play-song {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+.musica-item:hover .btn-play-song {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.btn-play-song:hover {
+  transform: scale(1.15) !important;
+  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.5);
+}
+.playlist-info-large {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.playlist-info-large h4 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.date-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-toggle-date {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.btn-toggle-date:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+}
+.playlist-info-large p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 42px;
+}
+
+.playlist-meta-large {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.playlist-meta-large span {
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.playlist-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.tag {
+  padding: 4px 10px;
+  background: rgba(236, 72, 153, 0.1);
+  border: 1px solid rgba(236, 72, 153, 0.2);
+  border-radius: 12px;
+  font-size: 11px;
+  color: #ec4899;
+  font-weight: 600;
+}
+
+.btn-create {
+  padding: 12px 24px;
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.btn-create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(236, 72, 153, 0.4);
+}
 .modal-header h3 {
   font-size: 20px;
   font-weight: 700;
@@ -5918,7 +7246,19 @@ html, body {
   gap: 10px;
   align-items: center;
 }
+.playlist-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  background: #0a0a0a;
+}
 
+.playlist-thumb-wrapper.no-cover {
+  background: #0a0a0a;
+}
+
+.playlist-thumb-wrapper.no-cover {
+  background: #0a0a0a;
+}
 .btn-remove-cover {
   padding: 10px 20px;
   background: rgba(239, 68, 68, 0.75);
@@ -6526,7 +7866,33 @@ html, body {
   color: #94a3b8;
   line-height: 1.4;
 }
+.btn-clear {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
 
+.btn-clear:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+}
+
+.btn-clear:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 .toast-close {
   width: 32px;
   height: 32px;
