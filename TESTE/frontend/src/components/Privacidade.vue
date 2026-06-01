@@ -1,4 +1,4 @@
-<<template>
+<template>
   <div class="privacy-page">
 
     <!-- Background Effects -->

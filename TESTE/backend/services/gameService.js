@@ -921,24 +921,24 @@ const getTriviaQuestions = (dificuldade) => {
 
 const iniciarSessao = async (userId, modo, dificuldade) => {
   const stats = await getOrCreateUserStats(userId)
-  
-  // Verifica se dificuldade está bloqueada
+
   if (dificuldade !== 'easy' && stats.progresso[modo][dificuldade].bloqueado) {
     throw new Error('Dificuldade bloqueada. Complete o nível anterior primeiro.')
   }
-  
+
   const session = new GameSession({
     usuario: userId,
     modo,
     dificuldade,
     totalPerguntas: 10
   })
-  
+
   await session.save()
-  
-  // Gera primeira pergunta
-  const pergunta = await gerarPergunta(modo, dificuldade)
-  
+
+  const pergunta = await gerarPergunta(modo, dificuldade, session._id.toString())
+  session.perguntaAtual = pergunta
+  await session.save()
+
   return {
     sessionId: session._id,
     pergunta,
@@ -970,38 +970,47 @@ const gerarPergunta = async (modo, dificuldade, sessionId = null) => {
 // ============================================
 
 const responderPergunta = async (sessionId, respostaIndex, tempoResposta) => {
-  const session = await GameSession.findById(sessionId);
-  if (!session) throw new Error('Sessão não encontrada');
-  if (session.completada) throw new Error('Sessão já finalizada');
-  
-  // ⚡ PASSA SESSIONID PARA EVITAR REPETIÇÃO
-  const perguntaAtual = await gerarPergunta(session.modo, session.dificuldade, sessionId);
-  const acertou = respostaIndex === perguntaAtual.respostaCorreta;
-  
+  const session = await GameSession.findById(sessionId)
+  if (!session) throw new Error('Sessão não encontrada')
+  if (session.completada) throw new Error('Sessão já finalizada')
+  if (!session.perguntaAtual) throw new Error('Pergunta atual não encontrada')
+
+  const perguntaAtual = session.perguntaAtual
+  const acertou = Number(respostaIndex) === Number(perguntaAtual.respostaCorreta)
+
   const diffConfig = DIFICULTIES[session.dificuldade]
-const pontosBase = 100
-const bonusTempo = Math.max(0, diffConfig.tempo - tempoResposta) * 5
-const streakBonus = Math.min(session.acertos + (acertou ? 1 : 0), 5) * 10 // bônus streak
-const pontosGanhos = acertou ? Math.floor((pontosBase + bonusTempo + streakBonus) * diffConfig.multiplicador) : 0
-const moedasGanhas = acertou ? Math.floor((10 + streakBonus) * diffConfig.multiplicador) : 0
-  
+  const pontosBase = 100
+  const bonusTempo = Math.max(0, diffConfig.tempo - (tempoResposta || 0)) * 5
+  const streakBonus = Math.min(session.acertos + (acertou ? 1 : 0), 5) * 10
+
+  const pontosGanhos = acertou
+    ? Math.floor((pontosBase + bonusTempo + streakBonus) * diffConfig.multiplicador)
+    : 0
+
+  const moedasGanhas = acertou
+    ? Math.floor((10 + streakBonus) * diffConfig.multiplicador)
+    : 0
+
   session.pontuacao += pontosGanhos
   session.moedasGanhas += moedasGanhas
   session.acertos += acertou ? 1 : 0
   session.erros += acertou ? 0 : 1
   session.perguntasRespondidas += 1
-  session.tempoTotal += tempoResposta
-  
-  // Verifica se completou
+  session.tempoTotal += tempoResposta || 0
+
   if (session.perguntasRespondidas >= session.totalPerguntas) {
     return await finalizarSessao(session)
   }
-  
+
+  const proximaPergunta = await gerarPergunta(
+    session.modo,
+    session.dificuldade,
+    session._id.toString()
+  )
+
+  session.perguntaAtual = proximaPergunta
   await session.save()
-  
-  // Próxima pergunta
-  const proximaPergunta = await gerarPergunta(session.modo, session.dificuldade)
-  
+
   return {
     acertou,
     pontosGanhos,
@@ -1214,15 +1223,27 @@ const claimDailyReward = async (userId, dia) => {
   const agora = new Date()
   const ultima = recompensas.ultimaReivindicacao
   
-  if (ultima && (agora - new Date(ultima)) < 24 * 60 * 60 * 1000) {
-    throw new Error('Recompensa já reivindicada hoje')
+  // Verifica se já reivindicou nas últimas 20 horas (dá margem)
+  if (ultima && (agora - new Date(ultima)) < 20 * 60 * 60 * 1000) {
+    throw new Error('Recompensa já reivindicada hoje. Volte amanhã!')
   }
   
   const recompensa = RECOMPENSAS_DIARIAS.find(r => r.dia === dia)
   if (!recompensa) throw new Error('Recompensa inválida')
   
-  if (dia !== (recompensas.diaAtual % 7) + 1) {
-    throw new Error('Dia incorreto')
+  // Dia esperado: se diaAtual=0 → dia 1, se diaAtual=1 → dia 2, etc.
+  // Se perdeu o streak, reseta para dia 1
+  const diaEsperado = (recompensas.diaAtual % 7) + 1
+  
+  // ⚡ CORREÇÃO: Se o dia enviado for 1 e o esperado for diferente,
+  // mas o usuário nunca reivindicou OU perdeu o streak, permite reset
+  if (dia !== diaEsperado) {
+    // Se é o dia 1 e o usuário quer recomeçar (perdeu streak ou primeira vez)
+    if (dia === 1 && (!ultima || (agora - new Date(ultima)) >= 48 * 60 * 60 * 1000)) {
+      recompensas.diaAtual = 0  // Reseta para começar do dia 1
+    } else {
+      throw new Error(`Dia incorreto. Próximo dia disponível: ${diaEsperado}`)
+    }
   }
   
   stats.estatisticas.totalMoedas += recompensa.moedas
@@ -1244,12 +1265,57 @@ const claimDailyReward = async (userId, dia) => {
 // ============================================
 
 const LOJA_ITENS = [
-  { id: 'avatar_gold', nome: 'Avatar Dourado', descricao: 'Avatar especial dourado', icon: '👤', preco: 500, tipo: 'avatar' },
-  { id: 'theme_dark', nome: 'Tema Noturno', descricao: 'Tema escuro exclusivo', icon: '🌙', preco: 300, tipo: 'tema' },
-  { id: 'badge_pro', nome: 'Badge Pro', descricao: 'Badge de jogador pro', icon: '💎', preco: 1000, tipo: 'badge' },
-  { id: 'vinyl_rare', nome: 'Vinil Raro', descricao: 'Vinil decorativo raro', icon: '💿', preco: 750, tipo: 'decorativo' },
-  { id: 'emoji_set', nome: 'Pack de Emojis', descricao: 'Emojis musicais exclusivos', icon: '🎭', preco: 200, tipo: 'emoji' }
-];
+ {
+      id: 'avatar_gold',
+      nome: 'Avatar Dourado',
+      descricao: 'Uma borda dourada luxuosa para seu avatar de perfil',
+      preco: 9000,
+      iconClass: 'fa-solid fa-crown',
+      tipo: 'avatar',
+      possuido: false,
+      equipado: false
+    },
+    {
+      id: 'theme_dark',
+      nome: 'Tema Noturno',
+      descricao: 'Tema escuro exclusivo para a interface do jogo',
+      preco: 5000,
+      iconClass: 'fa-solid fa-moon',
+      tipo: 'tema',
+      possuido: false,
+      equipado: false
+    },
+    {
+      id: 'badge_pro',
+      nome: 'Badge PRO',
+      descricao: 'Distintivo exclusivo PRO no seu perfil',
+      preco: 15000,
+      iconClass: 'fa-solid fa-certificate',
+      tipo: 'badge',
+      possuido: false,
+      equipado: false
+    },
+    {
+      id: 'vinyl_rare',
+      nome: 'Vinil Raro',
+      descricao: 'Coleção de vinil raro para colecionadores',
+      preco: 3750,
+      iconClass: 'fa-solid fa-compact-disc',
+      tipo: 'colecionavel',
+      possuido: false,
+      equipado: false
+    },
+    {
+      id: 'emoji_set',
+      nome: 'Pack de Emojis',
+      descricao: 'Conjunto de emojis musicais exclusivos',
+      preco: 2200,
+      iconClass: 'fa-solid fa-face-smile',
+      tipo: 'emoji',
+      possuido: false,
+      equipado: false
+    }
+  ];
 
 const getShopItems = async (userId) => {
   const stats = await getOrCreateUserStats(userId);
@@ -1375,13 +1441,13 @@ const aplicarEfeitoItem = async (stats, item) => {
 
 const getAchievements = async (userId) => {
   const stats = await getOrCreateUserStats(userId)
-  // Mapeia para o formato que o frontend espera
+
   return stats.conquistas.map(c => ({
     id: c.id,
     titulo: c.titulo,
     descricao: c.descricao,
     icon: c.icon,
-    iconClass: c.icon ? `fa-solid fa-${c.icon}` : 'fa-solid fa-medal', // ou mapeie ícones corretamente
+    iconClass: c.iconClass || 'fa-solid fa-medal',
     moedas: c.moedas,
     desbloqueada: c.desbloqueada,
     resgatada: c.resgatada,
@@ -1541,6 +1607,11 @@ const getInventarioAtivo = async (userId) => {
   };
 };
 
+const getEquippedItems = async (userId) => {
+  const stats = await getOrCreateUserStats(userId);
+  return stats.inventario.filter(i => i.ativo === true);
+};
+
 module.exports = {
   iniciarSessao,
   responderPergunta,
@@ -1552,7 +1623,8 @@ module.exports = {
   buyItem,
   equiparItem,        // ← ADICIONAR
   desativarItem,      // ← ADICIONAR
-  getInventarioAtivo, // ← ADICIONAR
+  getInventarioAtivo,
+  getEquippedItems, // ← ADICIONAR
   getAchievements,
   claimAchievement,
   getUserGameStats,

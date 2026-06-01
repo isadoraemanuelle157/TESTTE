@@ -46,6 +46,20 @@
       </div>
     </header>
 
+    <!-- Guest Limitation Banner -->
+<div v-if="!isLoggedIn" class="guest-banner">
+  <div class="guest-banner-content">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>Você está ouvindo apenas previews do Deezer. 
+      <a @click="redirectToLogin">Faça login</a> para músicas completas do Spotify.
+    </span>
+  </div>
+</div>
+
     <div class="room-layout">
       <!-- Main Stage -->
       <main class="stage-area">
@@ -445,6 +459,19 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+// Adicione estas refs
+const isLoggedIn = ref(false)
+const isRoomOwner = ref(false)
+const roomSource = ref('deezer') // 'deezer' ou 'spotify'
+
+// Adicione estas computed
+const canAddFullTracks = computed(() => isLoggedIn.value && roomSource.value === 'spotify')
+const showLoginPrompt = computed(() => !isLoggedIn.value && roomSource.value === 'deezer')
 
 // Room State - agora com ID da URL
 const room = ref({
@@ -710,17 +737,33 @@ const searchDeezer = async () => {
 
   isSearching.value = true
   try {
-    // endpoint mais comum: /search?q=
+    // If logged in with Spotify, search both
+    if (isLoggedIn.value && roomSource.value === 'spotify') {
+      // Try Spotify first for full tracks
+      try {
+        const token = localStorage.getItem('token')
+        const spotifyRes = await fetch(`/spotify/search?q=${encodeURIComponent(searchQuery.value)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (spotifyRes.ok) {
+          const spotifyData = await spotifyRes.json()
+          // Process Spotify results...
+        }
+      } catch (e) {
+        console.log('Spotify search failed, falling back to Deezer')
+      }
+    }
+    
+    // Always search Deezer as fallback (or primary for guests)
     const data = await fetchJsonDeezer(`/search?q=${encodeURIComponent(searchQuery.value)}&limit=10`)
     searchResults.value = data.data || []
   } catch (error) {
-    console.error('Erro ao buscar no Deezer:', error)
+    console.error('Erro ao buscar:', error)
     searchResults.value = []
   } finally {
     isSearching.value = false
   }
 }
-
 
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
@@ -832,24 +875,41 @@ const leaveRoom = () => {
 // Join Room Logic
 const checkRoomAccess = () => {
   const urlParams = new URLSearchParams(window.location.search)
-  const roomId = urlParams.get('room')
+  const roomIdFromUrl = urlParams.get('room')
   
-  if (roomId) {
-    room.value.id = roomId
-    // Verificar se é o dono ou convidado
-    const isOwner = localStorage.getItem(`room_${roomId}_owner`) === 'true'
+  // Check auth status
+  const token = localStorage.getItem('token')
+  isLoggedIn.value = !!token
+  
+  if (roomIdFromUrl) {
+    room.value.id = roomIdFromUrl
+    const isOwner = localStorage.getItem(`room_${roomIdFromUrl}_owner`) === 'true'
+    isRoomOwner.value = isOwner
     
-    if (!isOwner) {
-      // Mostrar modal para entrar
+    // Load room data
+    loadRoomData(roomIdFromUrl)
+    
+    // Check if room requires auth
+    const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
+    if (savedRoom) {
+      const data = JSON.parse(savedRoom)
+      roomSource.value = data.source || 'deezer'
+      room.value.isPublic = data.isPublic !== false
+      
+      // If private room and not owner, check if invited
+      if (!data.isPublic && !isOwner && !isLoggedIn.value) {
+        showJoinModal.value = true
+        return
+      }
+    }
+    
+    if (!isOwner && !isLoggedIn.value) {
+      // Guest view - limited features
       showJoinModal.value = true
-      // Carregar dados da sala do backend/localStorage
-      loadRoomData(roomId)
     }
   } else {
-    // Criar nova sala
-    room.value.id = generateRoomId()
-    localStorage.setItem(`room_${room.value.id}_owner`, 'true')
-    updateUrlWithRoomId()
+    // No room ID - redirect to creation page
+    router.push('/rooms/create')
   }
 }
 
@@ -927,26 +987,24 @@ const drop = (event, dropIndex) => {
 
 // Lifecycle
 onMounted(() => {
+  checkAuth()
   checkRoomAccess()
   fetchDeezerChart()
   
-  // Salvar estado periodicamente
+  // Periodic save
   setInterval(saveRoomState, 5000)
-  
-  // Simular novos ouvintes entrando (para demo)
-  setTimeout(() => {
-    if (roomListeners.value.length < 5 && Math.random() > 0.5) {
-      roomListeners.value.push({
-        id: 'user-' + Date.now(),
-        name: 'Novo Ouvinte',
-        avatar: 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 70),
-        status: 'Sincronizado',
-        synced: true,
-        isFriend: false
-      })
-    }
-  }, 10000)
 })
+
+const checkAuth = () => {
+  const token = localStorage.getItem('token')
+  isLoggedIn.value = !!token
+}
+
+const redirectToLogin = () => {
+  // Save current room to return after login
+  localStorage.setItem('redirect_after_login', window.location.href)
+  window.location.href = '/login'
+}
 
 onUnmounted(() => {
   clearTimeout(searchTimeout)
@@ -1876,7 +1934,30 @@ onUnmounted(() => {
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 4px;
 }
+/* Adicione no <style> */
+.guest-banner {
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(90deg, rgba(255, 107, 107, 0.2), rgba(255, 193, 7, 0.2));
+  border-bottom: 1px solid rgba(255, 107, 107, 0.3);
+  padding: 0.75rem 2rem;
+}
 
+.guest-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  color: #ffc107;
+  font-size: 0.875rem;
+}
+
+.guest-banner-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
 .msg-author {
   font-size: 0.75rem;
   font-weight: 700;

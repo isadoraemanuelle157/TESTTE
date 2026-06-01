@@ -227,6 +227,71 @@ export default {
   },
 
   methods: {
+    async toggleGoldenAvatar(equipar = true) {
+    const token = localStorage.getItem('token')
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]')
+      const itemIndex = inventory.findIndex(i => i.itemId === 'avatar_gold')
+      
+      if (itemIndex >= 0) {
+        inventory[itemIndex].ativo = equipar
+        
+        // Desativa outros avatares do mesmo tipo
+        if (equipar) {
+          inventory.forEach(i => {
+            if (i.tipo === 'avatar' && i.itemId !== 'avatar_gold') {
+              i.ativo = false
+            }
+          })
+        }
+        
+        localStorage.setItem('soundup_inventory', JSON.stringify(inventory))
+        
+        // Dispara evento para o Perfil.vue atualizar
+        window.dispatchEvent(new CustomEvent('inventory-updated'))
+        
+        this.showToast({
+          title: equipar ? "Avatar Dourado equipado! 👑" : "Avatar Dourado removido",
+          message: equipar 
+            ? "Sua borda dourada está ativa no perfil" 
+            : "Você desativou o avatar dourado",
+          type: "success",
+          icon: "fa fa-crown"
+        })
+      }
+      
+      return
+    }
+    
+    // Modo online - chama API
+    try {
+      const endpoint = equipar ? 'equipar' : 'desequipar'
+      await axios.post(`http://localhost:3002/recompensas/${endpoint}`, {
+        itemId: 'avatar_gold'
+      }, this.getAuthConfig())
+      
+      // Dispara evento para o Perfil.vue atualizar
+      window.dispatchEvent(new CustomEvent('inventory-updated'))
+      
+      this.showToast({
+        title: equipar ? "Avatar Dourado equipado! 👑" : "Avatar Dourado removido",
+        type: "success",
+        icon: "fa fa-crown"
+      })
+      
+    } catch (error) {
+      console.error('Erro ao equipar avatar:', error)
+      this.showToast({
+        title: "Erro",
+        message: "Não foi possível equipar o avatar dourado",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      })
+    }
+  },
+  
     onImageError() {
       this.imageError = true
     },

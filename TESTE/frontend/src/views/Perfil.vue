@@ -49,7 +49,12 @@
        
         <div class="profile-info-container">
           <div class="avatar-section">
-            <div class="avatar-wrapper" :class="{ 'online': isOnline, 'has-story': hasStory }">
+           <div class="avatar-wrapper" 
+     :class="{ 
+       'online': isOnline, 
+       'has-story': hasStory,
+       'avatar-dourado': hasGoldenAvatar 
+     }">
               <!-- Anel de story -->
               <div class="story-ring" v-if="hasStory" @click="viewStory">
                 <div class="story-progress" :style="storyProgressStyle"></div>
@@ -1306,12 +1311,31 @@
       <transition name="modal">
         <div v-if="showAvatarSelector" class="modal-overlay" @click.self="closeAvatarSelector">
           <div class="modal-content modal-avatar">
-            <div class="modal-header">
-              <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
-              <button class="btn-close" @click="closeAvatarSelector">
-                <i class="fa fa-times"></i>
-              </button>
-            </div>
+         <div class="modal-header">
+  <div class="avatar-modal-header-left">
+    <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
+  </div>
+  
+  <div class="avatar-modal-actions">
+    <!-- ⚡ BOTÃO DE EQUIPAR AVATAR DOURADO -->
+    <button 
+      v-if="hasGoldenAvatarItem"
+      type="button"
+      class="btn-equip-gold"
+      :class="{ 'equipped': isAvatarGoldEquipped }"
+      @click="toggleEquipGoldenAvatar"
+      :disabled="equippingGold"
+    >
+      <i :class="isAvatarGoldEquipped ? 'fa fa-crown' : 'fa fa-crown-o'"></i>
+      <span v-if="equippingGold"><i class="fa fa-spinner fa-spin"></i></span>
+      <span v-else>{{ isAvatarGoldEquipped ? 'Dourado Ativo' : 'Equipar Dourado' }}</span>
+    </button>
+    
+    <button class="btn-close" @click="closeAvatarSelector">
+      <i class="fa fa-times"></i>
+    </button>
+  </div>
+</div>
            
             <div class="modal-body">
               <div class="avatar-selector-tabs">
@@ -1475,6 +1499,9 @@ export default {
       seguindoList: [],
       openedPlaylist: null,
       showAvatarSelector: false,
+        isAvatarGoldEquipped: false,
+    hasGoldenAvatarItem: false,
+    equippingGold: false,
       activeAvatarTab: 'initials',
       expandedDates: {},
       isDragging: false,
@@ -1649,6 +1676,25 @@ activityResources: [
   },
 
   computed: {
+ hasGoldenAvatar() {
+    // Verifica se o avatar dourado está EQUIPADO (ativo no perfil)
+    return this.isAvatarGoldEquipped;
+  },
+  
+  // ⚡ NOVO: Verifica se POSSUI o item (comprado)
+  hasGoldenAvatarInInventory() {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      return inventory.some(i => i.itemId === 'avatar_gold');
+    }
+    
+    // Modo online — verificado via API no mounted
+    return this.hasGoldenAvatarItem;
+  },
+
 usuarioGenerosList() {
   const generos = this.usuario?.generos
 
@@ -1908,6 +1954,9 @@ mounted() {
   }, 800)
 
   this.carregarUsuarioLogado()
+  
+   this.$forceUpdate()
+  
   this.loadCustomAvatarOptions()
   this.generateArtisticAvatars()
   this.generateFunAvatars()
@@ -1935,7 +1984,13 @@ mounted() {
     this.carregarUsuarioLogado()
     this.generateArtisticAvatars()
     this.generateFunAvatars()
+     this.checkGoldenAvatarStatus()
   }
+    this.onInventoryUpdated = () => {
+    // Força reavaliação da computed property hasGoldenAvatar
+    this.$forceUpdate()
+  }
+  window.addEventListener('inventory-updated', this.onInventoryUpdated)
 
   window.addEventListener('playlist-updated', this.onPlaylistUpdated)
   window.addEventListener('likes-updated', this.onLikesUpdated)
@@ -1966,10 +2021,103 @@ mounted() {
     window.removeEventListener('focus', this.handleFocus)
     window.removeEventListener('storage', this.handleStorage)
      window.removeEventListener('play-song', this.onPlaySong)
+      window.removeEventListener('inventory-updated', this.onInventoryUpdated)
      
   },
 
   methods: {
+    async checkGoldenAvatarStatus() {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = !!goldItem;
+      this.isAvatarGoldEquipped = goldItem?.ativo || false;
+      return;
+    }
+    
+    // Modo online
+    try {
+      const res = await gameApi.getEquippedItems();
+      const equipped = res.data?.equipped || [];
+      this.isAvatarGoldEquipped = equipped.some(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = true; // Assume que se chegou aqui, tem o item
+    } catch (error) {
+      console.error('Erro ao verificar avatar dourado:', error);
+      // Fallback para localStorage
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = !!goldItem;
+      this.isAvatarGoldEquipped = goldItem?.ativo || false;
+    }
+  },
+  
+  // ⚡ NOVO: Toggle equipar/desequipar avatar dourado
+  async toggleEquipGoldenAvatar() {
+    if (this.equippingGold) return;
+    
+    this.equippingGold = true;
+    const token = localStorage.getItem('token');
+    const newState = !this.isAvatarGoldEquipped;
+    
+    try {
+      if (!token) {
+        // Modo offline
+        const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+        const itemIndex = inventory.findIndex(i => i.itemId === 'avatar_gold');
+        
+        if (itemIndex >= 0) {
+          inventory[itemIndex].ativo = newState;
+          
+          // Desativa outros avatares do mesmo tipo
+          if (newState) {
+            inventory.forEach(i => {
+              if (i.tipo === 'avatar' && i.itemId !== 'avatar_gold') {
+                i.ativo = false;
+              }
+            });
+          }
+          
+          localStorage.setItem('soundup_inventory', JSON.stringify(inventory));
+        }
+      } else {
+        // Modo online
+        if (newState) {
+          await gameApi.equipAvatarGold();
+        } else {
+          await gameApi.unequipAvatarGold();
+        }
+      }
+      
+      this.isAvatarGoldEquipped = newState;
+      
+      // Dispara evento para atualizar o perfil
+      window.dispatchEvent(new CustomEvent('inventory-updated'));
+      
+      this.showToast({
+        title: newState ? "👑 Avatar Dourado Ativado!" : "Avatar Dourado Removido",
+        message: newState 
+          ? "Sua borda dourada está ativa no perfil" 
+          : "Você desativou o avatar dourado",
+        type: "success",
+        icon: newState ? "fa fa-crown" : "fa fa-user"
+      });
+      
+    } catch (error) {
+      console.error('Erro ao equipar avatar dourado:', error);
+      this.showToast({
+        title: "Erro",
+        message: "Não foi possível atualizar o avatar dourado",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      });
+    } finally {
+      this.equippingGold = false;
+    }
+  },
+
     formatTimeFromDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -5182,7 +5330,18 @@ html, body {
   background: rgba(255, 255, 255, 0.1);
   color: white;
 }
+.avatar-wrapper.avatar-dourado .avatar,
+.avatar-wrapper.avatar-dourado .generated-avatar {
+  border: 4px solid #FFD700 !important;
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
 
+.avatar-wrapper.avatar-dourado .story-ring {
+  background: conic-gradient(from 0deg, #FFD700, #FFA500, #FFD700) !important;
+}
 /* Filtros */
 .filters-panel {
   padding: 20px 40px;
@@ -5907,7 +6066,67 @@ html, body {
 .artist-item:hover .artist-image-wrapper {
   border-color: #ec4899;
 }
+/* ===== BOTÃO AVATAR DOURADO NO MODAL ===== */
+.avatar-modal-header-left {
+  flex: 1;
+}
 
+.avatar-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-equip-gold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #FFD700;
+  background: rgba(255, 215, 0, 0.1);
+  color: #FFD700;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-equip-gold:hover:not(:disabled) {
+  background: rgba(255, 215, 0, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.btn-equip-gold.equipped {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #1a1a2e;
+  border-color: #FFD700;
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+}
+
+.btn-equip-gold.equipped:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFA500, #FFD700);
+  box-shadow: 0 6px 25px rgba(255, 215, 0, 0.5);
+}
+
+.btn-equip-gold:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-equip-gold i {
+  font-size: 14px;
+}
+
+/* Ajuste no header do modal de avatar */
+.modal-avatar .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
 .artist-avatar {
   width: 100%;
   height: 100%;

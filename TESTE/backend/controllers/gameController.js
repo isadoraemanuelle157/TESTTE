@@ -172,15 +172,26 @@
     }
   }
 
-  const claimDailyReward = async (req, res) => {
-    try {
-      const { dia } = req.body
-      const result = await gameService.claimDailyReward(req.user.id, parseInt(dia))
-      res.json(result)
-    } catch (error) {
-      res.status(400).json({ error: error.message })
+const claimDailyReward = async (req, res) => {
+  try {
+    const { dia } = req.body
+    
+    if (dia === undefined || dia === null) {
+      return res.status(400).json({ error: 'O campo "dia" é obrigatório' })
     }
+    
+    const diaNum = parseInt(dia)
+    if (isNaN(diaNum) || diaNum < 1 || diaNum > 7) {
+      return res.status(400).json({ error: 'Dia deve ser um número entre 1 e 7' })
+    }
+    
+    const result = await gameService.claimDailyReward(req.user.id, diaNum)
+    res.json(result)
+  } catch (error) {
+    console.error('Erro ao reivindicar recompensa:', error.message)
+    res.status(400).json({ error: error.message })
   }
+}
 
   // ============================================
   // 🛒 LOJA
@@ -308,6 +319,16 @@ const getActiveInventory = async (req, res) => {
   }
 };
 
+// ⚡ ADICIONAR ISTO AQUI:
+const getEquippedItems = async (req, res) => {
+  try {
+    const equipped = await gameService.getEquippedItems(req.user.id);
+    res.json({ equipped });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getGameModes,
   getDifficulties,
@@ -320,7 +341,8 @@ module.exports = {
   buyItem,
   equipItem,        // ← ADICIONAR
   unequipItem,      // ← ADICIONAR
-  getActiveInventory, // ← ADICIONAR
+  getActiveInventory,
+   getEquippedItems,  // ← ADICIONAR
   getAchievements,
   claimAchievement,
   getStats,

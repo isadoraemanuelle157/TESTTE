@@ -45,17 +45,18 @@ const UserGameStatsSchema = new mongoose.Schema({
   },
   
   // Conquistas
-  conquistas: [{
-    id: String,
-    titulo: String,
-    descricao: String,
-    icon: String,
-    desbloqueada: { type: Boolean, default: false },
-    dataDesbloqueio: Date,
-    resgatada: { type: Boolean, default: false },
-    moedas: Number
-  }],
-  
+conquistas: [{
+  id: String,
+  titulo: String,
+  descricao: String,
+  icon: String,
+  iconClass: String,
+  desbloqueada: { type: Boolean, default: false },
+  dataDesbloqueio: Date,
+  resgatada: { type: Boolean, default: false },
+  moedas: Number
+}],
+
   // Recompensas diárias
   recompensasDiarias: {
     ultimaReivindicacao: Date,
@@ -91,15 +92,18 @@ inventario: [{
 // Método para calcular nível
 UserGameStatsSchema.methods.adicionarXP = function(xpGanho) {
   this.nivel.xp += xpGanho
-  
+
+  let subiuNivel = false
+
   while (this.nivel.xp >= this.nivel.xpProximoNivel) {
     this.nivel.xp -= this.nivel.xpProximoNivel
     this.nivel.atual += 1
     this.nivel.xpProximoNivel = Math.floor(this.nivel.xpProximoNivel * 1.5)
+    subiuNivel = true
   }
-  
+
   return {
-    subiuNivel: this.nivel.xp < xpGanho, // Se XP anterior + ganho >= proximo
+    subiuNivel,
     nivel: this.nivel.atual,
     xp: this.nivel.xp,
     xpProximo: this.nivel.xpProximoNivel
