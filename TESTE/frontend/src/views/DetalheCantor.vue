@@ -172,7 +172,7 @@
           <p>Carregando músicas...</p>
         </div>
 
-        <div v-else-if="!getArtistTracks() || getArtistTracks().length === 0" class="empty-state">
+        <div v-else-if="!artistTracks || artistTracks.length === 0" class="empty-state">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
           </svg>
@@ -181,7 +181,7 @@
 
         <div v-else class="musicas-list">
           <div
-            v-for="(musica, index) in getArtistTracks()"
+            v-for="(musica, index) in artistTracks"
             :key="getTrackId(musica) || index"
             class="musica-row"
             :class="{ 'playing': currentTrackId === getTrackId(musica) && isPlaying }"
@@ -228,8 +228,8 @@
 
             <div class="track-duration">{{ formatarDuracao(getTrackDuration(musica)) }}</div>
 
-            <button class="track-like" @click.stop="toggleLike(getTrackId(musica))">
-              <svg :class="{ 'liked': likedTracks.includes(getTrackId(musica)) }" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <button class="track-like" @click.stop="toggleLike(musica)">
+              <svg :class="{ 'liked': isTrackLiked(getTrackId(musica)) }" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
               </svg>
             </button>
@@ -278,6 +278,8 @@
             :key="getAlbumId(album) || index"
             class="album-card"
             :style="{ animationDelay: `${index * 0.1}s` }"
+            @mouseenter="ensureAlbumTracks(album)"
+            @click="abrirModalAlbum(album)"
           >
             <div class="album-cover-wrapper">
               <img v-if="getAlbumImage(album)" :src="getAlbumImage(album)" :alt="getAlbumName(album)" class="album-cover" @error="handleAlbumImageError" />
@@ -316,29 +318,51 @@
 
       <!-- Sobre -->
       <section v-show="activeTab === 'sobre'" class="section sobre-section">
-        <div class="sobre-grid">
-          <div class="sobre-main">
-            <h2>Sobre o Artista</h2>
-            <p class="sobre-texto">{{ getArtistBio() || 'Biografia não disponível.' }}</p>
+        <div class="about-container">
+          <div class="about-main">
+            <div class="about-card">
+              <h2>Sobre o Artista</h2>
+              <p class="about-bio">{{ getArtistBio() || 'Informações não disponíveis' }}</p>
+             
+              <div class="about-stats">
+                <div class="stat-card">
+                  <div class="stat-number">{{ formatarSeguidores(getRealFollowers()) }}</div>
+                  <div class="stat-name">Seguidores</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">{{ artistTracks.length }}</div>
+                  <div class="stat-name">Músicas</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-number">{{ artistAlbums.length }}</div>
+                  <div class="stat-name">Álbuns</div>
+                </div>
+              </div>
+            </div>
 
-            <div class="sobre-stats">
-              <div class="sobre-stat">
-                <span class="sobre-stat-value">{{ cantor.cidade || cantor.city || 'São Paulo, BR' }}</span>
-                <span class="sobre-stat-label">Cidade Natal</span>
-              </div>
-              <div class="sobre-stat">
-                <span class="sobre-stat-value">{{ cantor.inicioCarreira || cantor.career_start || '2015' }}</span>
-                <span class="sobre-stat-label">Início da Carreira</span>
-              </div>
-              <div class="sobre-stat">
-                <span class="sobre-stat-value">{{ cantor.gravadora || cantor.label || 'Independente' }}</span>
-                <span class="sobre-stat-label">Gravadora</span>
+            <div v-if="getArtistGenres().length > 0" class="about-card">
+              <h3>Gêneros</h3>
+              <div class="genres-list">
+                <span v-for="(genero, idx) in getArtistGenres()" :key="idx" class="genre-badge">
+                  {{ genero }}
+                </span>
               </div>
             </div>
           </div>
 
-          <div class="sobre-image" v-if="getSecondaryImage()">
-            <img :src="getSecondaryImage()" :alt="getArtistName()" @error="handleImageError" />
+          <div v-if="artistasRelacionados.length > 0" class="about-side">
+            <div class="related-artists-card">
+              <h3>Artistas Similares</h3>
+              <div class="related-artists-list">
+                <div v-for="(artista, idx) in artistasRelacionados" :key="idx" class="related-artist-item">
+                  <img :src="getRelatedArtistImage(artista)" :alt="getRelatedArtistName(artista)" class="related-artist-image" />
+                  <div class="related-artist-info">
+                    <div class="related-artist-name">{{ getRelatedArtistName(artista) }}</div>
+                    <div class="related-artist-genre">{{ getRelatedArtistGenre(artista) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -347,7 +371,6 @@
       <section v-show="activeTab === 'shows'" class="section shows-section">
         <div class="section-header">
           <h2>Próximos Shows</h2>
-          <span class="section-subtitle">{{ shows.length }} data{{ shows.length !== 1 ? 's' : '' }} confirmada{{ shows.length !== 1 ? 's' : '' }}</span>
         </div>
 
         <div v-if="showsLoading" class="loading-musicas">
@@ -355,111 +378,132 @@
           <p>Carregando shows...</p>
         </div>
 
-        <div v-else-if="shows.length === 0" class="empty-state">
+        <div v-else-if="!shows || shows.length === 0" class="empty-state">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/>
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
           <p>Nenhum show agendado</p>
-          <span class="empty-subtitle">Fique de olho! Novas datas em breve.</span>
         </div>
 
-        <div v-else class="shows-timeline">
-          <div v-for="(show, index) in shows" :key="show._id || show.id || index" class="show-item" :style="{ animationDelay: `${index * 0.1}s` }">
-            <div class="show-timeline-line"></div>
-            <div class="show-timeline-dot"></div>
-
-            <div class="show-card-premium">
-              <div class="show-date-premium">
-                <span class="show-day">{{ formatarDia(show.data || show.date) }}</span>
-                <span class="show-month">{{ formatarMes(show.data || show.date) }}</span>
-                <span class="show-year">{{ formatarAno(show.data || show.date) }}</span>
-              </div>
-
-              <div class="show-content">
-                <div class="show-image" v-if="show.foto || show.image">
-                  <img :src="show.foto || show.image" :alt="show.titulo || show.title" @error="handleImageError" />
-                </div>
-                <div class="show-details">
-                  <h3>{{ show.titulo || show.title }}</h3>
-                  <div class="show-location">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                      <circle cx="12" cy="9" r="2.5"/>
-                    </svg>
-                    <span>{{ show.local || show.venue }} — {{ show.cidade || show.city }}</span>
-                  </div>
-                  <div class="show-time" v-if="show.horario || show.time">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="10"/>
-                      <path d="M12 6v6l4 2"/>
-                    </svg>
-                    <span>{{ show.horario || show.time }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <a v-if="show.linkIngressos || show.ticket_url" :href="show.linkIngressos || show.ticket_url" target="_blank" rel="noopener noreferrer" class="btn-ingressos">
-                <span>Ingressos</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M7 17L17 7M17 7H7M17 7v10"/>
-                </svg>
-              </a>
-              <button v-else class="btn-ingressos disabled">
-                <span>Esgotado</span>
-              </button>
+        <div v-else class="shows-list">
+          <div v-for="(show, idx) in shows" :key="idx" class="show-card">
+            <div class="show-date">
+              <div class="show-day">{{ getShowDay(show) }}</div>
+              <div class="show-month">{{ getShowMonth(show) }}</div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Artistas Relacionados -->
-      <section v-if="artistasRelacionados && artistasRelacionados.length > 0" class="section relacionados-section">
-        <div class="section-header">
-          <h2>Fãs também curtem</h2>
-        </div>
-        <div class="relacionados-grid">
-          <div v-for="artista in artistasRelacionados" :key="artista._id || artista.id" class="relacionado-card" @click="irParaArtista(artista._id || artista.id, artista.source)">
-            <div class="relacionado-image">
-              <img :src="getRelatedArtistImage(artista)" :alt="getRelatedArtistName(artista)" @error="handleImageError" />
-              <button class="relacionado-play" @click.stop="playArtista(artista)">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </button>
+            <div class="show-info">
+              <h3 class="show-title">{{ show.nome || show.name || 'Show' }}</h3>
+              <p class="show-venue">{{ show.local || show.venue || 'Local não informado' }}</p>
+              <p class="show-date-full">{{ formatarData(show.data || show.date) }}</p>
             </div>
-            <h4>{{ getRelatedArtistName(artista) }}</h4>
-            <p>{{ getRelatedArtistGenre(artista) }}</p>
+            <button class="show-btn">Ingressos</button>
           </div>
         </div>
       </section>
     </div>
 
-    <!-- Erro -->
-    <div v-else class="erro-premium">
-      <div class="erro-animation">
-        <div class="erro-disc">
-          <svg width="80" height="80" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
-          </svg>
-        </div>
-      </div>
-      <h2>Artista não encontrado</h2>
-      <p>Não conseguimos encontrar esse artista no momento. Verifique o nome ou tente novamente mais tarde.</p>
-      <button @click="$router.push('/')" class="btn-voltar">Voltar para o início</button>
-    </div>
+    <!-- ============================================ -->
+    <!-- MODAL DE ÁLBUM - GLASSMORPHISM ELEGANTE -->
+    <!-- ============================================ -->
+    <transition name="modal-fade">
+      <div v-if="albumModalAberto" class="modal-overlay" @click.self="fecharModalAlbum">
+        <div class="modal-album" @click.stop>
+          <!-- Modal Header -->
+          <div class="modal-header">
+            <div class="modal-header-content">
+              <img :src="getAlbumImage(albumSelecionado)" :alt="getAlbumName(albumSelecionado)" class="modal-album-cover" />
+              <div class="modal-header-info">
+                <h2 class="modal-album-title">{{ getAlbumName(albumSelecionado) }}</h2>
+                <p class="modal-album-artist">{{ getArtistName() }}</p>
+                <div class="modal-album-meta">
+                  <span class="meta-item">{{ getAlbumYear(albumSelecionado) }}</span>
+                  <span class="meta-divider">•</span>
+                  <span class="meta-item">{{ getAlbumType(albumSelecionado) }}</span>
+                  <span class="meta-divider">•</span>
+                  <span class="meta-item">{{ getAlbumTrackCount(albumSelecionado) }} músicas</span>
+                </div>
+              </div>
+            </div>
+            <button class="modal-close" @click="fecharModalAlbum">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
 
-    <!-- Toast Notification -->
-    <transition name="toast">
-      <div v-if="toast.show" class="toast-notification" :class="toast.type">
-        <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M20 6L9 17l-5-5"/>
-        </svg>
-        <svg v-else-if="toast.type === 'error'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-        </svg>
-        <span>{{ toast.message }}</span>
+          <!-- Modal Actions -->
+          <div class="modal-actions">
+            <button class="modal-btn-play" @click="playAlbumFromModal(albumSelecionado)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <span>Tocar Álbum</span>
+            </button>
+            <button class="modal-btn-like" :class="{ 'liked': likedAlbums.includes(getAlbumId(albumSelecionado)) }" @click="toggleAlbumLike(getAlbumId(albumSelecionado))">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Tracks List -->
+          <div class="modal-tracks-container">
+            <div v-if="!albumSelecionado.musicas || albumSelecionado.musicas.length === 0" class="modal-loading">
+              <div class="spinner-small"></div>
+              <p>Carregando faixas...</p>
+            </div>
+
+            <div v-else class="modal-tracks-list">
+              <div
+                v-for="(track, idx) in albumSelecionado.musicas"
+                :key="getTrackId(track) || idx"
+                class="modal-track-item"
+                :class="{ 'playing': currentTrackId === getTrackId(track) && isPlaying }"
+                @mouseenter="hoveredModalTrack = getTrackId(track)"
+                @mouseleave="hoveredModalTrack = null"
+              >
+                <div class="modal-track-number">
+                  <span v-if="hoveredModalTrack !== getTrackId(track) && !(currentTrackId === getTrackId(track) && isPlaying)" class="number">
+                    {{ String(idx + 1).padStart(2, '0') }}
+                  </span>
+                  <button v-else class="modal-track-play-btn" @click.stop="playTrack(track)">
+                    <svg v-if="currentTrackId !== getTrackId(track) || !isPlaying" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <div v-else class="equalizer-small">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </button>
+                </div>
+
+                <div class="modal-track-info">
+                  <div class="modal-track-name" :class="{ 'active': currentTrackId === getTrackId(track) && isPlaying }">
+                    {{ getTrackName(track) }}
+                  </div>
+                  <div class="modal-track-artist">{{ getTrackArtists(track) }}</div>
+                </div>
+
+                <div class="modal-track-duration">{{ formatarDuracao(getTrackDuration(track)) }}</div>
+
+                <button class="modal-track-like" @click.stop="toggleLike(track)">
+                  <svg :class="{ 'liked': isTrackLiked(getTrackId(track)) }" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </transition>
+
+    <!-- Toast Notification -->
+    <div v-if="toast.show" class="toast" :class="toast.type">
+      <div class="toast-content">
+        <span>{{ toast.message }}</span>
+      </div>
+    </div>
   </div>
 </template>
 <script>
@@ -476,14 +520,15 @@ export default {
       showsLoading: false,
       isFollowing: false,
       followLoading: false,
-      // === ESTADO DO PLAYER - CORRIGIDO ===
       isPlaying: false,
       currentTrackId: null,
-      // =====================================
       hoveredTrack: null,
+      hoveredModalTrack: null,
       likedTracks: [],
       likedAlbums: [],
       activeTab: 'musicas',
+      albumModalAberto: false,
+      albumSelecionado: null,
       activeAlbumFilter: 'todos',
       showMoreOptions: false,
       isTabsSticky: false,
@@ -492,6 +537,8 @@ export default {
       albunsCarregados: false,
       artistasRelacionados: [],
       source: 'db',
+      loadingTracks: {},
+      toastTimeout: null,
       toast: {
         show: false,
         message: '',
@@ -518,14 +565,37 @@ export default {
       }
     },
 
+    artistTracks() {
+      if (!this.cantor) return []
+      if (this.cantor.musicas && Array.isArray(this.cantor.musicas)) {
+        return this.cantor.musicas
+      }
+      if (this.cantor.tracks && Array.isArray(this.cantor.tracks)) {
+        return this.cantor.tracks
+      }
+      if (this.cantor.top && Array.isArray(this.cantor.top)) {
+        return this.cantor.top
+      }
+      return []
+    },
+
+    artistAlbums() {
+      if (!this.cantor) return []
+      if (this.cantor.albuns && Array.isArray(this.cantor.albuns)) {
+        return this.cantor.albuns
+      }
+      if (this.cantor.albums && Array.isArray(this.cantor.albums)) {
+        return this.cantor.albums
+      }
+      return []
+    },
+
     tabs() {
-      const musicas = this.getArtistTracks() || []
-      const albuns = this.getArtistAlbums() || []
       return [
-        { id: 'musicas', label: 'Músicas', icon: '🎵', count: musicas.length },
-        { id: 'albuns', label: 'Discografia', icon: '💿', count: albuns.length },
+        { id: 'musicas', label: 'Músicas', icon: '🎵', count: this.artistTracks.length },
+        { id: 'albuns', label: 'Discografia', icon: '💿', count: this.artistAlbums.length },
         { id: 'sobre', label: 'Sobre', icon: '👤' },
-        { id: 'shows', label: 'Shows', icon: '🎤', count: this.shows?.length }
+        { id: 'shows', label: 'Shows', icon: '🎤', count: this.shows?.length || 0 }
       ]
     },
 
@@ -546,7 +616,7 @@ export default {
     },
 
     filteredAlbuns() {
-      const albuns = this.getArtistAlbums() || []
+      const albuns = this.artistAlbums
       if (this.activeAlbumFilter === 'todos') return albuns
       return albuns.filter(album => {
         const tipo = (this.getAlbumType(album) || 'album').toLowerCase()
@@ -565,32 +635,37 @@ export default {
 
   async mounted() {
     this.isMobile = window.innerWidth < 768
-    this.carregarLikes()
+    await this.carregarLikes()
     await this.carregarDetalhes()
 
-    // === ESCUTA EVENTOS DO MUSICPLAYER - CORRIGIDO ===
     window.addEventListener('player-state-changed', this.handlePlayerStateChange)
     window.addEventListener('music-player-state-changed', this.handlePlayerStateChange)
-    // ================================================
-
     window.addEventListener('scroll', this.handleScroll)
     window.addEventListener('resize', this.handleResize)
     document.addEventListener('click', this.handleDocumentClick)
+    window.addEventListener('likes-updated', this.carregarLikes)
+    window.addEventListener('curtidas-updated', this.carregarLikes)
+    window.addEventListener('storage', this.handleStorageChange)
   },
 
   beforeUnmount() {
-    // === REMOVE EVENTOS - CORRIGIDO ===
     window.removeEventListener('player-state-changed', this.handlePlayerStateChange)
     window.removeEventListener('music-player-state-changed', this.handlePlayerStateChange)
-    // =================================
     window.removeEventListener('scroll', this.handleScroll)
     window.removeEventListener('resize', this.handleResize)
     document.removeEventListener('click', this.handleDocumentClick)
+    window.removeEventListener('likes-updated', this.carregarLikes)
+    window.removeEventListener('curtidas-updated', this.carregarLikes)
+    window.removeEventListener('storage', this.handleStorageChange)
+
+    if (this.toastTimeout) {
+      clearTimeout(this.toastTimeout)
+    }
   },
 
   methods: {
     // ========== HELPERS DE NORMALIZAÇÃO DE DADOS ==========
-   
+
     getArtistName() {
       if (!this.cantor) return 'Artista Desconhecido'
       return this.cantor.nome || this.cantor.name || this.cantor.title || 'Artista Desconhecido'
@@ -617,15 +692,12 @@ export default {
 
     getArtistGenres() {
       if (!this.cantor) return []
-      // Spotify: array de strings
       if (this.cantor.genres && Array.isArray(this.cantor.genres) && typeof this.cantor.genres[0] === 'string') {
         return this.cantor.genres
       }
-      // DB: array de objetos com nome
       if (this.cantor.generos && Array.isArray(this.cantor.generos)) {
         return this.cantor.generos.map(g => g.nome || g).filter(Boolean)
       }
-      // Deezer: não tem gêneros diretos, retorna array vazio ou genérico
       if (this.source === 'deezer') {
         return ['Música']
       }
@@ -637,7 +709,6 @@ export default {
       if (this.cantor.bio) return this.cantor.bio
       if (this.cantor.description) return this.cantor.description
       if (this.cantor.about) return this.cantor.about
-      // Fallback baseado na fonte
       const name = this.getArtistName()
       const followers = this.getRealFollowers()
       if (this.source === 'deezer') {
@@ -673,39 +744,13 @@ export default {
       return this.cantor.ranking || this.cantor.popularity || this.cantor.popularidade || '42'
     },
 
-    getArtistTracks() {
-      if (!this.cantor) return []
-      // DB
-      if (this.cantor.musicas && Array.isArray(this.cantor.musicas)) {
-        return this.cantor.musicas
-      }
-      // Spotify top tracks
-      if (this.cantor.tracks && Array.isArray(this.cantor.tracks)) {
-        return this.cantor.tracks
-      }
-      // Deezer top tracks
-      if (this.cantor.top && Array.isArray(this.cantor.top)) {
-        return this.cantor.top
-      }
-      return []
-    },
-
-    getArtistAlbums() {
-      if (!this.cantor) return []
-      if (this.cantor.albuns && Array.isArray(this.cantor.albuns)) {
-        return this.cantor.albuns
-      }
-      if (this.cantor.albums && Array.isArray(this.cantor.albums)) {
-        return this.cantor.albums
-      }
-      return []
-    },
-
     // ========== HELPERS DE MÚSICA ==========
 
     getTrackId(musica) {
       if (!musica) return null
-      return musica._id || musica.id || musica.track_id || null
+      // 🔥 CORREÇÃO: Sempre retorna string para comparação consistente
+      const id = musica._id || musica.id || musica.track_id || null
+      return id ? id.toString() : null
     },
 
     getTrackName(musica) {
@@ -843,15 +888,33 @@ export default {
       return 'Artista'
     },
 
-    // ========== SINCRONIZAÇÃO COM MUSICPLAYER - CORRIGIDO ==========
+    // ========== HELPERS DE SHOW ==========
+
+    getShowDay(show) {
+      if (!show) return '??'
+      const data = new Date(show.data || show.date)
+      return data.getDate().toString().padStart(2, '0')
+    },
+
+    getShowMonth(show) {
+      if (!show) return '???'
+      const data = new Date(show.data || show.date)
+      const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
+      return meses[data.getMonth()]
+    },
+
+    formatarData(data) {
+      if (!data) return 'Data não informada'
+      const date = new Date(data)
+      const dias = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+      const meses = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+      return `${dias[date.getDay()]}, ${date.getDate()} de ${meses[date.getMonth()]} de ${date.getFullYear()}`
+    },
+
+    // ========== SINCRONIZAÇÃO COM MUSICPLAYER ==========
     handlePlayerStateChange(e) {
       const detail = e.detail || {}
-      console.log('🎵 CantorDetalhe recebeu estado do player:', detail)
-
-      // Atualiza estado local baseado no evento global
       this.isPlaying = detail.isPlaying || false
-
-      // Pega o ID da música atual do player
       if (detail.track) {
         this.currentTrackId = detail.track.id || detail.track._id || null
       } else if (detail.currentTrack) {
@@ -872,224 +935,18 @@ export default {
 
         if (!artistId) throw new Error('ID não encontrado')
 
-        // ARTISTA DO BANCO
         if (this.source === 'db') {
-          const res = await fetch(`${API_BASE_URL}/cantores/${artistId}`)
-          if (!res.ok) throw new Error('Artista não encontrado')
-          this.cantor = await res.json()
-
-          // Carrega shows do banco
-          this.showsLoading = true
-          try {
-            const showsRes = await fetch(`${API_BASE_URL}/cantores/${artistId}/shows`)
-            this.shows = showsRes.ok ? await showsRes.json() : []
-          } catch (err) {
-            console.warn('Erro ao carregar shows:', err)
-            this.shows = []
-          } finally {
-            this.showsLoading = false
-          }
-
-          this.musicasCarregadas = true
-          this.albunsCarregados = true
-
-          // Verifica se está seguindo
-          const token = localStorage.getItem('token')
-          if (token) {
-            await this.verificarSeguindo(token, artistId)
-          }
+          await this.carregarArtistaBD(artistId)
           return
         }
 
-        // DEEZER
         if (this.source === 'deezer') {
-          const [artistRes, topTracksRes, albumsRes, relatedRes] = await Promise.all([
-            fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}`),
-            fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}/top?limit=20`),
-            fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}/albums?limit=20`),
-            fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}/related?limit=6`)
-          ])
-
-          const artistData = await artistRes.json()
-          const topTracksData = await topTracksRes.json()
-          const albumsData = await albumsRes.json()
-          const relatedData = await relatedRes.json()
-
-          this.cantor = {
-            _id: artistData.id,
-            id: artistData.id,
-            nome: artistData.name,
-            name: artistData.name,
-            foto: artistData.picture_big,
-            images: [
-              { url: artistData.picture_xl },
-              { url: artistData.picture_big },
-              { url: artistData.picture_medium }
-            ],
-            banner: artistData.picture_xl,
-            totalSeguidores: artistData.nb_fan,
-            nb_fan: artistData.nb_fan,
-            popularity: artistData.nb_fan ? Math.min(Math.floor(artistData.nb_fan / 10000), 100) : 50,
-            bio: `${artistData.name} é um artista popular no Deezer com ${this.formatarSeguidores(artistData.nb_fan)} fãs.`,
-            generos: [{ nome: 'Música' }],
-            genres: ['Música'],
-            musicas: (topTracksData.data || []).map(track => ({
-              _id: track.id,
-              id: track.id,
-              nome: track.title,
-              name: track.title,
-              title: track.title,
-              foto: track.album?.cover_medium,
-              cover: track.album?.cover_medium,
-              cover_medium: track.album?.cover_medium,
-              cover_big: track.album?.cover_big,
-              duracao: track.duration,
-              duration: track.duration,
-              duration_ms: track.duration * 1000,
-              preview: track.preview,
-              preview_url: track.preview,
-              album: {
-                title: track.album?.title,
-                images: [{ url: track.album?.cover_medium }],
-                cover_medium: track.album?.cover_medium
-              },
-              artist: { name: artistData.name },
-              artists: [{ name: artistData.name }],
-              popularity: track.rank ? Math.min(Math.floor(track.rank / 1000), 100) : Math.floor(Math.random() * 100),
-              rank: track.rank,
-              plays: track.rank ? track.rank * 1000 : Math.floor(Math.random() * 5000000)
-            })),
-            albuns: (albumsData.data || []).map(album => ({
-              _id: album.id,
-              id: album.id,
-              nome: album.title,
-              name: album.title,
-              title: album.title,
-              foto: album.cover_medium,
-              cover: album.cover_medium,
-              cover_medium: album.cover_medium,
-              cover_big: album.cover_big,
-              images: [{ url: album.cover_medium }, { url: album.cover_big }],
-              ano: album.release_date?.split('-')[0],
-              release_date: album.release_date,
-              release_year: album.release_date?.split('-')[0],
-              tipo: album.type || 'album',
-              album_type: album.type || 'album',
-              type: album.type || 'album',
-              total_tracks: album.nb_tracks,
-              nb_tracks: album.nb_tracks,
-              musicas: [],
-              tracks: []
-            }))
-          }
-
-          this.artistasRelacionados = (relatedData.data || []).map(artist => ({
-            _id: artist.id,
-            id: artist.id,
-            nome: artist.name,
-            name: artist.name,
-            foto: artist.picture_medium,
-            picture_medium: artist.picture_medium,
-            picture_big: artist.picture_big,
-            images: [{ url: artist.picture_medium }],
-            genres: ['Música'],
-            genero: 'Música',
-            source: 'deezer'
-          }))
-
-          this.shows = []
-          this.showsLoading = false
-          this.musicasCarregadas = true
-          this.albunsCarregados = true
+          await this.carregarArtistaDeezer(artistId)
           return
         }
 
-        // SPOTIFY
         if (this.source === 'spotify') {
-          const [artistRes, topTracksRes, albumsRes, relatedRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/spotify/artist/${artistId}`),
-            fetch(`${API_BASE_URL}/spotify/artist/${artistId}/top-tracks`),
-            fetch(`${API_BASE_URL}/spotify/artist/${artistId}/albums?limit=20`),
-            fetch(`${API_BASE_URL}/spotify/artist/${artistId}/related-artists`)
-          ])
-
-          const artistData = await artistRes.json()
-          const topTracksData = await topTracksRes.json()
-          const albumsData = await albumsRes.json()
-          const relatedData = await relatedRes.json()
-
-          this.cantor = {
-            _id: artistData.id,
-            id: artistData.id,
-            nome: artistData.name,
-            name: artistData.name,
-            foto: artistData.images?.[0]?.url,
-            images: artistData.images,
-            banner: artistData.images?.[0]?.url,
-            followers: artistData.followers,
-            totalSeguidores: artistData.followers?.total,
-            popularity: artistData.popularity,
-            popularidade: artistData.popularity,
-            bio: `${artistData.name} é um artista no Spotify com ${this.formatarSeguidores(artistData.followers?.total)} seguidores.`,
-            generos: artistData.genres?.map(g => ({ nome: g })) || [],
-            genres: artistData.genres || [],
-            musicas: (topTracksData.tracks || []).map(track => ({
-              _id: track.id,
-              id: track.id,
-              nome: track.name,
-              name: track.name,
-              title: track.name,
-              foto: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
-              cover: track.album?.images?.[0]?.url,
-              images: track.album?.images,
-              duracao: Math.floor(track.duration_ms / 1000),
-              duration: Math.floor(track.duration_ms / 1000),
-              duration_ms: track.duration_ms,
-              preview: track.preview_url,
-              preview_url: track.preview_url,
-              album: track.album,
-              artist: track.artists?.[0],
-              artists: track.artists,
-              popularity: track.popularity || Math.floor(Math.random() * 100),
-              plays: track.popularity ? track.popularity * 50000 : Math.floor(Math.random() * 5000000)
-            })),
-            albuns: (albumsData.items || []).map(album => ({
-              _id: album.id,
-              id: album.id,
-              nome: album.name,
-              name: album.name,
-              title: album.name,
-              foto: album.images?.[0]?.url,
-              cover: album.images?.[0]?.url,
-              images: album.images,
-              ano: album.release_date?.split('-')[0],
-              release_date: album.release_date,
-              release_year: album.release_date?.split('-')[0],
-              tipo: album.album_type || 'album',
-              album_type: album.album_type || 'album',
-              type: album.album_type || 'album',
-              total_tracks: album.total_tracks,
-              musicas: [],
-              tracks: []
-            }))
-          }
-
-          this.artistasRelacionados = (relatedData.artists || []).slice(0, 6).map(artist => ({
-            _id: artist.id,
-            id: artist.id,
-            nome: artist.name,
-            name: artist.name,
-            foto: artist.images?.[0]?.url,
-            images: artist.images,
-            genres: artist.genres,
-            genero: artist.genres?.[0],
-            source: 'spotify'
-          }))
-
-          this.shows = []
-          this.showsLoading = false
-          this.musicasCarregadas = true
-          this.albunsCarregados = true
+          await this.carregarArtistaSpotify(artistId)
           return
         }
 
@@ -1100,6 +957,347 @@ export default {
       } finally {
         this.loading = false
         this.showsLoading = false
+      }
+    },
+
+    async carregarArtistaBD(artistId) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/cantores/${artistId}`)
+        if (!res.ok) throw new Error('Artista não encontrado')
+        this.cantor = await res.json()
+
+        this.showsLoading = true
+        try {
+          const showsRes = await fetch(`${API_BASE_URL}/cantores/${artistId}/shows`)
+          this.shows = showsRes.ok ? await showsRes.json() : []
+        } catch (err) {
+          console.warn('Erro ao carregar shows:', err)
+          this.shows = []
+        } finally {
+          this.showsLoading = false
+        }
+
+        this.musicasCarregadas = true
+        this.albunsCarregados = true
+
+        const token = localStorage.getItem('token')
+        if (token) {
+          await this.verificarSeguindo(token, artistId)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar artista BD:', error)
+        throw error
+      }
+    },
+
+    async carregarArtistaDeezer(artistId) {
+      try {
+        const [artistRes, topTracksRes, albumsRes, relatedRes] = await Promise.all([
+          fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}`),
+          fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}/top?limit=50`),
+          fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}/albums?limit=100`),
+          fetch(`https://corsproxy.io/?https://api.deezer.com/artist/${artistId}/related?limit=10`)
+        ])
+
+        const artistData = await artistRes.json()
+        const topTracksData = await topTracksRes.json()
+        const albumsData = await albumsRes.json()
+        const relatedData = await relatedRes.json()
+
+        const musicas = (topTracksData.data || []).map(track => ({
+          _id: track.id,
+          id: track.id,
+          nome: track.title,
+          name: track.title,
+          title: track.title,
+          foto: track.album?.cover_medium,
+          cover: track.album?.cover_medium,
+          cover_medium: track.album?.cover_medium,
+          cover_big: track.album?.cover_big,
+          duracao: track.duration,
+          duration: track.duration,
+          duration_ms: track.duration * 1000,
+          preview: track.preview,
+          preview_url: track.preview,
+          album: {
+            id: track.album?.id,
+            title: track.album?.title,
+            images: [{ url: track.album?.cover_medium }],
+            cover_medium: track.album?.cover_medium
+          },
+          artist: { name: artistData.name },
+          artists: [{ name: artistData.name }],
+          popularity: track.rank ? Math.min(Math.floor(track.rank / 1000), 100) : Math.floor(Math.random() * 100),
+          rank: track.rank,
+          plays: track.rank ? track.rank * 1000 : Math.floor(Math.random() * 5000000)
+        }))
+
+        let albuns = (albumsData.data || []).map(album => ({
+          _id: album.id,
+          id: album.id,
+          nome: album.title,
+          name: album.title,
+          title: album.title,
+          foto: album.cover_medium,
+          cover: album.cover_medium,
+          cover_medium: album.cover_medium,
+          cover_big: album.cover_big,
+          images: [{ url: album.cover_medium }, { url: album.cover_big }],
+          ano: album.release_date?.split('-')[0],
+          release_date: album.release_date,
+          release_year: album.release_date?.split('-')[0],
+          tipo: album.type || 'album',
+          album_type: album.type || 'album',
+          type: album.type || 'album',
+          total_tracks: album.nb_tracks,
+          nb_tracks: album.nb_tracks,
+          musicas: [],
+          tracks: []
+        }))
+
+        albuns = await this.carregarTracksAlbunsEmLotes(albuns, 'deezer')
+
+        this.cantor = {
+          _id: artistData.id,
+          id: artistData.id,
+          nome: artistData.name,
+          name: artistData.name,
+          foto: artistData.picture_big,
+          images: [
+            { url: artistData.picture_xl },
+            { url: artistData.picture_big },
+            { url: artistData.picture_medium }
+          ],
+          banner: artistData.picture_xl,
+          totalSeguidores: artistData.nb_fan,
+          nb_fan: artistData.nb_fan,
+          popularity: artistData.nb_fan ? Math.min(Math.floor(artistData.nb_fan / 10000), 100) : 50,
+          bio: `${artistData.name} é um artista popular no Deezer com ${this.formatarSeguidores(artistData.nb_fan)} fãs.`,
+          generos: [{ nome: 'Música' }],
+          genres: ['Música'],
+          musicas,
+          albuns
+        }
+
+        this.artistasRelacionados = (relatedData.data || []).map(artist => ({
+          _id: artist.id,
+          id: artist.id,
+          nome: artist.name,
+          name: artist.name,
+          foto: artist.picture_medium,
+          picture_medium: artist.picture_medium,
+          picture_big: artist.picture_big,
+          images: [{ url: artist.picture_medium }],
+          genres: ['Música'],
+          genero: 'Música',
+          source: 'deezer'
+        }))
+
+        this.shows = []
+        this.showsLoading = false
+        this.musicasCarregadas = true
+        this.albunsCarregados = true
+      } catch (error) {
+        console.error('Erro ao carregar artista Deezer:', error)
+        throw error
+      }
+    },
+
+    async carregarArtistaSpotify(artistId) {
+      try {
+        const [artistRes, topTracksRes, albumsRes, relatedRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/spotify/artist/${artistId}`),
+          fetch(`${API_BASE_URL}/spotify/artist/${artistId}/top-tracks?limit=50`),
+          fetch(`${API_BASE_URL}/spotify/artist/${artistId}/albums?limit=50`),
+          fetch(`${API_BASE_URL}/spotify/artist/${artistId}/related-artists`)
+        ])
+
+        const artistData = await artistRes.json()
+        const topTracksData = await topTracksRes.json()
+        const albumsData = await albumsRes.json()
+        const relatedData = await relatedRes.json()
+
+        const musicas = (topTracksData.tracks || []).map(track => ({
+          _id: track.id,
+          id: track.id,
+          nome: track.name,
+          name: track.name,
+          title: track.name,
+          foto: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
+          cover: track.album?.images?.[0]?.url,
+          images: track.album?.images,
+          duracao: Math.floor(track.duration_ms / 1000),
+          duration: Math.floor(track.duration_ms / 1000),
+          duration_ms: track.duration_ms,
+          preview: track.preview_url,
+          preview_url: track.preview_url,
+          album: track.album,
+          artist: track.artists?.[0],
+          artists: track.artists,
+          popularity: track.popularity || Math.floor(Math.random() * 100),
+          plays: track.popularity ? track.popularity * 50000 : Math.floor(Math.random() * 5000000)
+        }))
+
+        let albuns = (albumsData.items || []).map(album => ({
+          _id: album.id,
+          id: album.id,
+          nome: album.name,
+          name: album.name,
+          title: album.name,
+          foto: album.images?.[0]?.url,
+          cover: album.images?.[0]?.url,
+          images: album.images,
+          ano: album.release_date?.split('-')[0],
+          release_date: album.release_date,
+          release_year: album.release_date?.split('-')[0],
+          tipo: album.album_type || 'album',
+          album_type: album.album_type || 'album',
+          type: album.album_type || 'album',
+          total_tracks: album.total_tracks,
+          musicas: [],
+          tracks: []
+        }))
+
+        albuns = await this.carregarTracksAlbunsEmLotes(albuns, 'spotify')
+
+        this.cantor = {
+          _id: artistData.id,
+          id: artistData.id,
+          nome: artistData.name,
+          name: artistData.name,
+          foto: artistData.images?.[0]?.url,
+          images: artistData.images,
+          banner: artistData.images?.[0]?.url,
+          followers: artistData.followers,
+          totalSeguidores: artistData.followers?.total,
+          popularity: artistData.popularity,
+          popularidade: artistData.popularity,
+          bio: `${artistData.name} é um artista no Spotify com ${this.formatarSeguidores(artistData.followers?.total)} seguidores.`,
+          generos: artistData.genres?.map(g => ({ nome: g })) || [],
+          genres: artistData.genres || [],
+          musicas,
+          albuns
+        }
+
+        this.artistasRelacionados = (relatedData.artists || []).slice(0, 10).map(artist => ({
+          _id: artist.id,
+          id: artist.id,
+          nome: artist.name,
+          name: artist.name,
+          foto: artist.images?.[0]?.url,
+          images: artist.images,
+          genres: artist.genres,
+          genero: artist.genres?.[0],
+          source: 'spotify'
+        }))
+
+        this.shows = []
+        this.showsLoading = false
+        this.musicasCarregadas = true
+        this.albunsCarregados = true
+      } catch (error) {
+        console.error('Erro ao carregar artista Spotify:', error)
+        throw error
+      }
+    },
+
+    async carregarTracksAlbunsEmLotes(albuns, source, tamanhoLote = 5) {
+      const albunsCopy = [...albuns]
+
+      for (let i = 0; i < albunsCopy.length; i += tamanhoLote) {
+        const lote = albunsCopy.slice(i, i + tamanhoLote)
+
+        const promises = lote.map(album =>
+          this.carregarTracksAlbum(album, source)
+        )
+
+        const resultados = await Promise.allSettled(promises)
+
+        resultados.forEach((resultado, idx) => {
+          if (resultado.status === 'fulfilled') {
+            albunsCopy[i + idx] = resultado.value
+          }
+        })
+      }
+
+      return albunsCopy
+    },
+
+    async carregarTracksAlbum(album, source) {
+      try {
+        if (source === 'deezer') {
+          const res = await fetch(`https://corsproxy.io/?https://api.deezer.com/album/${album.id}/tracks?limit=100`)
+          if (!res.ok) return album
+
+          const data = await res.json()
+          const tracks = (data.data || []).map(track => ({
+            _id: track.id,
+            id: track.id,
+            nome: track.title,
+            name: track.title,
+            title: track.title,
+            duracao: track.duration,
+            duration: track.duration,
+            duration_ms: track.duration * 1000,
+            preview: track.preview,
+            preview_url: track.preview,
+            artist: track.artist,
+            artists: [track.artist],
+            album: {
+              id: track.album?.id,
+              title: track.album?.title,
+              images: [{ url: track.album?.cover_medium }]
+            }
+          }))
+
+          album.musicas = tracks
+          album.tracks = tracks
+          return album
+        }
+
+        if (source === 'spotify') {
+          const res = await fetch(`${API_BASE_URL}/spotify/album/${album.id}/tracks?limit=50`)
+          if (!res.ok) return album
+
+          const data = await res.json()
+          const tracks = (data.items || []).map(track => ({
+            _id: track.id,
+            id: track.id,
+            nome: track.name,
+            name: track.name,
+            title: track.name,
+            duracao: Math.floor(track.duration_ms / 1000),
+            duration: Math.floor(track.duration_ms / 1000),
+            duration_ms: track.duration_ms,
+            preview: track.preview_url,
+            preview_url: track.preview_url,
+            artist: track.artists?.[0],
+            artists: track.artists
+          }))
+
+          album.musicas = tracks
+          album.tracks = tracks
+          return album
+        }
+
+        return album
+      } catch (error) {
+        console.warn(`Erro ao carregar tracks do álbum ${album.id}:`, error)
+        return album
+      }
+    },
+
+    async ensureAlbumTracks(album) {
+      const id = this.getAlbumId(album)
+      if (!id || (album.tracks && album.tracks.length > 0) || this.loadingTracks[id]) return
+
+      this.loadingTracks[id] = true
+      try {
+        await this.carregarTracksAlbum(album, this.source)
+      } catch (e) {
+        console.warn('Falha ao carregar tracks do álbum', id)
+      } finally {
+        this.loadingTracks[id] = false
       }
     },
 
@@ -1180,46 +1378,37 @@ export default {
       }
     },
 
-    // ========== PLAYER INTEGRADO - CORRIGIDO ==========
+    // ========== PLAYER INTEGRADO ==========
 
-    // Botão principal "Tocar/Pausar" no hero
     togglePlay() {
-      const tracks = this.getArtistTracks()
+      const tracks = this.artistTracks
       if (!tracks || tracks.length === 0) return
 
       const primeiraMusica = tracks[0]
       const musicaId = this.getTrackId(primeiraMusica)
 
-      // Se já está tocando a primeira música, apenas alterna play/pause
       if (this.currentTrackId === musicaId && this.isPlaying) {
         window.dispatchEvent(new CustomEvent('player-toggle-play'))
         return
       }
 
-      // Se está tocando outra música ou não está tocando nada, toca a primeira
       this.playTrack(primeiraMusica)
     },
 
-    // Tocar uma música específica
     async playTrack(musica) {
       if (!musica) return
 
       const musicaId = this.getTrackId(musica)
       if (!musicaId) return
 
-      // Se já está tocando esta música específica, apenas alterna play/pause
       if (this.currentTrackId === musicaId && this.isPlaying) {
         window.dispatchEvent(new CustomEvent('player-toggle-play'))
         return
       }
 
-      console.log('🎵 CantorDetalhe: Solicitando tocar música:', this.getTrackName(musica))
-
-      // Atualiza estado local imediatamente para feedback visual
       this.currentTrackId = musicaId
       this.isPlaying = true
 
-      // Prepara dados da música no formato que o MusicPlayer espera
       const songData = {
         id: musicaId,
         _id: musicaId,
@@ -1231,8 +1420,7 @@ export default {
         source: this.source || 'db'
       }
 
-      // Monta playlist completa
-      const tracks = this.getArtistTracks()
+      const tracks = this.artistTracks
       const playlist = tracks.map((m, idx) => ({
         id: this.getTrackId(m),
         _id: this.getTrackId(m),
@@ -1242,9 +1430,8 @@ export default {
         url: this.getTrackPreviewUrl(m),
         duration: this.getTrackDuration(m) || 30,
         source: this.source || 'db'
-      })).filter(m => m.id) // Remove itens sem ID
+      })).filter(m => m.id)
 
-      // Envia evento para o MusicPlayer
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: songData,
@@ -1255,235 +1442,367 @@ export default {
       }))
     },
 
-    // Tocar álbum
     playAlbum(album) {
       if (!album) return
 
       const albumId = this.getAlbumId(album)
       const albumTracks = album.musicas || album.tracks || []
 
-      if (albumTracks.length > 0) {
-        this.playTrack(albumTracks[0])
-        this.mostrarToast(`Reproduzindo álbum: ${this.getAlbumName(album)}`, 'success')
-      } else {
-        this.mostrarToast(`Álbum ${this.getAlbumName(album)} - Em breve`, 'success')
+      if (!albumTracks || albumTracks.length === 0) {
+        this.mostrarToast('Nenhuma música neste álbum', 'error')
+        return
+      }
+
+      const primeiraMusica = albumTracks[0]
+      const musicaId = this.getTrackId(primeiraMusica)
+
+      const songData = {
+        id: musicaId,
+        _id: musicaId,
+        title: this.getTrackName(primeiraMusica),
+        artist: this.getTrackArtists(primeiraMusica),
+        cover: this.getTrackImage(primeiraMusica) || this.getAlbumImage(album) || '/default-artist.png',
+        url: this.getTrackPreviewUrl(primeiraMusica),
+        duration: this.getTrackDuration(primeiraMusica) || 30,
+        source: this.source || 'db'
+      }
+
+      const playlist = albumTracks.map((m, idx) => ({
+        id: this.getTrackId(m),
+        _id: this.getTrackId(m),
+        title: this.getTrackName(m),
+        artist: this.getTrackArtists(m),
+        cover: this.getTrackImage(m) || this.getAlbumImage(album) || '/default-artist.png',
+        url: this.getTrackPreviewUrl(m),
+        duration: this.getTrackDuration(m) || 30,
+        source: this.source || 'db'
+      })).filter(m => m.id)
+
+      this.currentTrackId = musicaId
+      this.isPlaying = true
+
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: songData,
+          playlist: playlist,
+          index: 0,
+          context: `album_${albumId}`
+        }
+      }))
+
+      this.mostrarToast(`Tocando: ${this.getAlbumName(album)}`, 'success')
+    },
+
+    // ========== LIKES / CURTIDAS (CORRIGIDO - MESMO PADRÃO DO CURTIDAS.VUE) ==========
+   
+    handleStorageChange(e) {
+      if (e.key === 'likedTracks' || e.key === 'curtidas-updated') {
+        this.carregarLikes()
       }
     },
 
-    // Tocar artista relacionado
-    playArtista(artista) {
-      if (!artista) return
-      const id = artista._id || artista.id
-      const source = artista.source || 'spotify'
-      if (id) {
-        this.$router.push(`/artista/${id}?source=${source}`)
+    async carregarLikes() {
+      // 🔥 CARREGA DO LOCALSTORAGE PRIMEIRO (igual Curtidas.vue)
+      const stored = localStorage.getItem('likedTracks')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          // Garante que todos os IDs sejam strings
+          this.likedTracks = parsed.map(id => id.toString())
+        } catch (e) {
+          this.likedTracks = []
+        }
+      }
+
+      const storedAlbums = localStorage.getItem('likedAlbums')
+      if (storedAlbums) {
+        try {
+          this.likedAlbums = JSON.parse(storedAlbums)
+        } catch (e) {
+          this.likedAlbums = []
+        }
+      }
+
+      // 🔥 SINCRONIZA COM SERVIDOR (igual Curtidas.vue)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/curtidas`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (!res.ok) return
+
+        const data = await res.json()
+
+        // Extrai IDs do servidor e converte para string
+        const serverLikes = data.map(c => {
+          const id = c.id?.toString() || c._id?.toString() || c.musicaId?.toString()
+          return id
+        }).filter(Boolean)
+
+        // Merge: local + servidor (remove duplicatas)
+        const merged = [...new Set([...this.likedTracks, ...serverLikes])]
+        this.likedTracks = merged
+       
+        // Atualiza localStorage
+        localStorage.setItem('likedTracks', JSON.stringify(merged))
+
+      } catch (err) {
+        console.warn('Erro ao sincronizar curtidas:', err)
       }
     },
 
-    // ========== LIKES ==========
-    toggleLike(trackId) {
-      if (!trackId) return
-      const index = this.likedTracks.indexOf(trackId)
-      if (index > -1) {
-        this.likedTracks.splice(index, 1)
-      } else {
-        this.likedTracks.push(trackId)
+    // 🔥 NOVO: Verifica se música está curtida (usado no template)
+    isTrackLiked(trackId) {
+      if (!trackId) return false
+      const trackIdStr = trackId.toString()
+      return this.likedTracks.some(id => id.toString() === trackIdStr)
+    },
+
+    // 🔥 CORREÇÃO PRINCIPAL: toggleLike reescrito seguindo padrão do Curtidas.vue
+    async toggleLike(musica) {
+      if (!musica) {
+        console.error('toggleLike: musica é null/undefined')
+        return
       }
-      this.salvarLikes()
+
+      const trackId = this.getTrackId(musica)
+      if (!trackId) {
+        console.error('toggleLike: trackId é null/undefined', musica)
+        this.mostrarToast('Erro: ID da música não encontrado', 'error')
+        return
+      }
+
+      const token = localStorage.getItem('token')
+      if (!token) {
+        this.mostrarToast('Faça login para curtir músicas', 'error')
+        this.$router.push('/login')
+        return
+      }
+
+      const trackIdStr = trackId.toString()
+      const isAlreadyLiked = this.isTrackLiked(trackIdStr)
+
+      try {
+        const body = {
+          source: this.source || 'local'
+        }
+
+        // Se for externa (Spotify/Deezer), envia os dados completos
+        if (this.source !== 'db' && this.source !== 'local') {
+          // Extrai o nome do álbum de forma segura
+          let albumName = ''
+          if (musica.album) {
+            if (typeof musica.album === 'string') {
+              albumName = musica.album
+            } else if (musica.album.title) {
+              albumName = musica.album.title
+            } else if (musica.album.name) {
+              albumName = musica.album.name
+            }
+          }
+
+          body.dadosMusica = {
+            titulo: this.getTrackName(musica),
+            artista: this.getTrackArtists(musica),
+            capa: this.getTrackImage(musica) || '',
+            previewUrl: this.getTrackPreviewUrl(musica) || '',
+            duration: this.getTrackDuration(musica) || 30,
+            ano: musica.ano || null,
+            album: albumName  // Sempre uma string
+          }
+        }
+
+        console.log('Enviando curtida:', { trackId: trackIdStr, body })
+
+        const res = await fetch(`${API_BASE_URL}/curtidas/${trackIdStr}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        })
+
+        console.log('Resposta status:', res.status)
+
+        let data = {}
+        try {
+          const text = await res.text()
+          console.log('Resposta texto:', text)
+          data = text ? JSON.parse(text) : {}
+        } catch (parseErr) {
+          console.warn('Erro ao parsear resposta:', parseErr)
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error || data.message || `Erro HTTP ${res.status}`)
+        }
+
+        // O servidor retorna { liked: true/false }
+        const liked = data.liked !== undefined ? data.liked : !isAlreadyLiked
+
+        if (liked) {
+          // Adiciona aos curtidos
+          if (!this.isTrackLiked(trackIdStr)) {
+            this.likedTracks.push(trackIdStr)
+          }
+          this.mostrarToast('Adicionada aos curtidos ❤️', 'success')
+        } else {
+          // Remove dos curtidos
+          this.likedTracks = this.likedTracks.filter(id => id.toString() !== trackIdStr)
+          this.mostrarToast('Removida dos curtidos', 'info')
+        }
+
+        // Salva no localStorage e dispara eventos (igual Curtidas.vue)
+        localStorage.setItem('likedTracks', JSON.stringify(this.likedTracks))
+       
+        window.dispatchEvent(new Event('likes-updated'))
+        window.dispatchEvent(new Event('curtidas-updated'))
+       
+        // Trigger storage event para outras abas
+        localStorage.setItem('curtidas-updated', Date.now().toString())
+        localStorage.removeItem('curtidas-updated')
+
+      } catch (err) {
+        console.error('Erro completo ao curtir:', err)
+        this.mostrarToast(err.message || 'Erro ao curtir música', 'error')
+      }
     },
 
     toggleAlbumLike(albumId) {
       if (!albumId) return
-      const index = this.likedAlbums.indexOf(albumId)
-      if (index > -1) {
-        this.likedAlbums.splice(index, 1)
+      const idx = this.likedAlbums.indexOf(albumId)
+      if (idx > -1) {
+        this.likedAlbums.splice(idx, 1)
       } else {
         this.likedAlbums.push(albumId)
       }
-      this.salvarLikes()
-    },
-
-    carregarLikes() {
-      try {
-        const likes = JSON.parse(localStorage.getItem('likedTracks') || '[]')
-        const albumLikes = JSON.parse(localStorage.getItem('likedAlbums') || '[]')
-        this.likedTracks = likes
-        this.likedAlbums = albumLikes
-      } catch (e) {
-        this.likedTracks = []
-        this.likedAlbums = []
-      }
-    },
-
-    salvarLikes() {
-      localStorage.setItem('likedTracks', JSON.stringify(this.likedTracks))
       localStorage.setItem('likedAlbums', JSON.stringify(this.likedAlbums))
     },
 
-    // ========== COMPARTILHAR / REPORTAR ==========
-    compartilhar() {
-      this.showMoreOptions = false
-      if (navigator.share) {
-        navigator.share({
-          title: this.getArtistName(),
-          text: `Confira ${this.getArtistName()} na SoundUp!`,
-          url: window.location.href
-        }).catch(() => {})
-      } else {
-        navigator.clipboard.writeText(window.location.href)
-        this.mostrarToast('Link copiado para a área de transferência!', 'success')
+    // ========== UTILITÁRIOS ==========
+    formatarSeguidores(num) {
+      if (!num) return '0'
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
+      return num.toString()
+    },
+
+    formatarDuracao(segundos) {
+      if (!segundos) return '0:00'
+      const mins = Math.floor(segundos / 60)
+      const segs = segundos % 60
+      return `${mins}:${String(segs).padStart(2, '0')}`
+    },
+
+    getParticleStyle(n) {
+      const delay = Math.random() * 2
+      const left = Math.random() * 100
+      const duration = 3 + Math.random() * 4
+      return {
+        left: `${left}%`,
+        top: '100%',
+        animation: `float-up ${duration}s linear infinite`,
+        animationDelay: `${delay}s`
       }
     },
 
-    reportar() {
-      this.showMoreOptions = false
-      this.mostrarToast('Obrigado pelo feedback. Analisaremos sua denúncia.', 'success')
-    },
-
-    toggleMoreOptions() {
-      this.showMoreOptions = !this.showMoreOptions
-    },
-
-    handleDocumentClick(e) {
-      const moreBtn = this.$el.querySelector('.btn-more')
-      if (moreBtn && !moreBtn.contains(e.target)) {
-        this.showMoreOptions = false
-      }
-    },
-
-    // ========== NAVEGAÇÃO ==========
-    irParaArtista(id, source = 'spotify') {
-      if (id) {
-        this.$router.push(`/artista/${id}?source=${source}`)
-      }
-    },
-
-    verTodasMusicas() {
-      this.mostrarToast('Todas as músicas serão exibidas em breve', 'success')
-    },
-
-    showTrackMenu(musica) {
-      console.log('Menu da música:', this.getTrackName(musica))
-    },
-
-    // ========== UI HELPERS ==========
     handleScroll() {
-      const tabsNav = this.$el?.querySelector('.tabs-nav')
-      if (tabsNav) {
-        this.isTabsSticky = tabsNav.getBoundingClientRect().top <= 0
-      }
+      this.isTabsSticky = window.scrollY > 300
     },
 
     handleResize() {
       this.isMobile = window.innerWidth < 768
     },
 
-    getParticleStyle(n) {
-      return {
-        left: `${(n * 5.3) % 100}%`,
-        animationDelay: `${(n * 0.3) % 5}s`,
-        animationDuration: `${5 + (n % 10)}s`,
-        opacity: 0.2 + (n % 3) * 0.15
+    handleDocumentClick(e) {
+      if (!e.target.closest('.btn-more')) {
+        this.showMoreOptions = false
       }
     },
 
-    // ========== FORMATADORES ==========
-    formatarSeguidores(total) {
-      if (!total || total === 0) return '0'
-      const num = Number(total)
-      if (isNaN(num)) return '0'
-      if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M'
-      if (num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + 'K'
-      return String(num)
+    toggleMoreOptions() {
+      this.showMoreOptions = !this.showMoreOptions
     },
 
-    formatarDuracao(duracao) {
-      if (!duracao) return '3:45'
-      if (typeof duracao === 'number') {
-        if (duracao > 1000) {
-          const totalSeconds = Math.floor(duracao / 1000)
-          const min = Math.floor(totalSeconds / 60)
-          const sec = totalSeconds % 60
-          return `${min}:${String(sec).padStart(2, '0')}`
-        }
-        const min = Math.floor(duracao / 60)
-        const sec = duracao % 60
-        return `${min}:${String(sec).padStart(2, '0')}`
-      }
-      if (typeof duracao === 'string' && duracao.includes(':')) {
-        return duracao
-      }
-      return '3:45'
-    },
-
-    formatarDia(dataStr) {
-      try {
-        if (!dataStr) return '--'
-        const date = new Date(dataStr)
-        if (isNaN(date.getTime())) return '--'
-        return date.getDate()
-      } catch {
-        return '--'
+    compartilhar() {
+      const artistName = this.getArtistName()
+      const text = `Confira ${artistName} em nossa plataforma!`
+      if (navigator.share) {
+        navigator.share({
+          title: artistName,
+          text: text,
+          url: window.location.href
+        })
+      } else {
+        navigator.clipboard.writeText(window.location.href)
+        this.mostrarToast('Link copiado!', 'success')
       }
     },
 
-    formatarMes(dataStr) {
-      try {
-        if (!dataStr) return '---'
-        const date = new Date(dataStr)
-        if (isNaN(date.getTime())) return '---'
-        return date.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase()
-      } catch {
-        return '---'
-      }
+    reportar() {
+      this.mostrarToast('Obrigado por reportar. Analisaremos em breve.', 'success')
     },
 
-    formatarAno(dataStr) {
-      try {
-        if (!dataStr) return '----'
-        const date = new Date(dataStr)
-        if (isNaN(date.getTime())) return '----'
-        return date.getFullYear()
-      } catch {
-        return '----'
-      }
+    verTodasMusicas() {
+      this.mostrarToast('Redirecionando para todas as músicas...', 'info')
     },
 
-    // ========== TOAST ==========
-    mostrarToast(message, type = 'success') {
-      this.toast = { show: true, message, type }
-      setTimeout(() => {
-        this.toast.show = false
-      }, 3000)
+    showTrackMenu(musica) {
+      this.mostrarToast(`Menu da música: ${this.getTrackName(musica)}`, 'info')
     },
 
-    // ========== IMAGE HANDLERS ==========
     handleImageError(e) {
       e.target.src = '/default-artist.png'
     },
 
     handleTrackImageError(e) {
-      e.target.style.display = 'none'
-      if (e.target.parentElement) {
-        e.target.parentElement.classList.add('track-image-placeholder')
-      }
+      e.target.src = '/default-track.png'
     },
 
     handleAlbumImageError(e) {
-      e.target.style.display = 'none'
-      const placeholder = e.target.parentElement?.querySelector('.album-cover-placeholder')
-      if (placeholder) placeholder.style.display = 'flex'
+      e.target.src = '/default-album.png'
+    },
+
+    mostrarToast(message, type = 'success') {
+      if (this.toastTimeout) {
+        clearTimeout(this.toastTimeout)
+      }
+      this.toast = { show: true, message, type }
+      this.toastTimeout = setTimeout(() => {
+        this.toast.show = false
+      }, 3000)
+    },
+
+    // ========== MODAL DE ÁLBUM ==========
+    abrirModalAlbum(album) {
+      this.albumSelecionado = album
+      this.albumModalAberto = true
+      this.ensureAlbumTracks(album)
+      document.body.style.overflow = 'hidden'
+    },
+
+    fecharModalAlbum() {
+      this.albumModalAberto = false
+      this.albumSelecionado = null
+      this.hoveredModalTrack = null
+      document.body.style.overflow = 'auto'
+    },
+
+    playAlbumFromModal(album) {
+      this.playAlbum(album)
+      this.mostrarToast(`Tocando: ${this.getAlbumName(album)}`, 'success')
     }
   }
 }
 </script>
 <style scoped>
-/* ===== DESIGN SYSTEM ===== */
-.cantor-detalhe {
+:root {
   --primary: #8b5cf6;
   --primary-hover: #7c3aed;
-  --primary-light: rgba(139, 92, 246, 0.15);
-  --primary-glow: rgba(139, 92, 246, 0.4);
   --bg-dark: #0a0a0f;
   --bg-card: rgba(255, 255, 255, 0.03);
   --bg-card-hover: rgba(255, 255, 255, 0.06);
@@ -2102,11 +2421,10 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
 }
 
 .tab-btn:hover {
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .tab-btn.active {
@@ -2114,28 +2432,28 @@ export default {
 }
 
 .tab-icon {
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .tab-count {
-  background: var(--bg-card);
-  color: var(--text-muted);
-  font-size: 11px;
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--primary);
+  font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 10px;
+  border-radius: 100px;
+  margin-left: 4px;
 }
 
 .tab-indicator {
   position: absolute;
   bottom: 0;
-  left: 32px;
-  width: calc((100% - 64px) / 4);
+  left: 0;
   height: 3px;
   background: var(--primary);
   border-radius: 3px 3px 0 0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 -4px 12px rgba(139, 92, 246, 0.4);
+  width: 25%;
+  transition: transform 0.3s ease;
 }
 
 /* ===== SECTIONS ===== */
@@ -2143,32 +2461,27 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   padding: 48px 32px;
-  animation: fadeInUp 0.6s ease forwards;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .section-header h2 {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 800;
   margin: 0;
-  letter-spacing: -0.5px;
 }
 
 .btn-ver-todos {
-  background: none;
+  background: transparent;
+  color: var(--primary);
   border: none;
-  color: var(--text-muted);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -2176,79 +2489,50 @@ export default {
 }
 
 .btn-ver-todos:hover {
-  color: var(--primary);
+  color: var(--primary-hover);
 }
 
-.section-subtitle {
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 500;
-}
-
-/* ===== EMPTY STATE ===== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 64px 20px;
-  color: var(--text-muted);
-  gap: 16px;
-}
-
-.empty-state svg {
-  opacity: 0.5;
-}
-
-.empty-state p {
-  font-size: 16px;
-  margin: 0;
-}
-
-.empty-subtitle {
-  font-size: 14px;
-  opacity: 0.7;
-}
-
-/* ===== MUSICAS LIST ===== */
+/* ===== MÚSICAS ===== */
 .musicas-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .musica-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px 60px 1fr 150px 60px 40px 40px;
   align-items: center;
   gap: 16px;
   padding: 12px 16px;
   border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid transparent;
   transition: var(--transition);
   cursor: pointer;
-  border: 1px solid transparent;
 }
 
 .musica-row:hover {
-  background: var(--bg-card);
-  border-color: var(--border);
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
 }
 
 .musica-row.playing {
-  background: rgba(139, 92, 246, 0.08);
-  border-color: rgba(139, 92, 246, 0.2);
+  background: rgba(139, 92, 246, 0.1);
+  border-color: var(--primary);
 }
 
 .track-number {
-  width: 40px;
-  text-align: center;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .number {
-  color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  display: block;
 }
 
 .track-play-btn {
@@ -2266,8 +2550,8 @@ export default {
 }
 
 .track-play-btn:hover {
-  transform: scale(1.1);
   background: var(--primary-hover);
+  transform: scale(1.1);
 }
 
 .equalizer {
@@ -2278,28 +2562,28 @@ export default {
 }
 
 .equalizer span {
-  width: 3px;
-  background: var(--primary);
+  width: 2px;
+  background: white;
   border-radius: 1px;
-  animation: eq-bar 0.8s ease-in-out infinite;
+  animation: equalize-bar 0.6s ease-in-out infinite;
 }
 
-.equalizer span:nth-child(2) { animation-delay: 0.1s; }
-.equalizer span:nth-child(3) { animation-delay: 0.2s; }
+.equalizer span:nth-child(1) { animation-delay: 0s; }
+.equalizer span:nth-child(2) { animation-delay: 0.15s; }
+.equalizer span:nth-child(3) { animation-delay: 0.3s; }
 
-@keyframes eq-bar {
-  0%, 100% { height: 30%; }
-  50% { height: 100%; }
+@keyframes equalize-bar {
+  0%, 100% { height: 4px; }
+  50% { height: 12px; }
 }
 
-.track-image,
-.track-image-placeholder {
+.track-image {
   width: 48px;
   height: 48px;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
-  flex-shrink: 0;
   position: relative;
+  flex-shrink: 0;
 }
 
 .track-image img {
@@ -2317,41 +2601,40 @@ export default {
   justify-content: center;
   opacity: 0;
   transition: var(--transition);
-}
-
-.track-image-overlay svg {
   color: white;
-  width: 20px;
-  height: 20px;
 }
 
-.musica-row:hover .track-image-overlay {
+.track-image:hover .track-image-overlay {
   opacity: 1;
 }
 
 .track-image-placeholder {
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .track-info {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 
 .track-name {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: var(--transition);
 }
 
 .track-name.active {
@@ -2359,81 +2642,79 @@ export default {
 }
 
 .track-artista {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .track-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.track-plays {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .track-duration {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  width: 48px;
   text-align: right;
 }
 
-.track-like,
-.track-more {
-  width: 36px;
-  height: 36px;
+.track-like {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: none;
+  background: transparent;
   border: none;
   color: var(--text-muted);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   transition: var(--transition);
-  opacity: 0;
-}
-
-.musica-row:hover .track-like,
-.musica-row:hover .track-more {
-  opacity: 1;
 }
 
 .track-like:hover {
   color: #ef4444;
-  transform: scale(1.1);
 }
 
 .track-like svg.liked {
-  color: #ef4444;
   fill: #ef4444;
+  color: #ef4444;
+}
+
+.track-more {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
 }
 
 .track-more:hover {
   color: var(--text-primary);
 }
 
-/* ===== ALBUNS GRID ===== */
-.albuns-section .section-header {
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
+/* ===== ÁLBUNS ===== */
 .album-filters {
   display: flex;
-  gap: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .filter-btn {
   padding: 8px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
   border-radius: 100px;
-  color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -2441,82 +2722,79 @@ export default {
 }
 
 .filter-btn:hover {
-  background: var(--bg-card-hover);
-  color: var(--text-secondary);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .filter-btn.active {
   background: var(--primary);
-  color: white;
   border-color: var(--primary);
+  color: white;
 }
 
 .albuns-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 28px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 24px;
 }
 
 .album-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  transition: var(--transition);
-  animation: fadeInUp 0.5s ease forwards;
+  animation: fadeInUp 0.6s ease forwards;
   opacity: 0;
 }
 
-.album-card:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--border-hover);
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .album-cover-wrapper {
   position: relative;
   aspect-ratio: 1;
+  border-radius: var(--radius);
   overflow: hidden;
+  background: var(--bg-card);
+  margin-bottom: 16px;
 }
 
 .album-cover {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition);
 }
 
-.album-card:hover .album-cover {
-  transform: scale(1.1);
+.album-cover-wrapper:hover .album-cover {
+  transform: scale(1.05);
 }
 
 .album-cover-placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: var(--text-muted);
+  background: var(--bg-card);
 }
 
 .album-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 100%);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   opacity: 0;
   transition: var(--transition);
 }
 
-.album-card:hover .album-overlay {
+.album-cover-wrapper:hover .album-overlay {
   opacity: 1;
 }
 
-.album-play-btn {
+.album-play-btn,
+.album-like-btn {
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -2528,61 +2806,42 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
 }
 
-.album-play-btn:hover {
-  transform: scale(1.1);
-  background: var(--primary-hover);
-}
-
-.album-like-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: var(--transition);
-  backdrop-filter: blur(10px);
-}
-
+.album-play-btn:hover,
 .album-like-btn:hover {
-  background: rgba(239, 68, 68, 0.8);
+  background: var(--primary-hover);
   transform: scale(1.1);
 }
 
 .album-like-btn svg.liked {
-  color: #ef4444;
   fill: #ef4444;
+  color: #ef4444;
 }
 
 .album-year-badge {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.7);
   color: white;
+  padding: 4px 12px;
+  border-radius: 100px;
   font-size: 12px;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 6px;
 }
 
 .album-info {
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .album-name {
   font-size: 15px;
   font-weight: 700;
-  margin: 0 0 6px;
   color: var(--text-primary);
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2592,469 +2851,763 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
   margin: 0;
 }
 
 .album-type {
-  font-size: 13px;
-  color: var(--primary);
   font-weight: 600;
 }
 
 .album-tracks {
-  font-size: 13px;
-  color: var(--text-muted);
+  opacity: 0.8;
 }
 
-/* ===== SOBRE SECTION ===== */
-.sobre-grid {
+/* ===== SOBRE ===== */
+.about-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
-  align-items: start;
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
 }
 
-.sobre-main h2 {
-  font-size: 28px;
-  font-weight: 800;
-  margin: 0 0 20px;
-}
-
-.sobre-texto {
-  color: var(--text-secondary);
-  font-size: 17px;
-  line-height: 1.9;
-  margin: 0 0 32px;
-}
-
-.sobre-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.about-main {
+  display: flex;
+  flex-direction: column;
   gap: 24px;
 }
 
-.sobre-stat {
+.about-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 20px;
-  transition: var(--transition);
+  border-radius: var(--radius);
+  padding: 24px;
 }
 
-.sobre-stat:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-2px);
-}
-
-.sobre-stat-value {
-  display: block;
-  font-size: 18px;
+.about-card h2 {
+  font-size: 24px;
   font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 4px;
+  margin: 0 0 16px;
 }
 
-.sobre-stat-label {
+.about-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.about-bio {
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin: 0;
+}
+
+.about-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.stat-card {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.stat-name {
   font-size: 12px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-top: 4px;
 }
 
-.sobre-image {
-  border-radius: var(--radius);
-  overflow: hidden;
-  position: relative;
+.genres-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.sobre-image::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), transparent);
-  z-index: 1;
-  pointer-events: none;
+.genre-badge {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--primary);
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
-.sobre-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* ===== SHOWS TIMELINE ===== */
-.shows-timeline {
+.about-side {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  position: relative;
-}
-
-.show-item {
-  position: relative;
-  padding-left: 40px;
-  padding-bottom: 32px;
-  animation: fadeInUp 0.5s ease forwards;
-  opacity: 0;
-}
-
-.show-timeline-line {
-  position: absolute;
-  left: 15px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: linear-gradient(to bottom, var(--primary), transparent);
-}
-
-.show-item:last-child .show-timeline-line {
-  display: none;
-}
-
-.show-timeline-dot {
-  position: absolute;
-  left: 8px;
-  top: 24px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--primary);
-  border: 4px solid var(--bg-dark);
-  box-shadow: 0 0 0 2px var(--primary);
-}
-
-.show-card-premium {
-  display: flex;
-  align-items: center;
   gap: 24px;
-  padding: 24px;
+}
+
+.related-artists-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  padding: 24px;
+}
+
+.related-artists-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.related-artists-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.related-artist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.related-artist-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.related-artist-image {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.related-artist-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.related-artist-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.related-artist-genre {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== SHOWS ===== */
+.shows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.show-card {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px;
+  gap: 24px;
+  align-items: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
   transition: var(--transition);
 }
 
-.show-card-premium:hover {
+.show-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-hover);
-  transform: translateX(8px);
 }
 
-.show-date-premium {
+.show-date {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 72px;
-  height: 72px;
-  background: linear-gradient(135deg, var(--primary), #a78bfa);
+  background: rgba(139, 92, 246, 0.1);
   border-radius: var(--radius-sm);
-  color: white;
-  flex-shrink: 0;
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+  padding: 12px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
 .show-day {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
-  line-height: 1;
+  color: var(--primary);
 }
 
 .show-month {
   font-size: 11px;
-  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   margin-top: 2px;
 }
 
-.show-year {
-  font-size: 10px;
-  opacity: 0.8;
-  margin-top: 2px;
-}
-
-.show-content {
-  flex: 1;
+.show-info {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.show-image {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.show-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.show-details h3 {
-  font-size: 18px;
+.show-title {
+  font-size: 16px;
   font-weight: 700;
-  margin: 0 0 8px;
   color: var(--text-primary);
+  margin: 0;
 }
 
-.show-location,
-.show-time {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
+.show-venue {
   font-size: 14px;
-  margin-bottom: 4px;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
-.btn-ingressos {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: var(--primary);
-  border: 1.5px solid var(--primary);
-  padding: 12px 24px;
-  border-radius: 100px;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: var(--transition);
-  flex-shrink: 0;
-}
-
-.btn-ingressos:hover {
-  background: var(--primary);
-  color: white;
-  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
-  transform: translateY(-2px);
-}
-
-.btn-ingressos.disabled {
-  border-color: var(--text-muted);
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-.btn-ingressos.disabled:hover {
-  background: transparent;
-  transform: none;
-  box-shadow: none;
-}
-
-/* ===== RELACIONADOS ===== */
-.relacionados-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 24px;
-}
-
-.relacionado-card {
-  text-align: center;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.relacionado-card:hover {
-  transform: translateY(-4px);
-}
-
-.relacionado-image {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  overflow: hidden;
-  margin-bottom: 12px;
-  border: 3px solid var(--border);
-  transition: var(--transition);
-}
-
-.relacionado-card:hover .relacionado-image {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-glow);
-}
-
-.relacionado-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.relacionado-play {
-  position: absolute;
-  inset: 0;
-  background: rgba(139, 92, 246, 0.8);
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.relacionado-image:hover .relacionado-play {
-  opacity: 1;
-}
-
-.relacionado-card h4 {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0 0 4px;
-  color: var(--text-primary);
-}
-
-.relacionado-card p {
-  font-size: 13px;
+.show-date-full {
+  font-size: 12px;
   color: var(--text-muted);
   margin: 0;
 }
 
-/* ===== ERROR PREMIUM ===== */
-.erro-premium {
-  min-height: 100vh;
+.show-btn {
+  padding: 10px 20px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.show-btn:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  background: var(--bg-dark);
-  text-align: center;
-  padding: 32px;
+  padding: 80px 20px;
+  gap: 16px;
+  color: var(--text-muted);
 }
 
-.erro-animation {
+.empty-state svg {
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 16px;
+  margin: 0;
+}
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #10b981;
+  color: white;
+  padding: 16px 24px;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  animation: slideInUp 0.3s ease;
+}
+
+.toast.error {
+  background: #ef4444;
+}
+
+.toast.info {
+  background: var(--primary);
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================ */
+/* MODAL DE ÁLBUM - GLASSMORPHISM ELEGANTE */
+/* ============================================ */
+
+/* Transição do Modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .modal-album,
+.modal-fade-leave-active .modal-album {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+
+.modal-fade-enter-from .modal-album,
+.modal-fade-leave-to .modal-album {
+  transform: scale(0.92) translateY(20px);
+  opacity: 0;
+}
+
+/* Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal Container */
+.modal-album {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 30, 46, 0.95) 0%,
+    rgba(20, 20, 35, 0.98) 50%,
+    rgba(15, 15, 25, 0.99) 100%
+  );
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(139, 92, 246, 0.1),
+    0 0 60px rgba(139, 92, 246, 0.08);
   position: relative;
+}
+
+/* Glow decorativo no topo do modal */
+.modal-album::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.5) 50%,
+    transparent 100%
+  );
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 32px 32px 24px;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.modal-header-content {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-album-cover {
   width: 120px;
   height: 120px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header-info {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 4px;
 }
 
-.erro-disc {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #1e1b4b);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  animation: disc-spin 4s linear infinite;
-  box-shadow: var(--shadow-glow);
-}
-
-@keyframes disc-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.erro-premium h2 {
-  font-size: 32px;
+.modal-album-title {
+  font-size: 22px;
   font-weight: 800;
   color: var(--text-primary);
   margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.erro-premium p {
-  color: var(--text-muted);
-  font-size: 16px;
+.modal-album-artist {
+  font-size: 15px;
+  color: var(--text-secondary);
   margin: 0;
-  max-width: 400px;
+  font-weight: 500;
 }
 
-.btn-voltar {
-  margin-top: 16px;
-  padding: 14px 32px;
+.modal-album-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.meta-item {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.meta-divider {
+  color: var(--text-muted);
+  opacity: 0.5;
+  font-size: 13px;
+}
+
+.modal-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 32px 24px;
+  flex-shrink: 0;
+}
+
+.modal-btn-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   background: var(--primary);
   color: white;
   border: none;
+  padding: 12px 28px;
   border-radius: 100px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   transition: var(--transition);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
 }
 
-.btn-voltar:hover {
+.modal-btn-play:hover {
   background: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 8px 28px rgba(139, 92, 246, 0.4);
 }
 
-/* ===== TOAST NOTIFICATION ===== */
-.toast-notification {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
+.modal-btn-play:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.modal-btn-play svg {
+  flex-shrink: 0;
+}
+
+.modal-btn-like {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modal-btn-like:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+.modal-btn-like.liked {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.modal-btn-like.liked:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.modal-btn-like svg {
+  transition: transform 0.2s ease;
+}
+
+.modal-btn-like:hover svg {
+  transform: scale(1.15);
+}
+
+/* Modal Tracks Container */
+.modal-tracks-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 32px 32px;
+  min-height: 0;
+}
+
+/* Scrollbar personalizada */
+.modal-tracks-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-tracks-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-tracks-container::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 3px;
+}
+
+.modal-tracks-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.4);
+}
+
+/* Loading dentro do modal */
+.modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.spinner-small {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Modal Tracks List */
+.modal-tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-track-item {
+  display: grid;
+  grid-template-columns: 40px 1fr 60px 36px;
+  align-items: center;
   gap: 12px;
-  padding: 16px 24px;
-  border-radius: 100px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.modal-track-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(139, 92, 246, 0.1);
+}
+
+.modal-track-item.playing {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.2);
+}
+
+.modal-track-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  width: 28px;
+}
+
+.modal-track-play-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0;
+}
+
+.modal-track-play-btn:hover {
+  background: var(--primary-hover);
+  transform: scale(1.15);
+}
+
+.equalizer-small {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.equalizer-small span {
+  width: 2px;
+  background: white;
+  border-radius: 1px;
+  animation: equalize-bar 0.5s ease-in-out infinite;
+}
+
+.equalizer-small span:nth-child(1) { animation-delay: 0s; }
+.equalizer-small span:nth-child(2) { animation-delay: 0.1s; }
+.equalizer-small span:nth-child(3) { animation-delay: 0.2s; }
+
+.modal-track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modal-track-name {
   font-size: 14px;
   font-weight: 600;
-  z-index: 9999;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(20px);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: var(--transition);
 }
 
-.toast-notification.success {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+.modal-track-name.active {
+  color: var(--primary);
 }
 
-.toast-notification.error {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+.modal-track-artist {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.toast-enter-active,
-.toast-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+.modal-track-duration {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.toast-enter-from,
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(20px);
+.modal-track-like {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  padding: 0;
+}
+
+.modal-track-like:hover {
+  color: #ef4444;
+  transform: scale(1.15);
+}
+
+.modal-track-like svg.liked {
+  fill: #ef4444;
+  color: #ef4444;
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 968px) {
-  .sobre-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sobre-image {
-    order: -1;
-    max-height: 300px;
-  }
-}
-
-@media (max-width: 768px) {
-  .hero {
-    min-height: auto;
-    padding: 40px 0 60px;
-  }
-
+@media (max-width: 1024px) {
   .hero-content {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 0 20px;
     gap: 32px;
   }
 
@@ -3064,139 +3617,269 @@ export default {
   }
 
   .artist-name {
-    font-size: 40px;
+    font-size: 48px;
   }
 
-  .info-header {
-    justify-content: center;
+  .musica-row {
+    grid-template-columns: 40px 1fr 60px 40px;
+    gap: 12px;
   }
 
-  .stats-row {
-    justify-content: center;
+  .track-image,
+  .track-image-placeholder {
+    display: none;
+  }
+
+  .track-stats {
+    display: none;
+  }
+
+  .albuns-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 16px;
+  }
+
+  .about-container {
+    grid-template-columns: 1fr;
+  }
+
+  .show-card {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Modal responsivo tablet */
+  .modal-album {
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    min-height: 400px;
+    padding: 40px 0 60px;
+  }
+
+  .hero-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 24px;
+  }
+
+  .artist-visual {
+    order: -1;
+  }
+
+  .artist-photo-wrapper {
+    width: 160px;
+    height: 160px;
+  }
+
+  .artist-name {
+    font-size: 36px;
+  }
+
+  .bio {
+    max-width: 100%;
   }
 
   .hero-actions {
     justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .audio-visualizer {
-    justify-content: center;
-  }
-
-  .tabs-container {
-    padding: 0 16px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .tabs-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tab-btn {
-    padding: 16px 16px;
-    font-size: 14px;
+    width: 100%;
   }
 
   .section {
-    padding: 32px 20px;
+    padding: 32px 16px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .musica-row {
-    padding: 10px 12px;
+    grid-template-columns: 40px 1fr 40px 40px;
   }
 
-  .track-stats,
   .track-duration {
     display: none;
   }
 
   .albuns-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
   }
 
-  .show-card-premium {
+  .album-card {
+    animation-delay: 0s !important;
+  }
+
+  .stats-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 12px;
+  }
+
+  .stat-divider {
+    display: none;
+  }
+
+  .tabs-container {
+    padding: 0 16px;
+    overflow-x: auto;
+  }
+
+  .tab-btn {
+    padding: 16px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* Modal responsivo mobile */
+  .modal-overlay {
+    padding: 16px;
+    align-items: flex-end;
+  }
+
+  .modal-album {
+    max-height: 90vh;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .modal-header {
+    padding: 24px 20px 16px;
     gap: 16px;
   }
 
-  .btn-ingressos {
-    width: 100%;
-    justify-content: center;
+  .modal-album-cover {
+    width: 80px;
+    height: 80px;
   }
 
-  .sobre-stats {
-    grid-template-columns: 1fr;
+  .modal-album-title {
+    font-size: 18px;
   }
 
-  .relacionados-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .modal-album-artist {
+    font-size: 14px;
   }
 
-  .toast-notification {
-    left: 20px;
-    right: 20px;
-    transform: none;
-    border-radius: var(--radius-sm);
+  .modal-actions {
+    padding: 0 20px 16px;
+  }
+
+  .modal-tracks-container {
+    padding: 0 20px 24px;
+  }
+
+  .modal-track-item {
+    grid-template-columns: 36px 1fr 50px 32px;
+    gap: 10px;
+    padding: 8px 10px;
   }
 }
 
 @media (max-width: 480px) {
   .artist-name {
-    font-size: 32px;
+    font-size: 28px;
   }
 
-  .albuns-grid {
-    grid-template-columns: 1fr;
+  .artist-photo-wrapper {
+    width: 120px;
+    height: 120px;
   }
 
-  .relacionados-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .hero-actions {
+  .info-header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 12px;
   }
 
-  .btn-play,
-  .btn-follow {
+  .hero-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn-play {
     padding: 12px 24px;
     font-size: 14px;
   }
 
-  .skeleton-hero {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 40px 20px;
+  .btn-follow {
+    padding: 12px 20px;
+    font-size: 13px;
   }
 
-  .skeleton-artista {
-    width: 160px;
-    height: 160px;
+  .musica-row {
+    grid-template-columns: 40px 1fr 40px;
+    gap: 8px;
   }
 
-  .skeleton-info {
-    align-items: center;
-    width: 100%;
+  .track-like {
+    display: none;
   }
 
-  .skeleton-title {
-    width: 80%;
+  .albuns-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 
-  .skeleton-bio {
-    width: 90%;
+  .album-name {
+    font-size: 13px;
   }
-}
 
-/* ===== UTILITIES ===== */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  .album-meta {
+    font-size: 11px;
+  }
+
+  .show-card {
+    padding: 16px;
+  }
+
+  .toast {
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+  }
+
+  /* Modal responsivo pequeno */
+  .modal-header {
+    padding: 20px 16px 12px;
+  }
+
+  .modal-album-cover {
+    width: 64px;
+    height: 64px;
+  }
+
+  .modal-album-title {
+    font-size: 16px;
+  }
+
+  .modal-actions {
+    padding: 0 16px 12px;
+  }
+
+  .modal-btn-play {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .modal-tracks-container {
+    padding: 0 16px 20px;
+  }
+
+  .modal-track-item {
+    grid-template-columns: 32px 1fr 45px 28px;
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .modal-track-name {
+    font-size: 13px;
+  }
+
+  .modal-track-artist {
+    font-size: 11px;
+  }
 }
 </style>

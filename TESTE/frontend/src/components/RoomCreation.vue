@@ -67,42 +67,56 @@
         </div>
 
         <!-- Visibility Toggle -->
-        <div class="form-group">
-          <label>Visibilidade da Sala</label>
-          <div class="visibility-options">
-            <button 
-              class="visibility-btn"
-              :class="{ 'active': roomForm.isPublic }"
-              @click="roomForm.isPublic = true"
-              :disabled="!canCreate"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-              <div class="visibility-info">
-                <strong>Pública</strong>
-                <span>Qualquer pessoa pode entrar pelo link</span>
-              </div>
-            </button>
-            
-            <button 
-              class="visibility-btn"
-              :class="{ 'active': !roomForm.isPublic }"
-              @click="roomForm.isPublic = false"
-              :disabled="!canCreate"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <div class="visibility-info">
-                <strong>Privada</strong>
-                <span>Apenas convidados podem entrar</span>
-              </div>
-            </button>
-          </div>
-        </div>
+<div class="form-group">
+  <label>Visibilidade da Sala</label>
+  <div class="visibility-options">
+    <button
+      type="button"
+      class="visibility-btn"
+      :class="{ 'active': roomForm.isPublic }"
+      @click="setRoomVisibility(true)"
+      :disabled="!canCreate"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+      <div class="visibility-info">
+        <strong>Pública</strong>
+        <span>Qualquer pessoa pode entrar pelo link</span>
+      </div>
+    </button>
+
+    <button
+      type="button"
+      class="visibility-btn"
+      :class="{ 'active': !roomForm.isPublic }"
+      @click="setRoomVisibility(false)"
+      :disabled="!canCreate"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <div class="visibility-info">
+        <strong>Privada</strong>
+        <span>Somente convidados ou quem tiver a senha</span>
+      </div>
+    </button>
+  </div>
+</div>
+
+<div class="form-group" v-if="!roomForm.isPublic">
+  <label>Senha da Sala <span class="required">*</span></label>
+  <input
+    v-model="roomForm.password"
+    type="password"
+    maxlength="30"
+    placeholder="Mínimo 4 caracteres"
+    :disabled="!canCreate"
+  />
+  <span class="char-count">{{ roomForm.password.length }}/30</span>
+</div>
 
         <!-- Music Source Indicator -->
         <div class="form-group">
@@ -123,6 +137,88 @@
             🔒 <a @click="$router.push('/login')">Conecte-se</a> para ouvir músicas completas do Spotify
           </p>
         </div>
+
+        <!-- Permissions Section (only for logged users) -->
+<div class="form-group" v-if="isLoggedIn">
+  <label>Permissões da Sala</label>
+  <div class="permissions-section">
+    <!-- Role Info -->
+    <div class="role-badge owner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+      </svg>
+      <span>Você será o <strong>Dono</strong> da sala</span>
+    </div>
+
+    <!-- Add Music Permission -->
+    <div class="permission-item">
+      <div class="permission-info">
+        <strong>Adicionar Músicas</strong>
+        <span>Quem pode adicionar músicas à fila</span>
+      </div>
+      <div class="permission-options">
+        <button
+          type="button"
+          class="perm-btn"
+          :class="{ 'active': roomForm.permissions.addMusic === 'everyone' }"
+          @click="roomForm.permissions.addMusic = 'everyone'"
+        >
+          Todos
+        </button>
+        <button
+          type="button"
+          class="perm-btn"
+          :class="{ 'active': roomForm.permissions.addMusic === 'moderators' }"
+          @click="roomForm.permissions.addMusic = 'moderators'"
+        >
+          Moderadores
+        </button>
+        <button
+          type="button"
+          class="perm-btn"
+          :class="{ 'active': roomForm.permissions.addMusic === 'owner' }"
+          @click="roomForm.permissions.addMusic = 'owner'"
+        >
+          Apenas Dono
+        </button>
+      </div>
+    </div>
+
+    <!-- Invite Permission -->
+    <div class="permission-item">
+      <div class="permission-info">
+        <strong>Convidar Pessoas</strong>
+        <span>Quem pode convidar novos participantes</span>
+      </div>
+      <div class="permission-options">
+        <button
+          type="button"
+          class="perm-btn"
+          :class="{ 'active': roomForm.permissions.invitePeople === 'everyone' }"
+          @click="roomForm.permissions.invitePeople = 'everyone'"
+        >
+          Todos
+        </button>
+        <button
+          type="button"
+          class="perm-btn"
+          :class="{ 'active': roomForm.permissions.invitePeople === 'moderators' }"
+          @click="roomForm.permissions.invitePeople = 'moderators'"
+        >
+          Moderadores
+        </button>
+        <button
+          type="button"
+          class="perm-btn"
+          :class="{ 'active': roomForm.permissions.invitePeople === 'owner' }"
+          @click="roomForm.permissions.invitePeople = 'owner'"
+        >
+          Apenas Dono
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
         <!-- Invite Section (only for private rooms or always available) -->
         <div class="form-group" v-if="!roomForm.isPublic || true">
@@ -167,24 +263,41 @@
               <div v-if="followers.length === 0" class="empty-friends">
                 <p>Você ainda não tem seguidores</p>
               </div>
-              <div 
-                v-for="friend in followers" 
-                :key="friend.id"
-                class="friend-item"
-                :class="{ 'selected': selectedInvites.has(friend.id) }"
-                @click="toggleInvite(friend.id)"
-              >
-                <img :src="friend.avatar" class="friend-avatar" />
-                <div class="friend-info">
-                  <span class="friend-name">{{ friend.name }}</span>
-                  <span class="friend-username">@{{ friend.username }}</span>
-                </div>
-                <div class="check-indicator" v-if="selectedInvites.has(friend.id)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                </div>
-              </div>
+          <div 
+  v-for="friend in followers" 
+  :key="friend.id"
+  class="friend-item"
+  :class="{ 
+    'selected': selectedInvites.has(friend.id),
+    'moderator': selectedModerators.has(friend.id)
+  }"
+>
+  <img :src="friend.avatar" class="friend-avatar" />
+  <div class="friend-info">
+    <span class="friend-name">{{ friend.name }}</span>
+    <span class="friend-username">@{{ friend.username }}</span>
+  </div>
+  
+  <!-- Botão de Moderador -->
+  <button
+    class="mod-btn"
+    :class="{ 'active': selectedModerators.has(friend.id) }"
+    @click.stop="toggleModerator(friend.id)"
+    title="Declarar como moderador"
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+    <span>Mod</span>
+  </button>
+
+  <!-- Check de convite (mantém o existente) -->
+  <div class="check-indicator" v-if="selectedInvites.has(friend.id)" @click.stop="toggleInvite(friend.id)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  </div>
+</div>
             </div>
 
             <!-- Following List -->
@@ -204,6 +317,17 @@
                   <span class="friend-name">{{ friend.name }}</span>
                   <span class="friend-username">@{{ friend.username }}</span>
                 </div>
+                 <button
+    class="mod-btn"
+    :class="{ 'active': selectedModerators.has(friend.id) }"
+    @click.stop="toggleModerator(friend.id)"
+    title="Declarar como moderador"
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+    <span>Mod</span>
+  </button>
                 <div class="check-indicator" v-if="selectedInvites.has(friend.id)">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <polyline points="20 6 9 17 4 12"/>
@@ -220,11 +344,11 @@
         </div>
 
         <!-- Submit Button -->
-        <button 
-          class="create-room-btn"
-          :disabled="!canCreate || !roomForm.name.trim() || isCreating"
-          @click="createRoom"
-        >
+ <button 
+  class="create-room-btn"
+  :disabled="!canCreate || !roomForm.name.trim() || isCreating || (!roomForm.isPublic && roomForm.password.trim().length < 4)"
+  @click="createRoom"
+>
           <span v-if="isCreating" class="loader"></span>
           <span v-else>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -243,9 +367,9 @@
         <div class="rooms-grid">
           <div 
             v-for="room in myRooms" 
-            :key="room.id"
+            :key="room.id || room._id"
             class="room-card"
-            @click="enterRoom(room.id)"
+           @click="enterRoom(room.id || room._id)"
           >
             <div class="room-card-bg" :style="{ background: room.gradient || 'linear-gradient(135deg, #667eea, #764ba2)' }">
               <div class="vinyl-icon">
@@ -277,6 +401,19 @@
                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg>
             </button>
+
+            <button 
+  class="delete-room-btn" 
+  @click.stop="confirmDeleteRoom(room)"
+  title="Deletar sala"
+>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <line x1="10" y1="11" x2="10" y2="17"/>
+    <line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+</button>
           </div>
         </div>
       </div>
@@ -294,7 +431,7 @@
                   <line x1="18" y1="6" x2="6" y2="18"/>
                   <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
-              </button>
+             </button>
             </div>
             <div class="share-content" v-if="shareRoomData">
               <div class="share-preview">
@@ -331,6 +468,44 @@
         </div>
       </Transition>
     </Teleport>
+
+    <Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div class="modal-content delete-modal">
+        <div class="modal-header">
+          <h3>Deletar Sala</h3>
+          <button class="close-btn" @click="showDeleteModal = false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="delete-content">
+          <div class="delete-warning">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="1.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p>Tem certeza que deseja deletar a sala <strong>"{{ roomToDelete?.name }}"</strong>?</p>
+            <span>Esta ação não pode ser desfeita.</span>
+          </div>
+          <div class="delete-actions">
+            <button class="cancel-btn" @click="showDeleteModal = false" :disabled="isDeleting">
+              Cancelar
+            </button>
+            <button class="confirm-delete-btn" @click="deleteRoom" :disabled="isDeleting">
+              <span v-if="isDeleting" class="loader"></span>
+              <span v-else>Deletar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
   </div>
 </template>
 
@@ -339,6 +514,34 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+
+const apiFetch = async (path, options = {}) => {
+  const token = localStorage.getItem('token')
+
+  const headers = {
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...options,
+    headers
+  })
+}
+
+const normalizeRoom = (room) => ({
+  ...room,
+  id: room?.id || room?._id
+})
+
+const mapUser = (u) => ({
+  id: u?.id || u?._id,
+  name: u?.nome || u?.name || 'Usuário',
+  username: u?.username || '',
+  avatar: u?.avatar || u?.foto || 'https://via.placeholder.com/150'
+})
 
 // ============================================
 // AUTH STATE
@@ -350,12 +553,10 @@ const currentUser = ref({
   avatar: 'https://via.placeholder.com/150'
 })
 
-// Check auth on mount
 const checkAuth = () => {
   const token = localStorage.getItem('token')
-  // Tenta 'usuario' primeiro (formato da página /login), depois 'user' (formato antigo)
   const userRaw = localStorage.getItem('usuario') || localStorage.getItem('user')
-  
+
   if (token && userRaw) {
     try {
       const userData = JSON.parse(userRaw)
@@ -365,10 +566,14 @@ const checkAuth = () => {
         avatar: userData.avatar || userData.foto || 'https://via.placeholder.com/150'
       }
       isLoggedIn.value = true
+      localStorage.removeItem('guest_rooms')
+      return
     } catch (e) {
-      isLoggedIn.value = false
+      console.error('Erro ao ler usuário do localStorage:', e)
     }
   }
+
+  isLoggedIn.value = false
 }
 
 // ============================================
@@ -377,7 +582,12 @@ const checkAuth = () => {
 const roomForm = ref({
   name: '',
   description: '',
-  isPublic: true
+  isPublic: true,
+  password: '',
+  permissions: {
+    addMusic: 'everyone',
+    invitePeople: 'moderators'
+  }
 })
 
 const isCreating = ref(false)
@@ -410,155 +620,207 @@ const toggleInvite = (id) => {
   }
 }
 
+const setRoomVisibility = (isPublic) => {
+  roomForm.value.isPublic = isPublic
+  if (isPublic) {
+    roomForm.value.password = ''
+  }
+}
+
 // ============================================
 // MODALS
 // ============================================
 const showShareModal = ref(false)
 const shareRoomData = ref(null)
 const copiedLink = ref(false)
+const showDeleteModal = ref(false)
+const roomToDelete = ref(null)
+const isDeleting = ref(false)
 
 // ============================================
 // API FUNCTIONS
 // ============================================
-
-// Fetch user's followers
-const fetchFollowers = async () => {
-  if (!isLoggedIn.value || !currentUser.value.id) return
-  
-  try {
-    const token = localStorage.getItem('token')
-    const response = await fetch(`/usuarios/${currentUser.value.id}/seguidores/publicos`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    if (response.ok) {
-      const data = await response.json()
-      followers.value = data.map(f => ({
-        id: f.id || f._id,
-        name: f.nome,
-        username: f.username,
-        avatar: f.avatar || 'https://via.placeholder.com/150'
-      }))
-    }
-  } catch (error) {
-    console.error('Erro ao buscar seguidores:', error)
-  }
-}
-
-// Fetch user's following
-const fetchFollowing = async () => {
-  if (!isLoggedIn.value || !currentUser.value.id) return
-  
-  try {
-    const token = localStorage.getItem('token')
-    const response = await fetch(`/usuarios/${currentUser.value.id}/seguindo/publicos`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    if (response.ok) {
-      const data = await response.json()
-      following.value = data.map(f => ({
-        id: f.id || f._id,
-        name: f.nome,
-        username: f.username,
-        avatar: f.avatar || f.foto || 'https://via.placeholder.com/150'
-      }))
-    }
-  } catch (error) {
-    console.error('Erro ao buscar seguindo:', error)
-  }
-}
-
-// Fetch user's rooms
-const fetchMyRooms = async () => {
-  // For guests, get from localStorage
-  if (!isLoggedIn.value) {
-    const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
-    myRooms.value = guestRooms
-    userRoomsCount.value = guestRooms.length
+const fetchFollowersAndFollowing = async () => {
+  if (!isLoggedIn.value || !currentUser.value.id) {
+    followers.value = []
+    following.value = []
     return
   }
 
-  // For logged users, fetch from API
   try {
-    const token = localStorage.getItem('token')
-    const response = await fetch('/rooms/my', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    if (response.ok) {
-      const data = await response.json()
-      myRooms.value = data
-      userRoomsCount.value = data.length
-    }
+    const [followersRes, followingRes] = await Promise.all([
+      apiFetch(`/usuarios/${currentUser.value.id}/seguidores/publicos`),
+      apiFetch(`/usuarios/${currentUser.value.id}/seguindo/publicos`)
+    ])
+
+    const followersData = followersRes.ok ? await followersRes.json() : []
+    const followingData = followingRes.ok ? await followingRes.json() : []
+
+    followers.value = Array.isArray(followersData)
+      ? followersData
+          .filter(item => !item.tipo || item.tipo === 'usuario')
+          .map(mapUser)
+      : []
+
+    following.value = Array.isArray(followingData)
+      ? followingData
+          .filter(item => !item.tipo || item.tipo === 'usuario')
+          .map(mapUser)
+      : []
+  } catch (error) {
+    console.error('Erro ao carregar seguidores/seguindo:', error)
+    followers.value = []
+    following.value = []
+  }
+}
+
+const fetchMyRooms = async () => {
+  if (!isLoggedIn.value) {
+    const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+    myRooms.value = guestRooms.map(normalizeRoom)
+    userRoomsCount.value = myRooms.value.length
+    return
+  }
+
+  try {
+    const response = await apiFetch('/api/rooms/my')
+    if (!response.ok) throw new Error('Erro ao buscar salas')
+
+    const data = await response.json()
+    myRooms.value = Array.isArray(data) ? data.map(normalizeRoom) : []
+    userRoomsCount.value = myRooms.value.length
   } catch (error) {
     console.error('Erro ao buscar salas:', error)
   }
 }
+const selectedModerators = ref(new Set())
 
+const toggleModerator = (id) => {
+  if (selectedModerators.value.has(id)) {
+    selectedModerators.value.delete(id)
+  } else {
+    selectedModerators.value.add(id)
+  }
+}
 // ============================================
 // CREATE ROOM
 // ============================================
+const resetRoomForm = () => {
+  roomForm.value = {
+    name: '',
+    description: '',
+    isPublic: true,
+    password: '',
+    permissions: {
+      addMusic: 'everyone',
+      invitePeople: 'moderators'
+    }
+  }
+  selectedInvites.value = new Set()
+  inviteTab.value = 'followers'
+}
+
 const createRoom = async () => {
   if (!canCreate.value || !roomForm.value.name.trim()) return
-  
-  isCreating.value = true
-  
-  const roomData = {
-    // REMOVA o 'id' — deixe o backend gerar
-    name: roomForm.value.name,
-    description: roomForm.value.description,
-    isPublic: roomForm.value.isPublic,
-    // REMOVA 'createdBy' — o backend pega do token
-    // REMOVA 'createdAt' — o backend define
-    // REMOVA 'source' — ou confirme se o backend aceita
-    // REMOVA 'gradient' — ou confirme se o schema tem esse campo
-    invitedUsers: Array.from(selectedInvites.value)
+
+  const trimmedName = roomForm.value.name.trim()
+
+  if (!roomForm.value.isPublic && roomForm.value.password.trim().length < 4) {
+    alert('A senha da sala privada deve ter pelo menos 4 caracteres.')
+    return
   }
 
+  isCreating.value = true
+
   try {
-    if (isLoggedIn.value) {
-      const token = localStorage.getItem('token')
-      
-      console.log('📤 Enviando:', roomData)  // DEBUG
-      
-      const response = await fetch('/rooms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(roomData)
-      })
-      
-      // 👇 ADICIONE ISSO para ver o erro real do backend:
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        console.error('❌ Status:', response.status)
-        console.error('❌ Backend disse:', errorData)
-        throw new Error(errorData.message || `Erro ${response.status} ao criar sala`)
+    // visitante
+    if (!isLoggedIn.value) {
+      const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+
+      const duplicateGuest = guestRooms.some(
+        room => room.name?.trim()?.toLowerCase() === trimmedName.toLowerCase()
+      )
+
+      if (duplicateGuest) {
+        throw new Error('Já existe uma sala com esse nome')
       }
-      
-      const savedRoom = await response.json()
-      // ...
+
+      const guestRoom = {
+        id: generateRoomId(),
+        name: trimmedName,
+        description: roomForm.value.description?.trim() || '',
+        isPublic: roomForm.value.isPublic,
+        password: roomForm.value.isPublic ? '' : roomForm.value.password.trim(),
+        source: 'deezer',
+        gradient: generateRandomGradient(),
+        listeners: 0,
+        invitedUsers: [],
+        currentTrack: null,
+        queue: [],
+        messages: [],
+        createdAt: new Date().toISOString()
+      }
+
+      guestRooms.unshift(guestRoom)
+      localStorage.setItem('guest_rooms', JSON.stringify(guestRooms))
+
+      myRooms.value = guestRooms.map(normalizeRoom)
+      userRoomsCount.value = myRooms.value.length
+      resetRoomForm()
+      router.push(`/room?room=${guestRoom.id}`)
+      return
     }
+
+    // logado
+const roomData = {
+  name: trimmedName,
+  description: roomForm.value.description?.trim() || '',
+  isPublic: roomForm.value.isPublic,
+  password: roomForm.value.isPublic ? undefined : roomForm.value.password.trim(),
+  invitedUsers: Array.from(selectedInvites.value),
+  moderators: Array.from(selectedModerators.value), // <-- ADICIONAR ESTA LINHA
+  permissions: roomForm.value.permissions
+}
+
+    const response = await apiFetch('/api/rooms', {
+      method: 'POST',
+      body: JSON.stringify(roomData)
+    })
+
+    const payload = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(payload.error || payload.message || `Erro ${response.status} ao criar sala`)
+    }
+
+    const savedRoom = normalizeRoom(payload)
+
+    if (selectedInvites.value.size > 0) {
+      await sendInvites(savedRoom.id)
+    }
+
+    myRooms.value = [savedRoom, ...myRooms.value.filter(r => r.id !== savedRoom.id)]
+    userRoomsCount.value = myRooms.value.length
+
+    resetRoomForm()
+
+    router.push(`/room?room=${savedRoom.id}`)
   } catch (error) {
     console.error('Erro ao criar sala:', error)
-    alert(error.message)  // Mostra a mensagem real agora
+    alert(error.message || 'Não foi possível criar a sala')
   } finally {
     isCreating.value = false
   }
 }
 
 const sendInvites = async (roomId) => {
-  const token = localStorage.getItem('token')
-  const invites = Array.from(selectedInvites.value).map(userId => 
-    fetch('/rooms/invite', {
+  const invites = Array.from(selectedInvites.value).map(userId =>
+    apiFetch('/api/rooms/invite', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify({ roomId, userId })
     })
   )
+
   await Promise.allSettled(invites)
 }
 
@@ -593,10 +855,11 @@ const goBack = () => {
 // SHARE
 // ============================================
 const shareRoom = (room) => {
+  const normalized = normalizeRoom(room)
   const baseUrl = window.location.origin
   shareRoomData.value = {
-    ...room,
-    url: `${baseUrl}/room?room=${room.id}`
+    ...normalized,
+    url: `${baseUrl}/room?room=${normalized.id}`
   }
   showShareModal.value = true
 }
@@ -619,16 +882,59 @@ const shareVia = (platform) => {
   window.open(urls[platform], '_blank')
 }
 
+const confirmDeleteRoom = (room) => {
+  roomToDelete.value = room
+  showDeleteModal.value = true
+}
+
+const deleteRoom = async () => {
+  if (!roomToDelete.value) return
+
+  isDeleting.value = true
+
+  try {
+    const roomId = roomToDelete.value.id
+
+    if (!isLoggedIn.value) {
+      // Deletar sala de visitante do localStorage
+      const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+      const updatedRooms = guestRooms.filter(r => (r.id || r._id) !== roomId)
+      localStorage.setItem('guest_rooms', JSON.stringify(updatedRooms))
+
+      myRooms.value = updatedRooms.map(normalizeRoom)
+      userRoomsCount.value = myRooms.value.length
+    } else {
+      // Deletar sala no backend
+      const response = await apiFetch(`/api/rooms/${roomId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload.error || `Erro ${response.status}`)
+      }
+
+      myRooms.value = myRooms.value.filter(r => r.id !== roomId)
+      userRoomsCount.value = myRooms.value.length
+    }
+
+    showDeleteModal.value = false
+    roomToDelete.value = null
+  } catch (error) {
+    console.error('Erro ao deletar sala:', error)
+    alert(error.message || 'Não foi possível deletar a sala')
+  } finally {
+    isDeleting.value = false
+  }
+}
+
 // ============================================
 // LIFECYCLE
 // ============================================
-onMounted(() => {
+onMounted(async () => {
   checkAuth()
-  fetchMyRooms()
-  if (isLoggedIn.value) {
-    fetchFollowers()
-    fetchFollowing()
-  }
+  await fetchMyRooms()
+  await fetchFollowersAndFollowing()
 })
 </script>
 
@@ -727,7 +1033,34 @@ onMounted(() => {
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+.mod-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  color: #ffc107;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-right: 0.5rem;
+}
 
+.mod-btn:hover {
+  background: rgba(255, 193, 7, 0.2);
+}
+
+.mod-btn.active {
+  background: rgba(255, 193, 7, 0.3);
+  border-color: #ffc107;
+}
+
+.friend-item.moderator {
+  border-left: 3px solid #ffc107;
+}
 .header-left {
   display: flex;
   align-items: center;
@@ -1052,7 +1385,97 @@ onMounted(() => {
   padding: 2rem;
   color: var(--text-secondary);
 }
+/* Delete Button */
+.delete-room-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 107, 107, 0.2);
+  border: none;
+  border-radius: 50%;
+  color: #ff6b6b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
 
+.delete-room-btn:hover {
+  background: rgba(255, 107, 107, 0.4);
+  transform: scale(1.1);
+}
+
+/* Delete Modal */
+.delete-modal {
+  max-width: 400px;
+}
+
+.delete-content {
+  padding: 1.5rem;
+}
+
+.delete-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.delete-warning p {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.delete-warning span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.delete-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.delete-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.confirm-delete-btn {
+  background: #ff6b6b;
+  color: white;
+}
+
+.confirm-delete-btn:hover:not(:disabled) {
+  background: #ff5252;
+  transform: translateY(-1px);
+}
+
+.delete-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .friend-item {
   display: flex;
   align-items: center;
@@ -1256,7 +1679,7 @@ onMounted(() => {
 .share-room-btn {
   position: absolute;
   top: 1rem;
-  right: 1rem;
+  right: 3.5rem;
   width: 36px;
   height: 36px;
   background: rgba(0, 0, 0, 0.5);
@@ -1446,7 +1869,105 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
 }
+/* Permissions Section */
+.permissions-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 
+.role-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+}
+
+.role-badge.owner {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.role-badge svg {
+  flex-shrink: 0;
+}
+
+.permission-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.permission-item:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.permission-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.permission-info strong {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.permission-info span {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.permission-options {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.perm-btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 0.625rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.perm-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.perm-btn.active {
+  background: rgba(29, 185, 84, 0.2);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+@media (max-width: 640px) {
+  .permission-options {
+    flex-direction: column;
+  }
+  
+  .perm-btn {
+    width: 100%;
+  }
+}
 /* Responsive */
 @media (max-width: 640px) {
   .creation-content {

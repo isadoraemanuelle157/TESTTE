@@ -4,7 +4,8 @@ const roomSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    maxlength: 50
+    maxlength: 50,
+    trim: true
   },
   description: {
     type: String,
@@ -14,6 +15,15 @@ const roomSchema = new mongoose.Schema({
   isPublic: {
     type: Boolean,
     default: true
+  },
+  hasPassword: {
+    type: Boolean,
+    default: false
+  },
+  passwordHash: {
+    type: String,
+    default: null,
+    select: false
   },
   source: {
     type: String,
@@ -29,6 +39,24 @@ const roomSchema = new mongoose.Schema({
     ref: 'Usuario',
     required: true
   },
+  // ========== PERMISSÕES ==========
+  moderators: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario'
+  }],
+  permissions: {
+    addMusic: {
+      type: String,
+      enum: ['owner', 'moderators', 'everyone'],
+      default: 'everyone'
+    },
+    invitePeople: {
+      type: String,
+      enum: ['owner', 'moderators', 'everyone'],
+      default: 'moderators'
+    }
+  },
+  // ================================
   invitedUsers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario'
@@ -66,10 +94,19 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   }
-}, { timestamps: true })
+}, {
+  timestamps: true
+})
 
-// Índice para buscar salas do usuário
 roomSchema.index({ createdBy: 1 })
 roomSchema.index({ isPublic: 1 })
+
+roomSchema.pre('save', function(next) {
+  if (this.isPublic) {
+    this.passwordHash = null
+    this.hasPassword = false
+  }
+  next()
+})
 
 module.exports = mongoose.model('Room', roomSchema)

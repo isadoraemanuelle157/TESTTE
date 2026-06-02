@@ -438,17 +438,33 @@
                 </div>
               </div>
               
-              <div class="join-form">
-                <input 
-                  v-model="joinUserName" 
-                  placeholder="Seu nome"
-                  type="text"
-                  maxlength="20"
-                />
-                <button @click="joinRoom" :disabled="!joinUserName.trim()" class="join-btn">
-                  Entrar na Sala
-                </button>
-              </div>
+  <div class="join-form">
+  <input 
+    v-model="joinUserName" 
+    placeholder="Seu nome"
+    type="text"
+    maxlength="20"
+  />
+
+  <input
+    v-if="!room.isPublic"
+    v-model="joinPassword"
+    placeholder="Senha da sala"
+    type="password"
+    maxlength="30"
+  />
+
+  <p v-if="accessError" class="join-error">{{ accessError }}</p>
+
+  <button
+    @click="joinRoom"
+    :disabled="!joinUserName.trim() || (!room.isPublic && !joinPassword.trim())"
+    class="join-btn"
+  >
+    Entrar na Sala
+  </button>
+</div>
+
             </div>
           </div>
         </div>
@@ -472,6 +488,36 @@ const roomSource = ref('deezer') // 'deezer' ou 'spotify'
 // Adicione estas computed
 const canAddFullTracks = computed(() => isLoggedIn.value && roomSource.value === 'spotify')
 const showLoginPrompt = computed(() => !isLoggedIn.value && roomSource.value === 'deezer')
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+
+const apiFetch = async (path, options = {}) => {
+  const token = localStorage.getItem('token')
+
+  const headers = {
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...options,
+    headers
+  })
+}
+
+const normalizeRoom = (data = {}) => ({
+  ...data,
+  id: data.id || data._id,
+  createdBy: data.createdBy?.id || data.createdBy?._id || data.createdBy,
+  invitedUsers: Array.isArray(data.invitedUsers)
+    ? data.invitedUsers.map(u => u.id || u._id || u)
+    : []
+})
+
+const joinPassword = ref('')
+const accessError = ref('')
+
 
 // Room State - agora com ID da URL
 const room = ref({
@@ -913,44 +959,41 @@ const checkRoomAccess = () => {
   }
 }
 
-const loadRoomData = (roomId) => {
-  // Simular carregamento de dados da sala
-  const savedRoom = localStorage.getItem(`room_${roomId}_data`)
-  if (savedRoom) {
-    const data = JSON.parse(savedRoom)
-    room.value.name = data.name || room.value.name
-    if (data.currentTrack) {
-      currentTrack.value = data.currentTrack
-    }
-    if (data.queue) {
-      queue.value = data.queue
-    }
-  }
-}
+const joinRoom = async () => {
+  accessError.value = ''
 
-const joinRoom = () => {
-  if (!joinUserName.value.trim()) return
-  
-  currentUser.value.name = joinUserName.value
-  showJoinModal.value = false
-  
-  // Adicionar à lista de ouvintes (simulado)
-  const newListener = {
-    id: currentUser.value.id,
-    name: joinUserName.value,
-    avatar: currentUser.value.avatar,
-    status: 'Entrou agora',
-    synced: true,
-    isFriend: false
+  if (!joinUserName.value.trim()) {
+    accessError.value = 'Digite seu nome'
+    return
   }
-  
-  // Notificar outros usuários (em implementação real, usar WebSocket)
+
+  if (!room.value.isPublic) {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/join`, {
+      method: 'POST',
+      body: JSON.stringify({
+        password: joinPassword.value
+      })
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      accessError.value = data.error || 'Não foi possível entrar na sala'
+      return
+    }
+
+    applyRoomData(data)
+  }
+
+  currentUser.value.name = joinUserName.value.trim()
+  showJoinModal.value = false
+
   messages.value.push({
     id: Date.now(),
     userId: 'system',
     userName: 'Sistema',
     avatar: 'https://via.placeholder.com/150',
-    text: `${joinUserName.value} entrou na sala!`,
+    text: `${joinUserName.value.trim()} entrou na sala!`,
     timestamp: Date.now()
   })
 }
@@ -997,7 +1040,22 @@ onMounted(() => {
 
 const checkAuth = () => {
   const token = localStorage.getItem('token')
+  const userRaw = localStorage.getItem('usuario') || localStorage.getItem('user')
+
   isLoggedIn.value = !!token
+
+  if (token && userRaw) {
+    try {
+      const userData = JSON.parse(userRaw)
+      currentUser.value = {
+        id: userData.id || userData._id,
+        name: userData.nome || userData.name || 'Você',
+        avatar: userData.avatar || userData.foto || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+      }
+    } catch (e) {
+      console.error('Erro ao carregar usuário:', e)
+    }
+  }
 }
 
 const redirectToLogin = () => {
@@ -1005,6 +1063,61 @@ const redirectToLogin = () => {
   localStorage.setItem('redirect_after_login', window.location.href)
   window.location.href = '/login'
 }
+
+const applyRoomData = (data) => {
+  const normalized = normalizeRoom(data)
+
+  room.value = {
+    ...room.value,
+    ...normalized
+  }
+
+  roomSource.value = normalized.source || 'deezer'
+  isRoomOwner.value = currentUser.value?.id && String(normalized.createdBy) === String(currentUser.value.id)
+
+  if (normalized.currentTrack?.id) {
+    currentTrack.value = {
+      ...currentTrack.value,
+      ...normalized.currentTrack
+    }
+  }
+
+  if (Array.isArray(normalized.queue)) {
+    queue.value = normalized.queue
+  }
+
+  if (Array.isArray(normalized.messages)) {
+    messages.value = normalized.messages.map((msg, index) => ({
+      id: msg.id || `${msg.userId || 'msg'}_${index}_${msg.timestamp || Date.now()}`,
+      ...msg
+    }))
+  }
+}
+
+const loadRoomData = async (roomId) => {
+  try {
+    const response = await apiFetch(`/api/rooms/${roomId}`)
+    if (response.ok) {
+      const data = await response.json()
+      applyRoomData(data)
+      return true
+    }
+  } catch (error) {
+    console.error('Erro ao carregar sala da API:', error)
+  }
+
+  // fallback convidado/localStorage
+  const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+  const guestRoom = guestRooms.find(r => String(r.id || r._id) === String(roomId))
+
+  if (guestRoom) {
+    applyRoomData(guestRoom)
+    return true
+  }
+
+  return false
+}
+
 
 onUnmounted(() => {
   clearTimeout(searchTimeout)
@@ -2221,6 +2334,12 @@ onUnmounted(() => {
   padding: 0.75rem;
   border-radius: 12px;
   transition: background 0.3s;
+}
+.join-error {
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  text-align: center;
+  margin: 0;
 }
 
 .friend-item:hover {

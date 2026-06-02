@@ -6,24 +6,36 @@ const criar = async (req, res) => {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
 
-    const { name, description, isPublic, invitedUsers } = req.body
+    const { name, description, isPublic, invitedUsers, password, permissions } = req.body
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Nome da sala é obrigatório' })
     }
 
-    const roomData = {
-      name: name.trim(),
-      description: description || '',
-      isPublic: isPublic !== false,
-      invitedUsers: invitedUsers || [],
-      source: 'spotify' // usuário logado = spotify
+    if (isPublic === false && (!password || !String(password).trim())) {
+      return res.status(400).json({ error: 'Senha é obrigatória para sala privada' })
     }
+
+const roomData = {
+  name: name.trim(),
+  description: description || '',
+  isPublic: isPublic !== false,
+  invitedUsers: invitedUsers || [],
+  moderators: moderators || [], // <-- ADICIONAR
+  password: isPublic === false ? String(password).trim() : undefined,
+  source: 'spotify',
+  permissions: permissions || { addMusic: 'everyone', invitePeople: 'moderators' }
+}
 
     const room = await roomService.criar(roomData, req.user.id)
     res.status(201).json(room)
   } catch (error) {
     console.error('ERRO CRIAR SALA:', error)
+
+    if (error.message.includes('Já existe uma sala')) {
+      return res.status(409).json({ error: error.message })
+    }
+
     res.status(400).json({ error: error.message })
   }
 }
@@ -61,6 +73,19 @@ const buscarPorId = async (req, res) => {
   }
 }
 
+const entrar = async (req, res) => {
+  try {
+    const room = await roomService.entrar(
+      req.params.id,
+      req.user?.id || null,
+      req.body?.password || ''
+    )
+    res.json(room)
+  } catch (error) {
+    res.status(403).json({ error: error.message })
+  }
+}
+
 const atualizar = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
@@ -70,6 +95,9 @@ const atualizar = async (req, res) => {
     const room = await roomService.atualizar(req.params.id, req.user.id, req.body)
     res.json(room)
   } catch (error) {
+    if (error.message.includes('Já existe uma sala')) {
+      return res.status(409).json({ error: error.message })
+    }
     res.status(400).json({ error: error.message })
   }
 }
@@ -107,14 +135,96 @@ const convidar = async (req, res) => {
 
 const verificarAcesso = async (req, res) => {
   try {
-    const { roomId } = req.params
-    const userId = req.user?.id || null
-    const temAcesso = await roomService.verificarAcesso(roomId, userId)
+    const temAcesso = await roomService.verificarAcesso(
+      req.params.id,
+      req.user?.id || null
+    )
     res.json({ acesso: temAcesso })
   } catch (error) {
     res.status(403).json({ error: error.message, acesso: false })
   }
 }
+
+// ========== NOVAS ROTAS DE PERMISSÕES ==========
+
+const verificarPermissao = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
+    const { acao } = req.params
+    const temPermissao = await roomService.verificarPermissao(req.params.id, req.user.id, acao)
+    res.json({ permissao: temPermissao })
+  } catch (error) {
+    res.status(400).json({ error: error.message, permissao: false })
+  }
+}
+
+const getUserRole = async (req, res) => {
+  try {
+    const role = await roomService.getUserRole(req.params.id, req.user?.id || null)
+    res.json({ role })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const adicionarModerador = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
+    const { moderadorId } = req.body
+    if (!moderadorId) {
+      return res.status(400).json({ error: 'moderadorId é obrigatório' })
+    }
+
+    const room = await roomService.adicionarModerador(req.params.id, req.user.id, moderadorId)
+    res.json({ message: 'Moderador adicionado', room })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const removerModerador = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
+    const { moderadorId } = req.body
+    if (!moderadorId) {
+      return res.status(400).json({ error: 'moderadorId é obrigatório' })
+    }
+
+    const room = await roomService.removerModerador(req.params.id, req.user.id, moderadorId)
+    res.json({ message: 'Moderador removido', room })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const atualizarPermissoes = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
+    const { permissions } = req.body
+    if (!permissions) {
+      return res.status(400).json({ error: 'permissions é obrigatório' })
+    }
+
+    const room = await roomService.atualizarPermissoes(req.params.id, req.user.id, permissions)
+    res.json({ message: 'Permissões atualizadas', room })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+// ================================================
 
 const atualizarTrack = async (req, res) => {
   try {
@@ -156,10 +266,16 @@ module.exports = {
   listarMinhas,
   listarPublicas,
   buscarPorId,
+  entrar,
   atualizar,
   deletar,
   convidar,
   verificarAcesso,
+  verificarPermissao,
+  getUserRole,
+  adicionarModerador,
+  removerModerador,
+  atualizarPermissoes,
   atualizarTrack,
   adicionarNaFila,
   enviarMensagem
