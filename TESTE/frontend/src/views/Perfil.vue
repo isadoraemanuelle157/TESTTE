@@ -1311,13 +1311,13 @@
       <transition name="modal">
         <div v-if="showAvatarSelector" class="modal-overlay" @click.self="closeAvatarSelector">
           <div class="modal-content modal-avatar">
-         <div class="modal-header">
+<div class="modal-header">
   <div class="avatar-modal-header-left">
     <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
   </div>
   
   <div class="avatar-modal-actions">
-    <!-- ⚡ BOTÃO DE EQUIPAR AVATAR DOURADO -->
+    <!-- BOTÃO EQUIPAR DOURADO -->
     <button 
       v-if="hasGoldenAvatarItem"
       type="button"
@@ -1469,6 +1469,7 @@
 
 <script>
 import axios from 'axios'
+import { gameApi } from '../services/gameApi.js'
 
 // Diretiva para clicar fora
 const clickOutside = {
@@ -1984,7 +1985,13 @@ mounted() {
     this.carregarUsuarioLogado()
     this.generateArtisticAvatars()
     this.generateFunAvatars()
-     this.checkGoldenAvatarStatus()
+   const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped')
+  if (savedGoldState !== null) {
+    this.isAvatarGoldEquipped = savedGoldState === 'true'
+  }
+  
+  // Depois verifica com o backend (mas não sobrescreve se já tem valor salvo)
+  this.checkGoldenAvatarStatus()
   }
     this.onInventoryUpdated = () => {
     // Força reavaliação da computed property hasGoldenAvatar
@@ -2026,15 +2033,21 @@ mounted() {
   },
 
   methods: {
-    async checkGoldenAvatarStatus() {
+   async checkGoldenAvatarStatus() {
     const token = localStorage.getItem('token');
+    
+    // 🔥 VERIFICAR PRIMEIRO SE TEM ESTADO SALVO NO LOCALSTORAGE
+    const savedEquipped = localStorage.getItem('soundup_avatar_gold_equipped');
     
     if (!token) {
       // Modo offline
       const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
       const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
       this.hasGoldenAvatarItem = !!goldItem;
-      this.isAvatarGoldEquipped = goldItem?.ativo || false;
+      // 🔥 Usa o estado salvo se existir, senão usa do inventário
+      this.isAvatarGoldEquipped = savedEquipped !== null 
+        ? savedEquipped === 'true' 
+        : (goldItem?.ativo || false);
       return;
     }
     
@@ -2042,15 +2055,27 @@ mounted() {
     try {
       const res = await gameApi.getEquippedItems();
       const equipped = res.data?.equipped || [];
-      this.isAvatarGoldEquipped = equipped.some(i => i.itemId === 'avatar_gold');
-      this.hasGoldenAvatarItem = true; // Assume que se chegou aqui, tem o item
+      const serverState = equipped.some(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = true;
+      
+      // 🔥 Só sobrescreve com o servidor se não tiver estado local salvo
+      // (ou se quiser sincronizar, pode comparar e decidir)
+      if (savedEquipped === null) {
+        this.isAvatarGoldEquipped = serverState;
+        localStorage.setItem('soundup_avatar_gold_equipped', String(serverState));
+      } else {
+        // Mantém o estado local (usuário explicitamente escolheu)
+        this.isAvatarGoldEquipped = savedEquipped === 'true';
+      }
     } catch (error) {
       console.error('Erro ao verificar avatar dourado:', error);
       // Fallback para localStorage
       const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
       const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
       this.hasGoldenAvatarItem = !!goldItem;
-      this.isAvatarGoldEquipped = goldItem?.ativo || false;
+      this.isAvatarGoldEquipped = savedEquipped !== null 
+        ? savedEquipped === 'true' 
+        : (goldItem?.ativo || false);
     }
   },
   
@@ -2091,10 +2116,16 @@ mounted() {
         }
       }
       
-      this.isAvatarGoldEquipped = newState;
-      
-      // Dispara evento para atualizar o perfil
-      window.dispatchEvent(new CustomEvent('inventory-updated'));
+this.isAvatarGoldEquipped = newState;
+
+// 🔥 SALVAR NO LOCALSTORAGE PARA PERSISTIR ENTRE MODAIS/SESSÕES
+localStorage.setItem('soundup_avatar_gold_equipped', String(newState));
+
+// Dispara evento para atualizar o perfil E a navbar
+window.dispatchEvent(new CustomEvent('inventory-updated'));
+window.dispatchEvent(new CustomEvent('avatar-gold-changed', { 
+  detail: { equipped: newState } 
+}));
       
       this.showToast({
         title: newState ? "👑 Avatar Dourado Ativado!" : "Avatar Dourado Removido",
@@ -3184,7 +3215,10 @@ openAvatarSelector() {
   this.showAvatarSelector = true
   this.activeAvatarTab = 'initials'
   
-  // 🔥 GARANTE que os avatares são gerados com dados atualizados
+  // 🔥 ADICIONAR ESTA LINHA - garante que verifica o status do item dourado
+  this.checkGoldenAvatarStatus()
+  
+  // Garante que os avatares são gerados com dados atualizados
   this.$nextTick(() => {
     this.generateArtisticAvatars()
     this.generateFunAvatars()
@@ -4763,13 +4797,30 @@ html, body {
   height: 180px;
 }
 
-.avatar-wrapper.online .avatar {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4);
+/* ===== CSS DO AVATAR DOURADO - DEVE VIR DEPOIS DO PADRÃO ===== */
+.avatar-wrapper.avatar-dourado {
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.avatar-wrapper.has-story .avatar {
-  border-color: #ec4899;
+.avatar-wrapper.avatar-dourado .avatar,
+.avatar-wrapper.avatar-dourado .generated-avatar {
+  border: 3px solid #1a1a2e !important;
+  box-shadow: none !important;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  margin: 3px;
+}
+
+.avatar-wrapper.avatar-dourado .story-ring {
+  inset: -10px;
+  background: conic-gradient(from 0deg, #FFD700, #FFA500, #FFD700) !important;
+  padding: 4px;
 }
 
 /* Anel de Story */
@@ -6069,16 +6120,30 @@ html, body {
 /* ===== BOTÃO AVATAR DOURADO NO MODAL ===== */
 .avatar-modal-header-left {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.avatar-modal-header-left h3 {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 18px;        /* 🔥 ADICIONAR */
+  line-height: 1.2;       /* 🔥 ADICIONAR */
 }
 
 .avatar-modal-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
+/* Botão Equipar Dourado */
 .btn-equip-gold {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
@@ -6091,6 +6156,7 @@ html, body {
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
+  height: 36px;           /* 🔥 ADICIONAR - força altura igual ao botão fechar */
 }
 
 .btn-equip-gold:hover:not(:disabled) {
@@ -6106,27 +6172,42 @@ html, body {
   box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
 }
 
-.btn-equip-gold.equipped:hover:not(:disabled) {
-  background: linear-gradient(135deg, #FFA500, #FFD700);
-  box-shadow: 0 6px 25px rgba(255, 215, 0, 0.5);
-}
-
 .btn-equip-gold:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.btn-equip-gold i {
-  font-size: 14px;
-}
-
-/* Ajuste no header do modal de avatar */
+/* Header do modal de avatar */
 .modal-avatar .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  padding: 20px 24px;     /* 🔥 AJUSTAR - padding menor */
 }
+
+/* Botão fechar (X) */
+.btn-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;         /* 🔥 ADICIONAR - não encolhe */
+}
+
+.btn-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+}
+
 .artist-avatar {
   width: 100%;
   height: 100%;
@@ -7270,26 +7351,6 @@ html, body {
   font-size: 20px;
   font-weight: 700;
   margin: 0;
-  color: #f8fafc;
-}
-
-.btn-close {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.btn-close:hover {
-  background: rgba(255, 255, 255, 0.2);
   color: #f8fafc;
 }
 

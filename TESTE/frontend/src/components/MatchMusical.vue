@@ -314,9 +314,11 @@
 </span>
             </button>
 
-            <button class="icon-btn profile-btn" @click="openProfile">
-              <img :src="currentUser.avatar" alt="Profile" class="avatar-small">
-            </button>
+  <button class="icon-btn profile-btn" @click="openProfile">
+  <div class="avatar-small-wrapper" :class="{ 'avatar-gold': isAvatarGoldEquipped }">
+    <img :src="currentUser.avatar" alt="Profile" class="avatar-small">
+  </div>
+</button>
           </div>
         </div>
       </header>
@@ -523,11 +525,13 @@
             <div v-else class="matches-list">
               <div v-for="match in matches" :key="match.id" class="match-card" @click="openMatchDetail(match)">
                 <div class="match-header-card">
-                  <div class="match-avatars">
-                    <img :src="currentUser.avatar" alt="You" class="avatar you">
-                    <img :src="match.user.avatar" alt="Match" class="avatar them">
-                    <div class="compatibility-badge">{{ match.compatibility }}%</div>
-                  </div>
+        <div class="match-avatars">
+  <div class="avatar-wrapper-match" :class="{ 'avatar-gold': isAvatarGoldEquipped }">
+    <img :src="currentUser.avatar" alt="You" class="avatar you">
+  </div>
+  <img :src="match.user.avatar" alt="Match" class="avatar them">
+  <div class="compatibility-badge">{{ match.compatibility }}%</div>
+</div>
                   <div class="match-actions">
                     <button class="icon-btn-small" @click.stop="removeMatch(match)">
                       <svg viewBox="0 0 24 24" fill="currentColor">
@@ -600,10 +604,10 @@
             <!-- Profile View -->
             <div v-if="!isEditing" class="profile-view">
               <div class="profile-hero">
-                <div class="avatar-container">
-                  <img :src="currentUser.avatar" alt="Profile" class="profile-avatar-large">
-                  <div class="online-status"></div>
-                </div>
+<div class="avatar-container" :class="{ 'avatar-gold': isAvatarGoldEquipped }">
+  <img :src="currentUser.avatar" alt="Profile" class="profile-avatar-large">
+  <div class="online-status"></div>
+</div>
                 <h2>{{ currentUser.name }}, {{ currentUser.age }}</h2>
                 <p class="profile-bio">{{ currentUser.bio }}</p>
                 <p v-if="currentUser.location" class="profile-location">
@@ -1542,6 +1546,7 @@ blockingUser: false,
 showDeleteChatConfirm: false,
 deletingChat: false,
 chatToDelete: null,
+isAvatarGoldEquipped: false,
 
           showMatches: false,
           showProfile: false,
@@ -1693,9 +1698,20 @@ showPreviewMidia: false,
     await this.fetchGenres()
     await this.bootstrapUser()
      await this.buscarChats()
+      const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
+  if (savedGoldState !== null) {
+    this.isAvatarGoldEquipped = savedGoldState === 'true';
+  }
+  
+  // Listener para mudanças
+  window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
       methods: {
+         handleAvatarGoldChanged(e) {
+    this.isAvatarGoldEquipped = e.detail?.equipped || false;
+  },
+
          showToast({ type = 'success', title = '', message = '', duration = 4000 }) {
     // Limpa timer anterior se existir
     if (this.toast.timer) {
@@ -3686,6 +3702,7 @@ console.error('Erro ao remover match:', error)
       beforeUnmount() {
         this.stopAudio()
         this.stopChatPolling()
+         window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
       }
     }
     </script>
@@ -7048,7 +7065,83 @@ padding: 8px 20px 80px;
 .chat-slide-leave-to {
   transform: translateX(100%);
 }
+/* ===== AVATAR DOURADO NO MUSICAL MATCH ===== */
 
+/* Avatar pequeno no header */
+.avatar-small-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-small-wrapper.avatar-gold {
+  padding: 2px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 1px #B8860B,
+    0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.avatar-small-wrapper.avatar-gold .avatar-small {
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  object-fit: cover;
+}
+
+/* Avatar grande no modal de perfil */
+.avatar-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 16px;
+}
+
+.avatar-container.avatar-gold {
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 20px rgba(255, 215, 0, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.avatar-container.avatar-gold .profile-avatar-large {
+  border-radius: 50%;
+  border: 3px solid #1a1a2e;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  object-fit: cover;
+}
+
+/* Avatar no modal de matches */
+.avatar-wrapper-match {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-wrapper-match.avatar-gold {
+  padding: 2px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 0 0 0 1px #B8860B;
+}
+
+.avatar-wrapper-match.avatar-gold .avatar.you {
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  object-fit: cover;
+}
 /* Responsive */
 @media (max-width: 480px) {
   .chat-list-modal {

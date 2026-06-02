@@ -814,9 +814,9 @@
                 class="user-card"
                 @click="goToUserProfile(user)"
               >
-                <div class="user-card-img">
-                  <img :src="user.picture || user.avatar || '/default-avatar.png'" :alt="user.name">
-                </div>
+               <div class="user-card-img" :class="{ 'avatar-gold': user.hasGoldenAvatar || isAvatarGoldEquipped && isCurrentUser(user) }">
+  <img :src="user.picture || user.avatar || '/default-avatar.png'" :alt="user.name">
+</div>
                 <span class="user-card-name">{{ user.name || user.username }}</span>
                 <span class="user-card-type">Perfil</span>
                 <span v-if="user.perfilPrivado" class="user-privacy">🔒 Privado</span>
@@ -915,6 +915,8 @@ export default {
       spotifyPlayer: null,
       spotifyDeviceId: null,
       isSpotifyPremium: false,
+      isAvatarGoldEquipped: false,
+    currentUserId: null,
       spotifyToken: null,
      
       activeCategoryTab: 'genres',
@@ -1310,11 +1312,26 @@ export default {
     this.loadLocalizacoes()
     this.loadRecentCategories()
     this.checkSpotifyStatus()
+     const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
+  if (savedGoldState !== null) {
+    this.isAvatarGoldEquipped = savedGoldState === 'true';
+  }
+  
+  // Pegar ID do usuário logado
+  const storedUser = localStorage.getItem('usuario');
+  if (storedUser) {
+    const userData = JSON.parse(storedUser);
+    this.currentUserId = userData.id || userData._id;
+  }
+  
+  // Listener para mudanças no avatar dourado
+  window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
     if (this.searchTimeout) clearTimeout(this.searchTimeout)
+     window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
   watch: {
@@ -1331,6 +1348,13 @@ export default {
   },
 
   methods: {
+     handleAvatarGoldChanged(e) {
+    this.isAvatarGoldEquipped = e.detail?.equipped || false;
+  },
+  
+  isCurrentUser(user) {
+    return this.currentUserId && String(user.id) === String(this.currentUserId);
+  },
     goToArtistDetail(artist) {
       if (!artist) return
       if (artist.source === 'local' && artist.id) {
@@ -6354,5 +6378,33 @@ html, body, #app {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+/* ===== AVATAR DOURADO NO SEARCH ===== */
+.user-card-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 12px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.user-card-img.avatar-gold {
+  padding: 3px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 15px rgba(255, 215, 0, 0.5),
+    0 4px 20px rgba(0, 0, 0, 0.3);
+  border: none;
+}
+
+.user-card-img.avatar-gold img {
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style>    

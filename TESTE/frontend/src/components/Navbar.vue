@@ -169,15 +169,15 @@
             @click="toggleUserMenu"
             :class="{ active: showUserMenu }"
           >
-            <div class="user-avatar">
-              <img
-                v-if="userAvatar"
-                :src="userAvatar"
-                alt="Avatar"
-                @error="handleAvatarError"
-              />
-              <i v-else class="fa fa-user"></i>
-            </div>
+<div class="user-avatar" :class="{ 'avatar-gold': isAvatarGoldEquipped }">
+  <img
+    v-if="userAvatar"
+    :src="userAvatar"
+    alt="Avatar"
+    @error="handleAvatarError"
+  />
+  <i v-else class="fa fa-user"></i>
+</div>
             <span class="user-name">{{ userName }}</span>
             <i class="fa fa-chevron-down arrow-icon" :class="{ rotate: showUserMenu }"></i>
           </button>
@@ -185,10 +185,10 @@
           <transition name="dropdown">
             <div v-if="showUserMenu" class="dropdown-panel user-dropdown">
               <div class="dropdown-header user-header">
-                <div class="header-avatar">
-                  <img v-if="userAvatar" :src="userAvatar" @error="handleAvatarError" />
-                  <i v-else class="fa fa-user"></i>
-                </div>
+    <div class="header-avatar" :class="{ 'avatar-gold': isAvatarGoldEquipped }">
+  <img v-if="userAvatar" :src="userAvatar" @error="handleAvatarError" />
+  <i v-else class="fa fa-user"></i>
+</div>
                 <div class="header-info">
                   <h4>{{ userName }}</h4>
                   <p>{{ userEmail }}</p>
@@ -397,8 +397,9 @@ export default {
     const isLoggedIn = ref(false)
     const userName = ref('')
     const userEmail = ref('')
-    const userAvatar = ref(null)
-    const userId = ref(null)
+   const userAvatar = ref(null)
+const userId = ref(null)
+const isAvatarGoldEquipped = ref(false) // 🔥 NOVO
 
     const notifications = ref([])
     const notificationCount = ref(0)
@@ -481,6 +482,16 @@ export default {
         userId.value = null
       }
     }
+
+    const checkGoldenAvatar = () => {
+  const saved = localStorage.getItem('soundup_avatar_gold_equipped')
+  isAvatarGoldEquipped.value = saved === 'true'
+}
+
+// Listener para mudanças no avatar dourado
+const handleAvatarGoldChanged = (e) => {
+  isAvatarGoldEquipped.value = e.detail?.equipped || false
+}
 
     const formatTimeAgo = (dateString) => {
       if (!dateString) return 'Agora'
@@ -889,8 +900,9 @@ export default {
       }
     }
 
-    onMounted(async () => {
-      loadUserData()
+onMounted(async () => {
+  loadUserData()
+  checkGoldenAvatar() 
 
       if (isLoggedIn.value) {
         await carregarNotificacoes()
@@ -904,6 +916,7 @@ export default {
       window.addEventListener('user-logged-out', handleUserLoggedOut)
       window.addEventListener('perfil-updated', handleProfileUpdated)
       window.addEventListener('storage', handleStorage)
+       window.addEventListener('avatar-gold-changed', handleAvatarGoldChanged)
     })
 
     onUnmounted(() => {
@@ -915,6 +928,7 @@ export default {
       window.removeEventListener('user-logged-out', handleUserLoggedOut)
       window.removeEventListener('perfil-updated', handleProfileUpdated)
       window.removeEventListener('storage', handleStorage)
+       window.removeEventListener('avatar-gold-changed', handleAvatarGoldChanged)
 
       if (toast.value.timer) clearTimeout(toast.value.timer)
     })
@@ -956,7 +970,8 @@ export default {
       goToSettings,
       goToLibrary,
       goToHelp,
-      handleAvatarError
+      handleAvatarError,
+      isAvatarGoldEquipped,
     }
   }
 }
@@ -2033,7 +2048,39 @@ export default {
   opacity: 0;
   transform: translateX(100px);
 }
+/* ===== AVATAR DOURADO NA NAVBAR ===== */
+.user-avatar.avatar-gold,
+.header-avatar.avatar-gold {
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 1px #B8860B,
+    0 0 12px rgba(255, 215, 0, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
 
+.user-avatar.avatar-gold img,
+.header-avatar.avatar-gold img {
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  margin: 2px;
+  object-fit: cover;
+}
+
+/* Ajuste para o header-avatar no dropdown que é maior */
+.header-avatar.avatar-gold {
+  padding: 3px;
+}
+
+.header-avatar.avatar-gold img {
+  border: 2px solid #1a1a2e;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  margin: 3px;
+}
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1200px) {
   .navbar {

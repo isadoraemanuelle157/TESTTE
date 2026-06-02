@@ -36,7 +36,7 @@
        
         <div class="profile-info-container">
           <div class="avatar-section">
-            <div class="avatar-wrapper" :class="{ 'online': isOnline }">
+            <div class="avatar-wrapper" :class="{ 'avatar-gold': usuario.hasGoldenAvatar || isAvatarGoldEquipped } ">
               <img
                 v-if="usuario.avatar"
                 :src="usuario.avatar"
@@ -790,6 +790,8 @@ export default {
       atividadesRecentes: [],
       isFollowing: false,
       isOwnProfile: false,
+       isAvatarGoldEquipped: false,
+    isOwnProfile: false,
       activeTab: 'overview',
       showContextMenu: false,
       notFound: false,
@@ -1060,8 +1062,59 @@ isCurrentTabLocked() {
       }
     }
   },
+mounted() {
+  const loggedUser = localStorage.getItem('usuario');
+  const loggedId = loggedUser ? JSON.parse(loggedUser).id || JSON.parse(loggedUser)._id : null;
+  const profileId = this.usuario?.id || this.usuario?._id;
+  
+  this.isOwnProfile = loggedId && profileId && String(loggedId) === String(profileId);
+  
+  if (this.isOwnProfile) {
+    const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
+    if (savedGoldState !== null) {
+      this.isAvatarGoldEquipped = savedGoldState === 'true';
+    }
+  }
+  
+  // Verificar se o perfil visualizado tem avatar dourado (vindo do backend)
+  this.checkUserGoldenAvatar(profileId);
+  
+  // Listener para mudanças
+  window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
+},
+
+beforeUnmount() {
+  window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
+},
 
   methods: {
+     handleAvatarGoldChanged(e) {
+    if (this.isOwnProfile) {
+      this.isAvatarGoldEquipped = e.detail?.equipped || false;
+    }
+  },
+  
+  async checkUserGoldenAvatar(userId) {
+    // Verificar se o usuário do perfil tem avatar dourado equipado
+    // Isso pode vir do backend ou de uma flag no objeto usuario
+    try {
+      const token = localStorage.getItem('token');
+      if (!token || !userId) return;
+      
+      // Opcional: buscar do backend se o usuário tem avatar dourado
+      // const res = await axios.get(`http://localhost:3002/usuarios/${userId}/avatar-status`);
+      // this.usuario.hasGoldenAvatar = res.data.hasGoldenAvatar;
+      
+      // Por enquanto, verifica localmente se for o próprio perfil
+      if (this.isOwnProfile) {
+        const saved = localStorage.getItem('soundup_avatar_gold_equipped');
+        this.usuario.hasGoldenAvatar = saved === 'true';
+      }
+    } catch (error) {
+      console.error('Erro ao verificar avatar dourado:', error);
+    }
+  },
+  
   // ✅ NOVO: Verifica se a música atual já está em determinada playlist
 isMusicaJaNaPlaylist(playlistId) {
   if (!this.musicaParaAdicionar?.id) return false
@@ -4341,7 +4394,55 @@ isMusicaEmPlaylist(musica, playlistId) {
     transform: translateX(-50%) translateY(0);
   }
 }
+/* ===== AVATAR DOURADO NO PERFILUSUARIO ===== */
+.profile-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 16px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
 
+.profile-avatar.avatar-gold {
+  padding: 4px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 25px rgba(255, 215, 0, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  border: none;
+}
+
+.profile-avatar.avatar-gold img {
+  border-radius: 50%;
+  border: 3px solid #1a1a2e;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  margin: 4px;
+  object-fit: cover;
+}
+
+/* Avatar menor em listas/cards */
+.chat-avatar.avatar-gold,
+.user-list-avatar.avatar-gold {
+  padding: 2px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 1px #B8860B,
+    0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.chat-avatar.avatar-gold img,
+.user-list-avatar.avatar-gold img {
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  margin: 2px;
+  object-fit: cover;
+}
 /* Responsivo */
 @media (max-width: 768px) {
   .profile-info-container {
