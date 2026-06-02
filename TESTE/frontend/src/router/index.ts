@@ -40,6 +40,7 @@ import SpotifyConnected from '@/components/SpotifyConnected.vue'
 import LocalPlaylist from '@/views/LocalPlaylist.vue'
 import RoomCreation from '@/components/RoomCreation.vue'
 import DecadasPlaylist from '@/views/DecadasPlaylist.vue'
+import Rooms from '@/components/Rooms.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -141,6 +142,11 @@ const router = createRouter({
       name: 'salademusica',
       component: SaladeMusica,
       meta: { requiresAuth: false }
+    },
+     {
+      path: '/rooms',
+      name: 'RoomsList',
+      component: Rooms,
     },
      {
       path: '/local/:nome',
