@@ -30,7 +30,7 @@
               </div>
               <div class="link-info">
                 <span class="link-name">Instagram</span>
-                <span class="link-handle">@sua_marca</span>
+                <span class="link-handle">@SoundUp</span>
               </div>
               <i class="fa fa-external-link arrow-icon"></i>
             </a>
@@ -41,7 +41,7 @@
               </div>
               <div class="link-info">
                 <span class="link-name">Facebook</span>
-                <span class="link-handle">/sua_pagina</span>
+                <span class="link-handle">/SoundUp</span>
               </div>
               <i class="fa fa-external-link arrow-icon"></i>
             </a>
@@ -54,7 +54,7 @@
               </div>
               <div class="link-info">
                 <span class="link-name">X / Twitter</span>
-                <span class="link-handle">@sua_conta</span>
+                <span class="link-handle">@SoundUp</span>
               </div>
               <i class="fa fa-external-link arrow-icon"></i>
             </a>
@@ -65,7 +65,7 @@
               </div>
               <div class="link-info">
                 <span class="link-name">YouTube</span>
-                <span class="link-handle">/seu_canal</span>
+                <span class="link-handle">/SoundUpMusic</span>
               </div>
               <i class="fa fa-external-link arrow-icon"></i>
             </a>

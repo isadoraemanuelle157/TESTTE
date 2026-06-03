@@ -232,7 +232,7 @@ const generateDefaultAvatar = (nome, id) => {
 
 // ===== CRUD =====
 const createUser = async (data) => {
-  const { nome, email, senha, role } = data
+  const { nome, email, senha } = data
   const jaExiste = await Usuario.findOne({ email })
   if (jaExiste) throw new Error('E-mail já cadastrado')
 
@@ -243,7 +243,6 @@ const createUser = async (data) => {
   const user = new Usuario({
     nome, username, email,
     senha: senhaHash,
-    role: role || 'user',
     bio: '', avatar: defaultAvatar, cover: null, localizacao: '',
     perfilPrivado: false, mostrarAtividade: true,
     generos: { locais: [], externos: [] },

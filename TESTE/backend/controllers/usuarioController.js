@@ -82,40 +82,13 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    // ✅ DEBUG: log para verificar o que está vindo no req.user
-    console.log('🔍 [UPDATE] req.user:', req.user)
-    console.log('🔍 [UPDATE] req.user?.id:', req.user?.id)
-    console.log('🔍 [UPDATE] req.params.id:', req.params.id)
+    const usuarioLogado = await Usuario.findById(req.user?.id).select('role')
 
-    // ✅ VALIDAÇÃO: garantir que req.user existe e tem id
-    if (!req.user?.id) {
-      return res.status(401).json({
-        error: 'LOGIN_REQUIRED',
-        message: 'Faça login para continuar'
-      })
-    }
-
-    const usuarioLogado = await Usuario.findById(req.user.id).select('role nome email')
-    console.log('🔍 [UPDATE] usuarioLogado no banco:', usuarioLogado)
-
-    // ✅ Se não achou o usuário no banco, token está desatualizado
-    if (!usuarioLogado) {
-      return res.status(401).json({
-        error: 'USER_NOT_FOUND',
-        message: 'Usuário não encontrado. Faça login novamente.'
-      })
-    }
-
-    const isOwner = String(req.user.id) === String(req.params.id)
-    const isAdmin = usuarioLogado.role === 'admin'
-
-    console.log('🔍 [UPDATE] isOwner:', isOwner, '| isAdmin:', isAdmin)
+    const isOwner = String(req.user?.id) === String(req.params.id)
+    const isAdmin = usuarioLogado?.role === 'admin'
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({
-        error: 'Sem permissão para editar este usuário',
-        message: 'Você não tem permissão para editar este usuário. Faça login novamente ou contate um administrador.'
-      })
+      return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
     }
 
     const user = await userService.updateUser(req.params.id, req.body)
@@ -129,7 +102,6 @@ const update = async (req, res) => {
       user
     })
   } catch (error) {
-    console.error('❌ [UPDATE] Erro:', error)
     res.status(500).json({ error: error.message })
   }
 }
