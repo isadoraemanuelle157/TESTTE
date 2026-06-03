@@ -232,7 +232,7 @@ const generateDefaultAvatar = (nome, id) => {
 
 // ===== CRUD =====
 const createUser = async (data) => {
-  const { nome, email, senha } = data
+  const { nome, email, senha, role } = data
   const jaExiste = await Usuario.findOne({ email })
   if (jaExiste) throw new Error('E-mail já cadastrado')
 
@@ -243,6 +243,7 @@ const createUser = async (data) => {
   const user = new Usuario({
     nome, username, email,
     senha: senhaHash,
+    role: role || 'user',
     bio: '', avatar: defaultAvatar, cover: null, localizacao: '',
     perfilPrivado: false, mostrarAtividade: true,
     generos: { locais: [], externos: [] },
@@ -375,14 +376,13 @@ const updateUser = async (id, data) => {
   const {
     nome, username, idade, bio, avatar, cover, localizacao,
     email, website, perfilPrivado, mostrarAtividade,
-    generos, artistasFavoritos, vibesFavoritas, onboardingCompleto
+    generos, artistasFavoritos, vibesFavoritas, onboardingCompleto,
+    senha
   } = data
 
-  // Busca usuário atual para fazer merge nos arrays híbridos
   const usuarioAtual = await Usuario.findById(id)
   if (!usuarioAtual) return null
 
-  // Campos simples
   if (nome !== undefined) usuarioAtual.nome = nome
   if (username !== undefined) usuarioAtual.username = username
   if (idade !== undefined) usuarioAtual.idade = idade
@@ -396,19 +396,20 @@ const updateUser = async (id, data) => {
   if (mostrarAtividade !== undefined) usuarioAtual.mostrarAtividade = mostrarAtividade
   if (onboardingCompleto !== undefined) usuarioAtual.onboardingCompleto = onboardingCompleto
 
-  // Campos híbridos — substituição completa (não append)
+  if (senha !== undefined && String(senha).trim()) {
+    usuarioAtual.senha = await bcrypt.hash(String(senha).trim(), 10)
+  }
+
   if (generos !== undefined) {
     const norm = normalizarGeneros(generos)
     usuarioAtual.generos = { locais: norm.locais, externos: norm.externos }
   }
 
-if (artistasFavoritos !== undefined) {
-  const norm = normalizarArtistas(artistasFavoritos)
-  
-  // ✅ Forçar reset do campo para migrar de array antigo para objeto novo
-  usuarioAtual.markModified('artistasFavoritos')
-  usuarioAtual.artistasFavoritos = { locais: norm.locais, externos: norm.externos }
-}
+  if (artistasFavoritos !== undefined) {
+    const norm = normalizarArtistas(artistasFavoritos)
+    usuarioAtual.markModified('artistasFavoritos')
+    usuarioAtual.artistasFavoritos = { locais: norm.locais, externos: norm.externos }
+  }
 
   if (vibesFavoritas !== undefined) {
     const norm = normalizarVibes(vibesFavoritas)

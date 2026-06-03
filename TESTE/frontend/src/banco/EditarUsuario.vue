@@ -377,67 +377,83 @@ export default {
       }
     },
 
-    async salvar() {
-      if (!this.hasChanges) return
+  async salvar() {
+  if (!this.hasChanges) return
 
-      this.loading = true
-      this.erro = ""
-      this.mensagem = ""
+  this.loading = true
+  this.erro = ""
+  this.mensagem = ""
 
-      try {
-        const id = this.$route.params.id
+  try {
+    const id = this.$route.params.id
 
-        const payload = {
-          nome: this.form.nome,
-          email: this.form.email
-        }
+    const payload = {
+      nome: this.form.nome,
+      email: this.form.email
+    }
 
-        if (this.form.senha && this.form.senha.trim()) {
-          payload.senha = this.form.senha.trim()
-        }
+    if (this.form.senha && this.form.senha.trim()) {
+      payload.senha = this.form.senha.trim()
+    }
 
-        const res = await axios.put(
-          `http://localhost:3002/usuarios/${id}`,
-          payload,
-          {
-            headers: this.getAuthHeaders()
-          }
-        )
-
-        this.mensagem = res.data?.message || "Usuário atualizado com sucesso!"
-
-        const usuarioAtualizado = res.data?.user || {}
-
-        this.originalData = {
-          nome: this.form.nome,
-          email: this.form.email
-        }
-
-        this.form.senha = ""
-        this.showPasswordFields = false
-        this.showPassword = false
-
-        this.updatedAt =
-          usuarioAtualizado.updatedAt ||
-          new Date().toISOString()
-
-        this.userStatus = usuarioAtualizado.perfilPrivado ? "inactive" : this.userStatus
-
-        this.showSuccessOverlay = true
-
-        setTimeout(() => {
-          this.$router.push("/tabelausuario")
-        }, 1500)
-      } catch (err) {
-        console.error("Erro ao salvar alterações:", err)
-        this.erro =
-          err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Erro ao salvar alterações"
-      } finally {
-        this.loading = false
+    const res = await axios.put(
+      `http://localhost:3002/usuarios/${id}`,
+      payload,
+      {
+        headers: this.getAuthHeaders()
       }
-    },
+    )
+
+    this.mensagem = res.data?.message || "Usuário atualizado com sucesso!"
+
+    const usuarioAtualizado = res.data?.user || {}
+
+    this.originalData = {
+      nome: this.form.nome,
+      email: this.form.email
+    }
+
+    this.form.senha = ""
+    this.showPasswordFields = false
+    this.showPassword = false
+
+    this.updatedAt = usuarioAtualizado.updatedAt || new Date().toISOString()
+    this.userStatus = usuarioAtualizado.perfilPrivado ? "inactive" : this.userStatus
+
+    this.showSuccessOverlay = true
+
+    setTimeout(() => {
+      this.$router.push("/tabelausuario")
+    }, 1500)
+
+  } catch (err) {
+    console.error("Erro ao salvar alterações:", err)
+    const status = err.response?.status
+    const serverError = err.response?.data?.error || err.response?.data?.message
+
+    // ✅ 401 = token inválido/expirado (não tem role ou id)
+    if (status === 401 || serverError?.includes('Token') || serverError?.includes('login')) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('usuario')
+      localStorage.removeItem('usuario_perfil')
+      localStorage.removeItem('isLoggedIn')
+      this.erro = 'Sessão expirada. Faça login novamente.'
+      setTimeout(() => this.$router.push('/login'), 2000)
+      return
+    }
+
+    // ✅ 403 = sem permissão (tem token válido mas não é owner nem admin)
+    if (status === 403) {
+      this.erro = serverError || 'Você não tem permissão para editar este usuário.'
+      return
+    }
+
+    this.erro = serverError || "Erro ao salvar alterações"
+
+  } finally {
+    this.loading = false
+  }
+},
 
     voltar() {
       this.$router.push("/tabelausuario")

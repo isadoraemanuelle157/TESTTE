@@ -10,42 +10,43 @@
 
     <div class="card" :class="{ 'loading-state': loading }">
 
-       <button class="back-btn" @click="voltar">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M15 18l-6-6 6-6"/>
-  </svg>
-</button>
-<!-- Progress Steps -->
-     <div class="progress-steps">
-  <div class="step completed">
-    <div class="step-number">1</div>
-    <span class="step-label">Conta</span>
-  </div>
+      <button class="back-btn" @click="voltar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
 
-  <div class="step-line completed"></div>
+      <!-- Progress Steps -->
+      <div class="progress-steps">
+        <div class="step completed">
+          <div class="step-number">1</div>
+          <span class="step-label">Conta</span>
+        </div>
 
-  <div class="step active">
-    <div class="step-number">2</div>
-    <span class="step-label">Perfil</span>
-  </div>
+        <div class="step-line completed"></div>
 
-  <div class="step-line"></div>
+        <div class="step active">
+          <div class="step-number">2</div>
+          <span class="step-label">Perfil</span>
+        </div>
 
-  <div class="step">
-    <div class="step-number">3</div>
-    <span class="step-label">Preferências</span>
-  </div>
-</div>
+        <div class="step-line"></div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <span class="step-label">Preferências</span>
+        </div>
+      </div>
 
       <!-- Header -->
       <div class="brand-section">
         <div class="avatar-upload" @click="triggerAvatarUpload">
           <div class="avatar-preview" :style="avatarPreviewStyle">
             <img v-if="form.avatar" :src="form.avatar" alt="Avatar" />
-            <i v-else class="fa fa-camera"></i>
+            <i v-else class="fas fa-camera"></i>
           </div>
           <div class="avatar-overlay">
-            <i class="fa fa-camera"></i>
+            <i class="fas fa-camera"></i>
             <span>Adicionar foto</span>
           </div>
           <input 
@@ -61,10 +62,10 @@
       </div>
 
       <form @submit.prevent="completarPerfil" class="form-content">
-        <!-- Username -->
-        <div class="input-group" :class="{ 'focused': focused === 'username', 'filled': form.username }">
+        <!-- Username (OBRIGATÓRIO) -->
+        <div class="input-group" :class="{ 'focused': focused === 'username', 'filled': form.username, 'error': errors.username }">
           <div class="input-wrapper">
-            <span class="input-icon">@</span>
+            <span class="input-icon"><i class="fas fa-at"></i></span>
             <input 
               v-model="form.username" 
               type="text" 
@@ -74,15 +75,16 @@
               placeholder=" "
               maxlength="30"
             />
-            <label>Nome de usuário</label>
+            <label>Nome de usuário *</label>
           </div>
           <span class="hint">Este será seu identificador único</span>
+          <span class="error-text" v-if="errors.username">{{ errors.username }}</span>
         </div>
 
-        <!-- Bio -->
-        <div class="input-group" :class="{ 'focused': focused === 'bio', 'filled': form.bio }">
+        <!-- Bio (OBRIGATÓRIO) -->
+        <div class="input-group" :class="{ 'focused': focused === 'bio', 'filled': form.bio, 'error': errors.bio }">
           <div class="input-wrapper textarea-wrapper">
-            <span class="input-icon textarea-icon">📝</span>
+            <span class="input-icon textarea-icon"><i class="fas fa-pen"></i></span>
             <textarea 
               v-model="form.bio" 
               @focus="focused = 'bio'"
@@ -90,18 +92,18 @@
               placeholder=" "
               maxlength="150"
               rows="3"
+              required
             ></textarea>
-            <label>Sobre você</label>
+            <label>Sobre você *</label>
           </div>
           <span class="char-count">{{ form.bio.length }}/150</span>
+          <span class="error-text" v-if="errors.bio">{{ errors.bio }}</span>
         </div>
 
-        <!-- Localização -->
-        <!-- CEP -->
-        <!-- CEP -->
-        <div class="input-group" :class="{ 'focused': focused === 'cep', 'filled': form.cep }">
+        <!-- CEP (OBRIGATÓRIO) -->
+        <div class="input-group" :class="{ 'focused': focused === 'cep', 'filled': form.cep, 'error': errors.cep }">
           <div class="input-wrapper">
-            <span class="input-icon">📮</span>
+            <span class="input-icon"><i class="fas fa-map-marker-alt"></i></span>
             <input 
               v-model="form.cep"
               type="text"
@@ -109,15 +111,17 @@
               @focus="focused = 'cep'"
               @blur="buscarCEP"
               placeholder=" "
+              required
             />
-            <label>CEP</label>
+            <label>CEP *</label>
           </div>
+          <span class="error-text" v-if="errors.cep">{{ errors.cep }}</span>
         </div>
 
         <!-- Rua -->
         <div class="input-group" :class="{ 'focused': focused === 'rua', 'filled': form.rua }">
           <div class="input-wrapper">
-            <span class="input-icon">🏠</span>
+            <span class="input-icon"><i class="fas fa-road"></i></span>
             <input 
               v-model="form.rua" 
               type="text" 
@@ -132,7 +136,7 @@
         <!-- Número -->
         <div class="input-group" :class="{ 'focused': focused === 'numero', 'filled': form.numero }">
           <div class="input-wrapper">
-            <span class="input-icon">🔢</span>
+            <span class="input-icon"><i class="fas fa-hashtag"></i></span>
             <input 
               v-model="form.numero" 
               @input="atualizarLocalizacao" 
@@ -148,7 +152,7 @@
         <!-- Bairro -->
         <div class="input-group" :class="{ 'focused': focused === 'bairro', 'filled': form.bairro }">
           <div class="input-wrapper">
-            <span class="input-icon">📍</span>
+            <span class="input-icon"><i class="fas fa-map-pin"></i></span>
             <input 
               v-model="form.bairro" 
               type="text" 
@@ -163,7 +167,7 @@
         <!-- Cidade -->
         <div class="input-group" :class="{ 'focused': focused === 'cidade', 'filled': form.cidade }">
           <div class="input-wrapper">
-            <span class="input-icon">🏙️</span>
+            <span class="input-icon"><i class="fas fa-city"></i></span>
             <input 
               v-model="form.cidade" 
               type="text" 
@@ -178,7 +182,7 @@
         <!-- Estado -->
         <div class="input-group" :class="{ 'focused': focused === 'estado', 'filled': form.estado }">
           <div class="input-wrapper">
-            <span class="input-icon">🗺️</span>
+            <span class="input-icon"><i class="fas fa-flag"></i></span>
             <input 
               v-model="form.estado" 
               type="text" 
@@ -193,7 +197,7 @@
         <!-- Cover Image URL -->
         <div class="input-group" :class="{ 'focused': focused === 'cover', 'filled': form.cover }">
           <div class="input-wrapper">
-            <span class="input-icon">🖼️</span>
+            <span class="input-icon"><i class="fas fa-image"></i></span>
             <input 
               v-model="form.cover" 
               type="url" 
@@ -211,16 +215,16 @@
         </div>
 
         <!-- Submit Button -->
-        <button type="submit" :disabled="loading || !isValid" class="submit-btn">
+        <button type="submit" :disabled="loading" class="submit-btn">
           <span class="btn-content" v-if="!loading">
-            <span>Próximo</span>
+            <span>Finalizar Cadastro</span>
             <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </span>
           <span v-else class="loading-spinner">
             <span class="spinner"></span>
-            <span>Salvando...</span>
+            <span>Criando conta...</span>
           </span>
         </button>
 
@@ -229,14 +233,29 @@
           Pular por agora
         </button>
       </form>
+    </div>
 
-      <!-- Messages -->
-      <transition name="slide-up">
-        <div v-if="mensagem || erro" :class="['alert', mensagem ? 'success' : 'error']">
-          <span class="alert-icon">{{ mensagem ? '✓' : '!' }}</span>
-          <span>{{ mensagem || erro }}</span>
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+      <transition-group name="toast">
+        <div 
+          v-for="toast in toasts" 
+          :key="toast.id" 
+          :class="['toast', toast.type]"
+        >
+          <div class="toast-icon">
+            <i :class="toast.icon"></i>
+          </div>
+          <div class="toast-content">
+            <span class="toast-title">{{ toast.title }}</span>
+            <span class="toast-message">{{ toast.message }}</span>
+          </div>
+          <button class="toast-close" @click="removeToast(toast.id)">
+            <i class="fas fa-times"></i>
+          </button>
+          <div class="toast-progress" :style="{ animationDuration: toast.duration + 'ms' }"></div>
         </div>
-      </transition>
+      </transition-group>
     </div>
   </div>
 </template>
@@ -253,7 +272,6 @@ export default {
         bio: "",
         avatar: "",
         cover: "",
-        // NOVO
         cep: "",
         rua: "",
         numero: "",
@@ -263,16 +281,18 @@ export default {
         localizacao: ""
       },
       loading: false,
-      mensagem: "",
-      erro: "",
       focused: null,
-      usuarioTemp: null,
-      userId: null // ✅ NOVO: Armazenar ID separadamente
+      etapa1Dados: null,
+      errors: {},
+      toasts: [],
+      toastId: 0
     }
   },
   computed: {
     isValid() {
-      return this.form.username.length >= 3
+      return this.form.username.length >= 3 && 
+             this.form.bio.length > 0 && 
+             this.form.cep.replace(/\\D/g, '').length === 8
     },
     avatarPreviewStyle() {
       if (this.form.avatar) {
@@ -283,156 +303,223 @@ export default {
   },
   mounted() {
     // Verificar se veio da etapa 1
-    const tempUser = localStorage.getItem('usuario_temp')
-    if (!tempUser) {
-      // Se não tem dados temporários, redirecionar para registrar etapa 1
-      this.$router.push('/registrar')
-      return
-    }
-    
-    this.usuarioTemp = JSON.parse(tempUser)
-    
-    // ✅ CORREÇÃO: Pegar ID de várias possíveis fontes (MongoDB usa _id)
-    this.userId = this.usuarioTemp._id || this.usuarioTemp.id
-    
-    if (!this.userId) {
-      this.erro = "Erro: ID do usuário não encontrado. Por favor, volte à etapa anterior."
+    const dadosEtapa1 = localStorage.getItem('registrar_etapa1_dados')
+    if (!dadosEtapa1) {
+      this.showToast('error', 'Erro', 'Complete a etapa 1 primeiro. Redirecionando...')
       setTimeout(() => {
         this.$router.push('/registrar')
-      }, 3000)
+      }, 2000)
       return
     }
-    
+
+    this.etapa1Dados = JSON.parse(dadosEtapa1)
+
     // Sugerir username baseado no email
-    if (this.usuarioTemp.email) {
-      const suggestedUsername = this.usuarioTemp.email
+    if (this.etapa1Dados.email) {
+      const suggestedUsername = this.etapa1Dados.email
         .split('@')[0]
         .toLowerCase()
         .replace(/[^a-z0-9]/g, '')
       this.form.username = suggestedUsername
     }
+
+    // Recuperar dados salvos da etapa 2 se existirem
+    const dadosEtapa2 = localStorage.getItem('registrar_etapa2_dados')
+    if (dadosEtapa2) {
+      try {
+        const dados = JSON.parse(dadosEtapa2)
+        Object.assign(this.form, dados)
+      } catch (e) {
+        console.error('Erro ao recuperar dados da etapa 2:', e)
+      }
+    }
   },
   methods: {
+    showToast(type, title, message, duration = 5000) {
+      const id = ++this.toastId
+      const icons = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+      }
+
+      this.toasts.push({
+        id,
+        type,
+        title,
+        message,
+        icon: icons[type] || icons.info,
+        duration
+      })
+
+      setTimeout(() => {
+        this.removeToast(id)
+      }, duration)
+    },
+
+    removeToast(id) {
+      const index = this.toasts.findIndex(t => t.id === id)
+      if (index > -1) {
+        this.toasts.splice(index, 1)
+      }
+    },
+
     triggerAvatarUpload() {
       this.$refs.avatarInput.click()
     },
+
     voltar() {
-  this.$router.push('/registrar')
-},
-    
+      // Salvar dados atuais da etapa 2 para recuperar ao voltar
+      localStorage.setItem('registrar_etapa2_dados', JSON.stringify(this.form))
+      this.$router.push('/registrar')
+    },
+
     handleAvatarChange(event) {
       const file = event.target.files[0]
       if (!file) return
-      
-      // Validar tipo e tamanho
+
       if (!file.type.startsWith('image/')) {
-        this.erro = "Por favor, selecione uma imagem válida"
-        setTimeout(() => this.erro = "", 3000)
+        this.showToast('error', 'Erro', 'Por favor, selecione uma imagem válida')
         return
       }
-      
+
       if (file.size > 5 * 1024 * 1024) {
-        this.erro = "A imagem deve ter no máximo 5MB"
-        setTimeout(() => this.erro = "", 3000)
+        this.showToast('error', 'Erro', 'A imagem deve ter no máximo 5MB')
         return
       }
-      
-      // Converter para base64 (em produção, envie para servidor/S3)
+
       const reader = new FileReader()
       reader.onload = (e) => {
         this.form.avatar = e.target.result
+        this.showToast('success', 'Sucesso', 'Avatar carregado com sucesso!')
       }
       reader.readAsDataURL(file)
     },
-    
+
+    validateForm() {
+      this.errors = {}
+      let isValid = true
+
+      if (!this.form.username || this.form.username.length < 3) {
+        this.errors.username = 'Nome de usuário é obrigatório (mínimo 3 caracteres)'
+        this.showToast('error', 'Erro', 'Nome de usuário é obrigatório (mínimo 3 caracteres)')
+        isValid = false
+      }
+
+      if (!this.form.bio || this.form.bio.trim().length === 0) {
+        this.errors.bio = 'A bio é obrigatória'
+        this.showToast('error', 'Erro', 'A bio é obrigatória')
+        isValid = false
+      }
+
+      const cepLimpo = this.form.cep.replace(/\\D/g, '')
+      if (!cepLimpo || cepLimpo.length !== 8) {
+        this.errors.cep = 'CEP é obrigatório (8 dígitos)'
+        this.showToast('error', 'Erro', 'CEP é obrigatório (8 dígitos)')
+        isValid = false
+      }
+
+      return isValid
+    },
+
     async completarPerfil() {
       this.loading = true
-      this.erro = ""
-      this.mensagem = ""
 
-      if (!this.isValid) {
-        this.erro = "Escolha um nome de usuário válido (mínimo 3 caracteres)"
+      if (!this.validateForm()) {
         this.loading = false
+        this.showToast('error', 'Erro de Validação', 'Preencha todos os campos obrigatórios corretamente.')
         return
       }
 
-      // ✅ CORREÇÃO: Verificar se temos ID antes de fazer a requisição
-      if (!this.userId) {
-        this.erro = "Erro: ID do usuário não encontrado"
+      if (!this.etapa1Dados) {
+        this.showToast('error', 'Erro', 'Dados da etapa 1 não encontrados. Volte e preencha novamente.')
         this.loading = false
+        setTimeout(() => {
+          this.$router.push('/registrar')
+        }, 2000)
         return
       }
 
       try {
-        // Atualizar usuário no backend com dados completos
-const token = localStorage.getItem("token")
+        // ETAPA 1: Criar a conta no backend
+        const registerResponse = await axios.post(
+          "http://localhost:3002/usuarios/registrar",
+          {
+            nome: this.etapa1Dados.nome,
+            email: this.etapa1Dados.email,
+            senha: this.etapa1Dados.senha
+          }
+        )
 
-if (!token) {
-  this.erro = "Sessão expirada. Faça login novamente."
-  this.loading = false
-  setTimeout(() => {
-    this.$router.push('/login')
-  }, 2000)
-  return
-}
+        const userData = registerResponse.data.user
+        const token = registerResponse.data.token
 
-const response = await axios.put(
-  `http://localhost:3002/usuarios/${this.userId}`,
-  {
-    username: this.form.username,
-    bio: this.form.bio,
-    localizacao: this.form.localizacao,
-    avatar: this.form.avatar,
-    cover: this.form.cover,
-    onboardingCompleto: false 
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  }
-)
+        // ETAPA 2: Atualizar o perfil com dados da etapa 2
+        const userId = userData._id || userData.id
 
-        const userDataCompleto = response.data.user
-        
-        // Salvar dados completos no localStorage
+        const updateResponse = await axios.put(
+          `http://localhost:3002/usuarios/${userId}`,
+          {
+            username: this.form.username,
+            bio: this.form.bio,
+            localizacao: this.form.localizacao,
+            avatar: this.form.avatar,
+            cover: this.form.cover,
+            onboardingCompleto: false 
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+
+        const userDataCompleto = updateResponse.data.user
+
+        // Limpar dados temporários e salvar sessão
         localStorage.setItem("usuario", JSON.stringify(userDataCompleto))
         localStorage.setItem("usuario_perfil", JSON.stringify(userDataCompleto))
+        localStorage.setItem("token", token)
         localStorage.setItem("isLoggedIn", "true")
-        
-        // Remover dados temporários
         localStorage.removeItem('usuario_temp')
-        
-        // Disparar evento para atualizar navbar
+        localStorage.removeItem('registrar_etapa1_dados')
+        localStorage.removeItem('registrar_etapa2_dados')
+
         window.dispatchEvent(new CustomEvent('user-logged-in', {
           detail: userDataCompleto
         }))
 
-        this.mensagem = "Perfil completo! Redirecionando..."
-        
-        // ✅ ALTERAÇÃO: Redirecionar para "Feito Para Você" em vez do perfil
+        this.showToast('success', 'Sucesso!', 'Conta criada com sucesso! Redirecionando...')
+
         setTimeout(() => {
           this.$router.push("/feitoparavoce")
         }, 1500)
 
       } catch (err) {
-        this.erro = err.response?.data?.error || "Erro ao salvar perfil. Tente novamente."
-        setTimeout(() => this.erro = "", 5000)
+        const errorMsg = err.response?.data?.error || "Erro ao criar conta. Tente novamente."
+        this.showToast('error', 'Erro', errorMsg)
       } finally {
         this.loading = false
       }
     },
 
     async buscarCEP() {
-      const cep = this.form.cep.replace(/\D/g, '')
+      const cep = this.form.cep.replace(/\\D/g, '')
 
-      if (cep.length !== 8) return
+      if (cep.length !== 8) {
+        if (cep.length > 0) {
+          this.errors.cep = 'CEP deve ter 8 dígitos'
+        }
+        return
+      }
 
       try {
         const res = await axios.get(`https://viacep.com.br/ws/${cep}/json/`)
 
         if (res.data.erro) {
-          this.erro = "CEP não encontrado"
+          this.errors.cep = 'CEP não encontrado'
+          this.showToast('warning', 'Atenção', 'CEP não encontrado. Preencha manualmente.')
           return
         }
 
@@ -440,33 +527,65 @@ const response = await axios.put(
         this.form.bairro = res.data.bairro
         this.form.cidade = res.data.localidade
         this.form.estado = res.data.uf
+        this.errors.cep = ''
 
         this.atualizarLocalizacao()
+        this.showToast('success', 'Sucesso', 'Endereço encontrado!')
 
       } catch (err) {
-        this.erro = "Erro ao buscar CEP"
+        this.showToast('error', 'Erro', 'Erro ao buscar CEP. Tente novamente.')
       }
     },
-    
+
     atualizarLocalizacao() {
       this.form.localizacao = `${this.form.rua}, ${this.form.numero} - ${this.form.bairro}, ${this.form.cidade} - ${this.form.estado}`
     }, 
-    
-    pularEtapa() {
-      // Usar dados básicos e redirecionar
-      if (this.usuarioTemp) {
-        localStorage.setItem("usuario", JSON.stringify(this.usuarioTemp))
-        localStorage.setItem("usuario_perfil", JSON.stringify(this.usuarioTemp))
-        localStorage.setItem("isLoggedIn", "true")
-        localStorage.removeItem('usuario_temp')
-        
-        window.dispatchEvent(new CustomEvent('user-logged-in', {
-          detail: this.usuarioTemp
-        }))
+
+    async pularEtapa() {
+      if (!this.etapa1Dados) {
+        this.showToast('error', 'Erro', 'Dados da etapa 1 não encontrados')
+        return
       }
-      
-      // ✅ ALTERAÇÃO: Redirecionar para "Feito Para Você" também ao pular
-      this.$router.push("/feitoparavoce")
+
+      this.loading = true
+
+      try {
+        // Criar conta mesmo pulando a etapa 2
+        const registerResponse = await axios.post(
+          "http://localhost:3002/usuarios/registrar",
+          {
+            nome: this.etapa1Dados.nome,
+            email: this.etapa1Dados.email,
+            senha: this.etapa1Dados.senha
+          }
+        )
+
+        const userData = registerResponse.data.user
+        const token = registerResponse.data.token
+
+        localStorage.setItem("usuario", JSON.stringify(userData))
+        localStorage.setItem("usuario_perfil", JSON.stringify(userData))
+        localStorage.setItem("token", token)
+        localStorage.setItem("isLoggedIn", "true")
+        localStorage.removeItem('registrar_etapa1_dados')
+        localStorage.removeItem('registrar_etapa2_dados')
+
+        window.dispatchEvent(new CustomEvent('user-logged-in', {
+          detail: userData
+        }))
+
+        this.showToast('info', 'Conta criada!', 'Você pode completar seu perfil depois.')
+
+        setTimeout(() => {
+          this.$router.push("/feitoparavoce")
+        }, 1500)
+
+      } catch (err) {
+        const errorMsg = err.response?.data?.error || "Erro ao criar conta. Tente novamente."
+        this.showToast('error', 'Erro', errorMsg)
+      } finally {
+        this.loading = false
+      }
     }
   }
 }
@@ -490,6 +609,7 @@ const response = await axios.put(
   overflow: hidden;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
+
 .back-btn {
   position: absolute;
   top: 20px;
@@ -523,6 +643,7 @@ const response = await axios.put(
 .back-btn:active {
   transform: scale(0.95);
 }
+
 /* Background Shapes */
 .bg-shapes {
   position: absolute;
@@ -757,6 +878,12 @@ h1 {
   position: relative;
 }
 
+.input-group.error input,
+.input-group.error textarea {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
 .input-wrapper {
   position: relative;
   display: flex;
@@ -770,10 +897,11 @@ h1 {
 .input-icon {
   position: absolute;
   left: 16px;
-  font-size: 1.25rem;
+  font-size: 1rem;
   z-index: 2;
   transition: all 0.3s ease;
   opacity: 0.6;
+  color: #94a3b8;
 }
 
 .textarea-icon {
@@ -782,7 +910,12 @@ h1 {
 
 .input-group.focused .input-icon {
   opacity: 1;
+  color: #6366f1;
   transform: scale(1.1);
+}
+
+.input-group.error .input-icon {
+  color: #ef4444;
 }
 
 input, textarea {
@@ -850,6 +983,10 @@ textarea:not(:placeholder-shown) + label {
   transform: translateY(-50%) scale(0.85);
 }
 
+.input-group.error label {
+  color: #ef4444;
+}
+
 .hint {
   font-size: 0.75rem;
   color: #64748b;
@@ -865,6 +1002,21 @@ textarea:not(:placeholder-shown) + label {
   margin-top: 6px;
   display: block;
   padding: 0 4px;
+}
+
+.error-text {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  display: block;
+  padding: 0 4px;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 /* Cover Preview */
@@ -986,140 +1138,164 @@ textarea:not(:placeholder-shown) + label {
   cursor: not-allowed;
 }
 
-/* Alert */
-.alert {
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
-  margin-top: 20px;
-  font-size: 0.95rem;
-  animation: slideUp 0.3s ease;
+  max-width: 400px;
 }
 
-.alert.success {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.alert.error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+.toast.success {
+  border-left: 4px solid #22c55e;
 }
 
-.alert-icon {
+.toast.error {
+  border-left: 4px solid #ef4444;
+}
+
+.toast.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.toast.info {
+  border-left: 4px solid #3b82f6;
+}
+
+.toast-icon {
   width: 24px;
   height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
   flex-shrink: 0;
+  font-size: 14px;
 }
 
-.alert.success .alert-icon {
+.toast.success .toast-icon {
   background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
 }
 
-.alert.error .alert-icon {
+.toast.error .toast-icon {
   background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
 }
 
-@keyframes slideUp {
+.toast.warning .toast-icon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.toast.info .toast-icon {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.toast-message {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  animation: toastProgress linear forwards;
+}
+
+.toast.success .toast-progress {
+  background: #22c55e;
+}
+
+.toast.error .toast-progress {
+  background: #ef4444;
+}
+
+.toast.warning .toast-progress {
+  background: #f59e0b;
+}
+
+.toast.info .toast-progress {
+  background: #3b82f6;
+}
+
+@keyframes toastSlideIn {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateX(100px) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0) scale(1);
   }
 }
 
-.slide-up-enter-active, .slide-up-leave-active {
-  transition: all 0.3s ease;
+@keyframes toastProgress {
+  from { width: 100%; }
+  to { width: 0%; }
 }
 
-.slide-up-enter-from, .slide-up-leave-to {
+.toast-enter-active, .toast-leave-active {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast-enter-from, .toast-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
-}
-
-
-/* Labels flutuantes para campos de endereço */
-.input-group {
-  position: relative;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 16px;
-  font-size: 1.25rem;
-  z-index: 2;
-  transition: all 0.3s ease;
-  opacity: 0.6;
-}
-
-.input-group.focused .input-icon {
-  opacity: 1;
-  transform: scale(1.1);
-}
-
-input {
-  width: 100%;
-  padding: 16px 16px 16px 48px;
-  background: rgba(30, 41, 59, 0.5);
-  border: 2px solid rgba(148, 163, 184, 0.2);
-  border-radius: 16px;
-  color: white;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  outline: none;
-  font-family: inherit;
-}
-
-input:focus {
-  border-color: #6366f1;
-  background: rgba(30, 41, 59, 0.8);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-}
-
-.input-group.focused input {
-  border-color: #6366f1;
-}
-
-label {
-  position: absolute;
-  left: 48px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-  font-size: 1rem;
-  pointer-events: none;
-  transition: all 0.3s ease;
-  background: transparent;
-  padding: 0 4px;
-}
-
-/* EFEITO: Label sobe ao focar ou preencher */
-input:focus + label,
-input:not(:placeholder-shown) + label,
-.input-group.filled label {
-  top: 0;
-  transform: translateY(-50%) scale(0.85);
-  color: #6366f1;
-  background: #111827;
-  font-weight: 500;
+  transform: translateX(100px) scale(0.9);
 }
 
 /* Responsive */
@@ -1127,18 +1303,24 @@ input:not(:placeholder-shown) + label,
   .card {
     padding: 24px 20px 32px;
   }
-  
+
   h1 {
     font-size: 1.5rem;
   }
-  
+
   .avatar-upload {
     width: 100px;
     height: 100px;
   }
-  
+
   .step-line {
     width: 40px;
+  }
+
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    max-width: none;
   }
 }
 </style>

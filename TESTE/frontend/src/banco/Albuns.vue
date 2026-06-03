@@ -17,7 +17,9 @@
           <div class="vinyl-logo">
             <div class="vinyl-disc">
               <div class="vinyl-grooves"></div>
-              <div class="vinyl-center">💿</div>
+              <div class="vinyl-center">
+                <i class="fas fa-compact-disc"></i>  <!-- 🔄 emoji 💿 -->
+              </div>
             </div>
           </div>
           <div class="brand-text">
@@ -43,7 +45,9 @@
         <!-- Form Panel -->
         <section ref="formPanel" class="panel form-panel" :class="{ editing: modoEdicao }">
           <div class="panel-header">
-            <div class="panel-badge">{{ modoEdicao ? '✏️' : '➕' }}</div>
+            <div class="panel-badge">
+              <i :class="modoEdicao ? 'fas fa-pen' : 'fas fa-plus'"></i>  <!-- 🔄 emojis ✏️ / ➕ -->
+            </div>
             <h2>{{ modoEdicao ? 'Editar Álbum' : 'Novo Álbum' }}</h2>
             <p class="panel-desc">{{ modoEdicao ? 'Atualize as informações do álbum' : 'Adicione um novo álbum à sua coleção' }}</p>
           </div>
@@ -51,137 +55,141 @@
           <form @submit.prevent="salvarAlbum" class="album-form">
             <div class="form-row">
               <div class="input-wrap" :class="{ 'active': focused === 'nome', 'filled': form.nome }">
-                <span class="input-emoji">🎵</span>
-               <input 
-  ref="nomeInput"
-  v-model="form.nome" 
-  type="text" 
-  required
-  @focus="focused = 'nome'"
-  @blur="focused = null"
-  placeholder=" "
-/>
+                <span class="input-emoji"><i class="fas fa-music"></i></span>  <!-- 🔄 emoji 🎵 -->
+                <input 
+                  ref="nomeInput"
+                  v-model="form.nome" 
+                  type="text" 
+                  required
+                  @focus="focused = 'nome'"
+                  @blur="focused = null"
+                  placeholder=" "
+                />
                 <label>Nome do álbum</label>
                 <div class="input-glow"></div>
               </div>
             </div>
 
             <!-- Modern Select - Cantores -->
-          <!-- Modern Select - Cantores -->
-<div class="input-group modern-select">
-  <label class="select-label">
-    <span class="label-icon">🎤</span>
-    Selecionar Cantor(a)
-  </label>
+            <div class="input-group modern-select">
+              <label class="select-label">
+                <span class="label-icon"><i class="fas fa-microphone"></i></span>  <!-- 🔄 emoji 🎤 -->
+                Selecionar Cantor(a)
+              </label>
 
-  <div class="select-container" :class="{ open: dropdownOpen === 'cantor' }">
-    <div class="select-trigger" @click.stop="toggleDropdown('cantor')">
-      <div class="selected-tags">
-        <span v-if="!form.cantor" class="placeholder">
-          Escolha um artista...
-        </span>
+              <div class="select-container" :class="{ open: dropdownOpen === 'cantor' }">
+                <div class="select-trigger" @click.stop="toggleDropdown('cantor')">
+                  <div class="selected-tags">
+                    <span v-if="!form.cantor" class="placeholder">
+                      Escolha um artista...
+                    </span>
 
-        <span v-else class="tag">
-          {{ getCantorNome(form.cantor) }}
-        <button
-  type="button"
-  class="tag-remove"
-  @click.stop="removeCantor"
->
-  ×
-</button>
-        </span>
-      </div>
+                    <span v-else class="tag">
+                      {{ getCantorNome(form.cantor) }}
+                      <button
+                        type="button"
+                        class="tag-remove"
+                        @click.stop="removeCantor"
+                      >
+                        <i class="fas fa-times"></i>  <!-- 🔄 emoji × -->
+                      </button>
+                    </span>
+                  </div>
 
-      <span class="dropdown-arrow" :class="{ open: dropdownOpen === 'cantor' }">▼</span>
-    </div>
+                  <span class="dropdown-arrow" :class="{ open: dropdownOpen === 'cantor' }">
+                    <i class="fas fa-chevron-down"></i>  <!-- 🔄 emoji ▼ -->
+                  </span>
+                </div>
 
-    <transition name="dropdown">
-      <div
-        v-if="dropdownOpen === 'cantor'"
-        class="dropdown-menu"
-        @click.stop
-      >
-        <div class="dropdown-search">
-          <input
-            v-model="searchCantores"
-            type="text"
-            placeholder="Buscar artista..."
-            @click.stop
-          />
-        </div>
+                <transition name="dropdown">
+                  <div
+                    v-if="dropdownOpen === 'cantor'"
+                    class="dropdown-menu"
+                    @click.stop
+                  >
+                    <div class="dropdown-search">
+                      <input
+                        v-model="searchCantores"
+                        type="text"
+                        placeholder="Buscar artista..."
+                        @click.stop
+                      />
+                    </div>
 
-        <div class="dropdown-options">
-          <button
-            v-for="cantor in filteredCantores"
-            :key="cantor._id"
-            type="button"
-            class="option option-button"
-            :class="{ selected: form.cantor === cantor._id }"
-            @click.stop="selecionarCantor(cantor)"
-          >
-            <span class="check-icon">✓</span>
-            <span class="option-text">{{ cantor.nome }}</span>
-          </button>
+                    <div class="dropdown-options">
+                      <button
+                        v-for="cantor in filteredCantores"
+                        :key="cantor._id"
+                        type="button"
+                        class="option option-button"
+                        :class="{ selected: form.cantor === cantor._id }"
+                        @click.stop="selecionarCantor(cantor)"
+                      >
+                        <span class="check-icon"><i class="fas fa-check"></i></span>  <!-- 🔄 emoji ✓ -->
+                        <span class="option-text">{{ cantor.nome }}</span>
+                      </button>
 
-          <div v-if="filteredCantores.length === 0" class="no-results">
-            Nenhum artista encontrado
-          </div>
-        </div>
-      </div>
-    </transition>
-  </div>
+                      <div v-if="filteredCantores.length === 0" class="no-results">
+                        Nenhum artista encontrado
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
 
-  <small class="hint">
-    <span class="hint-icon">💡</span>
-    Clique para selecionar um artista
-  </small>
-</div>
+              <small class="hint">
+                <span class="hint-icon"><i class="fas fa-lightbulb"></i></span>  <!-- 🔄 emoji 💡 -->
+                Clique para selecionar um artista
+              </small>
+            </div>
 
 
             <!-- Modern Select - Músicas -->
             <div class="input-group modern-select">
-  <label class="select-label">
-    <span class="label-icon">🎵</span>
-    Selecionar Músicas
-  </label>
+              <label class="select-label">
+                <span class="label-icon"><i class="fas fa-music"></i></span>  <!-- 🔄 emoji 🎵 -->
+                Selecionar Músicas
+              </label>
 
-  <div class="select-container" :class="{ open: dropdownOpen === 'musicas' }">
+              <div class="select-container" :class="{ open: dropdownOpen === 'musicas' }">
 
-    <div class="select-trigger" @mousedown.stop="toggleDropdown('musicas')">
-      <div class="selected-tags">
-        <span v-if="form.musicas.length === 0" class="placeholder">
-          Escolha as músicas...
-        </span>
+                <div class="select-trigger" @mousedown.stop="toggleDropdown('musicas')">
+                  <div class="selected-tags">
+                    <span v-if="form.musicas.length === 0" class="placeholder">
+                      Escolha as músicas...
+                    </span>
 
-        <span v-for="id in form.musicas" :key="id" class="tag">
-          {{ getMusicaNome(id) }}
-          <button type="button" @mousedown.stop="removeMusica(id)" class="tag-remove">×</button>
+                    <span v-for="id in form.musicas" :key="id" class="tag">
+                      {{ getMusicaNome(id) }}
+                      <button type="button" @mousedown.stop="removeMusica(id)" class="tag-remove">
+                        <i class="fas fa-times"></i>  <!-- 🔄 emoji × -->
+                      </button>
+                    </span>
+                  </div>
 
-        </span>
-      </div>
+                  <span class="dropdown-arrow" :class="{ open: dropdownOpen === 'musicas' }">
+                    <i class="fas fa-chevron-down"></i>  <!-- 🔄 emoji ▼ -->
+                  </span>
+                </div>
 
-      <span class="dropdown-arrow" :class="{ open: dropdownOpen === 'musicas' }">▼</span>
-    </div>
+                <transition name="dropdown">
+                  <div v-if="dropdownOpen === 'musicas'" class="dropdown-menu" @mousedown.stop>
 
-    <transition name="dropdown">
-      <div v-if="dropdownOpen === 'musicas'" class="dropdown-menu" @mousedown.stop>
+                    <div class="dropdown-search">
+                      <input v-model="searchMusicas" placeholder="Buscar música..." />
+                    </div>
 
-        <div class="dropdown-search">
-          <input v-model="searchMusicas" placeholder="Buscar música..." />
-        </div>
-
-        <div class="dropdown-options">
-          <label
-            v-for="musica in filteredMusicas"
-            :key="musica._id"
-            class="option"
-            :class="{ selected: form.musicas.includes(musica._id) }"
-          >
-            <input type="checkbox" :value="musica._id" v-model="form.musicas" />
-            <span class="check-icon">✓</span>
-            <span class="option-text">{{ musica.nome }}</span>
-          </label>
+                    <div class="dropdown-options">
+                      <label
+                        v-for="musica in filteredMusicas"
+                        :key="musica._id"
+                        class="option"
+                        :class="{ selected: form.musicas.includes(musica._id) }"
+                      >
+                        <input type="checkbox" :value="musica._id" v-model="form.musicas" />
+                        <span class="check-icon"><i class="fas fa-check"></i></span>  <!-- 🔄 emoji ✓ -->
+                        <span class="option-text">{{ musica.nome }}</span>
+                      </label>
                       <div v-if="filteredMusicas.length === 0" class="no-results">
                         Nenhuma música encontrada
                       </div>
@@ -191,59 +199,62 @@
               </div>
               
               <small class="hint">
-                <span class="hint-icon">💡</span>
+                <span class="hint-icon"><i class="fas fa-lightbulb"></i></span>  <!-- 🔄 emoji 💡 -->
                 Clique para selecionar múltiplas músicas
               </small>
             </div>
 
             <!-- Modern Select - Gêneros -->
             <div class="input-group modern-select">
-  <label class="select-label">
-    <span class="label-icon">🎸</span>
-    Selecionar Gênero(s)
-  </label>
+              <label class="select-label">
+                <span class="label-icon"><i class="fas fa-guitar"></i></span>  <!-- 🔄 emoji 🎸 -->
+                Selecionar Gênero(s)
+              </label>
 
-  <div class="select-container" :class="{ open: dropdownOpen === 'generos' }">
+              <div class="select-container" :class="{ open: dropdownOpen === 'generos' }">
 
-    <div class="select-trigger" @mousedown.stop="toggleDropdown('generos')">
-      <div class="selected-tags">
-        <span v-if="form.generos.length === 0" class="placeholder">
-          Escolha os gêneros...
-        </span>
+                <div class="select-trigger" @mousedown.stop="toggleDropdown('generos')">
+                  <div class="selected-tags">
+                    <span v-if="form.generos.length === 0" class="placeholder">
+                      Escolha os gêneros...
+                    </span>
 
-        <span
-          v-for="id in form.generos"
-          :key="id"
-          class="tag"
-          :style="{ background: getGeneroColor(id) }"
-        >
-          {{ getGeneroNome(id) }}
-          <button type="button" @mousedown.stop="removeGenero(id)" class="tag-remove">×</button>
+                    <span
+                      v-for="id in form.generos"
+                      :key="id"
+                      class="tag"
+                      :style="{ background: getGeneroColor(id) }"
+                    >
+                      {{ getGeneroNome(id) }}
+                      <button type="button" @mousedown.stop="removeGenero(id)" class="tag-remove">
+                        <i class="fas fa-times"></i>  <!-- 🔄 emoji × -->
+                      </button>
+                    </span>
+                  </div>
 
-        </span>
-      </div>
+                  <span class="dropdown-arrow" :class="{ open: dropdownOpen === 'generos' }">
+                    <i class="fas fa-chevron-down"></i>  <!-- 🔄 emoji ▼ -->
+                  </span>
+                </div>
 
-      <span class="dropdown-arrow" :class="{ open: dropdownOpen === 'generos' }">▼</span>
-    </div>
+                <transition name="dropdown">
+                  <div v-if="dropdownOpen === 'generos'" class="dropdown-menu" @mousedown.stop>
 
-    <transition name="dropdown">
-      <div v-if="dropdownOpen === 'generos'" class="dropdown-menu" @mousedown.stop>
+                    <div class="dropdown-search">
+                      <input v-model="searchGeneros" placeholder="Buscar gênero..." />
+                    </div>
 
-        <div class="dropdown-search">
-          <input v-model="searchGeneros" placeholder="Buscar gênero..." />
-        </div>
-
-        <div class="dropdown-options">
-          <label
-            v-for="genero in filteredGeneros"
-            :key="genero._id"
-            class="option"
-            :class="{ selected: form.generos.includes(genero._id) }"
-          >
-            <input type="checkbox" :value="genero._id" v-model="form.generos" />
-            <span class="check-icon">✓</span>
-            <span class="option-text">{{ genero.nome }}</span>
-          </label>
+                    <div class="dropdown-options">
+                      <label
+                        v-for="genero in filteredGeneros"
+                        :key="genero._id"
+                        class="option"
+                        :class="{ selected: form.generos.includes(genero._id) }"
+                      >
+                        <input type="checkbox" :value="genero._id" v-model="form.generos" />
+                        <span class="check-icon"><i class="fas fa-check"></i></span>  <!-- 🔄 emoji ✓ -->
+                        <span class="option-text">{{ genero.nome }}</span>
+                      </label>
                       <div v-if="filteredGeneros.length === 0" class="no-results">
                         Nenhum gênero encontrado
                       </div>
@@ -253,22 +264,22 @@
               </div>
               
               <small class="hint">
-                <span class="hint-icon">💡</span>
+                <span class="hint-icon"><i class="fas fa-lightbulb"></i></span>  <!-- 🔄 emoji 💡 -->
                 Clique para selecionar múltiplos gêneros
               </small>
             </div>
 
             <div class="form-row">
               <div class="input-wrap" :class="{ 'active': focused === 'foto', 'filled': form.foto }">
-                <span class="input-emoji">🖼️</span>
-              <input 
- v-model="form.foto"
- type="text"
- required
- @focus="focused = 'foto'"
- @blur="focused = null"
- placeholder=" "
-/>
+                <span class="input-emoji"><i class="fas fa-image"></i></span>  <!-- 🔄 emoji 🖼️ -->
+                <input 
+                  v-model="form.foto"
+                  type="text"
+                  required
+                  @focus="focused = 'foto'"
+                  @blur="focused = null"
+                  placeholder=" "
+                />
                 <label>URL da capa</label>
                 <div class="input-glow"></div>
               </div>
@@ -285,47 +296,47 @@
                   alt="Capa do álbum"
                 />
                 <div v-else class="preview-placeholder">
-                  <span class="placeholder-icon">💿</span>
+                  <span class="placeholder-icon"><i class="fas fa-compact-disc"></i></span>  <!-- 🔄 emoji 💿 -->
                   <span class="placeholder-text">Imagem não disponível</span>
                 </div>
                 <div class="preview-gloss"></div>
               </div>
             </div>
 
- <!-- Ano do Álbum -->
-<div class="input-group modern-select">
-  <label class="select-label">
-    <span class="label-icon">📅</span>
-    Selecionar Década
-  </label>
+            <!-- Ano do Álbum -->
+            <div class="input-group modern-select">
+              <label class="select-label">
+                <span class="label-icon"><i class="fas fa-calendar-alt"></i></span>  <!-- 🔄 emoji 📅 -->
+                Selecionar Década
+              </label>
 
-  <div class="select-container">
-    <select
-      v-model="form.ano"
-      required
-      class="custom-select"
-       :class="{ 'is-placeholder': !form.ano }"
-    >
-      <option value="" disabled>Escolha a década...</option>
-      <option 
-        v-for="ano in anosDisponiveis" 
-        :key="ano" 
-        :value="ano"
-      >
-        {{ ano }}s
-      </option>
-    </select>
-  </div>
+              <div class="select-container">
+                <select
+                  v-model="form.ano"
+                  required
+                  class="custom-select"
+                  :class="{ 'is-placeholder': !form.ano }"
+                >
+                  <option value="" disabled>Escolha a década...</option>
+                  <option 
+                    v-for="ano in anosDisponiveis" 
+                    :key="ano" 
+                    :value="ano"
+                  >
+                    {{ ano }}s
+                  </option>
+                </select>
+              </div>
 
-  <small class="hint">
-    <span class="hint-icon">💡</span>
-    Selecione a década do álbum
-  </small>
-</div>
+              <small class="hint">
+                <span class="hint-icon"><i class="fas fa-lightbulb"></i></span>  <!-- 🔄 emoji 💡 -->
+                Selecione a década do álbum
+              </small>
+            </div>
 
             <div class="form-row">
               <div class="input-wrap textarea-wrap" :class="{ 'active': focused === 'descricao', 'filled': form.descricao }">
-                <span class="input-emoji textarea-emoji">📝</span>
+                <span class="input-emoji textarea-emoji"><i class="fas fa-pen"></i></span>  <!-- 🔄 emoji 📝 -->
                 <textarea 
                   v-model="form.descricao" 
                   required
@@ -346,7 +357,7 @@
                 class="btn-cancel"
                 @click="cancelarEdicao"
               >
-                <span>✕</span>
+                <span><i class="fas fa-times"></i></span>  <!-- 🔄 emoji ✕ -->
                 Cancelar
               </button>
               
@@ -357,7 +368,10 @@
                 :disabled="saving"
               >
                 <span v-if="!saving" class="btn-content">
-                  <span>{{ modoEdicao ? '💾 Salvar' : '➕ Criar Álbum' }}</span>
+                  <span>
+                    <i :class="modoEdicao ? 'fas fa-save' : 'fas fa-plus'"></i>  <!-- 🔄 emojis 💾 / ➕ -->
+                    {{ modoEdicao ? ' Salvar' : ' Criar Álbum' }}
+                  </span>
                 </span>
                 <span v-else class="btn-loading">
                   <div class="save-spinner"></div>
@@ -371,17 +385,21 @@
         <!-- Divider -->
         <div class="stage-divider">
           <div class="divider-line"></div>
-          <div class="divider-icon">🎧</div>
+          <div class="divider-icon"><i class="fas fa-headphones"></i></div>  <!-- 🔄 emoji 🎧 -->
           <div class="divider-line"></div>
         </div>
 
         <!-- Collection Panel -->
         <section class="panel collection-panel">
           <div class="panel-header">
-            <h2>📀 Sua Coleção</h2>
+            <h2><i class="fas fa-compact-disc"></i> Sua Coleção</h2>  <!-- 🔄 emoji 📀 -->
             <div class="view-toggle">
-              <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">⊞</button>
-              <button :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">☰</button>
+              <button :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">
+                <i class="fas fa-th-large"></i>  <!-- 🔄 emoji ⊞ -->
+              </button>
+              <button :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
+                <i class="fas fa-list"></i>  <!-- 🔄 emoji ☰ -->
+              </button>
             </div>
           </div>
 
@@ -415,7 +433,7 @@
                 />
                 <div class="cover-overlay" :class="{ 'show': hoveredAlbum === album._id }">
                   <button class="overlay-btn play" title="Visualizar">
-                    <span>▶</span>
+                    <span><i class="fas fa-play"></i></span>  <!-- 🔄 emoji ▶ -->
                   </button>
                 </div>
                 <div class="album-year">{{ album.ano || '---' }}</div>
@@ -427,12 +445,12 @@
               </div>
 
               <div class="album-actions">
-             <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)" title="Editar">
-  ✏️
-</button>
-<button type="button" class="action-btn delete" @click.stop="confirmarExclusao(album)" title="Excluir">
-  🗑️
-</button>
+                <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)" title="Editar">
+                  <i class="fas fa-pen"></i>  <!-- 🔄 emoji ✏️ -->
+                </button>
+                <button type="button" class="action-btn delete" @click.stop="confirmarExclusao(album)" title="Excluir">
+                  <i class="fas fa-trash"></i>  <!-- 🔄 emoji 🗑️ -->
+                </button>
               </div>
             </div>
           </div>
@@ -453,11 +471,15 @@
               <div class="list-info">
                 <h4>{{ album.nome }}</h4>
                 <p>{{ truncateDesc(album.descricao, 100) }}</p>
-                <span class="list-year">📅 {{ album.ano || '---' }}</span>
+                <span class="list-year"><i class="fas fa-calendar-alt"></i> {{ album.ano || '---' }}</span>  <!-- 🔄 emoji 📅 -->
               </div>
               <div class="list-actions">
-               <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)">✏️</button>
-<button type="button" class="action-btn delete" @click.stop="confirmarExclusao(album)">🗑️</button>
+                <button type="button" class="action-btn edit" @click.stop="editarAlbum(album)">
+                  <i class="fas fa-pen"></i>  <!-- 🔄 emoji ✏️ -->
+                </button>
+                <button type="button" class="action-btn delete" @click.stop="confirmarExclusao(album)">
+                  <i class="fas fa-trash"></i>  <!-- 🔄 emoji 🗑️ -->
+                </button>
               </div>
             </div>
           </div>
@@ -469,7 +491,7 @@
     <transition name="modal-fade">
       <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
         <div class="delete-modal">
-          <div class="modal-disc">🗑️</div>
+          <div class="modal-disc"><i class="fas fa-trash"></i></div>  <!-- 🔄 emoji 🗑️ -->
           <h3>Remover Álbum</h3>
           <p>Tem certeza que deseja excluir <strong>"{{ albumParaExcluir?.nome }}"</strong>?</p>
           <p class="warning-text">Esta ação não pode ser desfeita.</p>
@@ -491,7 +513,9 @@
     <!-- Toast -->
     <transition name="toast-slide">
       <div v-if="toast.show" :class="['toast', toast.type]">
-        <span class="toast-icon">{{ toast.type === 'success' ? '✓' : '!' }}</span>
+        <span class="toast-icon">
+          <i :class="toast.type === 'success' ? 'fas fa-check' : 'fas fa-exclamation'"></i>  <!-- 🔄 emojis ✓ / ! -->
+        </span>
         <span>{{ toast.message }}</span>
       </div>
     </transition>
@@ -503,7 +527,7 @@ import axios from "axios"
 
 const API = "http://localhost:3002/albuns"
 const API_MUSICAS = "http://localhost:3002/musicas"
-const DEFAULT_COVER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%238b5cf6'/%3E%3Cstop offset='100%25' style='stop-color:%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='300' height='300' fill='url(%23g)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui' font-size='80'%3E💿%3C/text%3E%3C/svg%3E"
+const DEFAULT_COVER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%238b5cf6'/%3E%3Cstop offset='100%25' style='stop-color:%23ec4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='300' height='300' fill='url(%23g)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui' font-size='80'%3E%3C/text%3E%3C/svg%3E"
 
 export default {
   name: "Albuns",
@@ -519,7 +543,6 @@ export default {
       modoEdicao: false,
       saving: false,
       deleting: false,
-
       focused: null,
       dropdownOpen: null,
       hoveredAlbum: null,
@@ -553,11 +576,11 @@ export default {
   },
 
   computed: {  
-totalTracks() {
-  return this.albuns.reduce((total, album) => {
-    return total + (Array.isArray(album.musicas) ? album.musicas.length : 0)
-  }, 0)
-},
+    totalTracks() {
+      return this.albuns.reduce((total, album) => {
+        return total + (Array.isArray(album.musicas) ? album.musicas.length : 0)
+      }, 0)
+    },
 
     filteredCantores() {
       if (!this.searchCantores) return this.cantores
@@ -578,13 +601,13 @@ totalTracks() {
     }
   },
 
- watch: {
-  dropdownOpen() {
-    this.searchCantores = ''
-    this.searchMusicas = ''
-    this.searchGeneros = ''
-  }
-},
+  watch: {
+    dropdownOpen() {
+      this.searchCantores = ''
+      this.searchMusicas = ''
+      this.searchGeneros = ''
+    }
+  },
 
 
   mounted() {
@@ -597,47 +620,47 @@ totalTracks() {
     // 🔥 clique fora correto
     this.handleClickOutside = (e) => {
       if (!e.target.closest('.select-container')) {
-       this.dropdownOpen = null
+        this.dropdownOpen = null
       }
     }
     document.addEventListener('mousedown', this.handleClickOutside)
-   },
+  },
 
- beforeUnmount() {
-  document.removeEventListener('mousedown', this.handleClickOutside)
-},
+  beforeUnmount() {
+    document.removeEventListener('mousedown', this.handleClickOutside)
+  },
 
   methods: {
- gerarAnos() {
-  const decadas = []
-  for (let i = 1920; i <= 2020; i += 10) {
-    decadas.push(i)
-  }
-  this.anosDisponiveis = decadas
-},
+    gerarAnos() {
+      const decadas = []
+      for (let i = 1920; i <= 2020; i += 10) {
+        decadas.push(i)
+      }
+      this.anosDisponiveis = decadas
+    },
 
-     toggleDropdown(type) {
-    this.dropdownOpen = this.dropdownOpen === type ? null : type
-  },
+    toggleDropdown(type) {
+      this.dropdownOpen = this.dropdownOpen === type ? null : type
+    },
 
-  handleClickOutside(e) {
-    if (!e.target.closest('.select-container')) {
-      this.dropdownOpen = null
-    }
-  },
+    handleClickOutside(e) {
+      if (!e.target.closest('.select-container')) {
+        this.dropdownOpen = null
+      }
+    },
 
- normalizeIds(list) {
-  if (!Array.isArray(list)) return []
-  return list.map(item => {
-    if (!item) return null
-    if (typeof item === 'string') return item
-    if (typeof item === 'object') {
-      // 🔥 Mongoose ObjectId ou objeto populado
-      return item._id?.toString?.() || item.id?.toString?.() || item.toString?.()
-    }
-    return item?.toString?.() || null
-  }).filter(Boolean)
-},
+    normalizeIds(list) {
+      if (!Array.isArray(list)) return []
+      return list.map(item => {
+        if (!item) return null
+        if (typeof item === 'string') return item
+        if (typeof item === 'object') {
+          // 🔥 Mongoose ObjectId ou objeto populado
+          return item._id?.toString?.() || item.id?.toString?.() || item.toString?.()
+        }
+        return item?.toString?.() || null
+      }).filter(Boolean)
+    },
 
     async carregarCantores() {
       try {
@@ -648,53 +671,53 @@ totalTracks() {
       }
     },
 
-async carregarGeneros() {
-  try {
-    const res = await axios.get("http://localhost:3002/generos")
-    console.log("GENEROS:", res.data)
+    async carregarGeneros() {
+      try {
+        const res = await axios.get("http://localhost:3002/generos")
+        console.log("GENEROS:", res.data)
 
-    let data = res.data
+        let data = res.data
 
-    // 🔥 CONVERSÃO CORRETA
-    if (!Array.isArray(data)) {
-      data = Object.values(data).flat()
-    }
+        // 🔥 CONVERSÃO CORRETA
+        if (!Array.isArray(data)) {
+          data = Object.values(data).flat()
+        }
 
-    this.generos = data
+        this.generos = data
 
-  } catch {
-    this.generos = []
-    this.showToast('Erro ao carregar gêneros', 'error')
-  }
-},
-async carregarMusicas() {
-  try {
-    const res = await axios.get(API_MUSICAS)
-    // 🔥 Extrai o array corretamente (suporta tanto paginado quanto array direto)
-    this.musicas = Array.isArray(res.data) ? res.data : (res.data.results || [])
-  } catch {
-    this.showToast('Erro ao carregar músicas', 'error')
-  }
-},
+      } catch {
+        this.generos = []
+        this.showToast('Erro ao carregar gêneros', 'error')
+      }
+    },
+    async carregarMusicas() {
+      try {
+        const res = await axios.get(API_MUSICAS)
+        // 🔥 Extrai o array corretamente (suporta tanto paginado quanto array direto)
+        this.musicas = Array.isArray(res.data) ? res.data : (res.data.results || [])
+      } catch {
+        this.showToast('Erro ao carregar músicas', 'error')
+      }
+    },
 
-async carregarAlbuns() {
-  try {
-    const res = await axios.get(API)
-    // 🔥 GARANTE QUE CADA ÁLBUM TEM ARRAYS
-    this.albuns = (res.data || []).map(album => ({
-      ...album,
-      musicas: Array.isArray(album.musicas) ? album.musicas : [],
-      generos: Array.isArray(album.generos) ? album.generos : []
-    }))
-  } catch {
-    this.showToast('Erro ao carregar álbuns', 'error')
-  }
-},
+    async carregarAlbuns() {
+      try {
+        const res = await axios.get(API)
+        // 🔥 GARANTE QUE CADA ÁLBUM TEM ARRAYS
+        this.albuns = (res.data || []).map(album => ({
+          ...album,
+          musicas: Array.isArray(album.musicas) ? album.musicas : [],
+          generos: Array.isArray(album.generos) ? album.generos : []
+        }))
+      } catch {
+        this.showToast('Erro ao carregar álbuns', 'error')
+      }
+    },
 
     async carregarAlbumPorId(id) {
-  const res = await axios.get(`${API}/${id}`)
-  return res.data
-},
+      const res = await axios.get(`${API}/${id}`)
+      return res.data
+    },
 
     getParticleStyle() {
       return {
@@ -721,41 +744,41 @@ async carregarAlbuns() {
       return this.cantores.find(c => c._id === id)?.nome || 'Desconhecido'
     },
 
-  getMusicaNome(id) {
-  // 🔥 DEFESA: garante que musicas é array
-  if (!Array.isArray(this.musicas)) {
-    console.warn('this.musicas não é array:', this.musicas)
-    return 'Desconhecida'
-  }
-  return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
-},
+    getMusicaNome(id) {
+      // 🔥 DEFESA: garante que musicas é array
+      if (!Array.isArray(this.musicas)) {
+        console.warn('this.musicas não é array:', this.musicas)
+        return 'Desconhecida'
+      }
+      return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
+    },
 
-getGeneroNome(id) {
-  // 🔥 DEFESA: garante que generos é array
-  if (!Array.isArray(this.generos)) {
-    console.warn('this.generos não é array:', this.generos)
-    return 'Desconhecido'
-  }
-  return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
-},
+    getGeneroNome(id) {
+      // 🔥 DEFESA: garante que generos é array
+      if (!Array.isArray(this.generos)) {
+        console.warn('this.generos não é array:', this.generos)
+        return 'Desconhecido'
+      }
+      return this.generos.find(g => g._id === id)?.nome || 'Desconhecido'
+    },
 
-getGeneroColor(id) {
-  const colors = [
-    'linear-gradient(135deg, #8b5cf6, #ec4899)',
-    'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-    'linear-gradient(135deg, #10b981, #3b82f6)',
-    'linear-gradient(135deg, #f59e0b, #ef4444)'
-  ]
-  // 🔥 DEFESA
-  if (!Array.isArray(this.generos)) return colors[0]
-  const index = this.generos.findIndex(g => g._id === id)
-  return colors[index % colors.length]
-},
+    getGeneroColor(id) {
+      const colors = [
+        'linear-gradient(135deg, #8b5cf6, #ec4899)',
+        'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+        'linear-gradient(135deg, #10b981, #3b82f6)',
+        'linear-gradient(135deg, #f59e0b, #ef4444)'
+      ]
+      // 🔥 DEFESA
+      if (!Array.isArray(this.generos)) return colors[0]
+      const index = this.generos.findIndex(g => g._id === id)
+      return colors[index % colors.length]
+    },
 
-   removeCantor() {
-  this.form.cantor = ''
-  this.searchCantores = ''
-},
+    removeCantor() {
+      this.form.cantor = ''
+      this.searchCantores = ''
+    },
     removeMusica(id) {
       this.form.musicas = this.form.musicas.filter(m => m !== id)
     },
@@ -764,184 +787,193 @@ getGeneroColor(id) {
       this.form.generos = this.form.generos.filter(g => g !== id)
     },
 
- async salvarAlbum() {
-  this.saving = true
+    async salvarAlbum() {
+      this.saving = true
 
-  try {
-    // 🔧 CONVERTER TIPOS antes de enviar
-    const payload = {
-      nome: this.form.nome?.trim(),
-      descricao: this.form.descricao?.trim(),
-      foto: this.form.foto?.trim(),
-ano: this.form.ano ? parseInt(this.form.ano, 10) : null,
-      cantor: this.form.cantor || null,                    // ← null se vazio
-      musicas: Array.isArray(this.form.musicas) ? this.form.musicas.filter(Boolean) : [],
-      generos: Array.isArray(this.form.generos) ? this.form.generos.filter(Boolean) : []
-    }
+      try {
+        // 🔧 CONVERTER TIPOS antes de enviar
+        const payload = {
+          nome: this.form.nome?.trim(),
+          descricao: this.form.descricao?.trim(),
+          foto: this.form.foto?.trim(),
+          ano: this.form.ano ? parseInt(this.form.ano, 10) : null,
+          cantor: this.form.cantor || null,                    // ← null se vazio
+          musicas: Array.isArray(this.form.musicas) ? this.form.musicas.filter(Boolean) : [],
+          generos: Array.isArray(this.form.generos) ? this.form.generos.filter(Boolean) : []
+        }
 
-    // Validação frontend (mostra qual campo falta)
-    const camposObrigatorios = {
-      'Nome do álbum': payload.nome,
-      'Descrição': payload.descricao,
-      'URL da capa': payload.foto,
-      'Ano': payload.ano,
-      'Cantor': payload.cantor,
-      'Músicas': payload.musicas.length > 0,
-      'Gêneros': payload.generos.length > 0
-    }
+        // Validação frontend (mostra qual campo falta)
+        const camposObrigatorios = {
+          'Nome do álbum': payload.nome,
+          'Descrição': payload.descricao,
+          'URL da capa': payload.foto,
+          'Ano': payload.ano,
+          'Cantor': payload.cantor,
+          'Músicas': payload.musicas.length > 0,
+          'Gêneros': payload.generos.length > 0
+        }
 
-    const camposVazios = Object.entries(camposObrigatorios)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key)
+        const camposVazios = Object.entries(camposObrigatorios)
+          .filter(([_, value]) => !value)
+          .map(([key]) => key)
 
-    if (camposVazios.length > 0) {
-      this.showToast(
-        `Campos obrigatórios: ${camposVazios.join(', ')}`,
-        'error'
-      )
-      this.saving = false
-      return
-    }
+        if (camposVazios.length > 0) {
+          this.showToast(
+            `Campos obrigatórios: ${camposVazios.join(', ')}`,
+            'error'
+          )
+          this.saving = false
+          return
+        }
 
-    if (this.modoEdicao && this.form.id) {
-      await axios.put(`${API}/${this.form.id}`, payload)
-      await this.carregarAlbuns()
-      this.showToast('Álbum atualizado!')
-    } else {
-      await axios.post(API, payload)
-      await this.carregarAlbuns()
-      this.showToast('Álbum criado!')
-    }
+        if (this.modoEdicao && this.form.id) {
+          await axios.put(`${API}/${this.form.id}`, payload)
+          await this.carregarAlbuns()
+          this.showToast('Álbum atualizado!')
+        } else {
+          await axios.post(API, payload)
+          await this.carregarAlbuns()
+          this.showToast('Álbum criado!')
+        }
 
-    this.reset()
-  } catch (err) {
-    // Mostra erro específico do backend
-    const msg = err.response?.data?.error || err.message || 'Erro ao salvar'
-    this.showToast(msg, 'error')
-    console.error('Erro completo:', err.response?.data)
-  } finally {
-    this.saving = false
-  }
-},
+        this.reset()
+      } catch (err) {
+        // Mostra erro específico do backend
+        const msg = err.response?.data?.error || err.message || 'Erro ao salvar'
+        this.showToast(msg, 'error')
+        console.error('Erro completo:', err.response?.data)
+      } finally {
+        this.saving = false
+      }
+    },
 
     selecionarCantor(cantor) {
-  this.form.cantor = cantor._id
-  this.dropdownOpen = null
-  this.searchCantores = ''
-},
+      this.form.cantor = cantor._id
+      this.dropdownOpen = null
+      this.searchCantores = ''
+    },
 
-  async editarAlbum(album) {
-  try {
-    const albumCompleto = await this.carregarAlbumPorId(album._id)
+    async editarAlbum(album) {
+      try {
+        const albumCompleto = await this.carregarAlbumPorId(album._id)
 
-this.form = {
-      id: albumCompleto._id,
-      nome: albumCompleto.nome || "",
-      descricao: albumCompleto.descricao || "",
-      foto: albumCompleto.foto === this.defaultCover ? "" : (albumCompleto.foto || ""),
-      ano: albumCompleto.ano || "",
-   cantor: albumCompleto.cantor
-  ? (typeof albumCompleto.cantor === 'object'
-      ? albumCompleto.cantor._id?.toString?.() || albumCompleto.cantor.toString()
-      : albumCompleto.cantor.toString())
-  : "",
-      musicas: this.normalizeIds(albumCompleto.musicas || []),
-      generos: this.normalizeIds(albumCompleto.generos)
-    }
+        this.form = {
+          id: albumCompleto._id,
+          nome: albumCompleto.nome || "",
+          descricao: albumCompleto.descricao || "",
+          foto: albumCompleto.foto === this.defaultCover ? "" : (albumCompleto.foto || ""),
+          ano: albumCompleto.ano || "",
+          cantor: albumCompleto.cantor
+            ? (typeof albumCompleto.cantor === 'object'
+                ? albumCompleto.cantor._id?.toString?.() || albumCompleto.cantor.toString()
+                : albumCompleto.cantor.toString())
+            : "",
+          musicas: this.normalizeIds(albumCompleto.musicas || []),
+          generos: this.normalizeIds(albumCompleto.generos)
+        }
 
-    this.modoEdicao = true
-    this.dropdownOpen = null
-    this.imageError = false
+        this.modoEdicao = true
+        this.dropdownOpen = null
+        this.imageError = false
 
-    await this.scrollToForm(true)
-  } catch (err) {
-    this.showToast('Erro ao carregar dados do álbum para edição', 'error')
-  }
-},
+        await this.scrollToForm(true)
+      } catch (err) {
+        this.showToast('Erro ao carregar dados do álbum para edição', 'error')
+      }
+    },
 
     confirmarExclusao(album) {
       this.albumParaExcluir = album
       this.showDeleteModal = true
     },
 
-   async excluirConfirmado() {
-  this.deleting = true
+    async excluirConfirmado() {
+      this.deleting = true
 
-  try {
-    const idExcluido = this.albumParaExcluir?._id
+      try {
+        const idExcluido = this.albumParaExcluir?._id
 
-    await axios.delete(`${API}/${idExcluido}`)
+        await axios.delete(`${API}/${idExcluido}`)
 
-    if (this.form.id === idExcluido) {
-      this.reset()
-    }
+        if (this.form.id === idExcluido) {
+          this.reset()
+        }
 
-    await this.carregarAlbuns()
+        await this.carregarAlbuns()
 
-    this.showToast('Álbum removido')
-    this.showDeleteModal = false
-    this.albumParaExcluir = null
-  } catch (err) {
-    this.showToast(err.response?.data?.error || 'Erro ao excluir', 'error')
-  } finally {
-    this.deleting = false
-  }
-},
+        this.showToast('Álbum removido')
+        this.showDeleteModal = false
+        this.albumParaExcluir = null
+      } catch (err) {
+        this.showToast(err.response?.data?.error || 'Erro ao excluir', 'error')
+      } finally {
+        this.deleting = false
+      }
+    },
 
     truncateDesc(desc, limit = 60) {
       return desc?.length > limit ? desc.slice(0, limit) + '...' : desc
     },
 
-async scrollToForm(focusInput = false) {
-  await this.$nextTick()
+    async scrollToForm(focusInput = false) {
+      await this.$nextTick()
 
-  if (this.$refs.formPanel) {
-    const top = this.$refs.formPanel.getBoundingClientRect().top + window.pageYOffset - 20
-    window.scrollTo({
-      top,
-      behavior: 'smooth'
-    })
-  }
+      if (this.$refs.formPanel) {
+        const top = this.$refs.formPanel.getBoundingClientRect().top + window.pageYOffset - 20
+        window.scrollTo({
+          top,
+          behavior: 'smooth'
+        })
+      }
 
-  if (focusInput) {
-    setTimeout(() => {
-      this.$refs.nomeInput?.focus()
-    }, 350)
-  }
-},
+      if (focusInput) {
+        setTimeout(() => {
+          this.$refs.nomeInput?.focus()
+        }, 350)
+      }
+    },
 
-focusForm() {
-  this.scrollToForm(true)
-},
+    focusForm() {
+      this.scrollToForm(true)
+    },
 
-reset() {
-  this.form = {
-    id: null,
-    nome: "",
-    descricao: "",
-    foto: "",
-    ano: "",
-    cantor: "",
-    musicas: [],
-    generos: []
-  }
+    reset() {
+      this.form = {
+        id: null,
+        nome: "",
+        descricao: "",
+        foto: "",
+        ano: "",
+        cantor: "",
+        musicas: [],
+        generos: []
+      }
 
-  this.modoEdicao = false
-  this.dropdownOpen = null
-  this.searchCantores = ''
-  this.searchMusicas = ''
-  this.searchGeneros = ''
-  this.imageError = false
-},
+      this.modoEdicao = false
+      this.dropdownOpen = null
+      this.searchCantores = ''
+      this.searchMusicas = ''
+      this.searchGeneros = ''
+      this.imageError = false
+    },
 
     cancelarEdicao() {
       this.reset()
     },
 
-    showToast(message, type = 'success') {
-      this.toast = { show: true, message, type }
-      setTimeout(() => this.toast.show = false, 3000)
-    }
+  showToast(message, type = 'success') {
+  if (this.toastTimer) {
+    clearTimeout(this.toastTimer)
+  }
+
+  this.toast.show = true
+  this.toast.message = message
+  this.toast.type = type
+
+  this.toastTimer = setTimeout(() => {
+    this.toast.show = false
+  }, 15000) // 15 segundos
+}
   }
 }
 </script>
@@ -1117,6 +1149,12 @@ reset() {
   z-index: 2;
 }
 
+/* 🔄 AJUSTE: ícone do vinil central */
+.vinyl-center i {
+  font-size: 12px;
+  color: #fff;
+}
+
 .brand-text h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -1196,12 +1234,14 @@ reset() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.25rem;  /* 🔄 ajustado para ícones */
   margin-bottom: 16px;
+  color: #c4b5fd;
 }
 
 .form-panel.editing .panel-badge {
   background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
 }
 
 .panel-header h2 {
@@ -1235,18 +1275,15 @@ reset() {
 .input-emoji {
   position: absolute;
   left: 16px;
-  font-size: 1.25rem;
+  font-size: 1.1rem;  /* 🔄 ajustado para ícones Font Awesome */
   z-index: 2;
   opacity: 0.6;
   transition: all 0.3s;
-}
-
-.custom-select.is-placeholder {
-  color: #64748b; /* mesma cor do placeholder dos outros */
-}
-
-.custom-select option {
-  color: #fff;
+  color: #8b5cf6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
 }
 
 .input-wrap.active .input-emoji {
@@ -1361,7 +1398,11 @@ textarea {
 }
 
 .label-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;  /* 🔄 ajustado */
+  color: #8b5cf6;
+  display: flex;
+  align-items: center;
+  width: 24px;
 }
 
 .select-container {
@@ -1431,12 +1472,13 @@ textarea {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   color: white;
-  font-size: 12px;
+  font-size: 10px;  /* 🔄 ajustado para ícone */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  padding: 0;
 }
 
 .tag-remove:hover {
@@ -1448,6 +1490,8 @@ textarea {
   font-size: 0.75rem;
   color: #64748b;
   transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
 }
 
 .dropdown-arrow.open {
@@ -1553,9 +1597,10 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 10px;  /* 🔄 ajustado */
   color: transparent;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .option.selected .check-icon {
@@ -1591,6 +1636,9 @@ textarea {
 
 .hint-icon {
   font-size: 0.9rem;
+  color: #8b5cf6;
+  display: flex;
+  align-items: center;
 }
 
 .dropdown-enter-active, .dropdown-leave-active {
@@ -1642,6 +1690,7 @@ textarea {
 .placeholder-icon {
   font-size: 3rem;
   opacity: 0.5;
+  color: #8b5cf6;
 }
 
 .placeholder-text {
@@ -1734,8 +1783,9 @@ textarea {
 }
 
 .divider-icon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;  /* 🔄 ajustado */
   opacity: 0.5;
+  color: #8b5cf6;
 }
 
 /* Collection Panel */
@@ -1749,6 +1799,16 @@ textarea {
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
+}
+
+.collection-panel .panel-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.collection-panel .panel-header h2 i {
+  color: #8b5cf6;
 }
 
 .view-toggle {
@@ -1767,8 +1827,11 @@ textarea {
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.3s;
-  font-size: 1.25rem;
+  font-size: 1rem;  /* 🔄 ajustado */
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .view-toggle button.active {
@@ -1977,7 +2040,7 @@ textarea {
   background: linear-gradient(135deg, #8b5cf6, #ec4899);
   border: none;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.25rem;  /* 🔄 ajustado */
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2038,17 +2101,22 @@ textarea {
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;  /* 🔄 ajustado */
   transition: all 0.3s;
   background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn.edit:hover {
   background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
 }
 
 .action-btn.delete:hover {
   background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 
 /* List View */
@@ -2116,6 +2184,10 @@ textarea {
   font-weight: 500;
 }
 
+.list-year i {
+  margin-right: 4px;
+}
+
 .list-actions .action-btn {
   width: 40px;
   height: 40px;
@@ -2154,8 +2226,9 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: 2rem;  /* 🔄 ajustado */
   margin: 0 auto 20px;
+  color: #ef4444;
 }
 
 .delete-modal h3 {

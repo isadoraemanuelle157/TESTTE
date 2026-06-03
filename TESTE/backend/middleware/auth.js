@@ -21,9 +21,10 @@ const token = authHeader?.startsWith('Bearer ')
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
- req.user = {
+req.user = {
   ...decoded,
-  id: decoded.id || decoded._id
+  id: decoded.id || decoded._id,
+  role: decoded.role || 'user'  // ← ADICIONAR ISSO
 }
     req.isLogged = true
     req.isAuthenticated = true
@@ -36,6 +37,9 @@ const token = authHeader?.startsWith('Bearer ')
 
 // ============================================
 // 🔒 REQUIRE AUTH
+// ============================================
+// ============================================
+// 🔒 REQUIRE AUTH — AJUSTADO
 // ============================================
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization
@@ -56,16 +60,29 @@ function requireAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-  req.user = {
-  ...decoded,
-  id: decoded.id || decoded._id
-}
+
+    // ✅ GARANTIR que id e role existem, independente do formato do token
+    req.user = {
+      ...decoded,
+      id: decoded.id || decoded._id || decoded.userId || decoded.sub,
+      role: decoded.role || 'user'
+    }
+
+    // ✅ VALIDAÇÃO: se não conseguiu extrair id, token é inválido
+    if (!req.user.id) {
+      return res.status(401).json({
+        error: 'INVALID_TOKEN',
+        message: 'Token inválido. Faça login novamente.'
+      })
+    }
+
     req.isLogged = true
     req.isAuthenticated = true
     next()
   } catch (err) {
     return res.status(401).json({
-      error: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN'
+      error: err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN',
+      message: err.name === 'TokenExpiredError' ? 'Sessão expirada. Faça login novamente.' : 'Token inválido.'
     })
   }
 }

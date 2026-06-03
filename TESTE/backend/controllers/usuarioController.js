@@ -1,4 +1,6 @@
  const userService = require('../services/usuarioService')
+ const Usuario = require('../models/Usuario')
+
 const jwt = require('jsonwebtoken')
 
 const create = async (req, res) => {
@@ -6,7 +8,10 @@ const create = async (req, res) => {
     const user = await userService.createUser(req.body)
 
 const token = jwt.sign(
-  { id: user.id },
+  { 
+    id: user.id,
+    role: user.role || 'user'  // ← ADICIONAR ISSO
+  },
   process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
   { expiresIn: '365d' }
 )
@@ -27,11 +32,14 @@ const login = async (req, res) => {
 
     const user = await userService.loginUser(email, senha)
 
-const token = jwt.sign(
-  { id: user.id },
-  process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
-  { expiresIn: '365d' }
-)
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        role: user.role || 'user'
+      },
+      process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
+      { expiresIn: '365d' }
+    )
 
     res.json({
       message: 'Login realizado',
@@ -74,11 +82,40 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const isOwner = String(req.user?.id) === String(req.params.id)
-    const isAdmin = req.user?.role === 'admin'
+    // ✅ DEBUG: log para verificar o que está vindo no req.user
+    console.log('🔍 [UPDATE] req.user:', req.user)
+    console.log('🔍 [UPDATE] req.user?.id:', req.user?.id)
+    console.log('🔍 [UPDATE] req.params.id:', req.params.id)
+
+    // ✅ VALIDAÇÃO: garantir que req.user existe e tem id
+    if (!req.user?.id) {
+      return res.status(401).json({
+        error: 'LOGIN_REQUIRED',
+        message: 'Faça login para continuar'
+      })
+    }
+
+    const usuarioLogado = await Usuario.findById(req.user.id).select('role nome email')
+    console.log('🔍 [UPDATE] usuarioLogado no banco:', usuarioLogado)
+
+    // ✅ Se não achou o usuário no banco, token está desatualizado
+    if (!usuarioLogado) {
+      return res.status(401).json({
+        error: 'USER_NOT_FOUND',
+        message: 'Usuário não encontrado. Faça login novamente.'
+      })
+    }
+
+    const isOwner = String(req.user.id) === String(req.params.id)
+    const isAdmin = usuarioLogado.role === 'admin'
+
+    console.log('🔍 [UPDATE] isOwner:', isOwner, '| isAdmin:', isAdmin)
 
     if (!isOwner && !isAdmin) {
-      return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
+      return res.status(403).json({
+        error: 'Sem permissão para editar este usuário',
+        message: 'Você não tem permissão para editar este usuário. Faça login novamente ou contate um administrador.'
+      })
     }
 
     const user = await userService.updateUser(req.params.id, req.body)
@@ -92,6 +129,7 @@ const update = async (req, res) => {
       user
     })
   } catch (error) {
+    console.error('❌ [UPDATE] Erro:', error)
     res.status(500).json({ error: error.message })
   }
 }

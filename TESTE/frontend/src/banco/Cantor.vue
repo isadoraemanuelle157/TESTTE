@@ -31,7 +31,7 @@
 
   <div class="header-actions">
     <button type="button" class="btn-total-artists">
-      <span class="total-artists-icon">🎤</span>
+     <span class="total-artists-icon"><i class="fas fa-microphone"></i></span>
       <div class="total-artists-text">
         <strong>{{ totalCantores }}</strong>
         <small>
@@ -121,7 +121,7 @@
 
   <div class="artist-chips">
     <span class="artist-chip artist-chip-primary">
-      👥 {{
+       <i class="fas fa-users"></i> {{
         cantor.seguidoresFormatado ||
         formatarSeguidores(
           (cantor.totalSeguidores ?? cantor.seguidoresBase ?? 0) +
@@ -131,11 +131,11 @@
     </span>
 
 <span class="artist-chip">
-  💿 {{ Array.isArray(cantor.albuns) ? cantor.albuns.length : 0 }} álbum(ns)
+  <i class="fas fa-compact-disc"></i> {{ Array.isArray(cantor.albuns) ? cantor.albuns.length : 0 }} álbum(ns)
 </span>
 
 <span class="artist-chip">
-  🎸
+  <i class="fas fa-guitar"></i>
   <template v-if="Array.isArray(cantor.generos) && cantor.generos.length > 0">
     {{
       cantor.generos
@@ -151,27 +151,22 @@
 </span>
 
 <span class="artist-chip">
-  🎵 {{ Array.isArray(cantor.musicas) ? cantor.musicas.length : 0 }} música(s)
+  <i class="fas fa-music"></i> {{ Array.isArray(cantor.musicas) ? cantor.musicas.length : 0 }} música(s)
 </span>
   </div>
 
 <p class="artist-date">
-  <span v-if="cantor.ano">📅 Desde {{ cantor.ano }}s</span>
-  <span v-else>📅 Ano não informado</span>
+<span v-if="cantor.ano"><i class="far fa-calendar-alt"></i> Desde {{ cantor.ano }}s</span>
+<span v-else><i class="far fa-calendar-alt"></i> Ano não informado</span>
   <span class="date-separator">•</span>
   Adicionado em {{ formatarData(cantor.createdAt) }}
 </p>
 
   <div class="artist-actions">
 
-
-    <button
-      type="button"
-      class="card-action-btn delete"
-      @click.stop="confirmarExclusao(cantor)"
-    >
-      🗑️ Excluir
-    </button>
+<button type="button" class="card-action-btn delete" @click.stop="confirmarExclusao(cantor)">
+  <i class="fas fa-trash-alt"></i> Excluir
+</button>
   </div>
 </div>
 
@@ -310,7 +305,7 @@
   <div class="selection-box">
     <div class="selection-header">
       <h3>
-        <span class="header-icon">🎸</span>
+        <span class="header-icon"><i class="fas fa-guitar"></i></span>
         Gêneros *
        <span class="count-badge">{{ form.generos.length }}</span>
       </h3>
@@ -390,7 +385,7 @@
   <div class="selection-box">
     <div class="selection-header">
       <h3>
-        <span class="header-icon">🎵</span>
+        <span class="header-icon"><i class="fas fa-music"></i></span>
         Músicas *
        <span class="count-badge">{{ form.musicas.length }}</span>
       </h3>
@@ -480,7 +475,7 @@
   <div class="selection-box">
     <div class="selection-header">
       <h3>
-        <span class="header-icon">💿</span>
+       <span class="header-icon"><i class="fas fa-compact-disc"></i></span>
         Álbuns (opcional)
     <span class="count-badge">{{ form.albuns.length }}</span>
       </h3>
@@ -772,7 +767,7 @@
     <transition name="modal">
       <div v-if="showDeleteModal" class="modal-soundup" @click.self="showDeleteModal = false">
         <div class="modal-content modal-small">
-          <div class="delete-icon">🗑️</div>
+          <div class="delete-icon"><i class="fas fa-trash-alt"></i></div>
           <h2>Excluir {{ cantorParaExcluir?.nome }}?</h2>
           <p>Esta ação não pode ser desfeita.</p>
           <div class="modal-actions">
@@ -795,7 +790,7 @@
     <!-- Toast Notification -->
     <transition name="toast">
       <div v-if="toast.show" :class="['toast-soundup', toast.type]">
-        <div class="toast-icon">{{ toast.icon }}</div>
+        <div class="toast-icon" v-html="toast.icon"></div>
         <div class="toast-message">{{ toast.message }}</div>
       </div>
     </transition>
@@ -1044,7 +1039,7 @@ async toggleSeguirCantor(cantor) {
     const token = localStorage.getItem('token')
 
     if (!this.usuarioLogadoId || !token) {
-      this.mostrarToast('Faça login para seguir artistas', 'error', '⚠️')
+     this.mostrarToast('Faça login para seguir artistas', 'error', '<i class="fas fa-exclamation-triangle"></i>')
       return
     }
 
@@ -1072,8 +1067,7 @@ async toggleSeguirCantor(cantor) {
 
     this.mostrarToast(
       jaSegue ? 'Você deixou de seguir este artista' : 'Agora você segue este artista',
-      'success',
-      '🎤'
+      'success'
     )
   } catch (error) {
     this.mostrarToast(error.message || 'Erro ao seguir cantor', 'error', '❌')
@@ -1197,7 +1191,7 @@ getGeneroNome(id) {
   removerMusicaLocal(index) {
     if (confirm('Tem certeza que deseja remover esta música?')) {
       this.form.musicas.splice(index, 1)
-      this.mostrarToast('Música removida', 'success', '🗑️')
+      this.mostrarToast('Música removida', 'success', '<i class="fas fa-trash-alt"></i>')
     }
   },
 
@@ -1212,7 +1206,7 @@ getGeneroNome(id) {
     !m.letra?.trim() ||
     !m.foto?.trim()
   ) {
-    this.mostrarToast('Preencha todos os campos obrigatórios', 'error', '⚠️')
+   this.mostrarToast('Preencha todos os campos obrigatórios', 'error', '<i class="fas fa-exclamation-triangle"></i>')
     return
   }
 
@@ -1258,7 +1252,7 @@ const musicaPayload = {
       this.form.musicas.push(musicaCriada._id)
     }
 
-    this.mostrarToast('Música salva no banco!', 'success', '🎵')
+    this.mostrarToast('Música salva no banco!', 'success', '<i class="fas fa-music"></i>')
     this.fecharModalMusica()
     await this.carregarMusicas()
 
@@ -1307,7 +1301,7 @@ fecharModalMusica() {
     removerAlbum(index) {
       if (confirm('Tem certeza que deseja remover este álbum?')) {
         this.form.albuns.splice(index, 1)
-        this.mostrarToast('Álbum removido', 'success', '🗑️')
+        this.mostrarToast('Álbum removido', 'success', '<i class="fas fa-trash-alt"></i>')
       }
     },
 
@@ -1325,10 +1319,10 @@ fecharModalMusica() {
 
       if (this.editandoAlbumIndex !== null) {
         this.form.albuns[this.editandoAlbumIndex] = albumData
-        this.mostrarToast('Álbum atualizado!', 'success', '✅')
+        this.mostrarToast('Artista criado!', 'success', '<i class="fas fa-check-circle"></i>')
       } else {
         this.form.albuns.push(albumData)
-        this.mostrarToast('Álbum adicionado!', 'success', '🎵')
+       this.mostrarToast('Álbum adicionado!', 'success', '<i class="fas fa-compact-disc"></i>')
       }
 
       this.fecharModalAlbum()
@@ -1377,7 +1371,7 @@ fecharModalMusica() {
           return cantor
         }))
       } catch (error) {
-        this.mostrarToast('Erro ao carregar artistas', 'error', '❌')
+       this.mostrarToast('Erro ao carregar artistas', 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.loading = false
       }
@@ -1496,7 +1490,7 @@ async salvarCantor() {
           const result = await response.json()
           cantorId = result.cantor._id
 
-          this.mostrarToast('Artista atualizado!', 'success', '✅')
+          this.mostrarToast('Artista atualizado!', 'success', '<i class="fas fa-check-circle"></i>')
         } else {
           response = await fetch('http://localhost:3002/cantores', {
             method: 'POST',
@@ -1507,7 +1501,7 @@ async salvarCantor() {
           const result = await response.json()
           cantorId = result.cantor._id
 
-          this.mostrarToast('Artista criado!', 'success', '✅')
+          this.mostrarToast('Artista criado!', 'success', '<i class="fas fa-check-circle"></i>')
         }
 // Só processa álbuns locais (objetos sem _id ou com _id que são strings do backend)
 // Álbuns do dropdown já estão salvos no banco, não precisa re-salvar
@@ -1575,7 +1569,7 @@ for (const album of albunsParaCriar) {
         await fetch(`http://localhost:3002/cantores/${this.cantorParaExcluir._id}`, {
           method: 'DELETE'
         })
-        this.mostrarToast('Artista removido', 'success', '🗑️')
+        this.mostrarToast('Artista removido', 'success', '<i class="fas fa-trash-alt"></i>')
         this.showDeleteModal = false
         this.carregarCantores()
       } catch (error) {
@@ -1604,12 +1598,12 @@ for (const album of albunsParaCriar) {
       if (!file) return
 
       if (!file.type.startsWith('image/')) {
-        this.mostrarToast('Selecione uma imagem válida', 'error', '⚠️')
+       this.mostrarToast('Selecione uma imagem válida', 'error', '<i class="fas fa-exclamation-triangle"></i>')
         return
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        this.mostrarToast('Máximo 5MB', 'error', '⚠️')
+       this.mostrarToast('Máximo 5MB', 'error', '<i class="fas fa-exclamation-triangle"></i>')
         return
       }
 
@@ -2678,7 +2672,27 @@ resetForm() {
 .dropdown-wrapper {
   position: relative;
 }
+.total-artists-icon i {
+  font-size: 1.1rem;
+}
 
+.delete-icon i {
+  font-size: 3rem;
+  color: #dc2626;
+}
+
+.toast-icon i {
+  font-size: 1.25rem;
+}
+
+.header-icon i {
+  font-size: 1.1rem;
+}
+
+.artist-chip i {
+  margin-right: 0.3rem;
+  font-size: 0.8rem;
+}
 .dropdown-trigger {
   display: flex;
   align-items: center;
@@ -3225,6 +3239,7 @@ resetForm() {
   color: #fecaca;
   background: rgba(127, 29, 29, 0.28);
   border: 1px solid rgba(248, 113, 113, 0.18);
+  gap: 0.6rem;
 }
 
 .card-action-btn.delete:hover {

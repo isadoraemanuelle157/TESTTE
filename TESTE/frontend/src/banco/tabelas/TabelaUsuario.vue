@@ -246,7 +246,7 @@
             <!-- Nome -->
             <div class="form-group" :class="{ focused: focused === 'nome', filled: registerForm.nome }">
               <div class="input-wrap">
-                <span class="input-emoji">👤</span>
+                <span class="input-emoji"><i class="fas fa-user"></i></span>
                 <input 
                   v-model="registerForm.nome" 
                   type="text" 
@@ -266,7 +266,7 @@
             <!-- Email -->
             <div class="form-group" :class="{ focused: focused === 'email', filled: registerForm.email }">
               <div class="input-wrap">
-                <span class="input-emoji">✉️</span>
+                <span class="input-emoji"><i class="fas fa-envelope"></i></span>
                 <input 
                   v-model="registerForm.email" 
                   type="email" 
@@ -282,7 +282,7 @@
             <!-- Senha -->
             <div class="form-group" :class="{ focused: focused === 'senha', filled: registerForm.senha }">
               <div class="input-wrap">
-                <span class="input-emoji">🔒</span>
+                <span class="input-emoji"><i class="fas fa-lock"></i></span>
                 <input 
                   v-model="registerForm.senha" 
                   :type="showPassword ? 'text' : 'password'" 
@@ -293,7 +293,7 @@
                 />
                 <label>Senha</label>
                 <button type="button" class="toggle-pass" @click="showPassword = !showPassword">
-                  {{ showPassword ? '🙈' : '👁️' }}
+                  <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
                 </button>
               </div>
               <div class="password-strength" v-if="registerForm.senha">
@@ -307,7 +307,7 @@
             <!-- Confirmar Senha -->
             <div class="form-group" :class="{ focused: focused === 'confirmarSenha', filled: registerForm.confirmarSenha }">
               <div class="input-wrap">
-                <span class="input-emoji">🔐</span>
+                <span class="input-emoji"><i class="fas fa-shield-halved"></i></span>
                 <input 
                   v-model="registerForm.confirmarSenha" 
                   :type="showConfirmPassword ? 'text' : 'password'" 
@@ -318,7 +318,7 @@
                 />
                 <label>Confirmar senha</label>
                 <button type="button" class="toggle-pass" @click="showConfirmPassword = !showConfirmPassword">
-                  {{ showConfirmPassword ? '🙈' : '👁️' }}
+                  <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
                 </button>
               </div>
               <span class="error-hint" v-if="senhasNaoCoincidem">As senhas não coincidem</span>
@@ -638,41 +638,42 @@ export default {
 
     async criarUsuario() {
       if (!this.formValido) return
-      
+
       this.registerLoading = true
-      
+
       try {
-        const token = localStorage.getItem("token")
-        
-        // Criar conta
+        // Criar conta (endpoint público, sem auth necessária)
         const res = await axios.post(
           "http://localhost:3002/usuarios/registrar",
           {
             nome: this.registerForm.nome,
             email: this.registerForm.email,
-            senha: this.registerForm.senha
+            senha: this.registerForm.senha,
+            username: this.registerForm.username
           }
         )
 
-        const userId = res.data.user?._id || res.data.user?.id
+        const userId = res.data.user?.id || res.data.user?._id
         const userToken = res.data.token
 
         if (!userId) {
-          throw new Error("ID do usuário não retornado")
+          throw new Error("ID do usuário não retornado pelo servidor")
         }
 
-        // Completar perfil com dados extras
-     await axios.put(
-  `http://localhost:3002/usuarios/${userId}`,
-  {
-    username: this.registerForm.username
-  },
-  {
-    headers: {
-      Authorization: `Bearer ${userToken || token}`
-    }
-  }
-)
+        // Tentar atualizar username se o registro não incluiu
+        if (this.registerForm.username && (!res.data.user?.username || res.data.user.username !== this.registerForm.username)) {
+          try {
+            await axios.put(
+              `http://localhost:3002/usuarios/${userId}`,
+              { username: this.registerForm.username },
+              { headers: { Authorization: `Bearer ${userToken}` } }
+            )
+          } catch (updateErr) {
+            console.warn("Não foi possível atualizar username:", updateErr.message)
+            // Não falhar o fluxo principal se o update de username der erro
+          }
+        }
+
         // Recarregar lista
         await this.carregarUsuarios()
 
@@ -680,14 +681,15 @@ export default {
         this.usuarioCriadoNome = this.registerForm.nome
         this.showSuccessAlert = true
         this.showRegisterModal = false
-        
+
         setTimeout(() => {
           this.showSuccessAlert = false
-        }, 4000)
+        }, 7000)
 
       } catch (err) {
         console.error("Erro ao criar usuário:", err)
-        this.showToast(err.response?.data?.error || "Erro ao criar usuário", "error")
+        const errorMsg = err.response?.data?.error || err.message || "Erro ao criar usuário"
+        this.showToast(errorMsg, "error")
       } finally {
         this.registerLoading = false
       }
@@ -713,8 +715,10 @@ export default {
           { headers: { Authorization: `Bearer ${token}` } }
         )
         this.usuarios = this.usuarios.filter(user => user.id !== this.usuarioParaExcluir.id)
-        this.showToast("Usuário excluído com sucesso!", "success")
         this.showDeleteModal = false
+        setTimeout(() => {
+          this.showToast("Usuário excluído com sucesso!", "success", 2000)
+        }, 350)
       } catch (err) {
         console.error("Erro ao excluir:", err)
         this.showToast("Erro ao excluir usuário", "error")
@@ -724,9 +728,9 @@ export default {
       }
     },
 
-    showToast(message, type = "success") {
+    showToast(message, type = "success", duration = 7000) {
       this.toast = { show: true, message, type }
-      setTimeout(() => this.toast.show = false, 3000)
+      setTimeout(() => this.toast.show = false, duration)
     }
   }
 }
@@ -1466,10 +1470,20 @@ export default {
 .input-emoji {
   position: absolute;
   left: 14px;
-  font-size: 1rem;
+  font-size: 0.85rem;
   z-index: 2;
   opacity: 0.6;
   transition: all 0.3s;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+
+.input-emoji i {
+  font-size: 0.85rem;
 }
 
 .form-group.focused .input-emoji {
@@ -1525,14 +1539,25 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.85rem;
   opacity: 0.6;
-  transition: opacity 0.3s;
+  transition: all 0.3s;
   padding: 0;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 .toggle-pass:hover {
   opacity: 1;
+  color: #e2e8f0;
+}
+
+.toggle-pass i {
+  font-size: 0.85rem;
 }
 
 /* Password Strength */
@@ -1641,10 +1666,10 @@ export default {
 /* ==================== SUCCESS ALERT ==================== */
 .success-alert-overlay {
   position: fixed;
-  top: 24px;
+  bottom: 24px;
   right: 24px;
   z-index: 3000;
-  animation: alertSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: alertSlideInBottom 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes alertSlideIn {
@@ -1655,6 +1680,17 @@ export default {
   to {
     opacity: 1;
     transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes alertSlideInBottom {
+  from {
+    opacity: 0;
+    transform: translateY(100px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -1740,7 +1776,7 @@ export default {
 
 .success-alert-leave-to {
   opacity: 0;
-  transform: translateX(100px) scale(0.9);
+  transform: translateY(100px) scale(0.9);
 }
 
 /* Modal Base */
@@ -2011,4 +2047,4 @@ export default {
     font-size: 0.8rem;
   }
 }
-</style>
+</style>  

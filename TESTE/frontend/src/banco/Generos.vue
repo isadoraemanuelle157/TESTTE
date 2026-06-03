@@ -6,7 +6,7 @@
       <div class="header-section">
         <div class="header-bg"></div>
         <div class="header-content">
-          <div class="music-icon">🎵</div>
+         <div class="music-icon"><i class="fas fa-music"></i></div>
           <h1>Gerenciador de Gêneros</h1>
           <p class="subtitle">Cadastre, edite e organize seus gêneros musicais favoritos</p>
         </div>
@@ -15,9 +15,9 @@
       <!-- Formulário Moderno -->
       <div class="form-section" ref="formSection">
         <div class="section-header">
-          <div class="section-icon" :class="modoEdicao ? 'edit-mode' : 'create-mode'">
-            {{ modoEdicao ? '✏️' : '➕' }}
-          </div>
+        <div class="section-icon" :class="modoEdicao ? 'edit-mode' : 'create-mode'">
+  <i :class="modoEdicao ? 'fas fa-pen' : 'fas fa-plus'"></i>
+</div>
           <h2>{{ modoEdicao ? "Editar Gênero" : "Novo Gênero" }}</h2>
         </div>
         
@@ -79,12 +79,12 @@
                     :class="{ 'active': form.categoria === cat.value }"
                     @mousedown.prevent="selectCategoria(cat.value)"
                   >
-                    <span class="cat-icon">{{ cat.icon }}</span>
+                    <i class="cat-icon" :class="cat.icon"></i>
                     <span class="cat-label">{{ cat.label }}</span>
                   </div>
                   <div v-if="form.categoria && !categoriasPredefinidas.find(c => c.value === form.categoria)" class="dropdown-divider"></div>
                   <div v-if="form.categoria && !categoriasPredefinidas.find(c => c.value === form.categoria)" class="dropdown-item custom">
-                    <span class="cat-icon">✨</span>
+                     <i class="cat-icon fas fa-magic"></i>
                     <span class="cat-label">Usar "{{ form.categoria }}"</span>
                   </div>
                 </div>
@@ -96,12 +96,12 @@
           <div class="input-group">
             <label>Ícone</label>
             <div class="icon-picker-trigger" @click="showIconPicker = true">
-              <div class="selected-icon" v-if="form.icon">
-                {{ form.icon }}
-              </div>
-              <div class="selected-icon-placeholder" v-else>
-                <span>🎵</span> Clique para escolher um ícone
-              </div>
+           <div class="selected-icon" v-if="form.icon">
+  <i :class="form.icon"></i>
+</div>
+       <div class="selected-icon-placeholder" v-else>
+  <i class="fas fa-music"></i> Clique para escolher um ícone
+</div>
               <span class="change-icon">Alterar</span>
             </div>
           </div>
@@ -133,7 +133,7 @@
           :disabled="!podeAdicionarCor"
           title="Adicionar cor à paleta"
         >
-          <span v-if="!loadingCor">+</span>
+           <i v-if="!loadingCor" class="fas fa-plus"></i>
           <span v-else class="spinner-small"></span>
         </button>
       </div>
@@ -193,10 +193,10 @@
               :class="['btn-primary', { 'loading': loading }]"
               :disabled="loading"
             >
-              <span v-if="!loading" class="btn-content">
-                <span class="btn-icon">{{ modoEdicao ? '💾' : '✨' }}</span>
-                {{ modoEdicao ? "Atualizar" : "Cadastrar" }}
-              </span>
+          <span v-if="!loading" class="btn-content">
+  <i class="btn-icon" :class="modoEdicao ? 'fas fa-save' : 'fas fa-magic'"></i>
+  {{ modoEdicao ? "Atualizar" : "Cadastrar" }}
+</span>
               <span v-else class="spinner"></span>
             </button>
             
@@ -206,25 +206,18 @@
               class="btn-secondary"
               @click="cancelarEdicao"
             >
-              <span class="btn-icon">❌</span>
-              Cancelar
-            </button>
+              <i class="btn-icon fas fa-times"></i>
+  Cancelar
+</button>
           </div>
         </form>
-
-        <transition name="slide-fade">
-          <div v-if="mensagem" :class="['alert', mensagem.tipo]">
-            <span class="alert-icon">{{ mensagem.tipo === 'success' ? '✅' : '⚠️' }}</span>
-            {{ mensagem.texto }}
-          </div>
-        </transition>
       </div>
 
       <!-- Lista de Gêneros -->
       <div class="list-section">
         <div class="list-header">
           <div class="list-title-group">
-            <h2>📋 Gêneros Cadastrados</h2>
+            <h2><i class="fas fa-list"></i> Gêneros Cadastrados</h2>
             <span class="badge">{{ generos.length }} itens</span>
           </div>
           <div class="view-toggle">
@@ -233,14 +226,14 @@
               @click="viewMode = 'grid'"
               title="Visualização em Grade"
             >
-              ⊞
+              <i class="fas fa-th-large"></i>
             </button>
             <button 
               :class="{ 'active': viewMode === 'list' }"
               @click="viewMode = 'list'"
               title="Visualização em Lista"
             >
-              ☰
+              <i class="fas fa-list"></i>
             </button>
           </div>
         </div>
@@ -252,9 +245,9 @@
 
         <div v-else-if="generos.length === 0" class="empty-state">
           <div class="empty-animation">
-            <div class="note">🎵</div>
-            <div class="note">🎶</div>
-            <div class="note">🎼</div>
+  <div class="note"><i class="fas fa-music"></i></div>
+  <div class="note"><i class="fas fa-headphones"></i></div>
+  <div class="note"><i class="fas fa-guitar"></i></div>
           </div>
           <h3>Nenhum gênero cadastrado</h3>
           <p>Adicione seu primeiro gênero musical acima!</p>
@@ -275,7 +268,7 @@
           >
             <div class="card-header">
               <div class="card-icon" :style="{ background: genero.color || '#6366f1' }">
-                {{ genero.icon || '🎵' }}
+                <i :class="genero.icon || 'fas fa-music'"></i>
               </div>
               <div class="card-category">{{ genero.categoria || 'Outros' }}</div>
             </div>
@@ -289,14 +282,14 @@
                 @click="iniciarEdicao(genero)"
                 title="Editar"
               >
-                ✏️
+                <i class="fas fa-pen"></i>
               </button>
               <button 
                 class="btn-card delete"
                 @click="confirmarExclusao(genero)"
                 title="Excluir"
               >
-                🗑️
+                <i class="fas fa-trash"></i>
               </button>
             </div>
           </div>
@@ -315,7 +308,7 @@
             class="genero-item"
           >
             <div class="item-icon" :style="{ background: genero.color || '#6366f1' }">
-              {{ genero.icon || '🎵' }}
+              <i :class="genero.icon || 'fas fa-music'"></i>
             </div>
             <div class="genero-info">
               <div class="info-header">
@@ -331,14 +324,14 @@
                 @click="iniciarEdicao(genero)"
                 title="Editar"
               >
-                ✏️
+                <i class="fas fa-pen"></i>
               </button>
               <button 
                 class="btn-icon-action delete"
                 @click="confirmarExclusao(genero)"
                 title="Excluir"
               >
-                🗑️
+                <i class="fas fa-trash"></i>
               </button>
             </div>
           </li>
@@ -350,7 +343,7 @@
     <transition name="modal">
       <div v-if="modalExcluir" class="modal-overlay" @click.self="modalExcluir = false">
         <div class="modal-content">
-          <div class="modal-icon">⚠️</div>
+          <div class="modal-icon"><i class="fas fa-exclamation-triangle"></i></div>
           <h3>Confirmar Exclusão</h3>
           <p>
             Tem certeza que deseja excluir o gênero 
@@ -379,8 +372,8 @@
       <div v-if="showIconPicker" class="modal-overlay" @click.self="showIconPicker = false">
         <div class="modal-content icon-picker-modal">
           <div class="modal-header">
-            <h3>🎨 Escolha um Ícone</h3>
-            <button class="close-btn" @click="showIconPicker = false">✕</button>
+            <h3><i class="fas fa-palette"></i> Escolha um Ícone</h3>
+            <button class="close-btn" @click="showIconPicker = false"><i class="fas fa-times"></i></button>
           </div>
           
           <div class="icon-search">
@@ -398,7 +391,7 @@
               :class="{ 'active': selectedIconCategory === cat.name }"
               @click="selectedIconCategory = cat.name"
             >
-              {{ cat.icon }} {{ cat.label }}
+              <i :class="cat.icon"></i> {{ cat.label }}
             </button>
           </div>
           
@@ -410,12 +403,21 @@
               :class="{ 'selected': form.icon === icon }"
               @click="selectIcon(icon)"
             >
-              {{ icon }}
+               <i :class="icon"></i>
             </div>
           </div>
         </div>
       </div>
     </transition>
+    <!-- Toast Notification -->
+<transition name="toast-slide">
+  <div v-if="toast.show" :class="['toast', toast.type]">
+    <span class="toast-icon">
+      <i :class="toast.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
+    </span>
+    <span class="toast-text">{{ toast.message }}</span>
+  </div>
+</transition>
   </div>
 </template>
 
@@ -441,7 +443,7 @@ export default {
       loading: false,
       loadingList: false,
       loadingDelete: false,
-      mensagem: null,
+      toast: { show: false, message: '', type: 'success' },
       modoEdicao: false,
       modalExcluir: false,
       generoParaExcluir: null,
@@ -457,46 +459,46 @@ export default {
       coresCustomizadas: [],
       
       // Categorias
-      categoriasPredefinidas: [
-        { value: 'popular', label: 'Popular', icon: '🌟' },
-        { value: 'regional', label: 'Regional', icon: '🌍' },
-        { value: 'electronic', label: 'Eletrônico', icon: '⚡' },
-        { value: 'classical', label: 'Clássica', icon: '🎻' },
-        { value: 'jazz', label: 'Jazz', icon: '🎷' },
-        { value: 'rock', label: 'Rock', icon: '🎸' },
-        { value: 'pop', label: 'Pop', icon: '🎤' },
-        { value: 'hiphop', label: 'Hip Hop', icon: '🎧' },
-        { value: 'outros', label: 'Outros', icon: '📦' }
-      ],
+categoriasPredefinidas: [
+  { value: 'popular', label: 'Popular', icon: 'fas fa-star' },
+  { value: 'regional', label: 'Regional', icon: 'fas fa-globe-americas' },
+  { value: 'electronic', label: 'Eletrônico', icon: 'fas fa-bolt' },
+  { value: 'classical', label: 'Clássica', icon: 'fas fa-violin' },
+  { value: 'jazz', label: 'Jazz', icon: 'fas fa-saxophone' },
+  { value: 'rock', label: 'Rock', icon: 'fas fa-guitar' },
+  { value: 'pop', label: 'Pop', icon: 'fas fa-microphone' },
+  { value: 'hiphop', label: 'Hip Hop', icon: 'fas fa-headphones' },
+  { value: 'outros', label: 'Outros', icon: 'fas fa-box' }
+],
       showCategoriaDropdown: false,
       
       // Icon picker
       showIconPicker: false,
       iconSearch: '',
       selectedIconCategory: 'music',
-      iconCategories: [
-        { name: 'music', label: 'Música', icon: '🎵' },
-        { name: 'instruments', label: 'Instrumentos', icon: '🎸' },
-        { name: 'mood', label: 'Humor', icon: '😊' },
-        { name: 'nature', label: 'Natureza', icon: '🌿' },
-        { name: 'objects', label: 'Objetos', icon: '📦' }
-      ],
-      icons: {
-        music: ['🎵', '🎶', '🎼', '🎹', '🎺', '🎻', '🎷', '🎸', '🎤', '🎧', '🎚️', '🎛️', '🎙️', '📻', '🔊', '🔈', '🔇', '🔔', '🎵', '♪', '♫', '♬', '♭', '♮', '♯'],
-        instruments: ['🎸', '🎹', '🎺', '🎻', '🎷', '🥁', '🪘', '🪗', '🪕', '🎻', '🎺', '🎹', '🎸', '🎷', '🎤', '🎧', '🎚️', '🎛️', '🎙️', '📯', '🪗', '🪘'],
-        mood: ['😊', '😎', '🤩', '😍', '🥰', '😘', '😗', '😙', '😚', '☺️', '🙂', '🤗', '🤔', '🤭', '🤫', '🤠', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'],
-        nature: ['🌿', '🍀', '🌲', '🌳', '🌴', '🌵', '🌷', '🌸', '🌹', '🌺', '🌻', '🌼', '🌽', '🌾', '🌰', '🌱', '🌲', '🌳', '🌴', '🌵', '🌶️', '🌷', '🌸', '🌹', '🌺', '🌻', '🌼', '🌽', '🌾', '🌿', '🍀', '🍁', '🍂', '🍃', '🍄', '🌰', '🌍', '🌎', '🌏', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '☀️', '🌝', '🌞', '⭐', '🌟', '🌠', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌂', '☂️', '☔', '⛱️', '⚡', '❄️', '☃️', '⛄', '☄️', '🔥', '💧', '🌊'],
-        objects: ['📦', '🎁', '🎀', '🎊', '🎉', '🎈', '🎎', '🎏', '🎐', '🎑', '🧧', '🎀', '🎁', '🎗️', '🎟️', '🎫', '🎖️', '🏆', '🏅', '🥇', '🥈', '🥉', '⚽', '⚾', '🥎', '🏀', '🏐', '🏈', '🏉', '🎾', '🥏', '🎳', '🏏', '🏑', '🏒', '🥍', '🥏', '🎱', '🔮', '🧿', '🎮', '🕹️', '🎰', '🎲', '🧩', '🧸', '🪅', '🪆', '🪀', '🪁', '🎨', '🧵', '🧶', '👓', '🕶️', '🥽', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🛍️', '🎒', '🩴', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '🪖', '⛑️', '📷', '📸', '📹', '📼', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🪤', '🪚', '🔨', '⛏️', '⚒️', '🛠️', '🪤', '🪛', '🪜', '⚙️', '🪤', '🪛', '🔩', '🪤', '🪛', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🌡️', '🧹', '🪠', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🪣', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🪆', '🖼️', '🪞', '🪟', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🪄', '🪅', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '🎀', '🎁', '🎗️', '🎟️', '🎫', '🎖️', '🏆', '🏅', '🥇', '🥈', '🥉']
-      }
+iconCategories: [
+  { name: 'music', label: 'Música', icon: 'fas fa-music' },
+  { name: 'instruments', label: 'Instrumentos', icon: 'fas fa-guitar' },
+  { name: 'mood', label: 'Humor', icon: 'fas fa-smile' },
+  { name: 'nature', label: 'Natureza', icon: 'fas fa-leaf' },
+  { name: 'objects', label: 'Objetos', icon: 'fas fa-box' }
+],
+icons: {
+  music: ['fas fa-music', 'fas fa-headphones', 'fas fa-microphone', 'fas fa-microphone-alt', 'fas fa-volume-up', 'fas fa-volume-down', 'fas fa-volume-mute', 'fas fa-volume-off', 'fas fa-play', 'fas fa-pause', 'fas fa-stop', 'fas fa-forward', 'fas fa-backward', 'fas fa-step-forward', 'fas fa-step-backward', 'fas fa-random', 'fas fa-redo', 'fas fa-undo', 'fas fa-sync', 'fas fa-stream', 'fas fa-broadcast-tower', 'fas fa-bullhorn', 'fas fa-bell', 'fas fa-compact-disc', 'fas fa-record-vinyl'],
+  instruments: ['fas fa-guitar', 'fas fa-drum', 'fas fa-drum-steelpan', 'fas fa-music', 'fas fa-headphones', 'fas fa-microphone', 'fas fa-microphone-alt', 'fas fa-volume-up', 'fas fa-broadcast-tower', 'fas fa-bullhorn'],
+  mood: ['fas fa-smile', 'fas fa-laugh', 'fas fa-grin', 'fas fa-grin-alt', 'fas fa-grin-beam', 'fas fa-grin-beam-sweat', 'fas fa-grin-hearts', 'fas fa-grin-squint', 'fas fa-grin-squint-tears', 'fas fa-grin-stars', 'fas fa-grin-tears', 'fas fa-grin-tongue', 'fas fa-grin-tongue-squint', 'fas fa-grin-tongue-wink', 'fas fa-grin-wink', 'fas fa-smile-beam', 'fas fa-smile-wink', 'fas fa-sad-cry', 'fas fa-sad-tear', 'fas fa-angry', 'fas fa-dizzy', 'fas fa-flushed', 'fas fa-frown', 'fas fa-frown-open', 'fas fa-meh', 'fas fa-meh-blank', 'fas fa-meh-rolling-eyes', 'fas fa-surprise', 'fas fa-tired', 'fas fa-sun', 'fas fa-moon', 'fas fa-cloud', 'fas fa-star', 'fas fa-heart', 'fas fa-fire', 'fas fa-bolt', 'fas fa-snowflake', 'fas fa-leaf', 'fas fa-seedling'],
+  nature: ['fas fa-leaf', 'fas fa-seedling', 'fas fa-tree', 'fas fa-cannabis', 'fas fa-feather', 'fas fa-feather-alt', 'fas fa-cloud', 'fas fa-cloud-sun', 'fas fa-cloud-moon', 'fas fa-cloud-rain', 'fas fa-cloud-showers-heavy', 'fas fa-cloud-sun-rain', 'fas fa-bolt', 'fas fa-snowflake', 'fas fa-sun', 'fas fa-moon', 'fas fa-wind', 'fas fa-water', 'fas fa-icicles', 'fas fa-fire', 'fas fa-fire-alt', 'fas fa-mountain', 'fas fa-globe-americas', 'fas fa-globe-europe', 'fas fa-globe-africa', 'fas fa-globe-asia', 'fas fa-fish', 'fas fa-frog', 'fas fa-horse', 'fas fa-horse-head', 'fas fa-cat', 'fas fa-dog', 'fas fa-dove', 'fas fa-kiwi-bird', 'fas fa-dragon', 'fas fa-spider', 'fas fa-bug', 'fas fa-bacteria', 'fas fa-virus', 'fas fa-hippo', 'fas fa-otter', 'fas fa-paw'],
+  objects: ['fas fa-box', 'fas fa-gift', 'fas fa-award', 'fas fa-medal', 'fas fa-trophy', 'fas fa-crown', 'fas fa-gem', 'fas fa-ring', 'fas fa-clock', 'fas fa-hourglass', 'fas fa-hourglass-half', 'fas fa-hourglass-end', 'fas fa-stopwatch', 'fas fa-calendar', 'fas fa-calendar-alt', 'fas fa-bell', 'fas fa-book', 'fas fa-bookmark', 'fas fa-camera', 'fas fa-camera-retro', 'fas fa-video', 'fas fa-film', 'fas fa-image', 'fas fa-images', 'fas fa-paint-brush', 'fas fa-palette', 'fas fa-pencil-alt', 'fas fa-pen', 'fas fa-pen-nib', 'fas fa-pen-fancy', 'fas fa-highlighter', 'fas fa-magic', 'fas fa-wrench', 'fas fa-tools', 'fas fa-hammer', 'fas fa-screwdriver', 'fas fa-cog', 'fas fa-cogs', 'fas fa-sliders-h', 'fas fa-toggle-on', 'fas fa-toggle-off', 'fas fa-lightbulb', 'fas fa-battery-full', 'fas fa-battery-half', 'fas fa-battery-quarter', 'fas fa-plug', 'fas fa-microchip', 'fas fa-satellite', 'fas fa-satellite-dish', 'fas fa-wifi', 'fas fa-broadcast-tower', 'fas fa-rocket', 'fas fa-plane', 'fas fa-car', 'fas fa-bicycle', 'fas fa-motorcycle', 'fas fa-ship', 'fas fa-truck', 'fas fa-train', 'fas fa-subway', 'fas fa-bus', 'fas fa-taxi', 'fas fa-ambulance', 'fas fa-fire-extinguisher', 'fas fa-first-aid', 'fas fa-stethoscope', 'fas fa-syringe', 'fas fa-pills', 'fas fa-prescription-bottle', 'fas fa-prescription-bottle-alt', 'fas fa-tablets', 'fas fa-capsules', 'fas fa-notes-medical', 'fas fa-file-medical', 'fas fa-file-medical-alt', 'fas fa-file-prescription', 'fas fa-file-invoice', 'fas fa-file-invoice-dollar', 'fas fa-file-contract', 'fas fa-file-signature', 'fas fa-file-export', 'fas fa-file-import', 'fas fa-file-download', 'fas fa-file-upload', 'fas fa-file-code', 'fas fa-file-video', 'fas fa-file-audio', 'fas fa-file-image', 'fas fa-file-archive', 'fas fa-file-word', 'fas fa-file-excel', 'fas fa-file-powerpoint', 'fas fa-file-pdf', 'fas fa-file-csv', 'fas fa-file-alt', 'fas fa-file', 'fas fa-folder', 'fas fa-folder-open', 'fas fa-folder-plus', 'fas fa-folder-minus', 'fas fa-folder-tree', 'fas fa-archive', 'fas fa-box-open', 'fas fa-box', 'fas fa-boxes', 'fas fa-warehouse', 'fas fa-truck', 'fas fa-truck-loading', 'fas fa-truck-moving', 'fas fa-truck-pickup', 'fas fa-shipping-fast', 'fas fa-dolly', 'fas fa-dolly-flatbed', 'fas fa-parachute-box', 'fas fa-helicopter', 'fas fa-plane', 'fas fa-plane-departure', 'fas fa-plane-arrival', 'fas fa-plane-slash', 'fas fa-rocket', 'fas fa-satellite', 'fas fa-satellite-dish', 'fas fa-shuttle-van', 'fas fa-bus', 'fas fa-bus-alt', 'fas fa-car', 'fas fa-car-alt', 'fas fa-car-side', 'fas fa-car-crash', 'fas fa-car-battery', 'fas fa-oil-can', 'fas fa-tachometer-alt', 'fas fa-tachometer-alt-fast', 'fas fa-tachometer-alt-average', 'fas fa-tachometer-alt-slow', 'fas fa-gas-pump', 'fas fa-gauge-high', 'fas fa-gauge', 'fas fa-gauge-simple-high', 'fas fa-gauge-simple', 'fas fa-motorcycle', 'fas fa-bicycle', 'fas fa-swimmer', 'fas fa-skating', 'fas fa-skiing', 'fas fa-skiing-nordic', 'fas fa-snowboarding', 'fas fa-hiking', 'fas fa-walking', 'fas fa-running', 'fas fa-wheelchair', 'fas fa-blind', 'fas fa-deaf', 'fas fa-american-sign-language-interpreting', 'fas fa-assistive-listening-systems', 'fas fa-braille', 'fas fa-low-vision', 'fas fa-universal-access', 'fas fa-wheelchair-alt', 'fas fa-cat', 'fas fa-dog', 'fas fa-fish', 'fas fa-frog', 'fas fa-horse', 'fas fa-horse-head', 'fas fa-kiwi-bird', 'fas fa-dragon', 'fas fa-spider', 'fas fa-bug', 'fas fa-bacteria', 'fas fa-virus', 'fas fa-hippo', 'fas fa-otter', 'fas fa-paw', 'fas fa-dove', 'fas fa-crow', 'fas fa-feather', 'fas fa-feather-alt', 'fas fa-kiwi-bird', 'fas fa-leaf', 'fas fa-seedling', 'fas fa-tree', 'fas fa-cannabis', 'fas fa-cloud', 'fas fa-cloud-sun', 'fas fa-cloud-moon', 'fas fa-cloud-rain', 'fas fa-cloud-showers-heavy', 'fas fa-cloud-sun-rain', 'fas fa-bolt', 'fas fa-snowflake', 'fas fa-sun', 'fas fa-moon', 'fas fa-wind', 'fas fa-water', 'fas fa-icicles', 'fas fa-fire', 'fas fa-fire-alt', 'fas fa-mountain', 'fas fa-globe-americas', 'fas fa-globe-europe', 'fas fa-globe-africa', 'fas fa-globe-asia', 'fas fa-globe', 'fas fa-earth-americas', 'fas fa-earth-europe', 'fas fa-earth-africa', 'fas fa-earth-asia', 'fas fa-earth-oceania', 'fas fa-map', 'fas fa-map-marker', 'fas fa-map-marker-alt', 'fas fa-map-pin', 'fas fa-thumbtack', 'fas fa-location-arrow', 'fas fa-directions', 'fas fa-route', 'fas fa-road', 'fas fa-street-view', 'fas fa-layer-group', 'fas fa-shapes', 'fas fa-draw-polygon', 'fas fa-vector-square', 'fas fa-square', 'fas fa-square-full', 'fas fa-circle', 'fas fa-circle-notch', 'fas fa-dot-circle', 'fas fa-asterisk', 'fas fa-star', 'fas fa-star-half', 'fas fa-star-half-alt', 'fas fa-heart', 'fas fa-heart-broken', 'fas fa-thumbs-up', 'fas fa-thumbs-down', 'fas fa-hand-point-up', 'fas fa-hand-point-down', 'fas fa-hand-point-left', 'fas fa-hand-point-right', 'fas fa-hand-peace', 'fas fa-hand-rock', 'fas fa-hand-paper', 'fas fa-hand-scissors', 'fas fa-hand-lizard', 'fas fa-hand-spock', 'fas fa-hand-middle-finger', 'fas fa-fist-raised', 'fas fa-praying-hands', 'fas fa-hand-holding-heart', 'fas fa-hand-holding-usd', 'fas fa-hand-holding-medical', 'fas fa-hands-helping', 'fas fa-handshake', 'fas fa-people-arrows', 'fas fa-people-carry', 'fas fa-user', 'fas fa-user-alt', 'fas fa-user-circle', 'fas fa-user-friends', 'fas fa-user-plus', 'fas fa-user-minus', 'fas fa-user-check', 'fas fa-user-times', 'fas fa-user-lock', 'fas fa-user-shield', 'fas fa-user-secret', 'fas fa-user-graduate', 'fas fa-user-md', 'fas fa-user-nurse', 'fas fa-user-injured', 'fas fa-user-astronaut', 'fas fa-user-tie', 'fas fa-user-cog', 'fas fa-user-edit', 'fas fa-users', 'fas fa-users-cog', 'fas fa-users-slash', 'fas fa-child', 'fas fa-baby', 'fas fa-male', 'fas fa-female', 'fas fa-mars', 'fas fa-venus', 'fas fa-transgender', 'fas fa-transgender-alt', 'fas fa-venus-mars', 'fas fa-mars-stroke', 'fas fa-mars-stroke-v', 'fas fa-mars-stroke-h', 'fas fa-mercury', 'fas fa-neuter', 'fas fa-genderless', 'fas fa-restroom', 'fas fa-toilet', 'fas fa-toilet-paper', 'fas fa-toilet-paper-slash', 'fas fa-pump-soap', 'fas fa-pump-medical', 'fas fa-soap', 'fas fa-hands-wash', 'fas fa-hand-sparkles', 'fas fa-head-side-mask', 'fas fa-head-side-virus', 'fas fa-head-side-cough', 'fas fa-head-side-cough-slash', 'fas fa-virus', 'fas fa-virus-slash', 'fas fa-viruses', 'fas fa-bacteria', 'fas fa-bacterium', 'fas fa-disease', 'fas fa-lungs', 'fas fa-lungs-virus', 'fas fa-heart', 'fas fa-heartbeat', 'fas fa-heart-broken', 'fas fa-heart-circle', 'fas fa-heart-square', 'fas fa-procedures', 'fas fa-stethoscope', 'fas fa-syringe', 'fas fa-pills', 'fas fa-prescription-bottle', 'fas fa-prescription-bottle-alt', 'fas fa-tablets', 'fas fa-capsules', 'fas fa-notes-medical', 'fas fa-file-medical', 'fas fa-file-medical-alt', 'fas fa-file-prescription', 'fas fa-file-invoice', 'fas fa-file-invoice-dollar', 'fas fa-file-contract', 'fas fa-file-signature', 'fas fa-file-export', 'fas fa-file-import', 'fas fa-file-download', 'fas fa-file-upload', 'fas fa-file-code', 'fas fa-file-video', 'fas fa-file-audio', 'fas fa-file-image', 'fas fa-file-archive', 'fas fa-file-word', 'fas fa-file-excel', 'fas fa-file-powerpoint', 'fas fa-file-pdf', 'fas fa-file-csv', 'fas fa-file-alt', 'fas fa-file', 'fas fa-folder', 'fas fa-folder-open', 'fas fa-folder-plus', 'fas fa-folder-minus', 'fas fa-folder-tree', 'fas fa-archive', 'fas fa-box-open', 'fas fa-box', 'fas fa-boxes', 'fas fa-warehouse', 'fas fa-truck', 'fas fa-truck-loading', 'fas fa-truck-moving', 'fas fa-truck-pickup', 'fas fa-shipping-fast', 'fas fa-dolly', 'fas fa-dolly-flatbed', 'fas fa-parachute-box', 'fas fa-helicopter', 'fas fa-plane', 'fas fa-plane-departure', 'fas fa-plane-arrival', 'fas fa-plane-slash', 'fas fa-rocket', 'fas fa-satellite', 'fas fa-satellite-dish', 'fas fa-shuttle-van', 'fas fa-bus', 'fas fa-bus-alt', 'fas fa-car', 'fas fa-car-alt', 'fas fa-car-side', 'fas fa-car-crash', 'fas fa-car-battery', 'fas fa-oil-can', 'fas fa-tachometer-alt', 'fas fa-tachometer-alt-fast', 'fas fa-tachometer-alt-average', 'fas fa-tachometer-alt-slow', 'fas fa-gas-pump', 'fas fa-gauge-high', 'fas fa-gauge', 'fas fa-gauge-simple-high', 'fas fa-gauge-simple', 'fas fa-motorcycle', 'fas fa-bicycle', 'fas fa-swimmer', 'fas fa-skating', 'fas fa-skiing', 'fas fa-skiing-nordic', 'fas fa-snowboarding', 'fas fa-hiking', 'fas fa-walking', 'fas fa-running', 'fas fa-wheelchair', 'fas fa-blind', 'fas fa-deaf', 'fas fa-american-sign-language-interpreting', 'fas fa-assistive-listening-systems', 'fas fa-braille', 'fas fa-low-vision', 'fas fa-universal-access', 'fas fa-wheelchair-alt']
+}
     }
   },
 
   computed: {
-       filteredIcons() {
-      const categoryIcons = this.icons[this.selectedIconCategory] || []
-      if (!this.iconSearch) return categoryIcons
-      return categoryIcons.filter(icon => icon.includes(this.iconSearch))
-    },
+filteredIcons() {
+  const categoryIcons = this.icons[this.selectedIconCategory] || []
+  if (!this.iconSearch) return categoryIcons
+  return categoryIcons.filter(icon => icon.includes(this.iconSearch.toLowerCase()))
+},
     
     // ✅ MOVER podeAdicionarCor PARA DENTRO DE computed
     podeAdicionarCor() {
@@ -509,7 +511,6 @@ export default {
 
   mounted() {
     this.carregarGeneros()
-    this.carregarGeneros()
   
   // Carregar cores customizadas do localStorage
   const coresSalvas = localStorage.getItem('coresCustomizadas')
@@ -521,6 +522,10 @@ export default {
     }
   }
   },
+
+  beforeUnmount() {
+  if (this._toastTimer) clearTimeout(this._toastTimer)
+},
 
   methods: {
     // Carregar lista de gêneros
@@ -540,7 +545,7 @@ export default {
     this.generos = data
 
   } catch (err) {
-    this.mostrarMensagem("Erro ao carregar gêneros", "error")
+    this.showToast("Erro ao carregar gêneros", "error")
     this.generos = [] // garantir que não fica undefined
   } finally {
     this.loadingList = false
@@ -556,22 +561,18 @@ export default {
  !this.form.icon ||
  !this.form.color
 ){
- this.mostrarMensagem(
-   "Preencha todos os campos obrigatórios",
-   "error"
- )
+this.showToast("Preencha todos os campos obrigatórios", "error")
  return
 }
-      this.loading = true
-      this.limparMensagem()
+ this.loading = true
 
       try {
         if (this.modoEdicao) {
           await axios.put(`${API_URL}/${this.form.id}`, this.form)
-          this.mostrarMensagem("Gênero atualizado com sucesso!", "success")
+          this.showToast("Gênero atualizado com sucesso!", "success")
         } else {
           await axios.post(API_URL, this.form)
-          this.mostrarMensagem("Gênero cadastrado com sucesso!", "success")
+          this.showToast("Gênero cadastrado com sucesso!", "success")
         }
 
         this.resetarFormulario()
@@ -579,7 +580,7 @@ export default {
 
       } catch (err) {
         const msg = err.response?.data?.error || "Erro ao salvar gênero"
-        this.mostrarMensagem(msg, "error")
+        this.showToast(msg, "error")
       } finally {
         this.loading = false
       }
@@ -593,7 +594,7 @@ export default {
       this.coresCustomizadas.push(cor)
       // Salvar no localStorage para persistir
       localStorage.setItem('coresCustomizadas', JSON.stringify(this.coresCustomizadas))
-      this.mostrarMensagem("Cor adicionada à paleta!", "success")
+      this.showToast("Cor adicionada à paleta!", "success")
     }
   },
   
@@ -601,14 +602,14 @@ export default {
   removerCorCustomizada(index) {
     this.coresCustomizadas.splice(index, 1)
     localStorage.setItem('coresCustomizadas', JSON.stringify(this.coresCustomizadas))
-    this.mostrarMensagem("Cor removida da paleta", "success")
+    this.showToast("Cor removida da paleta", "success")
   },
   
   // Limpar todas as cores customizadas
   limparCoresCustomizadas() {
     this.coresCustomizadas = []
     localStorage.removeItem('coresCustomizadas')
-    this.mostrarMensagem("Todas as cores customizadas removidas", "success")
+    this.showToast("Todas as cores customizadas removidas", "success")
   },
   
   // Quando muda no color picker nativo
@@ -617,17 +618,16 @@ export default {
   },
 
     // Iniciar modo de edição
-    iniciarEdicao(genero) {
-      this.form = {
-        id: genero._id,
-        nome: genero.nome,
-        descricao: genero.descricao,
-        categoria: genero.categoria || "",
-        icon: genero.icon || "",
-        color: genero.color || "#6366f1"
-      }
-      this.modoEdicao = true
-      this.limparMensagem()
+iniciarEdicao(genero) {
+  this.form = {
+    id: genero._id,
+    nome: genero.nome,
+    descricao: genero.descricao,
+    categoria: genero.categoria || "",
+    icon: genero.icon || "fas fa-music",
+    color: genero.color || "#6366f1"
+  }
+  this.modoEdicao = true
       this.$nextTick(() => {
   this.$refs.formSection.scrollIntoView({
     behavior: 'smooth',
@@ -654,12 +654,12 @@ export default {
       this.loadingDelete = true
       try {
         await axios.delete(`${API_URL}/${this.generoParaExcluir._id}`)
-        this.mostrarMensagem("Gênero excluído com sucesso!", "success")
+        this.showToast("Gênero excluído com sucesso!", "success")
         await this.carregarGeneros()
         this.modalExcluir = false
         this.generoParaExcluir = null
       } catch (err) {
-        this.mostrarMensagem("Erro ao excluir gênero", "error")
+        this.showToast("Erro ao excluir gênero", "error")
       } finally {
         this.loadingDelete = false
       }
@@ -682,32 +682,35 @@ export default {
     },
 
     // Icon picker
-    selectIcon(icon) {
-      this.form.icon = icon
-      this.showIconPicker = false
-    },
+selectIcon(icon) {
+  this.form.icon = icon
+  this.showIconPicker = false
+  this.iconSearch = ''
+},
 
     // Utilitários
-    resetarFormulario() {
-      this.form = {
-        id: null,
-        nome: "",
-        descricao: "",
-        categoria: "",
-        icon: "",
-        color: "#6366f1"
-      }
-      this.modoEdicao = false
-    },
+resetarFormulario() {
+  this.form = {
+    id: null,
+    nome: "",
+    descricao: "",
+    categoria: "",
+    icon: "fas fa-music",
+    color: "#6366f1"
+  }
+  this.modoEdicao = false
+},
 
-    mostrarMensagem(texto, tipo) {
-      this.mensagem = { texto, tipo }
-      setTimeout(() => this.limparMensagem(), 5000)
-    },
-
-    limparMensagem() {
-      this.mensagem = null
-    }
+showToast(message, type = 'success') {
+  this.toast.show = false
+  this.$nextTick(() => {
+    this.toast = { show: true, message, type }
+    if (this._toastTimer) clearTimeout(this._toastTimer)
+    this._toastTimer = setTimeout(() => {
+      this.toast.show = false
+    }, 5000)
+  })
+}
   }
 }
 </script>
@@ -1169,7 +1172,81 @@ export default {
   max-height: 300px;
   overflow-y: auto;
 }
+/* Ajustes para ícones Font Awesome */
+.music-icon i,
+.section-icon i,
+.cat-icon,
+.selected-icon i,
+.selected-icon-placeholder i,
+.card-icon i,
+.item-icon i,
+.note i,
+.modal-icon i {
+  font-size: inherit;
+  line-height: 1;
+}
 
+.music-icon i {
+  font-size: 4rem;
+}
+
+.section-icon i {
+  font-size: 1.5rem;
+}
+
+.cat-icon {
+  font-size: 1.2rem;
+  width: 1.5rem;
+  text-align: center;
+}
+
+.selected-icon i {
+  font-size: 2rem;
+}
+
+.selected-icon-placeholder i {
+  font-size: 1.5rem;
+  color: #64748b;
+}
+
+.card-icon i,
+.item-icon i {
+  font-size: 1.8rem;
+}
+
+.note i {
+  font-size: 3rem;
+}
+
+.modal-icon i {
+  font-size: 4rem;
+  color: #f59e0b;
+}
+
+.alert-icon {
+  font-size: 1.3rem;
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+}
+
+.icon-option i {
+  font-size: 1.5rem;
+}
+
+.btn-add-color i {
+  font-size: 1.2rem;
+}
+
+.view-toggle button i {
+  font-size: 1.1rem;
+}
+
+.list-title-group h2 i {
+  margin-right: 8px;
+  color: #6366f1;
+}
 .dropdown-header {
   padding: 12px 16px;
   font-size: 0.75rem;
@@ -1503,33 +1580,78 @@ button:disabled {
 }
 
 /* Alertas */
-.alert {
-  padding: 16px 20px;
-  border-radius: 16px;
-  margin-top: 24px;
-  font-weight: 500;
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  animation: slideIn 0.4s ease;
+  gap: 14px;
+  padding: 16px 24px;
+  border-radius: 14px;
+  color: white;
+  font-weight: 500;
+  font-size: 0.95rem;
+  z-index: 1001;
+  animation: toastIn 0.3s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  max-width: 400px;
+  line-height: 1.4;
 }
 
-.alert.success {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+.toast.success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
 }
 
-.alert.error {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+.toast.error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
 }
 
-.alert-icon {
-  font-size: 1.3rem;
+.toast-icon {
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
+.toast-icon i {
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+.toast-text {
+  flex: 1;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.toast-slide-enter-active, .toast-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-slide-enter-from {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateX(100%);
+}
 /* Lista Header */
 .list-header {
   display: flex;
