@@ -82,13 +82,25 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
-    const usuarioLogado = await Usuario.findById(req.user?.id).select('role')
+    const usuarioLogado = await Usuario.findById(req.user?.id).select('email role nome')
 
+    if (!usuarioLogado) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
+    const emailsPermitidos = ["isa@gmail.com", "pablo@gmail.com"]
+    const isEmailAdmin = emailsPermitidos.includes(usuarioLogado.email)
     const isOwner = String(req.user?.id) === String(req.params.id)
     const isAdmin = usuarioLogado?.role === 'admin'
 
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
+    // ✅ Owner pode editar a si mesmo
+    // ✅ Admin (role) pode editar qualquer um
+    // ✅ Email da whitelist (isa/pablo) pode editar qualquer um
+    if (!isOwner && !isAdmin && !isEmailAdmin) {
+      return res.status(403).json({
+        error: 'Sem permissão para editar este usuário',
+        message: 'Apenas o próprio usuário ou administradores podem realizar esta ação'
+      })
     }
 
     const user = await userService.updateUser(req.params.id, req.body)
@@ -408,6 +420,21 @@ const getRecomendacoes = async (req, res) => {
   }
 }
 
+// Verificar se email já existe (usado no registro etapa 1)
+const verificarEmail = async (req, res) => {
+  try {
+    const { email } = req.query
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' })
+    }
+
+    const usuario = await Usuario.findOne({ email: email.toLowerCase().trim() })
+    res.json({ existe: !!usuario })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
 const RECURSOS_VALIDOS = [
   'curtidas',
   'playlists',
@@ -427,6 +454,7 @@ module.exports = {
   update,
   remove,
   search,
+  verificarEmail,
   getMixes,
   getRecomendacoes,
   getPublicCurtidas,

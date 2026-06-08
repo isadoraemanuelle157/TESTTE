@@ -86,7 +86,7 @@
             </li>
 
             <li>
-              <router-link to="/salademusica" class="nav-link" @click="$emit('close')">
+              <router-link to="/rooms" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-music"></i>
                 <span>Sala de Música</span>
               </router-link>

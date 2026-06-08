@@ -79,14 +79,35 @@ const deleteReproducao = async (req, res) => {
   }
 }
 
+const getEstatisticasMensais = async (req, res) => {
+  try {
+    const horas = await historicoService.getHorasOuvidasEsteMes(req.user.id)
+    res.json({ horasOuvidasEsteMes: horas })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+const getSequencia = async (req, res) => {
+  try {
+    const dias = await historicoService.getSequenciaAtual(req.user.id)
+    res.json({ sequencia: dias })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
 module.exports = {
   // Buscas
   getHistorico,
   addHistorico,
   clearHistorico,
-  // 🔥 Reproduções
+  // Reproduções
   getReproducoes,
   addReproducao,
   clearReproducoes,
-  deleteReproducao  // ← ADICIONAR
+  deleteReproducao,
+  // Estatísticas
+  getEstatisticasMensais,
+  getSequencia  // ← ADICIONAR
 }

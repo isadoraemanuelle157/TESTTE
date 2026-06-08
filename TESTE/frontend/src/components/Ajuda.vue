@@ -244,14 +244,12 @@ export default {
           id: 'playlist',
              icon: 'fa-solid fa-music',
           title: 'Músicas e Playlists',
-          description: 'Aprenda a criar, organizar, editar e compartilhar playlists com facilidade.',
+          description: 'Aprenda a criar, organizar e editar playlists com facilidade.',
           modalDescription: 'Aqui você encontra ajuda para montar playlists, adicionar faixas, reorganizar músicas e compartilhar suas coleções favoritas.',
           items: [
             'Criar uma nova playlist em poucos passos',
             'Adicionar ou remover músicas',
-            'Reordenar faixas da playlist',
-            'Deixar uma playlist pública ou privada',
-            'Compartilhar playlists com amigos'
+            'Deixar uma playlist pública ou privada'
           ],
           tip: 'Se você ouve por estilo ou momento do dia, crie playlists separadas como “Treino”, “Relaxar” e “Favoritas”.',
           keywords: ['playlist', 'música', 'musicas', 'faixa', 'curtir', 'favoritos', 'compartilhar']
@@ -282,8 +280,7 @@ export default {
             'Trocar a senha regularmente',
             'Revisar sessões ativas',
             'Controlar permissões da conta',
-            'Proteger dados pessoais',
-            'Receber ajuda em casos de acesso indevido'
+            'Proteger dados pessoais'
           ],
           tip: 'Use uma senha forte com letras, números e caracteres especiais para aumentar a proteção da conta.',
           keywords: ['segurança', 'privacidade', 'permissões', 'proteger', 'dados', 'acesso', 'login']

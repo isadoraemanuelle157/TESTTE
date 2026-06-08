@@ -33,7 +33,7 @@
       </div>
       
       <div class="header-actions">
-        <button class="action-btn" @click="openInviteModal">
+       <button class="action-btn" @click="showShareModal = true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="8.5" cy="7" r="4"/>
@@ -113,6 +113,7 @@
           @timeupdate="updateTime"
           @ended="nextTrack"
           @loadedmetadata="onLoadedMetadata"
+           @canplay="onCanPlay"
         ></audio>
 
         <!-- Progress Bar -->
@@ -193,48 +194,93 @@
       <!-- Sidebar -->
       <aside class="room-sidebar">
         <!-- Listeners -->
-        <div class="listeners-section">
-          <div class="section-header">
-            <h3>Ouvindo agora</h3>
-            <span class="listener-count">{{ roomListeners.length + 1 }}</span>
-          </div>
-          
-          <div class="listeners-list">
-            <!-- Host -->
-            <div class="listener-item host">
-              <div class="listener-avatar">
-                <img :src="currentUser.avatar" :alt="currentUser.name" />
-                <div class="host-badge">HOST</div>
-              </div>
-              <div class="listener-info">
-                <span class="listener-name">{{ currentUser.name }} (Você)</span>
-                <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
-              </div>
-              <div class="listener-wave" v-if="isPlaying">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
-            </div>
+  <!-- Listeners -->
+<div class="listeners-section">
+  <div class="section-header">
+    <h3>Ouvindo agora</h3>
+    <span class="listener-count">{{ activeListeners.length }}</span>
+  </div>
+  
+  <div class="listeners-list">
+    <!-- Dono da Sala -->
+    <div v-for="listener in activeListeners.filter(l => l.role === 'owner')" 
+         :key="listener.id" 
+         class="listener-item host">
+      <div class="listener-avatar">
+        <img :src="listener.avatar" :alt="listener.name" />
+        <div class="host-badge">HOST</div>
+      </div>
+      <div class="listener-info">
+        <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.value.id ? '(Você)' : '' }}</span>
+        <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
+      </div>
+      <div class="listener-wave" v-if="isPlaying">
+        <span v-for="n in 4" :key="n"></span>
+      </div>
+    </div>
 
-            <!-- Other Listeners -->
-            <div v-for="listener in roomListeners" :key="listener.id" class="listener-item">
-              <div class="listener-avatar">
-                <img :src="listener.avatar" :alt="listener.name" />
-                <div v-if="listener.isFriend" class="friend-badge">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                  </svg>
-                </div>
-              </div>
-              <div class="listener-info">
-                <span class="listener-name">{{ listener.name }}</span>
-                <span class="listener-status">{{ listener.status }}</span>
-              </div>
-              <div class="listener-wave" v-if="isPlaying && listener.synced">
-                <span v-for="n in 4" :key="n"></span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- Moderadores -->
+    <div v-for="listener in activeListeners.filter(l => l.role === 'moderator')" 
+         :key="listener.id" 
+         class="listener-item moderator">
+      <div class="listener-avatar">
+        <img :src="listener.avatar" :alt="listener.name" />
+        <div class="mod-badge">MOD</div>
+      </div>
+      <div class="listener-info">
+        <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.value.id ? '(Você)' : '' }}</span>
+        <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
+      </div>
+      <!-- Botão de expulsar (só dono pode expulsar moderadores) -->
+      <button 
+        v-if="currentUserRole === 'owner' && listener.id !== currentUser.value.id"
+        class="kick-btn"
+        @click="kickUser(listener.id, listener.name)"
+        title="Expulsar usuário"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      </button>
+      <div class="listener-wave" v-if="isPlaying">
+        <span v-for="n in 4" :key="n"></span>
+      </div>
+    </div>
+
+    <!-- Participantes -->
+    <div v-for="listener in activeListeners.filter(l => l.role === 'participant')" 
+         :key="listener.id" 
+         class="listener-item">
+      <div class="listener-avatar">
+        <img :src="listener.avatar" :alt="listener.name" />
+      </div>
+      <div class="listener-info">
+        <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.value.id ? '(Você)' : '' }}</span>
+        <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
+      </div>
+      <!-- Botão de expulsar (dono e moderadores podem expulsar participantes) -->
+      <button 
+        v-if="canKickUsers && listener.id !== currentUser.value.id && listener.role !== 'owner'"
+        class="kick-btn"
+        @click="kickUser(listener.id, listener.name)"
+        title="Expulsar usuário"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      </button>
+      <div class="listener-wave" v-if="isPlaying">
+        <span v-for="n in 4" :key="n"></span>
+      </div>
+    </div>
+  </div>
+</div>
 
         <!-- Queue -->
         <div class="queue-section">
@@ -291,13 +337,16 @@
             <h3>Chat da sala</h3>
             <span class="unread-badge" v-if="unreadMessages > 0">{{ unreadMessages }}</span>
           </div>
-          <div class="chat-messages" ref="chatContainer">
-            <div 
-              v-for="msg in recentMessages" 
-              :key="msg.id" 
-              class="chat-message"
-              :class="{ 'self': msg.userId === currentUser.id }"
-            >
+       <div class="chat-messages" ref="chatContainer">
+  <div 
+    v-for="msg in recentMessages" 
+    :key="msg.id" 
+    class="chat-message"
+    :class="{ 
+      'self': msg.userId === currentUser.id,
+      'system': msg.userId === 'system'
+    }"
+  >
               <img :src="msg.avatar" class="msg-avatar" />
               <div class="msg-content">
                 <span class="msg-author">{{ msg.userName }}</span>
@@ -323,21 +372,70 @@
         </div>
       </aside>
     </div>
+<Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showShareModal" class="modal-overlay" @click.self="showShareModal = false">
+      <div class="modal-content share-modal">
+        <div class="modal-header">
+          <h3>Convidar para Sala</h3>
+          <button class="close-btn" @click="showShareModal = false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="share-content">
+          <div class="invite-link">
+            <label>Link da Sala</label>
+            <div class="link-input-group">
+              <input :value="roomUrl" readonly />
+              <button class="copy-btn" @click="copyLink" :class="{ 'copied': copied }">
+                <span v-if="copied">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Copiado!
+                </span>
+                <span v-else>Copiar</span>
+              </button>
+            </div>
+            <p class="invite-hint">Compartilhe este link para convidar amigos para sua sala.</p>
+          </div>
+          <div class="share-options">
+            <h4>Compartilhar</h4>
+            <div class="share-buttons">
+              <button class="share-btn whatsapp" @click="shareVia('whatsapp')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                WhatsApp
+              </button>
+              <button class="share-btn telegram" @click="shareVia('telegram')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                Telegram
+              </button>
+              <button class="share-btn email" @click="shareVia('email')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                Email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
 
     <!-- Invite Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <RoomShareModal v-if="showShareModal" v-model="showShareModal" :room="room" />
-      </Transition>
-    </Teleport>
-    <Teleport to="body">
-      <Transition name="modal">
         <RoomJoinModal v-if="showJoinModal" v-model="showJoinModal" :room-id="roomId" @joined="onGuestJoined" />
-      </Transition>
-    </Teleport>
-    <Teleport to="body">
-      <Transition name="modal">
-        <RoomPreparationModal v-if="showSettingsModal" v-model="showSettingsModal" :is-editing="true" :room-data="room" @roomUpdated="onRoomUpdated" />
       </Transition>
     </Teleport>
 
@@ -438,7 +536,7 @@
                 </div>
               </div>
               
-  <div class="join-form">
+ <div class="join-form">
   <input 
     v-model="joinUserName" 
     placeholder="Seu nome"
@@ -446,8 +544,9 @@
     maxlength="20"
   />
 
+  <!-- Só mostra campo de senha se NÃO for dono e sala for privada -->
   <input
-    v-if="!room.isPublic"
+    v-if="!isRoomOwner && !room.isPublic"
     v-model="joinPassword"
     placeholder="Senha da sala"
     type="password"
@@ -458,10 +557,10 @@
 
   <button
     @click="joinRoom"
-    :disabled="!joinUserName.trim() || (!room.isPublic && !joinPassword.trim())"
+    :disabled="!joinUserName.trim() || (!room.isPublic && !isRoomOwner && !joinPassword.trim())"
     class="join-btn"
   >
-    Entrar na Sala
+    {{ isRoomOwner ? 'Entrar como Dono' : 'Entrar na Sala' }}
   </button>
 </div>
 
@@ -482,8 +581,15 @@ const router = useRouter()
 
 // Adicione estas refs
 const isLoggedIn = ref(false)
-const isRoomOwner = ref(false)
 const roomSource = ref('deezer') // 'deezer' ou 'spotify'
+// ========== LISTENERS & PERMISSÕES ==========
+const activeListeners = ref([])  // Lista de quem está na sala agora
+const currentUserRole = ref('participant') // 'owner' | 'moderator' | 'participant'
+const canKickUsers = computed(() => 
+  currentUserRole.value === 'owner' || currentUserRole.value === 'moderator'
+)
+const isRoomOwner = ref(false)
+// ==========================================
 
 // Adicione estas computed
 const canAddFullTracks = computed(() => isLoggedIn.value && roomSource.value === 'spotify')
@@ -555,53 +661,17 @@ const currentTrack = ref({
 const queue = ref([])
 
 // Listeners
-const roomListeners = ref([
-  {
-    id: 'user-2',
-    name: 'Maria Silva',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    status: 'Sincronizado',
-    synced: true,
-    isFriend: true
-  },
-  {
-    id: 'user-3',
-    name: 'João Pedro',
-    avatar: 'https://i.pravatar.cc/150?img=3',
-    status: 'Sincronizado',
-    synced: true,
-    isFriend: true
-  }
-])
+const roomListeners = ref([])
 
 // Chat
-const messages = ref([
-  {
-    id: 1,
-    userId: 'user-2',
-    userName: 'Maria Silva',
-    avatar: 'https://i.pravatar.cc/150?img=5',
-    text: 'Essa música é incrível! 🎵',
-    timestamp: Date.now() - 300000
-  },
-  {
-    id: 2,
-    userId: 'user-3',
-    userName: 'João Pedro',
-    avatar: 'https://i.pravatar.cc/150?img=3',
-    text: 'Concordo! Adoro o álbum todo',
-    timestamp: Date.now() - 240000
-  }
-])
+const messages = ref([])
 
 const newMessage = ref('')
 const unreadMessages = ref(0)
 
 // Modals
-const showInviteModal = ref(false)
+const showShareModal = ref(false)
 const showAddMusic = ref(false)
-const showSettings = ref(false)
-const showJoinModal = ref(false)
 
 // Search Deezer
 const searchQuery = ref('')
@@ -617,11 +687,7 @@ const joinUserName = ref('')
 const copied = ref(false)
 
 // Friends
-const onlineFriends = ref([
-  { id: 'f1', name: 'Carlos Mendes', avatar: 'https://i.pravatar.cc/150?img=12', listeningTo: 'Ouvindo Jazz', invited: false },
-  { id: 'f2', name: 'Fernanda Lima', avatar: 'https://i.pravatar.cc/150?img=8', listeningTo: null, invited: false },
-  { id: 'f3', name: 'Pedro Santos', avatar: 'https://i.pravatar.cc/150?img=15', listeningTo: 'Ouvindo Rock', invited: false }
-])
+const onlineFriends = ref([])
 
 // URL da sala
 const roomUrl = computed(() => {
@@ -670,10 +736,19 @@ const togglePlay = () => {
   
   if (isPlaying.value) {
     audioPlayer.value.pause()
+    isPlaying.value = false
   } else {
+    // ✅ Tenta tocar, se falhar (ex: autoplay policy), mostra erro
     audioPlayer.value.play()
+      .then(() => {
+        isPlaying.value = true
+      })
+      .catch(err => {
+        console.warn('Erro ao tocar:', err)
+        // Navegador bloqueou autoplay - usuário precisa clicar de novo
+        isPlaying.value = false
+      })
   }
-  isPlaying.value = !isPlaying.value
 }
 
 const toggleShuffle = () => shuffle.value = !shuffle.value
@@ -698,6 +773,18 @@ const nextTrack = () => {
   }
 }
 
+// ✅ ADICIONAR método onCanPlay
+const onCanPlay = () => {
+  // Quando o áudio está pronto para tocar
+  if (isPlaying.value && audioPlayer.value) {
+    audioPlayer.value.play().catch(err => {
+      console.warn('Erro ao tocar áudio:', err)
+      // Pode ser necessário interação do usuário primeiro
+    })
+  }
+}
+
+// ✅ MODIFICAR loadTrack para garantir que toca
 const loadTrack = (track) => {
   currentTrack.value = {
     id: track.id,
@@ -707,20 +794,25 @@ const loadTrack = (track) => {
     duration: track.duration,
     explicit: track.explicit_lyrics || false,
     deezerId: track.id,
-    preview: track.preview
+    preview: track.preview  // ✅ URL do preview do Deezer
   }
   currentTime.value = 0
   
   nextTick(() => {
     if (audioPlayer.value) {
-      audioPlayer.value.load()
+      audioPlayer.value.load()  // ✅ Força recarregar o src
+      
+      // ✅ Se estava tocando, continua tocando
       if (isPlaying.value) {
-        audioPlayer.value.play()
+        audioPlayer.value.play().catch(err => {
+          console.warn('Autoplay bloqueado:', err)
+          // Em alguns navegadores, precisa de interação do usuário
+          isPlaying.value = false
+        })
       }
     }
   })
 }
-
 const seekTo = (event) => {
   if (!audioPlayer.value || !currentTrack.value.duration) return
   const bar = event.currentTarget
@@ -910,16 +1002,14 @@ const inviteFriend = (friend) => {
 
 const leaveRoom = () => {
   if (confirm('Sair da sala?')) {
-    // Limpar URL
-    const url = new URL(window.location.href)
-    url.searchParams.delete('room')
-    window.history.replaceState({}, '', url)
-    window.location.reload()
+    router.push('/rooms')
   }
 }
 
 // Join Room Logic
-const checkRoomAccess = () => {
+// SUBSTITUA O MÉTODO checkRoomAccess() EXISTENTE POR ESTE:
+
+const checkRoomAccess = async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const roomIdFromUrl = urlParams.get('room')
   
@@ -927,37 +1017,76 @@ const checkRoomAccess = () => {
   const token = localStorage.getItem('token')
   isLoggedIn.value = !!token
   
-  if (roomIdFromUrl) {
-    room.value.id = roomIdFromUrl
-    const isOwner = localStorage.getItem(`room_${roomIdFromUrl}_owner`) === 'true'
-    isRoomOwner.value = isOwner
-    
-    // Load room data
-    loadRoomData(roomIdFromUrl)
-    
-    // Check if room requires auth
-    const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
-    if (savedRoom) {
-      const data = JSON.parse(savedRoom)
-      roomSource.value = data.source || 'deezer'
-      room.value.isPublic = data.isPublic !== false
-      
-      // If private room and not owner, check if invited
-      if (!data.isPublic && !isOwner && !isLoggedIn.value) {
-        showJoinModal.value = true
-        return
-      }
-    }
-    
-    if (!isOwner && !isLoggedIn.value) {
-      // Guest view - limited features
-      showJoinModal.value = true
-    }
-  } else {
+  if (!roomIdFromUrl) {
     // No room ID - redirect to creation page
     router.push('/rooms/create')
+    return
   }
+
+  room.value.id = roomIdFromUrl
+
+  // ✅ VERIFICA SE É DONO PRIMEIRO (tanto logado quanto visitante)
+  const isOwner = localStorage.getItem(`room_${roomIdFromUrl}_owner`) === 'true'
+  isRoomOwner.value = isOwner
+
+  // Load room data (API ou localStorage)
+  try {
+    await loadRoomData(roomIdFromUrl)
+  } catch (error) {
+    console.error('Erro ao carregar dados da sala:', error)
+  }
+
+  // Se é dono, já entra direto (não mostra join modal)
+  if (isOwner) {
+    showJoinModal.value = false
+    await addSelfToListeners()
+    await determineUserRole()
+    startListenersPolling()
+
+    messages.value.push({
+  id: Date.now(),
+  userId: 'system',
+  userName: 'Sistema',
+  avatar: 'https://via.placeholder.com/150',
+  text: `${currentUser.value.name} entrou na sala!`,
+  timestamp: Date.now()
+})
+    return
+  }
+
+  // NÃO é dono — verifica se precisa de senha
+  const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
+  
+  if (savedRoom) {
+    try {
+      const data = JSON.parse(savedRoom)
+      room.value.isPublic = data.isPublic !== false
+      roomSource.value = data.source || 'deezer'
+    } catch (e) {
+      console.error('Erro ao parse localStorage:', e)
+    }
+  }
+
+  // Sala privada E não é dono → mostra modal de senha
+  if (!room.value.isPublic) {
+    showJoinModal.value = true
+    return
+  }
+
+  // Sala pública E não é dono → mostra modal para colocar nome (guest)
+  if (!isLoggedIn.value) {
+    showJoinModal.value = true
+    return
+  }
+
+  // Logado, sala pública, não é dono → entra direto
+  showJoinModal.value = false
+  await addSelfToListeners()
+  await determineUserRole()
+  startListenersPolling()
 }
+
+// SUBSTITUA O MÉTODO joinRoom() EXISTENTE POR ESTE:
 
 const joinRoom = async () => {
   accessError.value = ''
@@ -967,26 +1096,106 @@ const joinRoom = async () => {
     return
   }
 
+  // ✅ DONO entra sem senha (verifica localStorage ou API)
+  if (isRoomOwner.value) {
+    currentUser.value.name = joinUserName.value.trim()
+    showJoinModal.value = false
+    await addSelfToListeners()
+    await determineUserRole()
+    startListenersPolling()
+    return
+  }
+
+  // Sala privada → precisa verificar senha
   if (!room.value.isPublic) {
-    const response = await apiFetch(`/api/rooms/${room.value.id}/join`, {
-      method: 'POST',
-      body: JSON.stringify({
-        password: joinPassword.value
-      })
-    })
-
-    const data = await response.json().catch(() => ({}))
-
-    if (!response.ok) {
-      accessError.value = data.error || 'Não foi possível entrar na sala'
+    const senha = joinPassword.value.trim()
+    if (!senha) {
+      accessError.value = 'Digite a senha da sala'
       return
     }
 
-    applyRoomData(data)
+    // ✅ Verifica se é sala de visitante (localStorage)
+    const isGuestRoom = !String(room.value.id).match(/^[0-9a-fA-F]{24}$/)
+    
+    if (isGuestRoom) {
+      // ... (código existente de verificação localStorage) ...
+      // Verificação localStorage para salas de visitante
+      const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+      const guestRoom = guestRooms.find(r => (r.id || r._id) === room.value.id)
+      
+      if (!guestRoom) {
+        accessError.value = 'Sala não encontrada.'
+        return
+      }
+
+      if (String(guestRoom.password || '') !== senha) {
+        accessError.value = 'Senha incorreta. Tente novamente.'
+        joinPassword.value = ''
+        return
+      }
+
+      // ✅ Senha correta para sala de visitante
+      currentUser.value.name = joinUserName.value.trim()
+      showJoinModal.value = false
+      await addSelfToListeners()
+      await determineUserRole()
+      startListenersPolling()
+      return
+    }
+
+    // ✅ Sala da API (MongoDB) — verifica no backend
+    try {
+      const response = await apiFetch(`/api/rooms/${room.value.id}/join`, {
+        method: 'POST',
+        body: JSON.stringify({ password: senha })
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        accessError.value = data.error || 'Senha incorreta. Tente novamente.'
+        joinPassword.value = ''
+        return
+      }
+
+      // ✅ Backend validou a senha
+      currentUser.value.name = joinUserName.value.trim()
+      showJoinModal.value = false
+
+      // ✅ Aplica dados da sala se vierem
+      if (data._id || data.id) {
+        applyRoomData(data)
+      }
+
+      await addSelfToListeners()
+      await determineUserRole()
+      startListenersPolling()
+
+      // ✅ Adiciona mensagem de sistema
+      messages.value.push({
+        id: Date.now(),
+        userId: 'system',
+        userName: 'Sistema',
+        avatar: 'https://via.placeholder.com/150',
+        text: `${joinUserName.value.trim()} entrou na sala!`,
+        timestamp: Date.now()
+      })
+
+    } catch (error) {
+      console.error('Erro ao verificar senha:', error)
+      accessError.value = 'Erro ao conectar. Tente novamente.'
+    }
+    return
   }
 
+  // Sala pública → entra direto (só precisa do nome)
   currentUser.value.name = joinUserName.value.trim()
   showJoinModal.value = false
+  
+  // ✅ Adiciona à lista de listeners e busca permissões
+  await addSelfToListeners()
+  await determineUserRole()
+  startListenersPolling()
 
   messages.value.push({
     id: Date.now(),
@@ -996,6 +1205,96 @@ const joinRoom = async () => {
     text: `${joinUserName.value.trim()} entrou na sala!`,
     timestamp: Date.now()
   })
+}
+// ========== GERENCIAR LISTENERS ==========
+
+const fetchActiveListeners = async () => {
+  if (!room.value.id) return
+  
+  try {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`)
+    if (response.ok) {
+      const listeners = await response.json()
+      activeListeners.value = listeners
+      
+      // Atualiza a contagem na UI
+      roomListeners.value = listeners.filter(l => l.id !== currentUser.value.id)
+    }
+  } catch (error) {
+    console.error('Erro ao buscar listeners:', error)
+  }
+}
+
+const addSelfToListeners = async () => {
+  if (!room.value.id) return
+  
+  try {
+    const userData = {
+      name: currentUser.value.name,
+      avatar: currentUser.value.avatar,
+      guestId: isLoggedIn.value ? undefined : currentUser.value.id
+    }
+    
+    await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    })
+    
+    // Busca lista atualizada
+    await fetchActiveListeners()
+  } catch (error) {
+    console.error('Erro ao adicionar listener:', error)
+  }
+}
+
+const kickUser = async (userId, userName) => {
+  if (!confirm(`Expulsar ${userName} da sala?`)) return
+  
+  try {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+      method: 'DELETE',
+      body: JSON.stringify({ userIdToRemove: userId })
+    })
+    
+    if (response.ok) {
+      // Remove da lista local
+      activeListeners.value = activeListeners.value.filter(l => l.id !== userId)
+      
+      // Adiciona mensagem de sistema localmente
+      messages.value.push({
+        id: Date.now(),
+        userId: 'system',
+        userName: 'Sistema',
+        avatar: 'https://via.placeholder.com/150',
+        text: `${userName} foi removido da sala.`,
+        timestamp: Date.now()
+      })
+    } else {
+      const error = await response.json()
+      alert(error.error || 'Erro ao expulsar usuário')
+    }
+  } catch (error) {
+    console.error('Erro ao expulsar:', error)
+    alert('Erro ao expulsar usuário')
+  }
+}
+
+const determineUserRole = async () => {
+  if (!room.value.id || !isLoggedIn.value) {
+    currentUserRole.value = 'participant'
+    return
+  }
+  
+  try {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/role`)
+    if (response.ok) {
+      const { role } = await response.json()
+      currentUserRole.value = role
+      isRoomOwner.value = role === 'owner'
+    }
+  } catch (error) {
+    console.error('Erro ao verificar role:', error)
+  }
 }
 
 const saveRoomState = () => {
@@ -1064,7 +1363,10 @@ const redirectToLogin = () => {
   window.location.href = '/login'
 }
 
+
 const applyRoomData = (data) => {
+  if (!data) return  // ← ADICIONE ESTA LINHA
+  
   const normalized = normalizeRoom(data)
 
   room.value = {
@@ -1119,8 +1421,35 @@ const loadRoomData = async (roomId) => {
 }
 
 
+let listenersInterval = null
+
+const startListenersPolling = () => {
+  // Busca imediatamente
+  fetchActiveListeners()
+  
+  // Poll a cada 5 segundos
+  listenersInterval = setInterval(fetchActiveListeners, 5000)
+}
+
+const stopListenersPolling = () => {
+  if (listenersInterval) {
+    clearInterval(listenersInterval)
+    listenersInterval = null
+  }
+}
+
+// Modificar onUnmounted para limpar
 onUnmounted(() => {
   clearTimeout(searchTimeout)
+  stopListenersPolling()
+  
+  // Remove self da lista de listeners ao sair
+  if (room.value.id && currentUser.value.id) {
+    apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+      method: 'DELETE',
+      body: JSON.stringify({ userIdToRemove: currentUser.value.id })
+    }).catch(() => {})
+  }
 })
 </script>
 
@@ -1322,7 +1651,51 @@ onUnmounted(() => {
 .action-btn.settings {
   padding: 0.625rem;
 }
+/* Moderador Badge */
+.mod-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 0.5rem;
+  font-weight: 800;
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: 2px solid var(--bg-card);
+}
 
+/* Botão de Expulsar */
+.kick-btn {
+  background: rgba(255, 107, 107, 0.2);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff6b6b;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s;
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+
+.listener-item:hover .kick-btn {
+  opacity: 1;
+}
+
+.kick-btn:hover {
+  background: rgba(255, 107, 107, 0.4);
+  transform: scale(1.1);
+}
+
+/* Moderador item highlight */
+.listener-item.moderator {
+  border-left: 3px solid #667eea;
+}
 /* Layout */
 .room-layout {
   position: relative;
@@ -1774,7 +2147,21 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 0.75rem;
 }
-
+.chat-message.system {
+  justify-content: center;
+}
+.chat-message.system .msg-content {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 90%;
+}
+.chat-message.system .msg-avatar,
+.chat-message.system .msg-author {
+  display: none;
+}
 .listener-item {
   display: flex;
   align-items: center;

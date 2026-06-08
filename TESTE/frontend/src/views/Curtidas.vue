@@ -85,45 +85,64 @@
               @click="closeMenu"
             ></div>
 
-            <transition name="menu-pop">
-              <div
-                v-if="activeMenuIndex === index"
-                class="modern-dropdown"
-                :style="dropdownPosition"
-                ref="dropdownMenus"
-                @click.stop
-              >
-                <div class="dropdown-options">
-                  <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
-                    <div class="option-icon playlist-icon">
-                      <i class="fa fa-plus-square-o"></i>
-                    </div>
-                    <div class="option-content">
-                      <span class="option-label">Adicionar à playlist</span>
-                      <span class="option-hint">Escolha uma playlist existente</span>
-                    </div>
-                    <i class="fa fa-chevron-right option-arrow"></i>
-                  </button>
+       <transition name="menu-pop">
+  <div
+    v-if="activeMenuIndex === index"
+    class="modern-dropdown"
+    :style="dropdownPosition"
+    ref="dropdownMenus"
+    @click.stop
+  >
+    <div class="dropdown-options">
+      <!-- BOTÃO ADICIONAR À PLAYLIST (com estado) -->
+      <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
+        <div class="option-icon playlist-icon"
+             :class="{ active: getEstadoMusica(musica.id).playlists.length > 0 }">
+          <i :class="getEstadoMusica(musica.id).playlists.length > 0 
+                     ? 'fa fa-check-square' 
+                     : 'fa fa-plus-square-o'"></i>
+        </div>
+        <div class="option-content">
+          <span class="option-label">
+            {{ getEstadoMusica(musica.id).playlists.length > 0 
+               ? 'Em playlist(s)' 
+               : 'Adicionar à playlist' }}
+          </span>
+          <span class="option-hint">
+            {{ getEstadoMusica(musica.id).playlists.length > 0 
+               ? `Já está em ${getEstadoMusica(musica.id).playlists.length} playlist(s)` 
+               : 'Escolha uma playlist existente' }}
+          </span>
+        </div>
+        <i class="fa fa-chevron-right option-arrow"></i>
+      </button>
 
-                  <button class="dropdown-option" @click="favoritarMusica(musica)">
-                    <div class="option-icon favorite-icon">
-                      <i class="fa fa-star-o"></i>
-                    </div>
-                    <div class="option-content">
-                      <span class="option-label">Favoritar</span>
-                      <span class="option-hint">Adicionar aos favoritos especiais</span>
-                    </div>
-                    <i class="fa fa-chevron-right option-arrow"></i>
-                  </button>
-                </div>
+      <!-- BOTÃO FAVORITAR (com estado) -->
+      <button class="dropdown-option" @click="favoritarMusica(musica)">
+        <div class="option-icon favorite-icon" 
+             :class="{ active: getEstadoMusica(musica.id).favoritada }">
+          <i :class="getEstadoMusica(musica.id).favoritada ? 'fa fa-star' : 'fa fa-star-o'"></i>
+        </div>
+        <div class="option-content">
+          <span class="option-label">
+            {{ getEstadoMusica(musica.id).favoritada ? 'Remover dos favoritos' : 'Favoritar' }}
+          </span>
+          <span class="option-hint">
+            {{ getEstadoMusica(musica.id).favoritada ? 'Já está nos favoritos especiais' : 'Adicionar aos favoritos especiais' }}
+          </span>
+        </div>
+        <i class="fa fa-chevron-right option-arrow"></i>
+      </button>
+    </div>
 
-                <div class="dropdown-footer">
-                  <button class="dropdown-close" @click="closeMenu">
-                    <i class="fa fa-times"></i> Fechar
-                  </button>
-                </div>
-              </div>
-            </transition>
+    <div class="dropdown-footer">
+      <button class="dropdown-close" @click="closeMenu">
+        <i class="fa fa-times"></i> Fechar
+      </button>
+    </div>
+  </div>
+</transition>
+
           </Teleport>
         </div>
       </div>
@@ -197,49 +216,65 @@
             </div>
 
             <div v-else class="playlist-grid-modern">
-              <div
-                v-for="playlist in filteredPlaylists"
-                :key="playlist._id"
-                class="playlist-card-modern"
-                :class="{ adding: playlistBeingAdded === playlist._id, added: playlistJustAdded === playlist._id }"
-                @click="adicionarNaPlaylist(playlist._id)"
-              >
-                <div class="playlist-card-cover">
-                  <img
-                    v-if="playlist.capa || playlist.musicas?.[0]?.cover"
-                    :src="playlist.capa || playlist.musicas[0].cover"
-                    :alt="playlist.nome"
-                  />
+            <!-- LOCALIZE ESTE TRECHO (~linha 195): -->
+<div
+  v-for="playlist in filteredPlaylists"
+  :key="playlist._id"
+  class="playlist-card-modern"
+  :class="{ 
+    adding: playlistBeingAdded === playlist._id, 
+    added: playlistJustAdded === playlist._id,
+    'already-in-card': jaEstaNaPlaylist(playlist._id) && playlistJustAdded !== playlist._id  // ← ADICIONE ESTA LINHA
+  }"
+  @click="adicionarNaPlaylist(playlist._id)"
+>
+        <div class="playlist-card-cover">
+  <img
+    v-if="playlist.capa || playlist.musicas?.[0]?.cover"
+    :src="playlist.capa || playlist.musicas[0].cover"
+    :alt="playlist.nome"
+    @error="onImageError($event)"
+  />
+  <div v-else class="playlist-cover-placeholder black-cover">
+    <i class="fa fa-music"></i>
+  </div>
 
-                  <div v-else class="playlist-cover-placeholder">
-                    <i class="fa fa-music"></i>
-                  </div>
+  <div v-if="playlistBeingAdded === playlist._id" class="playlist-overlay-loading">
+    <div class="spinner-tiny"></div>
+  </div>
 
-                  <div v-if="playlistBeingAdded === playlist._id" class="playlist-overlay-loading">
-                    <div class="spinner-tiny"></div>
-                  </div>
+  <div v-if="playlistJustAdded === playlist._id" class="playlist-overlay-success">
+    <i class="fa fa-check"></i>
+  </div>
+</div>
 
-                  <div v-if="playlistJustAdded === playlist._id" class="playlist-overlay-success">
-                    <i class="fa fa-check"></i>
-                  </div>
-                </div>
+           <div class="playlist-card-info">
+  <strong class="playlist-card-name">
+    {{ playlist.nome }}
+    <!-- ADICIONE ESTE SPAN: -->
+    <span v-if="jaEstaNaPlaylist(playlist._id) && playlistJustAdded !== playlist._id" class="playlist-added-indicator">
+      <i class="fa fa-check-circle"></i> Já está aqui
+    </span>
+  </strong>
+  <span class="playlist-card-count">
+    {{ playlist.musicas?.length || 0 }} músicas
+    <span v-if="playlist.privada" class="playlist-private-badge"><i class="fa fa-lock"></i></span>
+  </span>
+</div>
 
-                <div class="playlist-card-info">
-                  <strong class="playlist-card-name">{{ playlist.nome }}</strong>
-                  <span class="playlist-card-count">
-                    {{ playlist.musicas?.length || 0 }} músicas
-                <span v-if="playlist.privada" class="playlist-private-badge"><i class="fa fa-lock"></i></span>
-                  </span>
-                </div>
-
-                <button
-                  class="btn-add-modern"
-                  :class="{ added: playlistJustAdded === playlist._id }"
-                  :disabled="playlistBeingAdded === playlist._id"
-                >
-                  <i v-if="playlistJustAdded === playlist._id" class="fa fa-check"></i>
-                  <i v-else class="fa fa-plus"></i>
-                </button>
+            <!-- LOCALIZE ESTE TRECHO (~linha 215): -->
+<button
+  class="btn-add-modern"
+  :class="{ 
+    added: playlistJustAdded === playlist._id || jaEstaNaPlaylist(playlist._id),
+    'already-in': jaEstaNaPlaylist(playlist._id) && playlistJustAdded !== playlist._id
+  }"
+  :disabled="playlistBeingAdded === playlist._id || jaEstaNaPlaylist(playlist._id)"
+>
+  <i v-if="playlistJustAdded === playlist._id" class="fa fa-check"></i>
+  <i v-else-if="jaEstaNaPlaylist(playlist._id)" class="fa fa-check-circle"></i>
+  <i v-else class="fa fa-plus"></i>
+</button>
               </div>
             </div>
           </div>
@@ -264,6 +299,9 @@ export default {
     musicas: [],
     isLoading: false,
     ultimaMusicaRemovida: null,
+        playlistsComMusica: [], 
+           estadoMusicas: {},     // ← ADICIONAR: IDs das playlists que já têm a música
+    musicaFavoritada: false, 
     ultimoIndiceRemovido: null,
     activeMenuIndex: null,
     dropdownPosition: {
@@ -338,6 +376,16 @@ computed: {
   }
 },
   methods: {
+    // ADICIONE NO methods: (antes do fechamento do objeto methods)
+jaEstaNaPlaylist(playlistId) {
+  if (!playlistId) return false
+  const target = String(playlistId)
+  return this.playlistsComMusica.some(id => String(id) === target)
+},
+
+    getEstadoMusica(musicaId) {
+    return this.estadoMusicas[musicaId] || { favoritada: false, playlists: [] }
+  },
     async registrarHistorico(musica) {
   try {
     const token = localStorage.getItem('token')
@@ -387,7 +435,6 @@ parseDuration(durationStr) {
   }
   return 30
 },
-
 async carregarCurtidas() {
   this.isLoading = true
   try {
@@ -398,9 +445,7 @@ async carregarCurtidas() {
     }
 
     const res = await fetch(`http://localhost:3002/curtidas`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
 
     if (!res.ok) {
@@ -412,9 +457,8 @@ async carregarCurtidas() {
 
     const data = await res.json()
 
-    // 🔥 FILTRAR APENAS SPOTIFY (e local se quiser manter)
     this.musicas = data
-      .filter(c => c.source === 'spotify' || c.source === 'local')  // ← ADICIONAR FILTRO
+      .filter(c => c.source === 'spotify' || c.source === 'local')
       .map(c => ({
         id: c.id,
         title: c.nome,
@@ -426,13 +470,341 @@ async carregarCurtidas() {
         duration: c.duration || 180,
         ano: c.ano || null
       }))
-      
+
+    // 🔥 NOVO: carregar estado (playlists + favoritada) de TODAS as músicas
+    await this.carregarEstadosMusicas()
 
   } catch (err) {
     console.error("Erro ao carregar curtidas:", err)
     this.musicas = []
   } finally {
     this.isLoading = false
+  }
+},
+
+// 🔥 NOVO MÉTODO: busca estado de todas as músicas em paralelo
+async carregarEstadosMusicas() {
+  const token = localStorage.getItem("token")
+  if (!token || this.musicas.length === 0) return
+
+  try {
+    const estados = await Promise.all(
+      this.musicas.map(async (musica) => {
+        try {
+          const res = await fetch(
+            `http://localhost:3002/curtidas/${musica.id}/estado?source=${musica.source || 'local'}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          if (!res.ok) return { id: musica.id, favoritada: false, playlists: [] }
+          const data = await res.json()
+          return {
+            id: musica.id,
+            favoritada: data.favoritada || false,
+            playlists: data.playlists || []
+          }
+        } catch {
+          return { id: musica.id, favoritada: false, playlists: [] }
+        }
+      })
+    )
+
+    // Atualiza objeto reativo de uma só vez
+// LOCALIZE ESTE TRECHO no carregarEstadosMusicas (~linha 310):
+const novoEstado = {}
+estados.forEach(e => {
+  novoEstado[e.id] = { 
+    favoritada: e.favoritada, 
+    playlists: (e.playlists || []).map(id => String(id))  // ← CONVERTE PARA STRING
+  }
+})
+this.estadoMusicas = novoEstado
+
+  } catch (err) {
+    console.error('Erro ao carregar estados das músicas:', err)
+  }
+},
+
+async adicionarAPlaylist(musica) {
+  this.closeMenu()
+  this.musicaSelecionada = musica
+  this.showPlaylistModal = true
+  this.playlistSearchQuery = ''
+  this.playlistBeingAdded = null
+  this.playlistJustAdded = null
+  this.isLoadingPlaylists = true
+  this.playlistsComMusica = []
+  this.playlists = []
+
+  try {
+    const token = localStorage.getItem("token")
+
+    // 🔥 1. BUSCA PLAYLISTS + ESTADO EM PARALELO
+    const [playlistsRes, estadoRes] = await Promise.all([
+      fetch(`http://localhost:3002/playlists`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch(
+        `http://localhost:3002/curtidas/${musica.id}/estado?source=${musica.source || 'local'}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+    ])
+
+    const playlistsData = await playlistsRes.json()
+    const estadoData = estadoRes.ok ? await estadoRes.json() : { playlists: [], favoritada: false }
+
+    // 🔥 2. CARREGA MÚSICAS DE CADA PLAYLIST EM PARALELO
+    const playlistsCompletas = await Promise.all(
+      playlistsData.map(async (pl) => {
+        // Se já vier com músicas populadas, mantém
+        if (Array.isArray(pl.musicas) && pl.musicas.length > 0 && pl.musicas[0].cover !== undefined) {
+          return pl
+        }
+
+        // Senão, busca os detalhes da playlist (que devem trazer as músicas)
+        try {
+          const detRes = await fetch(`http://localhost:3002/playlists/${pl._id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (detRes.ok) {
+            const det = await detRes.json()
+            return {
+              ...pl,
+              musicas: det.musicas || det.playlist?.musicas || pl.musicas || []
+            }
+          }
+        } catch (e) {
+          console.warn(`Erro ao carregar músicas da playlist ${pl._id}:`, e)
+        }
+        return { ...pl, musicas: pl.musicas || [] }
+      })
+    )
+
+    this.playlists = playlistsCompletas
+
+    // 🔥 3. MONTA LISTA DE PLAYLISTS QUE JÁ CONTÊM A MÚSICA
+    //    Combina dados do endpoint /estado COM verificação local nas músicas carregadas
+    const idsDoEstado = (estadoData.playlists || []).map(id => String(id))
+    const idsLocais = playlistsCompletas
+      .filter(pl => {
+        if (!Array.isArray(pl.musicas)) return false
+        return pl.musicas.some(m => {
+          const mId = String(m.id || m._id || m.musicaId || '')
+          const mSource = m.source || 'local'
+          return mId === String(musica.id) && mSource === (musica.source || 'local')
+        })
+      })
+      .map(pl => String(pl._id))
+
+    // União dos dois (sem duplicar)
+    this.playlistsComMusica = [...new Set([...idsDoEstado, ...idsLocais])]
+
+    // 🔥 4. ATUALIZA estadoMusicas para refletir no dropdown também
+    this.estadoMusicas[musica.id] = {
+      favoritada: estadoData.favoritada || false,
+      playlists: this.playlistsComMusica
+    }
+
+  } catch (err) {
+    console.error('Erro ao carregar playlists:', err)
+    this.showToast({
+      title: "Erro",
+      message: "Não foi possível carregar playlists",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  } finally {
+    this.isLoadingPlaylists = false
+  }
+},
+
+
+async adicionarNaPlaylist(playlistId) {
+  if (this.jaEstaNaPlaylist(playlistId)) {
+    this.showToast({
+      title: "Já adicionada",
+      message: "Esta música já está nesta playlist",
+      type: "info",
+      icon: "fa fa-info-circle"
+    })
+    return
+  }
+
+  if (this.playlistBeingAdded) return
+  this.playlistBeingAdded = playlistId
+
+  try {
+    const token = localStorage.getItem("token")
+    const musica = this.musicaSelecionada
+    const body = { source: musica.source || 'local' }
+
+    if (musica.source && musica.source !== 'local') {
+      body.dadosMusica = {
+        titulo: musica.title || 'Sem título',
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: this.parseDuration(musica.duration),
+        ano: musica.ano || null,
+        album: musica.album || ''
+      }
+    }
+
+    const res = await fetch(
+      `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      }
+    )
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || `Erro ${res.status}`)
+    }
+
+    this.playlistBeingAdded = null
+    this.playlistJustAdded = playlistId
+
+    // 🔥 Atualiza estado local
+    const playlistIdStr = String(playlistId)
+    if (!this.playlistsComMusica.includes(playlistIdStr)) {
+      this.playlistsComMusica.push(playlistIdStr)
+    }
+
+    // 🔥 Atualiza também o array de músicas da playlist (para o contador / capa)
+    const plLocal = this.playlists.find(p => String(p._id) === playlistIdStr)
+    if (plLocal) {
+      if (!Array.isArray(plLocal.musicas)) plLocal.musicas = []
+      const jaTem = plLocal.musicas.some(m => String(m.id || m._id) === String(musica.id))
+      if (!jaTem) {
+        plLocal.musicas.push({
+          id: musica.id,
+          title: musica.title,
+          cover: musica.cover,
+          source: musica.source || 'local'
+        })
+      }
+    }
+
+    if (this.estadoMusicas[musica.id]) {
+      if (!this.estadoMusicas[musica.id].playlists.includes(playlistIdStr)) {
+        this.estadoMusicas[musica.id].playlists.push(playlistIdStr)
+      }
+    } else {
+      this.estadoMusicas[musica.id] = { favoritada: false, playlists: [playlistIdStr] }
+    }
+
+    this.showToast({
+      title: "Adicionada!",
+      message: `"${musica.title}" foi adicionada à playlist`,
+      type: "success",
+      icon: "fa fa-check"
+    })
+
+    setTimeout(() => {
+      this.showPlaylistModal = false
+      this.playlistJustAdded = null
+    }, 1200)
+
+  } catch (err) {
+    this.playlistBeingAdded = null
+    console.error(err)
+    this.showToast({
+      title: "Erro",
+      message: err.message || "Não foi possível adicionar",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  }
+},
+
+
+async favoritarMusica(musica) {
+  this.closeMenu()
+
+  try {
+    const token = localStorage.getItem("token")
+
+    const body = { tipo: "musica" }
+
+    if (musica.source && musica.source !== 'local') {
+      body.source = musica.source
+      body.tipoItem = 'musica'
+      body.dadosItem = {
+        titulo: musica.title || 'Sem título',
+        artista: musica.artist || 'Desconhecido',
+        capa: musica.cover || '',
+        previewUrl: musica.url || '',
+        duration: this.parseDuration(musica.duration),
+        ano: musica.ano || null,
+        album: musica.album || ''
+      }
+    }
+
+    const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || errData.message || `Erro ${res.status}`)
+    }
+
+    const data = await res.json()
+
+    // 🔥 Garante que o objeto exista antes de mutar
+    if (!this.estadoMusicas[musica.id]) {
+      this.estadoMusicas[musica.id] = { favoritada: false, playlists: [] }
+    }
+
+    if (data.favorited) {
+      this.estadoMusicas[musica.id].favoritada = true
+      this.showToast({
+        title: "⭐ Favoritada!",
+        message: `"${musica.title}" adicionada aos favoritos`,
+        type: "success",
+        icon: "fa fa-star"
+      })
+    } else {
+      this.estadoMusicas[musica.id].favoritada = false
+      this.showToast({
+        title: "Removida",
+        message: `"${musica.title}" removida dos favoritos`,
+        type: "info",
+        icon: "fa fa-star-o"
+      })
+    }
+  } catch (err) {
+    console.error('Erro completo ao favoritar:', err)
+    this.showToast({
+      title: "Erro",
+      message: err.message || "Não foi possível favoritar",
+      type: "error",
+      icon: "fa fa-times"
+    })
+  }
+},
+
+// 🔥 Handler para fallback caso imagem da playlist falhe ao carregar
+onImageError(event) {
+  const img = event.target
+  const parent = img.parentElement
+  img.style.display = 'none'
+  // injeta placeholder preto se ainda não existir
+  if (!parent.querySelector('.playlist-cover-placeholder')) {
+    const div = document.createElement('div')
+    div.className = 'playlist-cover-placeholder black-cover'
+    div.innerHTML = '<i class="fa fa-music"></i>'
+    parent.appendChild(div)
   }
 },
 
@@ -490,176 +862,6 @@ closeMenu() {
 setDropdownTriggerRef(el, index) {
   if (el) {
     this.dropdownTriggerRefs[index] = el
-  }
-},
-
-
-async adicionarAPlaylist(musica) {
-  this.closeMenu()
-  this.musicaSelecionada = musica
-  this.showPlaylistModal = true
-  this.playlistSearchQuery = ''
-  this.playlistBeingAdded = null
-  this.playlistJustAdded = null
-  this.isLoadingPlaylists = true
-
-  try {
-    const token = localStorage.getItem("token")
-    const res = await fetch(`http://localhost:3002/playlists`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    const data = await res.json()
-    this.playlists = data
-  } catch (err) {
-    console.error(err)
-    this.showToast({
-      title: "Erro",
-      message: "Não foi possível carregar playlists",
-      type: "error",
-      icon: "fa fa-times"
-    })
-  } finally {
-    this.isLoadingPlaylists = false
-  }
-},
-    
-async adicionarNaPlaylist(playlistId) {
-  // Evita clique duplo
-  if (this.playlistBeingAdded) return
-
-  this.playlistBeingAdded = playlistId
-
-  try {
-    const token = localStorage.getItem("token")
-    const musica = this.musicaSelecionada
-
-    const body = {
-      source: musica.source || 'local'
-    }
-
-    if (musica.source && musica.source !== 'local') {
-      body.dadosMusica = {
-        titulo: musica.title || 'Sem título',
-        artista: musica.artist || 'Desconhecido',
-        capa: musica.cover || '',
-        previewUrl: musica.url || '',
-        duration: this.parseDuration(musica.duration),
-        ano: musica.ano || null,
-        album: musica.album || ''
-      }
-    }
-
-    const res = await fetch(
-      `http://localhost:3002/playlists/${playlistId}/musicas/${musica.id}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      }
-    )
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
-      throw new Error(errData.error || `Erro ${res.status}`)
-    }
-
-    // ✅ SUCESSO: mostra check por 1.5s depois fecha
-    this.playlistBeingAdded = null
-    this.playlistJustAdded = playlistId
-    
-    this.showToast({
-      title: "Adicionada!",
-      message: `"${musica.title}" foi adicionada à playlist`,
-      type: "success",
-      icon: "fa fa-check"
-    })
-
-    // Fecha modal após delay
-    setTimeout(() => {
-      this.showPlaylistModal = false
-      this.playlistJustAdded = null
-    }, 1200)
-
-  } catch (err) {
-    this.playlistBeingAdded = null
-    console.error(err)
-    this.showToast({
-      title: "Erro",
-      message: err.message || "Não foi possível adicionar",
-      type: "error",
-      icon: "fa fa-times"
-    })
-  }
-},
-
- async favoritarMusica(musica) {
-  this.closeMenu()
-
-  try {
-    const token = localStorage.getItem("token")
-
-    const body = {
-      tipo: "musica"
-    }
-
-    if (musica.source && musica.source !== 'local') {
-      body.source = musica.source
-      body.tipoItem = 'musica'        // ← envia tipoItem
-      body.dadosItem = {              // ← envia dadosItem (não dadosMusica)
-        titulo: musica.title || 'Sem título',
-        artista: musica.artist || 'Desconhecido',
-        capa: musica.cover || '',
-        previewUrl: musica.url || '',
-        duration: this.parseDuration(musica.duration),
-        ano: musica.ano || null,
-        album: musica.album || ''
-      }
-    }
-
-    const res = await fetch(`http://localhost:3002/favoritas/${musica.id}/favoritar`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    })
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
-      console.error('Erro do servidor ao favoritar:', errData)
-      throw new Error(errData.error || errData.message || `Erro ${res.status}`)
-    }
-
-    const data = await res.json()
-
-    if (data.favorited) {
-      this.showToast({
-        title: "⭐ Favoritada!",
-        message: `"${musica.title}" adicionada aos favoritos`,
-        type: "success",
-        icon: "fa fa-star"
-      })
-      window.dispatchEvent(new Event('favoritas-updated'))
-    } else {
-      this.showToast({
-        title: "Removida",
-        message: `"${musica.title}" removida dos favoritos`,
-        type: "info",
-        icon: "fa fa-star-o"
-      })
-    }
-  } catch (err) {
-    console.error('Erro completo ao favoritar:', err)
-    this.showToast({
-      title: "Erro",
-      message: err.message || "Não foi possível favoritar",
-      type: "error",
-      icon: "fa fa-times"
-    })
   }
 },
 
@@ -1190,7 +1392,58 @@ window.dispatchEvent(new CustomEvent('play-song', {
   z-index: 10001;
   overflow: hidden;
 }
+/* LOCALIZE e SUBSTITUA ou ADICIONE (~linha 880): */
+.btn-add-modern.already-in {
+  background: rgba(16, 185, 129, 0.25) !important;  /* mais visível */
+  color: #10b981 !important;
+  cursor: default;
+  opacity: 1;  /* não fica apagado */
+}
 
+.btn-add-modern.already-in:hover {
+  transform: none;
+  background: rgba(16, 185, 129, 0.25) !important;
+  color: #10b981 !important;
+}
+.playlist-cover-placeholder.black-cover {
+  background: #000000 !important;
+  background-image: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-cover-placeholder.black-cover i {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 20px;
+}
+/* Ícone playlist ativo (já está em playlist) */
+.option-icon.playlist-icon.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2));
+  color: #10b981;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+
+/* Ícone favorito ativo */
+.option-icon.favorite-icon.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(217, 119, 6, 0.25));
+  color: #fbbf24;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+
+.option-icon.favorite-icon.active i {
+  animation: starPulse 0.4s ease;
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.btn-add-modern.already-in:hover {
+  transform: none;
+  background: rgba(16, 185, 129, 0.15);
+}
 /* Animação do Menu */
 .menu-pop-enter-active {
   animation: menuPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1338,7 +1591,41 @@ window.dispatchEvent(new CustomEvent('play-song', {
   gap: 2px;
   min-width: 0;
 }
+/* LOCALIZE (~linha 900, depois de .playlist-card-modern.added) e ADICIONE: */
 
+/* Card quando a música já está na playlist */
+.playlist-card-modern.already-in-card {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  cursor: default;
+}
+
+.playlist-card-modern.already-in-card:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  transform: none;  /* remove o efeito de hover */
+}
+
+/* Badge "Já adicionada" no card */
+.playlist-card-modern.already-in-card .playlist-card-name::after {
+  content: ' ✓';
+  color: #10b981;
+  font-weight: 700;
+}
+
+/* Ou, se preferir um badge visual: */
+.playlist-added-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 600;
+}
 .option-label {
   font-size: 14px;
   font-weight: 600;

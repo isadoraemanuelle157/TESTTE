@@ -31,7 +31,7 @@
 
   <div class="header-actions">
     <button type="button" class="btn-total-artists">
-      <span class="total-artists-icon">🎤</span>
+     <span class="total-artists-icon"><i class="fas fa-microphone"></i></span>
       <div class="total-artists-text">
         <strong>{{ totalCantores }}</strong>
         <small>
@@ -121,7 +121,7 @@
 
   <div class="artist-chips">
     <span class="artist-chip artist-chip-primary">
-      👥 {{
+       <i class="fas fa-users"></i> {{
         cantor.seguidoresFormatado ||
         formatarSeguidores(
           (cantor.totalSeguidores ?? cantor.seguidoresBase ?? 0) +
@@ -131,11 +131,11 @@
     </span>
 
 <span class="artist-chip">
-  💿 {{ Array.isArray(cantor.albuns) ? cantor.albuns.length : 0 }} álbum(ns)
+  <i class="fas fa-compact-disc"></i> {{ Array.isArray(cantor.albuns) ? cantor.albuns.length : 0 }} álbum(ns)
 </span>
 
 <span class="artist-chip">
-  🎸
+  <i class="fas fa-guitar"></i>
   <template v-if="Array.isArray(cantor.generos) && cantor.generos.length > 0">
     {{
       cantor.generos
@@ -151,27 +151,22 @@
 </span>
 
 <span class="artist-chip">
-  🎵 {{ Array.isArray(cantor.musicas) ? cantor.musicas.length : 0 }} música(s)
+  <i class="fas fa-music"></i> {{ Array.isArray(cantor.musicas) ? cantor.musicas.length : 0 }} música(s)
 </span>
   </div>
 
 <p class="artist-date">
-  <span v-if="cantor.ano">📅 Desde {{ cantor.ano }}s</span>
-  <span v-else>📅 Ano não informado</span>
+<span v-if="cantor.ano"><i class="far fa-calendar-alt"></i> Desde {{ cantor.ano }}s</span>
+<span v-else><i class="far fa-calendar-alt"></i> Ano não informado</span>
   <span class="date-separator">•</span>
   Adicionado em {{ formatarData(cantor.createdAt) }}
 </p>
 
   <div class="artist-actions">
 
-
-    <button
-      type="button"
-      class="card-action-btn delete"
-      @click.stop="confirmarExclusao(cantor)"
-    >
-      🗑️ Excluir
-    </button>
+<button type="button" class="card-action-btn delete" @click.stop="confirmarExclusao(cantor)">
+  <i class="fas fa-trash-alt"></i> Excluir
+</button>
   </div>
 </div>
 
@@ -310,7 +305,7 @@
   <div class="selection-box">
     <div class="selection-header">
       <h3>
-        <span class="header-icon">🎸</span>
+        <span class="header-icon"><i class="fas fa-guitar"></i></span>
         Gêneros *
        <span class="count-badge">{{ form.generos.length }}</span>
       </h3>
@@ -390,7 +385,7 @@
   <div class="selection-box">
     <div class="selection-header">
       <h3>
-        <span class="header-icon">🎵</span>
+        <span class="header-icon"><i class="fas fa-music"></i></span>
         Músicas *
        <span class="count-badge">{{ form.musicas.length }}</span>
       </h3>
@@ -480,7 +475,7 @@
   <div class="selection-box">
     <div class="selection-header">
       <h3>
-        <span class="header-icon">💿</span>
+       <span class="header-icon"><i class="fas fa-compact-disc"></i></span>
         Álbuns (opcional)
     <span class="count-badge">{{ form.albuns.length }}</span>
       </h3>
@@ -772,7 +767,7 @@
     <transition name="modal">
       <div v-if="showDeleteModal" class="modal-soundup" @click.self="showDeleteModal = false">
         <div class="modal-content modal-small">
-          <div class="delete-icon">🗑️</div>
+          <div class="delete-icon"><i class="fas fa-trash-alt"></i></div>
           <h2>Excluir {{ cantorParaExcluir?.nome }}?</h2>
           <p>Esta ação não pode ser desfeita.</p>
           <div class="modal-actions">
@@ -795,7 +790,7 @@
     <!-- Toast Notification -->
     <transition name="toast">
       <div v-if="toast.show" :class="['toast-soundup', toast.type]">
-        <div class="toast-icon">{{ toast.icon }}</div>
+        <div class="toast-icon" v-html="toast.icon"></div>
         <div class="toast-message">{{ toast.message }}</div>
       </div>
     </transition>
@@ -912,11 +907,12 @@ filteredGeneros() {
     return this.albunsDisponiveis.filter(a => a.nome.toLowerCase().includes(s))
   },
 
-  filteredMusicas() {
-    if (!this.searchMusicas) return this.musicas
-    const s = this.searchMusicas.toLowerCase()
-    return this.musicas.filter(m => m.nome.toLowerCase().includes(s))
-  }
+filteredMusicas() {
+  const lista = Array.isArray(this.musicas) ? this.musicas : []
+  if (!this.searchMusicas) return lista
+  const s = this.searchMusicas.toLowerCase()
+  return lista.filter(m => m.nome?.toLowerCase().includes(s))
+}
 },
 
   mounted() {
@@ -950,23 +946,42 @@ normalizarListaGeneros(payload) {
 },
 
 isGeneroSelecionado(generoId) {
-  const idNormalizado = this.normalizeMongoId(generoId)
+  if (!generoId || !Array.isArray(this.form.generos)) return false
 
-  return Array.isArray(this.form.generos) && this.form.generos.some(g => {
-    return this.normalizeMongoId(g) === idNormalizado
+  // Aceita string ou objeto
+  const targetId = typeof generoId === 'object'
+    ? (generoId._id || generoId.id || generoId.nome)
+    : String(generoId)
+
+  return this.form.generos.some(g => {
+    const gId = typeof g === 'object' && g !== null
+      ? (g._id || g.id || g.nome)
+      : String(g)
+    return String(gId) === String(targetId)
   })
 },
 
 toggleGeneroSelection(generoId) {
-  const idNormalizado = this.normalizeMongoId(generoId)
-  const jaSelecionado = this.isGeneroSelecionado(idNormalizado)
+  const jaSelecionado = this.isGeneroSelecionado(generoId)
 
   if (jaSelecionado) {
+    // Remove o gênero correspondente
+    const targetId = typeof generoId === 'object'
+      ? (generoId._id || generoId.id || generoId.nome)
+      : String(generoId)
+
     this.form.generos = this.form.generos.filter(g => {
-      return this.normalizeMongoId(g) !== idNormalizado
+      const gId = typeof g === 'object' && g !== null
+        ? (g._id || g.id || g.nome)
+        : String(g)
+      return String(gId) !== String(targetId)
     })
   } else {
-    this.form.generos.push(idNormalizado)
+    // Adiciona o ID (ou objeto completo se da API)
+    const idParaSalvar = typeof generoId === 'object' && generoId !== null
+      ? (generoId._id || generoId.id || generoId)
+      : generoId
+    this.form.generos.push(idParaSalvar)
   }
 },
 
@@ -1024,7 +1039,7 @@ async toggleSeguirCantor(cantor) {
     const token = localStorage.getItem('token')
 
     if (!this.usuarioLogadoId || !token) {
-      this.mostrarToast('Faça login para seguir artistas', 'error', '⚠️')
+     this.mostrarToast('Faça login para seguir artistas', 'error', '<i class="fas fa-exclamation-triangle"></i>')
       return
     }
 
@@ -1052,31 +1067,50 @@ async toggleSeguirCantor(cantor) {
 
     this.mostrarToast(
       jaSegue ? 'Você deixou de seguir este artista' : 'Agora você segue este artista',
-      'success',
-      '🎤'
+      'success'
     )
   } catch (error) {
     this.mostrarToast(error.message || 'Erro ao seguir cantor', 'error', '❌')
   }
 },
 
-    getGeneroNome(id) {
-  const idNormalizado = this.normalizeMongoId(id)
+getGeneroNome(id) {
+  if (!id) return 'Desconhecido'
 
-  return this.generos.find(g => {
-    return this.normalizeMongoId(g._id) === idNormalizado
-  })?.nome || 'Desconhecido'
+  // Aceita objeto ou string
+  const idNormalizado = typeof id === 'object' && id !== null
+    ? (id._id || id.id || id.nome)
+    : String(id)
+
+  const lista = Array.isArray(this.generos) ? this.generos : []
+
+  // Busca por _id, id ou nome (para gêneros da API sem ID fixo)
+  const encontrado = lista.find(g => {
+    if (!g) return false
+    const gId = g._id || g.id
+    const matchId = gId && String(gId) === String(idNormalizado)
+    const matchNome = g.nome && String(g.nome).toLowerCase() === String(idNormalizado).toLowerCase()
+    return matchId || matchNome
+  })
+
+  return encontrado?.nome || encontrado?.name || encontrado?.label || 'Desconhecido'
 },
 
-    getMusicaNome(id) {
-      return this.musicas.find(m => m._id === id)?.nome || 'Desconhecida'
-    },
+ getMusicaNome(id) {
+  const lista = Array.isArray(this.musicas) ? this.musicas : []
+  return lista.find(m => m._id === id)?.nome || 'Desconhecida'
+},
 
-    removeGenero(id) {
-  const idNormalizado = this.normalizeMongoId(id)
+   removeGenero(id) {
+  const targetId = typeof id === 'object' && id !== null
+    ? (id._id || id.id || id.nome)
+    : String(id)
 
   this.form.generos = this.form.generos.filter(g => {
-    return this.normalizeMongoId(g) !== idNormalizado
+    const gId = typeof g === 'object' && g !== null
+      ? (g._id || g.id || g.nome)
+      : String(g)
+    return String(gId) !== String(targetId)
   })
 },
 
@@ -1157,7 +1191,7 @@ async toggleSeguirCantor(cantor) {
   removerMusicaLocal(index) {
     if (confirm('Tem certeza que deseja remover esta música?')) {
       this.form.musicas.splice(index, 1)
-      this.mostrarToast('Música removida', 'success', '🗑️')
+      this.mostrarToast('Música removida', 'success', '<i class="fas fa-trash-alt"></i>')
     }
   },
 
@@ -1172,7 +1206,7 @@ async toggleSeguirCantor(cantor) {
     !m.letra?.trim() ||
     !m.foto?.trim()
   ) {
-    this.mostrarToast('Preencha todos os campos obrigatórios', 'error', '⚠️')
+   this.mostrarToast('Preencha todos os campos obrigatórios', 'error', '<i class="fas fa-exclamation-triangle"></i>')
     return
   }
 
@@ -1181,17 +1215,20 @@ async toggleSeguirCantor(cantor) {
       ? this.cantorEditando._id
       : null
 
-    const musicaPayload = {
-      nome: m.nome.trim(),
-      duracao: m.duracao.trim(),
-      humor: m.humor.trim(),
-      link: m.link.trim(),
-      letra: m.letra.trim(),
-      foto: m.foto.trim(),
-      generos: Array.isArray(m.generos) ? m.generos.filter(Boolean) : [],
-      albuns: Array.isArray(m.albuns) ? m.albuns.filter(a => typeof a === 'object' ? a._id : a).filter(Boolean) : [],
-      cantores: cantorId ? [cantorId] : []
-    }
+// EM salvarMusicaLocal, ADICIONAR ano do cantor se disponível:
+const musicaPayload = {
+  nome: m.nome.trim(),
+  duracao: m.duracao.trim(),
+  humor: m.humor.trim(),
+  link: m.link.trim(),
+  letra: m.letra.trim(),
+  foto: m.foto.trim(),
+  // 🔥 ADICIONAR ANO DO CANTOR SE EXISTIR
+  ano: this.form.ano || null,
+  generos: Array.isArray(m.generos) ? m.generos.filter(Boolean) : [],
+  albuns: Array.isArray(m.albuns) ? m.albuns.filter(a => typeof a === 'object' ? a._id : a).filter(Boolean) : [],
+  cantores: cantorId ? [cantorId] : []
+}
 
     const response = await fetch('http://localhost:3002/musicas', {
       method: 'POST',
@@ -1215,7 +1252,7 @@ async toggleSeguirCantor(cantor) {
       this.form.musicas.push(musicaCriada._id)
     }
 
-    this.mostrarToast('Música salva no banco!', 'success', '🎵')
+    this.mostrarToast('Música salva no banco!', 'success', '<i class="fas fa-music"></i>')
     this.fecharModalMusica()
     await this.carregarMusicas()
 
@@ -1264,7 +1301,7 @@ fecharModalMusica() {
     removerAlbum(index) {
       if (confirm('Tem certeza que deseja remover este álbum?')) {
         this.form.albuns.splice(index, 1)
-        this.mostrarToast('Álbum removido', 'success', '🗑️')
+        this.mostrarToast('Álbum removido', 'success', '<i class="fas fa-trash-alt"></i>')
       }
     },
 
@@ -1282,10 +1319,10 @@ fecharModalMusica() {
 
       if (this.editandoAlbumIndex !== null) {
         this.form.albuns[this.editandoAlbumIndex] = albumData
-        this.mostrarToast('Álbum atualizado!', 'success', '✅')
+        this.mostrarToast('Artista criado!', 'success', '<i class="fas fa-check-circle"></i>')
       } else {
         this.form.albuns.push(albumData)
-        this.mostrarToast('Álbum adicionado!', 'success', '🎵')
+       this.mostrarToast('Álbum adicionado!', 'success', '<i class="fas fa-compact-disc"></i>')
       }
 
       this.fecharModalAlbum()
@@ -1334,52 +1371,82 @@ fecharModalMusica() {
           return cantor
         }))
       } catch (error) {
-        this.mostrarToast('Erro ao carregar artistas', 'error', '❌')
+       this.mostrarToast('Erro ao carregar artistas', 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.loading = false
       }
     },
 
-   async carregarGeneros() {
+async carregarGeneros() {
   try {
-    const response = await fetch('http://localhost:3002/generos')
+    const response = await fetch('http://localhost:3002/generos?format=flat')
     if (!response.ok) throw new Error('Erro ao carregar gêneros')
 
     const data = await response.json()
-    this.generos = this.normalizarListaGeneros(data)
+    console.log('📥 Generos carregados:', data)
+
+    // Garante que é array
+    const lista = Array.isArray(data) ? data : []
+    
+    // Normaliza para garantir _id e nome
+    this.generos = lista.map(g => ({
+      _id: g._id || g.id,
+      nome: g.nome || g.name || g.label || 'Desconhecido',
+      ...g
+    })).filter(g => g._id)
+
+    console.log('✅ Total generos:', this.generos.length)
+
   } catch (error) {
     console.error('Erro ao carregar gêneros:', error)
     this.generos = []
   }
 },
 
-    async carregarMusicas() {
-      try {
-        const response = await fetch('http://localhost:3002/musicas')
-        if (!response.ok) throw new Error('Erro ao carregar músicas')
-        this.musicas = await response.json()
-      } catch (error) {
-        console.error('Erro ao carregar músicas:', error)
-        this.musicas = []
-      }
-    },
+async carregarMusicas() {
+  try {
+    const response = await fetch('http://localhost:3002/musicas')
+    if (!response.ok) throw new Error('Erro ao carregar músicas')
+    const data = await response.json()
 
-    async salvarCantor() {
-      if (
- !this.form.nome.trim() ||
- !this.form.foto.trim() ||
- !this.form.ano ||
- !this.form.seguidoresBase ||
- this.form.generos.length === 0 ||
- this.form.musicas.length === 0
-) {
- this.mostrarToast(
-   'Preencha todos os campos obrigatórios (álbum é opcional)',
-   'error',
-   '⚠️'
- )
- return
-}
+    // 🔥 Extrair array de qualquer formato que o backend enviar
+    if (Array.isArray(data)) {
+      this.musicas = data
+    } else if (data.results && Array.isArray(data.results)) {
+      this.musicas = data.results
+    } else if (data.lista && Array.isArray(data.lista)) {
+      this.musicas = data.lista
+    } else if (data.musicas && Array.isArray(data.musicas)) {
+      this.musicas = data.musicas
+    } else {
+      this.musicas = Object.values(data).flat().filter(m => m && m._id)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar músicas:', error)
+    this.musicas = []
+  }
+},
+
+async salvarCantor() {
+  // 🔥 Só valida campos obrigatórios no CRIAR, não no EDITAR
+  if (!this.modoEdicao) {
+    if (
+      !this.form.nome?.trim() ||
+      !this.form.foto?.trim() ||
+      !this.form.ano ||
+      !this.form.seguidoresBase ||
+      this.form.generos.length === 0 ||
+      this.form.musicas.length === 0
+    ) {
+      this.mostrarToast(
+        'Preencha todos os campos obrigatórios (álbum é opcional)',
+        'error',
+        '⚠️'
+      )
+      return
+    }
+  }
+  // 🔥 No EDITAR: remove validações obrigatórias — permite salvar parcial
 
       try {
         this.salvando = true
@@ -1423,7 +1490,7 @@ fecharModalMusica() {
           const result = await response.json()
           cantorId = result.cantor._id
 
-          this.mostrarToast('Artista atualizado!', 'success', '✅')
+          this.mostrarToast('Artista atualizado!', 'success', '<i class="fas fa-check-circle"></i>')
         } else {
           response = await fetch('http://localhost:3002/cantores', {
             method: 'POST',
@@ -1434,46 +1501,57 @@ fecharModalMusica() {
           const result = await response.json()
           cantorId = result.cantor._id
 
-          this.mostrarToast('Artista criado!', 'success', '✅')
+          this.mostrarToast('Artista criado!', 'success', '<i class="fas fa-check-circle"></i>')
         }
+// Só processa álbuns locais (objetos sem _id ou com _id que são strings do backend)
+// Álbuns do dropdown já estão salvos no banco, não precisa re-salvar
+const albunsParaCriar = this.form.albuns.filter(a => !a._id || a._id?.startsWith?.('local-'))
+const albunsParaAtualizar = this.form.albuns.filter(a => a._id && !a._id.startsWith?.('local-'))
 
-        for (const album of this.form.albuns) {
-          if (album._id) {
-            const responseAlbum = await fetch(`http://localhost:3002/albuns/${album._id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                nome: album.nome,
-                descricao: album.descricao,
-                foto: album.foto || '',
-                cantor: cantorId
-              })
-            })
+for (const album of albunsParaAtualizar) {
+  // Atualiza apenas se tiver cantor vinculado
+  try {
+    await fetch(`http://localhost:3002/albuns/${album._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: album.nome,
+        descricao: album.descricao || '',
+        foto: album.foto || '',
+        cantor: cantorId
+        // Não envia musicas/generos para não quebrar validação
+      })
+    })
+  } catch (e) {
+    console.warn('Erro ao atualizar álbum:', e)
+    // Não quebra o fluxo do cantor
+  }
+}
 
-            const resultAlbum = await responseAlbum.json()
+for (const album of albunsParaCriar) {
+  try {
+    const responseAlbum = await fetch('http://localhost:3002/albuns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: album.nome,
+        descricao: album.descricao || '',
+        foto: album.foto || '',
+        cantor: cantorId,
+        ano: this.form.ano || new Date().getFullYear(),
+        musicas: [], // Array vazio para não quebrar validação
+        generos: this.form.generos?.length ? this.form.generos : [] // Usa generos do cantor
+      })
+    })
 
-            if (!responseAlbum.ok) {
-              throw new Error(resultAlbum.error || 'Erro ao atualizar álbum')
-            }
-          } else {
-            const responseAlbum = await fetch(`http://localhost:3002/albuns`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                nome: album.nome,
-                descricao: album.descricao,
-                foto: album.foto || '',
-                 cantor: cantorId
-              })
-            })
-
-            const resultAlbum = await responseAlbum.json()
-
-            if (!responseAlbum.ok) {
-              throw new Error(resultAlbum.error || 'Erro ao criar álbum')
-            }
-          }
-        }
+    if (!responseAlbum.ok) {
+      const err = await responseAlbum.json()
+      console.warn('Erro ao criar álbum:', err.error)
+    }
+  } catch (e) {
+    console.warn('Erro ao criar álbum:', e)
+  }
+}
 
         this.fecharModal()
         this.carregarCantores()
@@ -1491,7 +1569,7 @@ fecharModalMusica() {
         await fetch(`http://localhost:3002/cantores/${this.cantorParaExcluir._id}`, {
           method: 'DELETE'
         })
-        this.mostrarToast('Artista removido', 'success', '🗑️')
+        this.mostrarToast('Artista removido', 'success', '<i class="fas fa-trash-alt"></i>')
         this.showDeleteModal = false
         this.carregarCantores()
       } catch (error) {
@@ -1520,12 +1598,12 @@ fecharModalMusica() {
       if (!file) return
 
       if (!file.type.startsWith('image/')) {
-        this.mostrarToast('Selecione uma imagem válida', 'error', '⚠️')
+       this.mostrarToast('Selecione uma imagem válida', 'error', '<i class="fas fa-exclamation-triangle"></i>')
         return
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        this.mostrarToast('Máximo 5MB', 'error', '⚠️')
+       this.mostrarToast('Máximo 5MB', 'error', '<i class="fas fa-exclamation-triangle"></i>')
         return
       }
 
@@ -1564,11 +1642,10 @@ async editarCantor(cantor) {
 
     // Carrega listas globais primeiro
     await Promise.all([
-      this.generos.length ? Promise.resolve() : this.carregarGeneros(),
-      this.musicas.length ? Promise.resolve() : this.carregarMusicas(),
-      this.albunsDisponiveis.length ? Promise.resolve() : this.carregarAlbunsDisponiveis()
+      this.carregarGeneros(),
+      this.carregarMusicas(),
+      this.carregarAlbunsDisponiveis()
     ])
-
     // Busca cantor completo
     const cantorResponse = await fetch(`http://localhost:3002/cantores/${cantor._id}`)
    
@@ -2595,7 +2672,27 @@ resetForm() {
 .dropdown-wrapper {
   position: relative;
 }
+.total-artists-icon i {
+  font-size: 1.1rem;
+}
 
+.delete-icon i {
+  font-size: 3rem;
+  color: #dc2626;
+}
+
+.toast-icon i {
+  font-size: 1.25rem;
+}
+
+.header-icon i {
+  font-size: 1.1rem;
+}
+
+.artist-chip i {
+  margin-right: 0.3rem;
+  font-size: 0.8rem;
+}
 .dropdown-trigger {
   display: flex;
   align-items: center;
@@ -3142,6 +3239,7 @@ resetForm() {
   color: #fecaca;
   background: rgba(127, 29, 29, 0.28);
   border: 1px solid rgba(248, 113, 113, 0.18);
+  gap: 0.6rem;
 }
 
 .card-action-btn.delete:hover {

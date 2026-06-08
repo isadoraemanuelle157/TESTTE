@@ -162,7 +162,6 @@
                 </option>
 
                 <option>Conta</option>
-                <option>Pagamento</option>
                 <option>Bug</option>
                 <option>Playlist</option>
                 <option>Privacidade</option>
@@ -221,6 +220,7 @@
 
           </form>
 <!-- HISTÓRICO LOCAL -->
+<!-- HISTÓRICO LOCAL (AGORA COM REPLY IGUAL AO DE CONTATO) -->
 <section class="history-local-section">
 
   <div class="history-local-card">
@@ -246,46 +246,115 @@
       <span>Nenhuma mensagem enviada.</span>
     </div>
 
+    <!-- CADA ITEM AGORA É UM THREAD EXPANSÍVEL COM REPLY -->
     <div
       v-for="item in supportHistory"
       :key="item.id"
-      class="history-item"
-       :class="{ 'collapsed': collapsedLocal[item.id] }"
+      class="message-thread"
+      :class="{ 'expanded': !collapsedLocal[item.id] }"
     >
 
-      <div class="history-top">
+      <div class="thread-top" @click="toggleLocalHistory(item.id)">
 
-        <span class="history-category">
-          {{ item.categoria }}
-        </span>
+        <div class="thread-info">
+          <div class="thread-icon" :class="item.categoria">
+            <i class="fa" :class="getCategoryIcon(item.categoria)"></i>
+          </div>
+          <div class="thread-details">
+            <h3>{{ item.assunto }}</h3>
+            <p class="thread-meta">
+              <span class="category-tag">{{ item.categoria }}</span>
+              <span class="date">{{ formatDate(item.data) }}</span>
+            </p>
+          </div>
+        </div>
 
-        <button 
-      class="minimize-btn"
-      @click="toggleLocalHistory(item.id)"
-      :title="collapsedLocal[item.id] ? 'Expandir' : 'Minimizar'"
-    >
-      <i class="fa" :class="collapsedLocal[item.id] ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
-    </button>
+        <div class="thread-actions">
+          <button
+            class="soften-btn"
+            @click.stop="toggleLocalHistory(item.id)"
+            :class="{ 'active': !collapsedLocal[item.id] }"
+          >
+            <i class="fa" :class="collapsedLocal[item.id] ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+          </button>
 
-        <span class="history-date">
-          {{ formatDate(item.data) }}
-        </span>
+          <button
+            class="delete-btn"
+            @click.stop="deleteLocalHistory(item.id)"
+            title="Excluir do histórico"
+          >
+            <i class="fa fa-trash"></i>
+          </button>
+        </div>
+
       </div>
 
-        <div v-show="!collapsedLocal[item.id]" class="history-content">
-    <div class="history-user" v-if="item.nome">
-      <i class="fa fa-user"></i>
-      <strong>{{ item.nome }}</strong>
+      <!-- CONTEÚDO EXPANDIDO COM MENSAGEM E CAIXA DE RESPOSTA -->
+      <transition name="expand">
+        <div v-show="!collapsedLocal[item.id]" class="thread-content">
+
+          <div class="thread-messages">
+            <div class="thread-message user">
+              <div class="message-bubble">
+                <div class="msg-label">
+                  <i class="fa fa-user"></i> Você
+                </div>
+                <p>{{ item.mensagem }}</p>
+                <small class="msg-time">
+                  <i class="fa fa-clock-o"></i>
+                  {{ formatDate(item.data) }}
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- CAIXA DE RESPOSTA (simula reply, salva no localStorage) -->
+          <div class="thread-reply-box">
+            <div class="reply-input-wrapper">
+              <i class="fa fa-reply reply-icon"></i>
+              <textarea
+                v-model="localReplyMap[item.id]"
+                rows="2"
+                placeholder="Escreva uma resposta..."
+              ></textarea>
+            </div>
+
+            <button
+              @click="replyLocalMessage(item.id)"
+              class="reply-btn"
+              :disabled="!localReplyMap[item.id] || !localReplyMap[item.id].trim()"
+            >
+              <i class="fa fa-paper-plane"></i>
+              Responder
+            </button>
+          </div>
+
+          <!-- RESPOSTAS SALVAS LOCALMENTE -->
+          <div v-if="item.respostas && item.respostas.length" class="thread-messages" style="margin-top: 16px;">
+            <div
+              v-for="(resp, idx) in item.respostas"
+              :key="idx"
+              class="thread-message admin"
+            >
+              <div class="message-bubble">
+                <div class="msg-label">
+                  <i class="fa fa-headset"></i> Suporte
+                </div>
+                <p>{{ resp.mensagem }}</p>
+                <small class="msg-time">
+                  <i class="fa fa-clock-o"></i>
+                  {{ formatDate(resp.data) }}
+                </small>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </transition>
+
     </div>
-    <h3>{{ item.assunto }}</h3>
-    <p>{{ item.mensagem }}</p>
-    <div class="history-contact">
-      <i class="fa fa-envelope"></i>
-      {{ item.contato }}
-    </div>
+
   </div>
-</div>
-</div>
 
 </section>
         </div>
@@ -402,6 +471,28 @@
   </div>
 
 </div>
+    <!-- MODAL DE CONFIRMAÇÃO -->
+    <transition name="modal-fade">
+      <div v-if="confirmModal.visible" class="confirm-modal-overlay" @click.self="closeConfirmModal">
+        <div class="confirm-modal">
+          <div class="modal-icon">
+            <i class="fa fa-trash"></i>
+          </div>
+          <h3 class="modal-title">{{ confirmModal.title }}</h3>
+          <p class="modal-message">{{ confirmModal.message }}</p>
+          <div class="modal-actions">
+            <button class="modal-btn cancel" @click="closeConfirmModal">
+              <i class="fa fa-times"></i>
+              Cancelar
+            </button>
+            <button class="modal-btn confirm" @click="handleConfirmAction">
+              <i class="fa fa-trash"></i>
+              Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -422,6 +513,14 @@ export default {
       replyMap: {},
       collapsedLocal: {},
       collapsedThreads: {},
+      localReplyMap: {},
+      confirmModal: {
+  visible: false,
+  title: '',
+  message: '',
+  action: null,
+  actionId: null
+},
 
       // =========================
       // TICKET
@@ -497,6 +596,79 @@ export default {
   },
 
   methods: {
+    closeConfirmModal() {
+  this.confirmModal.visible = false
+  this.confirmModal.action = null
+  this.confirmModal.actionId = null
+},
+
+handleConfirmAction() {
+  if (this.confirmModal.action && this.confirmModal.actionId) {
+    this.confirmModal.action(this.confirmModal.actionId)
+  }
+  this.closeConfirmModal()
+},
+    // Ícone da categoria (igual ao do template d)
+getCategoryIcon(categoria) {
+  const icons = {
+    Conta: 'fa-user',
+    Playlist: 'fa-music',
+    Bug: 'fa-bug',
+    Privacidade: 'fa-shield',
+    Outro: 'fa-file-text'
+  }
+  return icons[categoria] || 'fa-question'
+},
+
+// Responder no histórico local (salva no localStorage)
+replyLocalMessage(id) {
+  const mensagem = this.localReplyMap[id]
+  if (!mensagem || !mensagem.trim()) return
+
+  const historico = JSON.parse(
+    localStorage.getItem('supportHistory') || '[]'
+  )
+
+  const idx = historico.findIndex(h => h.id === id)
+  if (idx === -1) return
+
+  if (!historico[idx].respostas) {
+    historico[idx].respostas = []
+  }
+
+  historico[idx].respostas.push({
+    mensagem: mensagem.trim(),
+    data: new Date().toISOString()
+  })
+
+  localStorage.setItem('supportHistory', JSON.stringify(historico))
+  this.supportHistory = historico
+  this.localReplyMap[id] = ''
+
+  this.showAlert('success', 'Resposta salva', 'Sua resposta foi salva no histórico local.')
+},
+
+// Excluir do histórico local
+deleteLocalHistory(id) {
+  this.confirmModal = {
+    visible: true,
+    title: 'Excluir do histórico',
+    message: 'Deseja remover esta mensagem do histórico local?',
+    action: this.executeDeleteLocalHistory,
+    actionId: id
+  }
+},
+
+executeDeleteLocalHistory(id) {
+  const historico = JSON.parse(
+    localStorage.getItem('supportHistory') || '[]'
+  ).filter(h => h.id !== id)
+
+  localStorage.setItem('supportHistory', JSON.stringify(historico))
+  this.supportHistory = historico
+  this.showAlert('success', 'Removido', 'Mensagem removida do histórico.')
+},
+
 toggleLocalHistory(id) {
   // Cria uma cópia reativa do objeto para garantir que o Vue detecte a mudança
   this.collapsedLocal = {
@@ -558,13 +730,14 @@ toggleLocalHistory(id) {
       this.$router.back()
     },
 
-    openChat() {
-      this.showAlert(
-        'info',
-        'Chat',
-        'Abrindo chat de suporte...'
-      )
-    },
+ openChat() {
+  // Rola até o histórico local (simula "abrir chat")
+  const el = document.querySelector('.history-local-section')
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    this.showAlert('info', 'Chat', 'Abrindo seu histórico de conversas...')
+  }
+},
 
     // =========================
     // EMAIL
@@ -707,7 +880,8 @@ ${this.ticket.description}
 
       nome: this.ticket.name,
 
-      data: new Date().toISOString()
+      data: new Date().toISOString(),
+      respostas: [] 
     }
 
     // PEGA HISTÓRICO
@@ -1610,7 +1784,390 @@ select option {
 
   font-size: .85rem;
 }
+/* ===== THREAD (IGUAL AO TEMPLATE D) ===== */
+.message-thread {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
 
+.message-thread:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.message-thread.expanded {
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.thread-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  user-select: none;
+}
+
+.thread-top:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.thread-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.thread-icon.Conta { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.15)); color: #93c5fd; }
+.thread-icon.Pagamento { background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.15)); color: #6ee7b7; }
+.thread-icon.Playlist { background: linear-gradient(135deg, rgba(236,72,153,0.15), rgba(219,39,119,0.15)); color: #f9a8d4; }
+.thread-icon.Bug { background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.15)); color: #fcd34d; }
+.thread-icon.Privacidade { background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(109,40,217,0.15)); color: #c4b5fd; }
+.thread-icon.Outro { background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15)); color: #a5b4fc; }
+
+.thread-details { min-width: 0; flex: 1; }
+.thread-details h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: white;
+}
+
+.thread-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.5);
+}
+
+.category-tag {
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+  font-weight: 600;
+  text-transform: capitalize;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.thread-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.soften-btn, .delete-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.05);
+  font-size: 0.9rem;
+}
+
+.soften-btn:hover, .delete-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.soften-btn.active {
+  background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(139,92,246,0.2));
+  color: #c4b5fd;
+}
+
+.delete-btn:hover {
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.1));
+  color: #fca5a5;
+}
+
+.thread-content {
+  padding: 0 20px 20px;
+}
+
+.thread-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding-top: 8px;
+}
+
+.thread-message { animation: expand-in 0.3s ease; }
+
+.message-bubble {
+  padding: 16px 18px;
+  border-radius: 16px;
+  position: relative;
+}
+
+.thread-message.user .message-bubble {
+  background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(29,78,216,0.08));
+  border: 1px solid rgba(37,99,235,0.15);
+  margin-left: 20px;
+  border-bottom-left-radius: 4px;
+}
+
+.thread-message.admin .message-bubble {
+  background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(109,40,217,0.08));
+  border: 1px solid rgba(124,58,237,0.15);
+  margin-right: 20px;
+  border-bottom-right-radius: 4px;
+}
+
+.msg-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thread-message.user .msg-label { color: #93c5fd; }
+.thread-message.admin .msg-label { color: #c4b5fd; }
+
+.message-bubble p {
+  margin: 0 0 10px;
+  line-height: 1.7;
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.85);
+}
+
+.msg-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+}
+
+.thread-reply-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.reply-input-wrapper { position: relative; }
+
+.reply-icon {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.9rem;
+}
+
+.thread-reply-box textarea {
+  width: 100%;
+  border: 2px solid rgba(255,255,255,0.06);
+  outline: none;
+  border-radius: 16px;
+  padding: 14px 16px 14px 44px;
+  background: rgba(255,255,255,0.04);
+  color: white;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.thread-reply-box textarea:focus {
+  border-color: #7c3aed;
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 0 0 4px rgba(124,58,237,0.15);
+}
+
+.reply-btn {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(124,58,237,0.3);
+}
+
+.reply-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+}
+
+.reply-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ===== MODAL DE CONFIRMAÇÃO ===== */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.confirm-modal {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+  animation: modal-pop 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+@keyframes modal-pop {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.1));
+  border: 1px solid rgba(239,68,68,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 1.6rem;
+  color: #fca5a5;
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: white;
+}
+
+.modal-message {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 14px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-btn.cancel {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.modal-btn.cancel:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.modal-btn.confirm {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 8px 24px rgba(239,68,68,0.3);
+}
+
+.modal-btn.confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(239,68,68,0.4);
+}
+
+.modal-fade-enter-active, .modal-fade-leave-active {
+  transition: all 0.3s ease;
+}
+.modal-fade-enter-from, .modal-fade-leave-to {
+  opacity: 0;
+}
+.modal-fade-enter-from .confirm-modal,
+.modal-fade-leave-to .confirm-modal {
+  transform: scale(0.9) translateY(20px);
+}
+
+.expand-enter-active, .expand-leave-active {
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  overflow: hidden;
+}
+.expand-enter-from, .expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+@keyframes expand-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .history-date {
   color: rgba(255,255,255,0.5);
 

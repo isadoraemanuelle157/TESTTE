@@ -20,4 +20,14 @@ router.post('/reproducao', optionalAuth, controller.addReproducao)
 router.delete('/reproducao', requireAuth, controller.clearReproducoes)
 router.delete('/reproducao/:id', requireAuth, controller.deleteReproducao) 
 
+// ============================================
+// 📊 ESTATÍSTICAS MENSAIS
+// ============================================
+
+router.get('/estatisticas/mensal', requireAuth, controller.getEstatisticasMensais)
+// ============================================
+// 🔥 SEQUÊNCIA (STREAK)
+// ============================================
+
+router.get('/estatisticas/sequencia', requireAuth, controller.getSequencia)
 module.exports = router

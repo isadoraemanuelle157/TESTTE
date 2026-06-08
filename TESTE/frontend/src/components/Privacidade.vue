@@ -149,16 +149,17 @@
 
       <!-- Actions -->
       <div class="actions">
-        <button class="primary-btn" @click="acceptPrivacy" :disabled="accepting">
-          <span v-if="!accepting">
-            <i class="fa fa-check"></i>
-            Aceitar Política
-          </span>
-          <span v-else class="btn-loading">
-            <i class="fa fa-spinner fa-spin"></i>
-            Processando...
-          </span>
-        </button>
+<button class="primary-btn" @click="acceptPrivacy" :disabled="accepting" :class="{ 'accepted': privacyAccepted }">
+  <span v-if="!privacyAccepted">
+    <i class="fa fa-check" v-if="!accepting"></i>
+    <i class="fa fa-spinner fa-spin" v-else></i>
+    {{ accepting ? 'Processando...' : 'Aceitar Política' }}
+  </span>
+  <span v-else>
+    <i class="fa fa-check-double"></i>
+    Política Aceita!
+  </span>
+</button>
 
         <button class="secondary-btn" @click="goHome">
           <i class="fa fa-home"></i>
@@ -195,6 +196,7 @@ export default {
   data() {
     return {
       hoveredCard: null,
+      privacyAccepted: false,
       accepting: false,
       alert: {
         visible: false,
@@ -244,29 +246,40 @@ export default {
     }
   },
 
-  computed: {
-    currentDate() {
-      return new Date().toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      })
-    },
-    currentYear() {
-      return new Date().getFullYear()
-    },
-    alertIcon() {
-      const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-times-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle'
-      }
-      return icons[this.alert.type] || 'fa-info-circle'
-    }
+computed: {
+  currentDate() {
+    return new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })
   },
+  currentYear() {
+    return new Date().getFullYear()
+  },
+  alertIcon() {
+    const icons = {
+      success: 'fa-check-circle',
+      error: 'fa-times-circle',
+      warning: 'fa-exclamation-triangle',
+      info: 'fa-info-circle'
+    }
+    return icons[this.alert.type] || 'fa-info-circle'
+  }
+},
+
+mounted() {
+  this.checkPrivacyAccepted()
+},
 
   methods: {
+    checkPrivacyAccepted() {
+  this.privacyAccepted = localStorage.getItem('soundup_privacy_accepted') === 'true'
+},
+    getContentElement() {
+  return document.querySelector('.content')
+},
+
     getParticleStyle(n) {
       const size = Math.random() * 4 + 2
       const left = Math.random() * 100
@@ -290,27 +303,63 @@ export default {
       this.alert.visible = false
     },
 
-    goHome() {
-      this.$router.push('/')
-    },
+goHome() {
+  const isLoggedIn = !!localStorage.getItem('token')
+  this.$router.push(isLoggedIn ? '/dashboard' : '/').then(() => {
+    this.$nextTick(() => {
+      const content = this.getContentElement()
+      if (content) {
+        content.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    })
+  })
+},
 
-    goBack() {
-      this.$router.back()
-    },
-
-    async acceptPrivacy() {
-      this.accepting = true
-      
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      localStorage.setItem('soundup_privacy_accepted', 'true')
-      
-      this.showAlert('success', 'Sucesso!', 'Política de privacidade aceita com sucesso!')
-      
-      setTimeout(() => {
-        this.$router.push('/dashboard')
-      }, 2000)
+goBack() {
+  this.$router.back()
+  this.$nextTick(() => {
+    const content = this.getContentElement()
+    if (content) {
+      content.scrollTo({ top: 0, behavior: 'smooth' })
     }
+  })
+},
+createConfetti() {
+  const colors = ['#2563eb', '#7c3aed', '#ec4899', '#10b981', '#f59e0b']
+  for (let i = 0; i < 50; i++) {
+    const confetti = document.createElement('div')
+    confetti.className = 'confetti'
+    confetti.style.left = Math.random() * 100 + 'vw'
+    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)]
+    confetti.style.animationDelay = Math.random() * 2 + 's'
+    document.body.appendChild(confetti)
+    setTimeout(() => confetti.remove(), 3000)
+  }
+},
+
+async acceptPrivacy() {
+  this.accepting = true
+  
+  await new Promise(resolve => setTimeout(resolve, 800))
+  
+  localStorage.setItem('soundup_privacy_accepted', 'true')
+  this.privacyAccepted = true
+  this.createConfetti()
+  
+  this.showAlert('success', 'Sucesso!', 'Política de privacidade aceita com sucesso!')
+  
+  setTimeout(() => {
+    const isLoggedIn = !!localStorage.getItem('token')
+    this.$router.push(isLoggedIn ? '/dashboard' : '/').then(() => {
+      this.$nextTick(() => {
+        const content = this.getContentElement()
+        if (content) {
+          content.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+      })
+    })
+  }, 2000)
+},
   }
 }
 </script>
@@ -602,6 +651,16 @@ export default {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 24px;
   margin-bottom: 60px;
+}
+.primary-btn.accepted {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4) !important;
+  cursor: default;
+}
+
+.primary-btn.accepted:hover {
+  transform: none !important;
+  box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4) !important;
 }
 
 /* ===== CARD ===== */

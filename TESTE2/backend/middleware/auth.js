@@ -21,9 +21,10 @@ const token = authHeader?.startsWith('Bearer ')
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
- req.user = {
+req.user = {
   ...decoded,
-  id: decoded.id || decoded._id
+  id: decoded.id || decoded._id,
+  role: decoded.role || 'user'  // ← ADICIONAR ISSO
 }
     req.isLogged = true
     req.isAuthenticated = true
@@ -56,10 +57,13 @@ function requireAuth(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
-  req.user = {
-  ...decoded,
-  id: decoded.id || decoded._id
-}
+
+    req.user = {
+      ...decoded,
+      id: decoded.id || decoded._id,
+      role: decoded.role || 'user'
+    }
+
     req.isLogged = true
     req.isAuthenticated = true
     next()

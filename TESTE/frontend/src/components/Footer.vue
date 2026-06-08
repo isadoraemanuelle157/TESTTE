@@ -79,7 +79,7 @@
           <li><a href="#" @click.prevent="navigateTo('/desafiomusical')">Desafio Musical</a></li>
           <li><a href="#" @click.prevent="navigateTo('/karaoke')">Karaokê</a></li>
           <li><a href="#" @click.prevent="navigateTo('/matchmusical')">Match Musical</a></li>
-          <li><a href="#" @click.prevent="navigateTo('/salademusica')">Sala de Música</a></li>
+          <li><a href="#" @click.prevent="navigateTo('/rooms')">Sala de Música</a></li>
           <li><a href="#" @click.prevent="navigateTo('/chatiamusica')">Chat IA Música</a></li>
         </ul>
       </div>
@@ -210,7 +210,35 @@ export default {
     },
 
     // 🔥 NAVEGAÇÃO + SCROLL PARA O TOPO (FUNCIONAL)
+     // 🔥 NAVEGAÇÃO + SCROLL PARA O TOPO (FUNCIONAL)
     navigateTo(path) {
+      // Verifica se está tentando ir para início (/) e já está logado
+           // Verifica se está tentando ir para início (/) e já está logado
+      if (path === '/' && localStorage.getItem('isLoggedIn') === 'true') {
+        this.$router.push('/dashboard')
+        this.showAlert('info', 'Você já está logado! Redirecionando para o Dashboard.')
+        
+        // Scrolla para o topo do .content após o redirect
+        this.$nextTick(() => {
+          const content = this.getContentElement()
+          if (content) {
+            content.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            })
+          }
+        })
+        
+        return
+      }
+
+      // Verifica se está tentando acessar perfil sem estar logado
+      if (path === '/perfil' && localStorage.getItem('isLoggedIn') !== 'true') {
+        this.showAlert('warning', 'Você precisa estar logado para acessar o perfil.')
+        this.$router.push('/login')
+        return
+      }
+      
       // 1. Navega para a rota
       this.$router.push(path)
       
@@ -224,6 +252,13 @@ export default {
           })
         }
       })
+    },
+
+        showAlert(type, message) {
+      // Dispara evento customizado para o App.vue mostrar o alert
+      window.dispatchEvent(new CustomEvent('show-app-alert', {
+        detail: { type, message }
+      }))
     },
 
     // 🔥 SCROLL PARA O TOPO (Back to Top)

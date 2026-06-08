@@ -61,7 +61,7 @@
         <p class="subtitle">Personalize sua conta</p>
       </div>
 
-      <form @submit.prevent="completarPerfil" class="form-content">
+      <form @submit.prevent="completarPerfil" class="form-content" novalidate>
         <!-- Username (OBRIGATÓRIO) -->
         <div class="input-group" :class="{ 'focused': focused === 'username', 'filled': form.username, 'error': errors.username }">
           <div class="input-wrapper">
@@ -69,7 +69,6 @@
             <input 
               v-model="form.username" 
               type="text" 
-              required 
               @focus="focused = 'username'"
               @blur="focused = null"
               placeholder=" "
@@ -92,7 +91,6 @@
               placeholder=" "
               maxlength="150"
               rows="3"
-              required
             ></textarea>
             <label>Sobre você *</label>
           </div>
@@ -111,7 +109,6 @@
               @focus="focused = 'cep'"
               @blur="buscarCEP"
               placeholder=" "
-              required
             />
             <label>CEP *</label>
           </div>
@@ -233,29 +230,25 @@
           Pular por agora
         </button>
       </form>
-    </div>
-
-    <!-- Toast Notifications -->
-    <div class="toast-container">
-      <transition-group name="toast">
-        <div 
-          v-for="toast in toasts" 
-          :key="toast.id" 
-          :class="['toast', toast.type]"
-        >
-          <div class="toast-icon">
-            <i :class="toast.icon"></i>
+              <!-- Alert Messages (estilo login) -->
+      <transition name="alert-slide">
+        <div v-if="mensagem || erro" :class="['alert', mensagem ? 'alert-success' : 'alert-error']">
+          <div class="alert-icon">
+            <svg v-if="mensagem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
           </div>
-          <div class="toast-content">
-            <span class="toast-title">{{ toast.title }}</span>
-            <span class="toast-message">{{ toast.message }}</span>
+          <div class="alert-content">
+            <strong>{{ mensagem ? 'Sucesso!' : 'Ops!' }}</strong>
+            <span>{{ mensagem || erro }}</span>
           </div>
-          <button class="toast-close" @click="removeToast(toast.id)">
-            <i class="fas fa-times"></i>
-          </button>
-          <div class="toast-progress" :style="{ animationDuration: toast.duration + 'ms' }"></div>
         </div>
-      </transition-group>
+      </transition>
     </div>
   </div>
 </template>
@@ -284,8 +277,8 @@ export default {
       focused: null,
       etapa1Dados: null,
       errors: {},
-      toasts: [],
-      toastId: 0
+          mensagem: "",
+      erro: ""
     }
   },
   computed: {
@@ -305,7 +298,7 @@ export default {
     // Verificar se veio da etapa 1
     const dadosEtapa1 = localStorage.getItem('registrar_etapa1_dados')
     if (!dadosEtapa1) {
-      this.showToast('error', 'Erro', 'Complete a etapa 1 primeiro. Redirecionando...')
+      this.showAlert('error', 'Complete a etapa 1 primeiro. Redirecionando...')
       setTimeout(() => {
         this.$router.push('/registrar')
       }, 2000)
@@ -335,34 +328,19 @@ export default {
     }
   },
   methods: {
-    showToast(type, title, message, duration = 5000) {
-      const id = ++this.toastId
-      const icons = {
-        success: 'fas fa-check-circle',
-        error: 'fas fa-exclamation-circle',
-        warning: 'fas fa-exclamation-triangle',
-        info: 'fas fa-info-circle'
+     showAlert(type, message) {
+      this.mensagem = ""
+      this.erro = ""
+      if (type === 'success') {
+        this.mensagem = message
+      } else {
+        this.erro = message
       }
-
-      this.toasts.push({
-        id,
-        type,
-        title,
-        message,
-        icon: icons[type] || icons.info,
-        duration
-      })
-
+      // Auto-limpar após 5 segundos
       setTimeout(() => {
-        this.removeToast(id)
-      }, duration)
-    },
-
-    removeToast(id) {
-      const index = this.toasts.findIndex(t => t.id === id)
-      if (index > -1) {
-        this.toasts.splice(index, 1)
-      }
+        this.mensagem = ""
+        this.erro = ""
+      }, 5000)
     },
 
     triggerAvatarUpload() {
@@ -380,60 +358,75 @@ export default {
       if (!file) return
 
       if (!file.type.startsWith('image/')) {
-        this.showToast('error', 'Erro', 'Por favor, selecione uma imagem válida')
+        this.showAlert('error', 'Por favor, selecione uma imagem válida')
         return
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        this.showToast('error', 'Erro', 'A imagem deve ter no máximo 5MB')
+       this.showAlert('error', 'A imagem deve ter no máximo 5MB')
         return
       }
 
       const reader = new FileReader()
       reader.onload = (e) => {
         this.form.avatar = e.target.result
-        this.showToast('success', 'Sucesso', 'Avatar carregado com sucesso!')
+        this.showAlert('success', 'Avatar carregado com sucesso!')
       }
       reader.readAsDataURL(file)
     },
 
-    validateForm() {
+    async validateForm() {
       this.errors = {}
       let isValid = true
 
+      // Username
       if (!this.form.username || this.form.username.length < 3) {
         this.errors.username = 'Nome de usuário é obrigatório (mínimo 3 caracteres)'
-        this.showToast('error', 'Erro', 'Nome de usuário é obrigatório (mínimo 3 caracteres)')
         isValid = false
       }
 
+      // Bio
       if (!this.form.bio || this.form.bio.trim().length === 0) {
         this.errors.bio = 'A bio é obrigatória'
-        this.showToast('error', 'Erro', 'A bio é obrigatória')
         isValid = false
       }
 
-      const cepLimpo = this.form.cep.replace(/\\D/g, '')
+      // CEP - validação de formato
+      const cepLimpo = this.form.cep.replace(/\D/g, '')
       if (!cepLimpo || cepLimpo.length !== 8) {
         this.errors.cep = 'CEP é obrigatório (8 dígitos)'
-        this.showToast('error', 'Erro', 'CEP é obrigatório (8 dígitos)')
         isValid = false
+      } else {
+        // NOVO: validar CEP via API antes de prosseguir
+        try {
+          const res = await axios.get(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+          if (res.data.erro) {
+            this.errors.cep = 'CEP não encontrado'
+            isValid = false
+          }
+        } catch (err) {
+          this.errors.cep = 'Erro ao validar CEP'
+          isValid = false
+        }
       }
-
-      return isValid
+if (!isValid) {
+    this.showAlert('error', 'Preencha todos os campos obrigatórios corretamente.')
+}
+return isValid
     },
 
     async completarPerfil() {
       this.loading = true
 
-      if (!this.validateForm()) {
+      const isValid = await this.validateForm()
+if (!isValid) {
         this.loading = false
-        this.showToast('error', 'Erro de Validação', 'Preencha todos os campos obrigatórios corretamente.')
+    this.showAlert('error', 'Preencha todos os campos obrigatórios corretamente.')
         return
       }
 
       if (!this.etapa1Dados) {
-        this.showToast('error', 'Erro', 'Dados da etapa 1 não encontrados. Volte e preencha novamente.')
+       this.showAlert('error', 'Dados da etapa 1 não encontrados. Volte e preencha novamente.')
         this.loading = false
         setTimeout(() => {
           this.$router.push('/registrar')
@@ -490,7 +483,7 @@ export default {
           detail: userDataCompleto
         }))
 
-        this.showToast('success', 'Sucesso!', 'Conta criada com sucesso! Redirecionando...')
+        this.showAlert('success', 'Conta criada com sucesso! Redirecionando...')
 
         setTimeout(() => {
           this.$router.push("/feitoparavoce")
@@ -498,7 +491,7 @@ export default {
 
       } catch (err) {
         const errorMsg = err.response?.data?.error || "Erro ao criar conta. Tente novamente."
-        this.showToast('error', 'Erro', errorMsg)
+       this.showAlert('error', errorMsg)
       } finally {
         this.loading = false
       }
@@ -519,7 +512,7 @@ export default {
 
         if (res.data.erro) {
           this.errors.cep = 'CEP não encontrado'
-          this.showToast('warning', 'Atenção', 'CEP não encontrado. Preencha manualmente.')
+          this.showAlert('error', 'CEP não encontrado. Preencha manualmente.')
           return
         }
 
@@ -530,10 +523,10 @@ export default {
         this.errors.cep = ''
 
         this.atualizarLocalizacao()
-        this.showToast('success', 'Sucesso', 'Endereço encontrado!')
+        this.showAlert('success', 'Endereço encontrado!')
 
       } catch (err) {
-        this.showToast('error', 'Erro', 'Erro ao buscar CEP. Tente novamente.')
+        this.showAlert('error', 'Erro ao buscar CEP. Tente novamente.')
       }
     },
 
@@ -543,7 +536,7 @@ export default {
 
     async pularEtapa() {
       if (!this.etapa1Dados) {
-        this.showToast('error', 'Erro', 'Dados da etapa 1 não encontrados')
+       this.showAlert('error', 'Dados da etapa 1 não encontrados')
         return
       }
 
@@ -574,7 +567,7 @@ export default {
           detail: userData
         }))
 
-        this.showToast('info', 'Conta criada!', 'Você pode completar seu perfil depois.')
+       this.showAlert('success', 'Conta criada! Você pode completar seu perfil depois.')
 
         setTimeout(() => {
           this.$router.push("/feitoparavoce")
@@ -582,7 +575,7 @@ export default {
 
       } catch (err) {
         const errorMsg = err.response?.data?.error || "Erro ao criar conta. Tente novamente."
-        this.showToast('error', 'Erro', errorMsg)
+       this.showAlert('error', errorMsg)
       } finally {
         this.loading = false
       }
@@ -1137,166 +1130,76 @@ textarea:not(:placeholder-shown) + label {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-/* Toast Notifications */
-.toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 400px;
-}
-
-.toast {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: 16px;
-  background: rgba(17, 24, 39, 0.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-  color: white;
-  position: relative;
-  overflow: hidden;
-  animation: toastSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.toast.success {
-  border-left: 4px solid #22c55e;
-}
-
-.toast.error {
-  border-left: 4px solid #ef4444;
-}
-
-.toast.warning {
-  border-left: 4px solid #f59e0b;
-}
-
-.toast.info {
-  border-left: 4px solid #3b82f6;
-}
-
-.toast-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+/* Alert Messages (estilo login) */
+.alert {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 14px;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 20px;
+  animation: slideUp 0.3s ease;
 }
 
-.toast.success .toast-icon {
-  background: rgba(34, 197, 94, 0.2);
+.alert-success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
   color: #4ade80;
 }
 
-.toast.error .toast-icon {
-  background: rgba(239, 68, 68, 0.2);
+.alert-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   color: #f87171;
 }
 
-.toast.warning .toast-icon {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+.alert-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
-.toast.info .toast-icon {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
+.alert-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
-.toast-content {
+.alert-content {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
 }
 
-.toast-title {
+.alert-content strong {
+  font-size: 0.875rem;
   font-weight: 600;
-  font-size: 0.95rem;
 }
 
-.toast-message {
-  font-size: 0.85rem;
-  color: #94a3b8;
+.alert-content span {
+  font-size: 0.875rem;
+  opacity: 0.9;
 }
 
-.toast-close {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toast-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.toast-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  animation: toastProgress linear forwards;
-}
-
-.toast.success .toast-progress {
-  background: #22c55e;
-}
-
-.toast.error .toast-progress {
-  background: #ef4444;
-}
-
-.toast.warning .toast-progress {
-  background: #f59e0b;
-}
-
-.toast.info .toast-progress {
-  background: #3b82f6;
-}
-
-@keyframes toastSlideIn {
+@keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateX(100px) scale(0.9);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateY(0);
   }
 }
 
-@keyframes toastProgress {
-  from { width: 100%; }
-  to { width: 0%; }
+.alert-slide-enter-active, .alert-slide-leave-active {
+  transition: all 0.3s ease;
 }
 
-.toast-enter-active, .toast-leave-active {
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.toast-enter-from, .toast-leave-to {
+.alert-slide-enter-from, .alert-slide-leave-to {
   opacity: 0;
-  transform: translateX(100px) scale(0.9);
+  transform: translateY(-10px);
 }
+
 
 /* Responsive */
 @media (max-width: 480px) {

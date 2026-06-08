@@ -1123,7 +1123,7 @@ const normalizedSong = song ? {
         this.checkFavoriteStatus()
         // 🔥 REGISTRAR HISTÓRICO — só registra quando realmente começa a tocar
       })
-      this.queue = [song]
+
     },
 
     // ═══════════════════════════════════════════════════════

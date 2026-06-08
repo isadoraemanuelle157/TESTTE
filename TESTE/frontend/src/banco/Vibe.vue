@@ -1,7 +1,7 @@
 <template>
   <div class="create-vibe-container">
     <div class="header">
-      <h1>Criar Nova Vibe <span class="sparkle">✨</span></h1>
+      <h1>Criar Nova Vibe <span class="sparkle"><i class="fas fa-sparkles"></i></span></h1>
       <p class="subtitle">Defina o mood perfeito para suas playlists</p>
     </div>
 
@@ -12,7 +12,7 @@
         <!-- Nome -->
         <div class="form-group">
           <label>
-            <span class="label-icon">📝</span>
+            <span class="label-icon"><i class="fas fa-pen"></i></span>
             Nome da vibe
           </label>
           <input 
@@ -27,7 +27,7 @@
         <!-- Emoji com Seletor Premium -->
         <div class="form-group">
           <label>
-            <span class="label-icon">😀</span>
+            <span class="label-icon"><i class="far fa-smile"></i></span>
             Emoji
           </label>
           <div class="emoji-input-wrapper">
@@ -63,19 +63,13 @@
                   </div>
                 </div>
                 <button @click="closeEmojiPicker" class="btn-close-picker">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                <i class="fas fa-xmark"></i>
                 </button>
               </div>
 
               <!-- Search -->
               <div class="picker-search">
-                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <path d="m21 21-4.35-4.35"></path>
-                </svg>
+                <i class="fas fa-magnifying-glass search-icon"></i>
                 <input 
                   v-model="emojiSearch" 
                   type="text" 
@@ -127,7 +121,7 @@
         <!-- Descrição -->
         <div class="form-group">
           <label>
-            <span class="label-icon">📄</span>
+            <span class="label-icon"><i class="far fa-file-lines"></i></span>
             Descrição
           </label>
           <textarea 
@@ -143,7 +137,7 @@
         <!-- Seletor de Gradiente -->
         <div class="form-group">
           <label>
-            <span class="label-icon">🎨</span>
+            <span class="label-icon"><i class="fas fa-palette"></i></span>
             Cor do Gradiente
           </label>
           
@@ -157,7 +151,7 @@
               :style="{ background: gradient }"
               @click="selectPresetGradient(index, gradient)"
             >
-              <div v-if="selectedGradientIndex === index && !isCustomGradient" class="check-mark">✓</div>
+              <div v-if="selectedGradientIndex === index && !isCustomGradient" class="check-mark"><i class="fas fa-check"></i></div>
             </div>
           </div>
 
@@ -172,7 +166,7 @@
                 :disabled="customColors.length >= 5"
                 title="Adicionar cor"
               >
-                <span>+</span>
+                <span><i class="fas fa-plus"></i></span>
               </button>
             </div>
             
@@ -197,7 +191,7 @@
                   class="btn-remove-color"
                   title="Remover cor"
                 >
-                  ×
+                  <i class="fas fa-xmark"></i>
                 </button>
               </div>
             </div>
@@ -209,7 +203,7 @@
               @click="selectCustomGradient"
               :class="{ active: isCustomGradient }"
             >
-              <span v-if="isCustomGradient" class="check-mark">✓</span>
+              <span v-if="isCustomGradient" class="check-mark"><i class="fas fa-check"></i></span>
               <span class="preview-text">Clique para selecionar</span>
             </div>
           </div>
@@ -218,7 +212,7 @@
         <!-- Tags -->
         <div class="form-group">
           <label>
-            <span class="label-icon">🏷️</span>
+            <span class="label-icon"><i class="fas fa-tags"></i></span>
             Tags
           </label>
           <div class="tag-input-wrapper">
@@ -229,20 +223,20 @@
               class="input-field"
             />
             <button type="button" @click="addTag" class="btn-add-tag">
-              <span>+</span>
+              <span><i class="fas fa-plus"></i></span>
             </button>
           </div>
           <div class="tags-container" v-if="form.tags.length > 0">
             <span v-for="(tag, index) in form.tags" :key="index" class="tag">
               {{ tag }}
-              <button @click="removeTag(index)" class="tag-remove">×</button>
+              <button @click="removeTag(index)" class="tag-remove"><i class="fas fa-xmark"></i></button>
             </span>
           </div>
         </div>
 
         <button type="submit" class="btn-submit"  :disabled="isLoading || form.tags.length === 0">
-          <span v-if="isLoading">⏳ Salvando...</span>
-          <span v-else>💾 Salvar Vibe</span>
+          <span v-if="isLoading"><i class="fas fa-spinner fa-spin"></i> Salvando...</span>
+          <span v-else><i class="fas fa-floppy-disk"></i> Salvar Vibe</span>
         </button>
       </form>
 
@@ -274,7 +268,7 @@
       <div class="section-header">
         <h2>Suas Vibes <span class="count-badge">{{ vibes.length }}</span></h2>
         <button @click="loadVibes" class="btn-refresh" title="Atualizar lista">
-          🔄
+          <i class="fas fa-rotate"></i>
         </button>
       </div>
 
@@ -310,10 +304,10 @@
               <td class="date-cell">{{ formatDate(vibe.createdAt) }}</td>
               <td class="actions-cell">
                 <button @click="editVibe(vibe)" class="btn-action btn-edit" title="Editar">
-                  ✏️
+                  <i class="fas fa-pen-to-square"></i>
                 </button>
                 <button @click="confirmDelete(vibe)" class="btn-action btn-delete" title="Excluir">
-                  🗑️
+                  <i class="fas fa-trash-can"></i>
                 </button>
               </td>
             </tr>
@@ -327,13 +321,13 @@
   <div class="modal modal-edit">
     <div class="modal-header">
       <div class="header-title">
-        <span class="header-icon">✏️</span>
+        <span class="header-icon"><i class="fas fa-pen-to-square"></i></span>
         <div>
           <h3>Editar Vibe</h3>
           <p class="header-subtitle">Personalize sua vibe</p>
         </div>
       </div>
-      <button @click="cancelEdit" class="btn-close">×</button>
+      <button @click="cancelEdit" class="btn-close"><i class="fas fa-xmark"></i></button>
     </div>
     
     <form @submit.prevent="updateVibe" class="edit-form">
@@ -350,18 +344,18 @@
 
       <!-- Nome -->
       <div class="form-group">
-        <label><span class="label-icon">📝</span> Nome</label>
+        <label><span class="label-icon"><i class="fas fa-pen"></i></span> Nome</label>
         <input v-model="editingVibe.nome" type="text" required class="input-field" />
       </div>
       
       <!-- Emoji com picker -->
       <div class="form-group">
-        <label><span class="label-icon">😀</span> Emoji</label>
+        <label><span class="label-icon"><i class="far fa-smile"></i></span> Emoji</label>
         <div class="emoji-input-wrapper">
           <input v-model="editingVibe.emoji" type="text" maxlength="4" class="input-field emoji-input" readonly />
           <div class="emoji-preview-large">{{ editingVibe.emoji || '🎵' }}</div>
           <button type="button" @click="toggleEditEmojiPicker" class="btn-emoji-picker" :class="{ active: showEditEmojiPicker }">
-            <span class="keyboard-icon">⌨️</span>
+            <span class="keyboard-icon"><i class="far fa-keyboard"></i></span>
           </button>
         </div>
 
@@ -370,17 +364,18 @@
           <div class="emoji-picker-premium">
             <div class="picker-header">
               <div class="picker-title">
-                <span class="picker-icon">😊</span>
+                <span class="picker-icon"><i class="far fa-smile"></i></span>
                 <div class="picker-text">
                   <h4>Escolha um Emoji</h4>
                   <p>Clique para selecionar</p>
                 </div>
               </div>
-              <button @click="closeEditEmojiPicker" class="btn-close-picker">×</button>
+           <button @click="closeEditEmojiPicker" class="btn-close-picker"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="picker-search">
-              <input v-model="editEmojiSearch" type="text" placeholder="Buscar emoji..." class="search-input" />
-            </div>
+  <i class="fas fa-magnifying-glass search-icon"></i>
+  <input v-model="editEmojiSearch" type="text" placeholder="Buscar emoji..." class="search-input" />
+</div>
             <div class="picker-categories">
               <button v-for="cat in emojiCategories" :key="cat.name" @click="editActiveCategory = cat.name" :class="{ active: editActiveCategory === cat.name }" class="category-tab">
                 <span class="cat-icon">{{ cat.icon }}</span>
@@ -404,7 +399,7 @@
       
       <!-- Descrição -->
       <div class="form-group">
-        <label><span class="label-icon">📄</span> Descrição</label>
+        <label><span class="label-icon"><i class="far fa-file-lines"></i></span> Descrição</label>
        <textarea 
  v-model="editingVibe.descricao"
  required
@@ -416,18 +411,18 @@
 
       <!-- 🔥 NOVO: Editor de Gradiente -->
       <div class="form-group">
-        <label><span class="label-icon">🎨</span> Cor do Gradiente</label>
+        <label><span class="label-icon"><i class="fas fa-palette"></i></span> Cor do Gradiente</label>
         
         <div class="gradient-grid edit-gradient-grid">
           <div v-for="(gradient, index) in presetGradients" :key="index" class="gradient-option" :class="{ active: editSelectedGradientIndex === index && !editingVibe.isCustomGradient }" :style="{ background: gradient }" @click="selectEditPresetGradient(index, gradient)">
-            <div v-if="editSelectedGradientIndex === index && !editingVibe.isCustomGradient" class="check-mark">✓</div>
+           <div v-if="editSelectedGradientIndex === index && !editingVibe.isCustomGradient" class="check-mark"><i class="fas fa-check"></i></div>
           </div>
         </div>
 
         <div class="custom-gradient">
           <div class="custom-gradient-header">
             <label class="sublabel">Personalize:</label>
-            <button type="button" @click="addEditColor" class="btn-add-color" :disabled="editCustomColors.length >= 5"><span>+</span></button>
+          <button type="button" @click="addEditColor" class="btn-add-color" :disabled="editCustomColors.length >= 5"><i class="fas fa-plus"></i></button>
           </div>
           <div class="color-stops">
             <div v-for="(color, index) in editCustomColors" :key="index" class="color-stop">
@@ -435,11 +430,11 @@
                 <input type="color" v-model="editCustomColors[index]" @input="updateEditCustomGradient" class="color-input" />
                 <div class="color-position">{{ getEditColorPosition(index) }}%</div>
               </div>
-              <button v-if="editCustomColors.length > 2" @click="removeEditColor(index)" class="btn-remove-color">×</button>
+             <button v-if="editCustomColors.length > 2" @click="removeEditColor(index)" class="btn-remove-color"><i class="fas fa-xmark"></i></button>
             </div>
           </div>
           <div class="custom-gradient-preview" :style="{ background: editCustomGradientString }" @click="selectEditCustomGradient" :class="{ active: editingVibe.isCustomGradient }">
-            <span v-if="editingVibe.isCustomGradient" class="check-mark">✓</span>
+            <span v-if="editingVibe.isCustomGradient" class="check-mark"><i class="fas fa-check"></i></span>
             <span class="preview-text">Clique para selecionar</span>
           </div>
         </div>
@@ -447,14 +442,14 @@
       
       <!-- Tags -->
       <div class="form-group">
-        <label><span class="label-icon">🏷️</span> Tags</label>
+        <label><span class="label-icon"><i class="fas fa-tags"></i></span> Tags</label>
         <div class="tag-input-wrapper">
           <input v-model="newEditTag" @keyup.enter.prevent="addEditTag" placeholder="Digite uma tag e pressione Enter" class="input-field" />
-          <button type="button" @click="addEditTag" class="btn-add-tag"><span>+</span></button>
+        <button type="button" @click="addEditTag" class="btn-add-tag"><i class="fas fa-plus"></i></button>
         </div>
         <div class="tags-container" v-if="editingVibe.tags.length > 0">
           <span v-for="(tag, index) in editingVibe.tags" :key="index" class="tag">
-            {{ tag }}<button @click="removeEditTag(index)" class="tag-remove">×</button>
+            {{ tag }}<button @click="removeEditTag(index)" class="tag-remove"><i class="fas fa-xmark"></i></button>
           </span>
         </div>
       </div>
@@ -462,7 +457,8 @@
       <div class="modal-actions">
         <button type="button" @click="cancelEdit" class="btn-cancel">Cancelar</button>
         <button type="submit" class="btn-save"  :disabled="isUpdating || editingVibe.tags.length === 0">
-          {{ isUpdating ? '⏳ Salvando...' : '💾 Salvar Alterações' }}
+         <span v-if="isUpdating"><i class="fas fa-spinner fa-spin"></i> Salvando...</span>
+<span v-else><i class="fas fa-floppy-disk"></i> Salvar Alterações</span>
         </button>
       </div>
     </form>
@@ -472,18 +468,26 @@
     <!-- Modal de Confirmação de Exclusão -->
     <div v-if="deletingVibe" class="modal-overlay" @click.self="cancelDelete">
       <div class="modal modal-confirm">
-        <div class="warning-icon">⚠️</div>
+        <div class="warning-icon"><i class="fas fa-triangle-exclamation"></i></div>
         <h3>Confirmar Exclusão</h3>
         <p>Tem certeza que deseja excluir a vibe <strong>"{{ deletingVibe.nome }}"</strong>?</p>
         <p class="warning-text">Esta ação não pode ser desfeita.</p>
         <div class="modal-actions">
           <button @click="cancelDelete" class="btn-cancel">Cancelar</button>
           <button @click="deleteVibe" class="btn-confirm-delete" :disabled="isDeleting">
-            {{ isDeleting ? 'Excluindo...' : 'Sim, Excluir' }}
+            <span v-if="isDeleting"><i class="fas fa-spinner fa-spin"></i> Excluindo...</span>
+<span v-else><i class="fas fa-trash-can"></i> Sim, Excluir</span>
           </button>
         </div>
       </div>
     </div>
+<!-- Toast Notification -->
+<transition name="toast">
+  <div v-if="toast.show" :class="['toast-soundup', toast.type]">
+    <div class="toast-icon" v-html="toast.icon"></div>
+    <div class="toast-message">{{ toast.message }}</div>
+  </div>
+</transition>
   </div>
 </template>
 
@@ -514,6 +518,12 @@ export default {
         gradient: '',
         tags: []
       },
+    toast: {
+  show: false,
+  message: '',
+  type: 'success',
+  icon: '<i class="fas fa-check-circle"></i>'
+},
       newTag: '',
       vibes: [],
       isLoading: false,
@@ -704,7 +714,7 @@ filteredEditEmojis() {
    !this.form.gradient.trim() ||
    this.form.tags.length === 0
  ) {
-   alert('Preencha todos os campos e adicione ao menos uma tag.')
+ this.mostrarToast('Preencha todos os campos obrigatórios', 'warning', '<i class="fas fa-exclamation-triangle"></i>')
    return
  }
 
@@ -719,7 +729,7 @@ filteredEditEmojis() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
 
-        alert("Vibe criada com sucesso! 🎉")
+        this.mostrarToast('Vibe criada com sucesso!', 'success', '<i class="fas fa-check-circle"></i>')
         
         this.form = { nome: '', emoji: '', descricao: '', gradient: this.presetGradients[0], tags: [] }
         this.selectPresetGradient(0, this.presetGradients[0])
@@ -727,7 +737,7 @@ filteredEditEmojis() {
         await this.loadVibes()
 
       } catch (err) {
-        alert("Erro: " + err.message)
+        this.mostrarToast(err.message, 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.isLoading = false
       }
@@ -841,7 +851,7 @@ async updateVibe() {
  !this.editingVibe.descricao.trim() ||
  this.editingVibe.tags.length === 0
 ){
- alert('Todos os campos são obrigatórios.')
+this.mostrarToast('Preencha todos os campos obrigatórios', 'warning', '<i class="fas fa-exclamation-triangle"></i>')
  return
 }
   this.isUpdating = true
@@ -864,12 +874,12 @@ async updateVibe() {
 
     if (!res.ok) throw new Error("Erro ao atualizar")
 
-    alert("Vibe atualizada! ✨")
+   this.mostrarToast('Vibe atualizada!', 'success', '<i class="fas fa-check-circle"></i>')
     this.cancelEdit()
     await this.loadVibes()
 
   } catch (err) {
-    alert("Erro ao atualizar: " + err.message)
+    this.mostrarToast(err.message, 'error', '<i class="fas fa-times-circle"></i>')
   } finally {
     this.isUpdating = false
   }
@@ -901,16 +911,20 @@ cancelEdit() {
 
         if (!res.ok) throw new Error("Erro ao excluir")
 
-        alert("Vibe removida! 🗑️")
+       this.mostrarToast('Vibe removida com sucesso.', 'success', '<i class="fas fa-check-circle"></i>')
         this.cancelDelete()
         await this.loadVibes()
 
       } catch (err) {
-        alert("Erro ao excluir: " + err.message)
+        this.mostrarToast(err.message, 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.isDeleting = false
       }
     },
+mostrarToast(message, type = 'success', icon = '<i class="fas fa-check-circle"></i>') {
+  this.toast = { show: true, message, type, icon }
+  setTimeout(() => this.toast.show = false, 3000)
+},
     
     formatDate(dateString) {
       if (!dateString) return '-'
@@ -1080,6 +1094,47 @@ cancelEdit() {
 .keyboard-icon {
   font-size: 1.5rem;
   transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keyboard-icon i {
+  font-size: 1.4rem;
+}
+
+/* Ícone do sparkle com cor */
+.sparkle i {
+  font-size: 1.8rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Label icons com cor verde */
+.label-icon {
+  font-size: 1.1rem;
+  color: #1db954;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+}
+
+/* Check mark nos gradientes */
+.check-mark i {
+  font-size: 11px;
+}
+
+/* Botão close picker com ícone */
+.btn-close-picker {
+  font-size: 1.1rem;
+}
+
+/* Botão close modal com ícone */
+.btn-close {
+  font-size: 1.1rem;
 }
 
 .btn-emoji-picker:hover {
@@ -1124,7 +1179,7 @@ cancelEdit() {
 /* Emoji Picker Premium Panel */
 .emoji-picker-premium {
   width: 100%;
-  max-width: 480px;
+  max-width: 620px;
   max-height: 85vh;
   background: linear-gradient(145deg, #1e1e2e 0%, #252535 100%);
   border-radius: 24px;
@@ -1177,6 +1232,9 @@ cancelEdit() {
   font-size: 1.8rem;
   box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
 }
+.picker-icon i {
+  font-size: 1.3rem;  /* adicionar */
+}
 
 .picker-text h4 {
   margin: 0;
@@ -1220,7 +1278,8 @@ cancelEdit() {
 
 .search-icon {
   position: absolute;
-  left: 36px;
+  left: 40px;
+    font-size: 1rem;
   top: 50%;
   transform: translateY(-50%);
   color: #666;
@@ -1331,7 +1390,8 @@ cancelEdit() {
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid transparent;
   border-radius: 12px;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
+  min-height: 52px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
@@ -1705,7 +1765,60 @@ cancelEdit() {
   font-size: 2.5rem;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
+/* Toast Notification - Mesmo estilo da página Cantor */
+.toast-soundup {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(29, 185, 84, 0.3);
+  z-index: 2000;
+  animation: toastSlideUp 0.3s ease;
+  color: white;
+}
 
+.toast-soundup.success {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 50%, #22c55e 100%);
+}
+
+.toast-soundup.error {
+  background: #dc2626;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
+}
+
+.toast-soundup.warning {
+  background: #f59e0b;
+  box-shadow: 0 10px 40px rgba(245, 158, 11, 0.3);
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Transições do toast */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
 .edit-preview-card h4 {
   margin: 0;
   font-size: 1.1rem;

@@ -95,7 +95,7 @@
 
             <transition name="expand">
               <div v-if="showPasswordFields" class="password-fields">
-                <div class="input-wrapper" :class="{ 'focused': focused === 'senha', 'filled': form.senha }">
+                     <div class="input-wrapper" :class="{ 'focused': focused === 'senha', 'filled': form.senha }">
                   <div class="input-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -125,6 +125,50 @@
                     </svg>
                   </button>
                   <div class="input-focus-line"></div>
+                </div>
+
+                <!-- ⬇️ NOVO: Confirmar senha -->
+                <div class="input-wrapper" :class="{ 'focused': focused === 'confirmarSenha', 'filled': form.confirmarSenha, 'error': senhasNaoCoincidem }">
+                  <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      <polyline points="20 12 20 16 16 16"/>
+                    </svg>
+                  </div>
+                  <input 
+                    v-model="form.confirmarSenha" 
+                    :type="showPassword ? 'text' : 'password'"
+                    @focus="focused = 'confirmarSenha'"
+                    @blur="focused = null"
+                    placeholder=" "
+                  />
+                  <label>Confirmar senha</label>
+                  <button 
+                    type="button" 
+                    class="password-toggle"
+                    @click="showPassword = !showPassword"
+                  >
+                    <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  </button>
+                  <div class="input-focus-line"></div>
+                </div>
+
+                <!-- ⬇️ Mensagem de erro quando senhas não coincidem -->
+                <div v-if="senhasNaoCoincidem" class="password-match-error">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>As senhas não coincidem</span>
                 </div>
 
                 <!-- Password Strength -->
@@ -247,7 +291,8 @@ export default {
       form: {
         nome: "",
         email: "",
-        senha: ""
+        senha: "",
+        confirmarSenha: ""
       },
       originalData: {
         nome: "",
@@ -267,6 +312,12 @@ export default {
   },
 
   computed: {
+        senhasNaoCoincidem() {
+      if (!this.form.confirmarSenha && !this.form.senha) return false
+      if (!this.form.confirmarSenha) return false
+      return this.form.senha !== this.form.confirmarSenha
+    },
+
     userInitials() {
       return this.form.nome
         ?.split(" ")
@@ -293,11 +344,11 @@ export default {
       return colors[index % colors.length]
     },
 
-    hasChanges() {
+       hasChanges() {
       return (
         this.form.nome !== this.originalData.nome ||
         this.form.email !== this.originalData.email ||
-        !!this.form.senha
+        (!!this.form.senha && this.form.senha === this.form.confirmarSenha)
       )
     },
 
@@ -328,9 +379,26 @@ export default {
     }
   },
 
-  async mounted() {
-    await this.buscarUsuario()
-  },
+ async mounted() {
+  await this.buscarUsuario()
+  
+  // ✅ VERIFICAÇÃO DE PERMISSÃO: apenas isa@gmail.com e pablo@gmail.com podem editar
+  const usuarioLogado = JSON.parse(localStorage.getItem("usuario") || "{}")
+  const emailPermitido = ["isa@gmail.com", "pablo@gmail.com"]
+  
+  if (!emailPermitido.includes(usuarioLogado.email)) {
+    this.erro = "Você não tem permissão para editar usuários."
+    // Desabilita o formulário visualmente
+    this.form.nome = ""
+    this.form.email = ""
+    this.originalData = { nome: "", email: "" }
+    
+    setTimeout(() => {
+      this.voltar()
+    }, 3000)
+    return
+  }
+},
 
   methods: {
     getAuthHeaders() {
@@ -380,6 +448,22 @@ export default {
   async salvar() {
   if (!this.hasChanges) return
 
+  // ✅ Validação: se preencheu senha, precisa confirmar e precisam ser iguais
+  if (this.form.senha || this.form.confirmarSenha) {
+    if (!this.form.senha.trim()) {
+      this.erro = 'Digite a nova senha.'
+      return
+    }
+    if (!this.form.confirmarSenha.trim()) {
+      this.erro = 'Confirme a nova senha.'
+      return
+    }
+    if (this.form.senha !== this.form.confirmarSenha) {
+      this.erro = 'As senhas não coincidem.'
+      return
+    }
+  }
+
   this.loading = true
   this.erro = ""
   this.mensagem = ""
@@ -413,7 +497,8 @@ export default {
       email: this.form.email
     }
 
-    this.form.senha = ""
+   this.form.senha = ""
+    this.form.confirmarSenha = ""
     this.showPasswordFields = false
     this.showPassword = false
 
@@ -511,7 +596,40 @@ export default {
   filter: blur(100px);
   opacity: 0.15;
 }
+/* Password match error */
+.password-match-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  color: #f87171;
+  font-size: 0.85rem;
+  margin-top: 8px;
+  animation: slideUp 0.2s ease;
+}
 
+.password-match-error svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Input com erro */
+.input-wrapper.error input {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
+
+.input-wrapper.error .input-icon {
+  color: #ef4444 !important;
+}
+
+.input-wrapper.error label {
+  color: #ef4444 !important;
+}
 .orb-1 {
   width: 500px;
   height: 500px;

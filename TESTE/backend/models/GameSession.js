@@ -40,6 +40,15 @@ const GameSessionSchema = new mongoose.Schema({
     default: 0
   },
 
+  sequenciaAtual: {
+  type: Number,
+  default: 0
+},
+maiorSequenciaSessao: {
+  type: Number,
+  default: 0
+},
+
   erros: {
     type: Number,
     default: 0

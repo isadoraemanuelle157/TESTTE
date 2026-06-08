@@ -8,7 +8,6 @@
       <div class="grid-overlay"></div>
     </div>
 
-
     <!-- Main Card -->
     <div class="login-card" :class="{ 'shake': erro, 'success-pulse': mensagem }">
       <!-- Header with Logo -->
@@ -28,9 +27,9 @@
 
 
       <!-- Login Form -->
-      <form @submit.prevent="login" class="login-form">
+      <form @submit.prevent="login" class="login-form" novalidate>
         <!-- Email Field -->
-        <div class="input-wrapper" :class="{ 'active': focused === 'email', 'has-value': form.email }">
+        <div class="input-wrapper" :class="{ 'active': focused === 'email', 'has-value': form.email, 'input-error': fieldErrors.email }">
           <div class="input-field">
             <div class="input-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -40,19 +39,28 @@
             <input
               v-model="form.email"
               type="email"
-              required
-              @focus="focused = 'email'"
-              @blur="focused = null"
+              @focus="focused = 'email'; clearFieldError('email')"
+@blur="focused = null; validateField('email')"
               placeholder=" "
             />
             <label>Email</label>
             <div class="input-line"></div>
           </div>
+          <transition name="field-error">
+  <div v-if="fieldErrors.email" class="field-error-msg">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>{{ fieldErrors.email }}</span>
+  </div>
+</transition>
         </div>
 
 
         <!-- Password Field -->
-        <div class="input-wrapper" :class="{ 'active': focused === 'senha', 'has-value': form.senha }">
+        <div class="input-wrapper" :class="{ 'active': focused === 'senha', 'has-value': form.senha, 'input-error': fieldErrors.senha }">
           <div class="input-field">
             <div class="input-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -63,9 +71,8 @@
             <input
               v-model="form.senha"
               :type="showPassword ? 'text' : 'password'"
-              required
-              @focus="focused = 'senha'"
-              @blur="focused = null"
+           @focus="focused = 'senha'; clearFieldError('senha')"
+@blur="focused = null; validateField('senha')"
               placeholder=" "
               @keyup.enter="login"
             />
@@ -87,6 +94,16 @@
             </button>
             <div class="input-line"></div>
           </div>
+          <transition name="field-error">
+  <div v-if="fieldErrors.senha" class="field-error-msg">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>{{ fieldErrors.senha }}</span>
+  </div>
+</transition>
         </div>
 
 
@@ -202,6 +219,7 @@ export default {
         email: "",
         senha: ""
       },
+       fieldErrors: { email: "", senha: "" }, 
       loading: false,
       socialLoading: false,
       mensagem: "",
@@ -220,7 +238,38 @@ export default {
     this.handleOAuthCallback()
   },
   methods: {
+    validateField(field) {
+    this.fieldErrors[field] = ""
+    if (field === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!this.form.email) {
+        this.fieldErrors.email = "O email é obrigatório"
+      } else if (!emailRegex.test(this.form.email)) {
+        this.fieldErrors.email = "Digite um email válido (ex: usuario@email.com)"
+      }
+    }
+    if (field === 'senha') {
+      if (!this.form.senha) {
+        this.fieldErrors.senha = "A senha é obrigatória"
+      } else if (this.form.senha.length < 6) {
+        this.fieldErrors.senha = "A senha deve ter no mínimo 6 caracteres"
+      }
+    }
+  },
+  clearFieldError(field) {
+    this.fieldErrors[field] = ""
+  },
+  validateAll() {
+    this.validateField('email')
+    this.validateField('senha')
+    return !this.fieldErrors.email && !this.fieldErrors.senha
+  },
     async login() {
+    if (!this.validateAll()) {
+    this.erro = "Por favor, corrija os erros nos campos acima"
+    setTimeout(() => this.erro = "", 5000)
+    return
+  }
       if (!this.isValid) return
      
       this.loading = true
@@ -636,7 +685,47 @@ export default {
   width: 24px;
   height: 24px;
 }
-
+/* ===== ESTILO DE ERRO NOS CAMPOS ===== */
+.input-wrapper.input-error .input-field input {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+.input-wrapper.input-error .input-icon {
+  color: #ef4444;
+}
+.input-wrapper.input-error .input-line {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  width: 100%;
+}
+.input-wrapper.input-error label {
+  color: #ef4444 !important;
+}
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.field-error-msg svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.field-error-enter-active, .field-error-leave-active {
+  transition: all 0.25s ease;
+}
+.field-error-enter-from, .field-error-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 
 h1 {
   font-size: 1.75rem;

@@ -385,21 +385,12 @@
     </transition>
 
     <!-- Toast Notification -->
-    <transition name="toast">
-      <div v-if="toast.show" :class="['toast', toast.type]">
-        <div class="toast-icon">
-          <svg v-if="toast.type === 'success'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </div>
-        <span>{{ toast.message }}</span>
-      </div>
-    </transition>
+<transition name="toast">
+  <div v-if="toast.show" :class="['toast-soundup', toast.type]">
+    <div class="toast-icon" v-html="toast.icon"></div>
+    <div class="toast-message">{{ toast.message }}</div>
+  </div>
+</transition>
 
     <!-- Success Alert Overlay -->
     <transition name="success-alert">
@@ -441,11 +432,12 @@ export default {
       deleting: false,
       currentPage: 1,
       itemsPerPage: 10,
-      toast: {
-        show: false,
-        message: "",
-        type: "success"
-      },
+   toast: {
+  show: false,
+  message: "",
+  type: "success",
+  icon: '<i class="fas fa-check-circle"></i>'
+},
 
       // Modal de Registro (1 etapa apenas)
       showRegisterModal: false,
@@ -574,7 +566,7 @@ export default {
         }))
       } catch (err) {
         console.error("Erro ao buscar usuários:", err)
-        this.showToast("Erro ao carregar usuários", "error")
+      this.showToast("Erro ao carregar usuários", "error", '<i class="fas fa-times-circle"></i>')
       } finally {
         this.loading = false
       }
@@ -689,7 +681,7 @@ export default {
       } catch (err) {
         console.error("Erro ao criar usuário:", err)
         const errorMsg = err.response?.data?.error || err.message || "Erro ao criar usuário"
-        this.showToast(errorMsg, "error")
+       	this.showToast(errorMsg, "error", '<i class="fas fa-times-circle"></i>')
       } finally {
         this.registerLoading = false
       }
@@ -717,21 +709,21 @@ export default {
         this.usuarios = this.usuarios.filter(user => user.id !== this.usuarioParaExcluir.id)
         this.showDeleteModal = false
         setTimeout(() => {
-          this.showToast("Usuário excluído com sucesso!", "success", 2000)
+        this.showToast("Usuário excluído com sucesso!", "success", '<i class="fas fa-check-circle"></i>')
         }, 350)
       } catch (err) {
         console.error("Erro ao excluir:", err)
-        this.showToast("Erro ao excluir usuário", "error")
+        this.showToast("Erro ao excluir usuário", "error", '<i class="fas fa-times-circle"></i>')
       } finally {
         this.deleting = false
         this.usuarioParaExcluir = null
       }
     },
 
-    showToast(message, type = "success", duration = 7000) {
-      this.toast = { show: true, message, type }
-      setTimeout(() => this.toast.show = false, duration)
-    }
+  showToast(message, type = "success", icon = '<i class="fas fa-check-circle"></i>') {
+  this.toast = { show: true, message, type, icon }
+  setTimeout(() => this.toast.show = false, 3000)  // ou 7000 se quiser manter o tempo maior
+}
   }
 }
 </script>
@@ -1916,58 +1908,60 @@ export default {
 }
 
 /* Toast */
-.toast {
+.toast-soundup {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-radius: 12px;
+  gap: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+  z-index: 2000;
+  animation: toastSlideUp 0.3s ease;
   color: white;
-  font-weight: 500;
-  z-index: 1001;
-  animation: toastIn 0.3s ease;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
-.toast.success {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+.toast-soundup.success {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
 }
 
-.toast.error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+.toast-soundup.error {
+  background: #dc2626;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
 }
 
-.toast-icon {
-  width: 24px;
-  height: 24px;
+.toast-icon i {
+  font-size: 1.25rem;
 }
 
-.toast-icon svg {
-  width: 100%;
-  height: 100%;
+.toast-message {
+  font-size: 0.95rem;
 }
 
-@keyframes toastIn {
+@keyframes toastSlideUp {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(-50%) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-.toast-enter-active, .toast-leave-active {
+.toast-enter-active,
+.toast-leave-active {
   transition: all 0.3s ease;
 }
 
+.toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateX(-50%) translateY(20px);
 }
 
 /* Responsive */

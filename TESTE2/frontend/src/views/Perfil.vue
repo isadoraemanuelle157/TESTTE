@@ -49,7 +49,12 @@
        
         <div class="profile-info-container">
           <div class="avatar-section">
-            <div class="avatar-wrapper" :class="{ 'online': isOnline, 'has-story': hasStory }">
+           <div class="avatar-wrapper" 
+     :class="{ 
+       'online': isOnline, 
+       'has-story': hasStory,
+       'avatar-dourado': hasGoldenAvatar 
+     }">
               <!-- Anel de story -->
               <div class="story-ring" v-if="hasStory" @click="viewStory">
                 <div class="story-progress" :style="storyProgressStyle"></div>
@@ -353,13 +358,11 @@
                           :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
                         ></i>
                       </div>
-    <div class="playlist-thumb-wrapper" :class="{ 'no-cover': !playlist.cover && !playlist.capa }">
+   <div class="playlist-thumb-wrapper">
   <img 
-    v-if="playlist.cover || playlist.capa"
-    :src="playlist.cover || playlist.capa" 
+    :src="playlist.cover || playlist.capa || blackPlaceholder" 
     class="playlist-thumb" 
   />
-  <div v-else class="playlist-thumb-fallback"></div>
   <div class="playlist-thumb-overlay">
     <i class="fa fa-list-ul"></i>
   </div>
@@ -533,7 +536,7 @@
                   <i v-else class="fa fa-play" @click.stop="playMusic(musica)"></i>
                 </span>
                 <div class="row-image-wrapper">
-                  <img :src="musica.cover" :alt="musica.nome" />
+                 <img :src="musica.cover || blackPlaceholder" :alt="musica.nome" />
                   <div class="row-image-overlay" v-if="hoveredRow === musica.id">
                     <i class="fa fa-play"></i>
                   </div>
@@ -556,9 +559,7 @@
                   <button class="btn-add" @click="addToPlaylist(musica)" title="Adicionar à playlist">
                     <i class="fa fa-plus"></i>
                   </button>
-                  <button class="btn-more" @click="showMusicOptions(musica)">
-                    <i class="fa fa-ellipsis-v"></i>
-                  </button>
+                 
                 </div>
               </div>
             </div>
@@ -766,7 +767,7 @@
               @click="goToProfile(user)"
             >
               <div class="user-avatar-wrapper">
-                <img :src="user.avatar || defaultAvatar" :alt="user.nome" class="user-avatar-large" />
+             <img :src="user.avatar || blackPlaceholder" :alt="user.nome" class="user-avatar-large" />
               </div>
               <h4>{{ user.nome }}</h4>
               <p>@{{ user.username }}</p>
@@ -811,7 +812,7 @@
               >
                 <span class="row-number">{{ index + 1 }}</span>
                 <div class="row-image-wrapper">
-                  <img :src="item.cover" :alt="item.nome" />
+                <img :src="item.cover || blackPlaceholder" :alt="item.nome" />
                 </div>
                 <div class="row-info">
                   <h4>{{ item.nome }}</h4>
@@ -1268,7 +1269,7 @@
                   @click="addMusicToPlaylist(playlist)"
                   :class="{ 'selected': selectedPlaylist === playlist._id }"
                 >
-                  <img :src="playlist.cover || playlist.capa" :alt="playlist.nome" />
+                  <img :src="playlist.cover || playlist.capa || blackPlaceholder" :alt="playlist.nome" />
                   <div class="playlist-option-info">
                     <h4>{{ playlist.nome }}</h4>
                     <p>{{ playlist.musicas.length }} músicas</p>
@@ -1310,12 +1311,31 @@
       <transition name="modal">
         <div v-if="showAvatarSelector" class="modal-overlay" @click.self="closeAvatarSelector">
           <div class="modal-content modal-avatar">
-            <div class="modal-header">
-              <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
-              <button class="btn-close" @click="closeAvatarSelector">
-                <i class="fa fa-times"></i>
-              </button>
-            </div>
+<div class="modal-header">
+  <div class="avatar-modal-header-left">
+    <h3><i class="fa fa-user-circle"></i> Escolher foto de perfil</h3>
+  </div>
+  
+  <div class="avatar-modal-actions">
+    <!-- BOTÃO EQUIPAR DOURADO -->
+    <button 
+      v-if="hasGoldenAvatarItem"
+      type="button"
+      class="btn-equip-gold"
+      :class="{ 'equipped': isAvatarGoldEquipped }"
+      @click="toggleEquipGoldenAvatar"
+      :disabled="equippingGold"
+    >
+      <i :class="isAvatarGoldEquipped ? 'fa fa-crown' : 'fa fa-crown-o'"></i>
+      <span v-if="equippingGold"><i class="fa fa-spinner fa-spin"></i></span>
+      <span v-else>{{ isAvatarGoldEquipped ? 'Dourado Ativo' : 'Equipar Dourado' }}</span>
+    </button>
+    
+    <button class="btn-close" @click="closeAvatarSelector">
+      <i class="fa fa-times"></i>
+    </button>
+  </div>
+</div>
            
             <div class="modal-body">
               <div class="avatar-selector-tabs">
@@ -1449,6 +1469,7 @@
 
 <script>
 import axios from 'axios'
+import { gameApi } from '../services/gameApi.js'
 
 // Diretiva para clicar fora
 const clickOutside = {
@@ -1479,6 +1500,9 @@ export default {
       seguindoList: [],
       openedPlaylist: null,
       showAvatarSelector: false,
+        isAvatarGoldEquipped: false,
+    hasGoldenAvatarItem: false,
+    equippingGold: false,
       activeAvatarTab: 'initials',
       expandedDates: {},
       isDragging: false,
@@ -1494,11 +1518,11 @@ loadingHistory: false,
             font-size="48" font-family="Arial" fill="#333">♪</text>
         </svg>
       `),
-      defaultAvatar: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+defaultAvatar: 'data:image/svg+xml;utf8,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120">
-    <rect width="100%" height="100%" fill="#334155"/>
+    <rect width="100%" height="100%" fill="#0a0a0a"/>  // ✅ preto
     <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
-      font-size="42" font-family="Arial" fill="#fff">U</text>
+      font-size="42" font-family="Arial" fill="#333">U</text>
   </svg>
 `),
      
@@ -1573,7 +1597,6 @@ activityPrivacyMap: {},
 activityResources: [
   { key: 'curtidas', label: 'Curtidas', icon: 'fa fa-heart' },
   { key: 'playlists', label: 'Playlists', icon: 'fa fa-list' },
-  { key: 'atividades', label: 'Atividades', icon: 'fa fa-pulse' },
   { key: 'seguidores', label: 'Seguidores', icon: 'fa fa-users' },
   { key: 'seguindo', label: 'Seguindo', icon: 'fa fa-user-plus' },
   { key: 'tudo', label: 'Tudo', icon: 'fa fa-lock' }
@@ -1654,6 +1677,25 @@ activityResources: [
   },
 
   computed: {
+ hasGoldenAvatar() {
+    // Verifica se o avatar dourado está EQUIPADO (ativo no perfil)
+    return this.isAvatarGoldEquipped;
+  },
+  
+  // ⚡ NOVO: Verifica se POSSUI o item (comprado)
+  hasGoldenAvatarInInventory() {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      return inventory.some(i => i.itemId === 'avatar_gold');
+    }
+    
+    // Modo online — verificado via API no mounted
+    return this.hasGoldenAvatarItem;
+  },
+
 usuarioGenerosList() {
   const generos = this.usuario?.generos
 
@@ -1913,6 +1955,9 @@ mounted() {
   }, 800)
 
   this.carregarUsuarioLogado()
+  
+   this.$forceUpdate()
+  
   this.loadCustomAvatarOptions()
   this.generateArtisticAvatars()
   this.generateFunAvatars()
@@ -1940,7 +1985,19 @@ mounted() {
     this.carregarUsuarioLogado()
     this.generateArtisticAvatars()
     this.generateFunAvatars()
+   const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped')
+  if (savedGoldState !== null) {
+    this.isAvatarGoldEquipped = savedGoldState === 'true'
   }
+  
+  // Depois verifica com o backend (mas não sobrescreve se já tem valor salvo)
+  this.checkGoldenAvatarStatus()
+  }
+    this.onInventoryUpdated = () => {
+    // Força reavaliação da computed property hasGoldenAvatar
+    this.$forceUpdate()
+  }
+  window.addEventListener('inventory-updated', this.onInventoryUpdated)
 
   window.addEventListener('playlist-updated', this.onPlaylistUpdated)
   window.addEventListener('likes-updated', this.onLikesUpdated)
@@ -1971,10 +2028,127 @@ mounted() {
     window.removeEventListener('focus', this.handleFocus)
     window.removeEventListener('storage', this.handleStorage)
      window.removeEventListener('play-song', this.onPlaySong)
+      window.removeEventListener('inventory-updated', this.onInventoryUpdated)
      
   },
 
   methods: {
+   async checkGoldenAvatarStatus() {
+    const token = localStorage.getItem('token');
+    
+    // 🔥 VERIFICAR PRIMEIRO SE TEM ESTADO SALVO NO LOCALSTORAGE
+    const savedEquipped = localStorage.getItem('soundup_avatar_gold_equipped');
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = !!goldItem;
+      // 🔥 Usa o estado salvo se existir, senão usa do inventário
+      this.isAvatarGoldEquipped = savedEquipped !== null 
+        ? savedEquipped === 'true' 
+        : (goldItem?.ativo || false);
+      return;
+    }
+    
+    // Modo online
+    try {
+      const res = await gameApi.getEquippedItems();
+      const equipped = res.data?.equipped || [];
+      const serverState = equipped.some(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = true;
+      
+      // 🔥 Só sobrescreve com o servidor se não tiver estado local salvo
+      // (ou se quiser sincronizar, pode comparar e decidir)
+      if (savedEquipped === null) {
+        this.isAvatarGoldEquipped = serverState;
+        localStorage.setItem('soundup_avatar_gold_equipped', String(serverState));
+      } else {
+        // Mantém o estado local (usuário explicitamente escolheu)
+        this.isAvatarGoldEquipped = savedEquipped === 'true';
+      }
+    } catch (error) {
+      console.error('Erro ao verificar avatar dourado:', error);
+      // Fallback para localStorage
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
+      this.hasGoldenAvatarItem = !!goldItem;
+      this.isAvatarGoldEquipped = savedEquipped !== null 
+        ? savedEquipped === 'true' 
+        : (goldItem?.ativo || false);
+    }
+  },
+  
+  // ⚡ NOVO: Toggle equipar/desequipar avatar dourado
+  async toggleEquipGoldenAvatar() {
+    if (this.equippingGold) return;
+    
+    this.equippingGold = true;
+    const token = localStorage.getItem('token');
+    const newState = !this.isAvatarGoldEquipped;
+    
+    try {
+      if (!token) {
+        // Modo offline
+        const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+        const itemIndex = inventory.findIndex(i => i.itemId === 'avatar_gold');
+        
+        if (itemIndex >= 0) {
+          inventory[itemIndex].ativo = newState;
+          
+          // Desativa outros avatares do mesmo tipo
+          if (newState) {
+            inventory.forEach(i => {
+              if (i.tipo === 'avatar' && i.itemId !== 'avatar_gold') {
+                i.ativo = false;
+              }
+            });
+          }
+          
+          localStorage.setItem('soundup_inventory', JSON.stringify(inventory));
+        }
+      } else {
+        // Modo online
+        if (newState) {
+          await gameApi.equipAvatarGold();
+        } else {
+          await gameApi.unequipAvatarGold();
+        }
+      }
+      
+this.isAvatarGoldEquipped = newState;
+
+// 🔥 SALVAR NO LOCALSTORAGE PARA PERSISTIR ENTRE MODAIS/SESSÕES
+localStorage.setItem('soundup_avatar_gold_equipped', String(newState));
+
+// Dispara evento para atualizar o perfil E a navbar
+window.dispatchEvent(new CustomEvent('inventory-updated'));
+window.dispatchEvent(new CustomEvent('avatar-gold-changed', { 
+  detail: { equipped: newState } 
+}));
+      
+      this.showToast({
+        title: newState ? "👑 Avatar Dourado Ativado!" : "Avatar Dourado Removido",
+        message: newState 
+          ? "Sua borda dourada está ativa no perfil" 
+          : "Você desativou o avatar dourado",
+        type: "success",
+        icon: newState ? "fa fa-crown" : "fa fa-user"
+      });
+      
+    } catch (error) {
+      console.error('Erro ao equipar avatar dourado:', error);
+      this.showToast({
+        title: "Erro",
+        message: "Não foi possível atualizar o avatar dourado",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      });
+    } finally {
+      this.equippingGold = false;
+    }
+  },
+
     formatTimeFromDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -2879,7 +3053,7 @@ handleGeneratedOptionError(event) {
             _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
             nome: f.seguindo_id?.nome || 'Artista',
             username: null,
-            avatar: f.seguindo_id?.foto || f.seguindo_id?.avatar || 'https://e-cdns-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500.jpg',
+            avatar: f.seguindo_id?.foto || f.seguindo_id?.avatar || this.blackPlaceholder,
             tipo: 'cantor',
             isFollowing: true,
             generos: f.seguindo_id?.generos || []
@@ -3041,7 +3215,10 @@ openAvatarSelector() {
   this.showAvatarSelector = true
   this.activeAvatarTab = 'initials'
   
-  // 🔥 GARANTE que os avatares são gerados com dados atualizados
+  // 🔥 ADICIONAR ESTA LINHA - garante que verifica o status do item dourado
+  this.checkGoldenAvatarStatus()
+  
+  // Garante que os avatares são gerados com dados atualizados
   this.$nextTick(() => {
     this.generateArtisticAvatars()
     this.generateFunAvatars()
@@ -3131,7 +3308,7 @@ async onAvatarSelect(avatarUrl) {
 
 handleAvatarError(event) {
   if (event?.target) {
-    event.target.style.display = 'none'
+    event.target.src = this.blackPlaceholder
   }
 },
 
@@ -3300,7 +3477,7 @@ handleFocus() {
   .map(p => ({
     _id: p._id,
     nome: p.nome,
-    cover: p.cover || p.capa || 'https://via.placeholder.com/150',
+cover: p.cover || p.capa || this.blackPlaceholder,
     musicas: Array.isArray(p.musicas) ? p.musicas : [],
     totalMusicas: Array.isArray(p.musicas) ? p.musicas.length : 0,
     privacidade: p.privacidade || (p.privada ? 'Privada' : 'Pública'),
@@ -3343,7 +3520,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
       id: c.id || c._id,  // ← ID pode vir como 'id' (externo) ou '_id' (local)
       nome: c.nome || c.title || 'Música',
       artist: c.artist || c.artista || 'Artista desconhecido',
-      cover: c.cover || c.capa || 'https://via.placeholder.com/150',
+      cover: c.cover || c.capa || this.blackPlaceholder, 
       url: c.url || c.previewUrl || c.link || '',
       duration: c.duration || c.duracao || 30,
       curtido: true,
@@ -3382,7 +3559,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "musica",
           nome: f.musicaExterna.nome,
           artist: f.musicaExterna.artista,
-          cover: f.musicaExterna.capa,
+          cover: f.musicaExterna.capa || this.blackPlaceholder,
           url: f.musicaExterna.previewUrl,
           duration: f.musicaExterna.duration,
           dataFavoritado: f.createdAt,
@@ -3396,7 +3573,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "album",
           nome: f.albumExterno.nome,
           artist: f.albumExterno.artista,
-          cover: f.albumExterno.capa,
+         cover: f.albumExterno.capa || this.blackPlaceholder,
           dataFavoritado: f.createdAt,
           source: f.albumExterno.source || 'spotify'
         }
@@ -3408,7 +3585,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "cantor",
           nome: f.cantorExterno.nome,
           artist: "Artista",
-          cover: f.cantorExterno.capa || f.cantorExterno.foto,
+          cover: f.cantorExterno.capa || f.cantorExterno.foto || this.blackPlaceholder,
           dataFavoritado: f.createdAt,
           source: f.cantorExterno.source || 'spotify'
         }
@@ -3420,7 +3597,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "musica",
           nome: f.musica.nome,
           artist: f.musica.cantores?.map(c => c.nome).join(', ') || "Artista desconhecido",
-          cover: f.musica.foto,
+          cover: f.musica.foto || this.blackPlaceholder,
           url: f.musica.link,
           duration: f.musica.duracao,
           dataFavoritado: f.createdAt,
@@ -3440,7 +3617,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "playlist",
           nome: f.playlist.nome,
           artist: f.playlist.descricao || "Playlist",
-          cover: f.playlist.capa || f.playlist.cover,
+          cover: f.playlist.capa || f.playlist.cover || this.blackPlaceholder,
           // 🔥 CORREÇÃO: Usar o total calculado
           musicas: totalMusicas,
           duracaoTotal: f.playlist.duracaoTotal || "0 min",
@@ -3454,7 +3631,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "cantor",
           nome: f.cantor.nome,
           artist: "Artista",
-          cover: f.cantor.foto,
+          cover: f.cantor.foto || this.blackPlaceholder,
           dataFavoritado: f.createdAt,
           source: 'local'
         }
@@ -3465,7 +3642,7 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
           type: "album",
           nome: f.album.nome,
           artist: f.album.cantor?.nome || "Álbum",
-          cover: f.album.foto,
+          cover: f.album.foto || this.blackPlaceholder,
           musicas: f.album.musicas?.length || 0,
           dataFavoritado: f.createdAt,
           source: 'local'
@@ -4620,13 +4797,30 @@ html, body {
   height: 180px;
 }
 
-.avatar-wrapper.online .avatar {
-  border-color: #22c55e;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.3), 0 8px 32px rgba(0, 0, 0, 0.4);
+/* ===== CSS DO AVATAR DOURADO - DEVE VIR DEPOIS DO PADRÃO ===== */
+.avatar-wrapper.avatar-dourado {
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
-.avatar-wrapper.has-story .avatar {
-  border-color: #ec4899;
+.avatar-wrapper.avatar-dourado .avatar,
+.avatar-wrapper.avatar-dourado .generated-avatar {
+  border: 3px solid #1a1a2e !important;
+  box-shadow: none !important;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  margin: 3px;
+}
+
+.avatar-wrapper.avatar-dourado .story-ring {
+  inset: -10px;
+  background: conic-gradient(from 0deg, #FFD700, #FFA500, #FFD700) !important;
+  padding: 4px;
 }
 
 /* Anel de Story */
@@ -5187,7 +5381,18 @@ html, body {
   background: rgba(255, 255, 255, 0.1);
   color: white;
 }
+.avatar-wrapper.avatar-dourado .avatar,
+.avatar-wrapper.avatar-dourado .generated-avatar {
+  border: 4px solid #FFD700 !important;
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 8px 32px rgba(0, 0, 0, 0.4) !important;
+}
 
+.avatar-wrapper.avatar-dourado .story-ring {
+  background: conic-gradient(from 0deg, #FFD700, #FFA500, #FFD700) !important;
+}
 /* Filtros */
 .filters-panel {
   padding: 20px 40px;
@@ -5911,6 +6116,96 @@ html, body {
 
 .artist-item:hover .artist-image-wrapper {
   border-color: #ec4899;
+}
+/* ===== BOTÃO AVATAR DOURADO NO MODAL ===== */
+.avatar-modal-header-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.avatar-modal-header-left h3 {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 18px;        /* 🔥 ADICIONAR */
+  line-height: 1.2;       /* 🔥 ADICIONAR */
+}
+
+.avatar-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Botão Equipar Dourado */
+.btn-equip-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #FFD700;
+  background: rgba(255, 215, 0, 0.1);
+  color: #FFD700;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  height: 36px;           /* 🔥 ADICIONAR - força altura igual ao botão fechar */
+}
+
+.btn-equip-gold:hover:not(:disabled) {
+  background: rgba(255, 215, 0, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.btn-equip-gold.equipped {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #1a1a2e;
+  border-color: #FFD700;
+  box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+}
+
+.btn-equip-gold:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Header do modal de avatar */
+.modal-avatar .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;     /* 🔥 AJUSTAR - padding menor */
+}
+
+/* Botão fechar (X) */
+.btn-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  flex-shrink: 0;         /* 🔥 ADICIONAR - não encolhe */
+}
+
+.btn-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
 }
 
 .artist-avatar {
@@ -7056,26 +7351,6 @@ html, body {
   font-size: 20px;
   font-weight: 700;
   margin: 0;
-  color: #f8fafc;
-}
-
-.btn-close {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
-}
-
-.btn-close:hover {
-  background: rgba(255, 255, 255, 0.2);
   color: #f8fafc;
 }
 

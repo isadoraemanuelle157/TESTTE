@@ -203,12 +203,12 @@
                   <span>Meu Perfil</span>
                 </div>
 
-                <div class="dropdown-item" @click="goToSettings">
-                  <div class="item-icon">
-                    <i class="fa fa-cog"></i>
-                  </div>
-                  <span>Configurações</span>
-                </div>
+           <div class="dropdown-item" @click="goToContact">
+  <div class="item-icon">
+    <i class="fa fa-envelope"></i>   <!-- ← ícone de contato -->
+  </div>
+  <span>Contato</span>
+</div>
 
                 <div class="dropdown-item" @click="goToLibrary">
                   <div class="item-icon">
@@ -219,12 +219,12 @@
 
                 <div class="dropdown-divider"></div>
 
-                <div class="dropdown-item" @click="goToHelp">
-                  <div class="item-icon">
-                    <i class="fa fa-question-circle"></i>
-                  </div>
-                  <span>Ajuda & Suporte</span>
-                </div>
+             <div class="dropdown-item" @click="goToSupport">
+  <div class="item-icon">
+    <i class="fa fa-question-circle"></i>
+  </div>
+  <span>Suporte</span>
+</div>
 
                 <div class="dropdown-item danger" @click="handleLogout">
                   <div class="item-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
@@ -835,20 +835,20 @@ const handleAvatarGoldChanged = (e) => {
       router.push('/perfil')
     }
 
-    const goToSettings = () => {
-      showUserMenu.value = false
-      router.push('/settings')
-    }
+  const goToContact = () => {
+  showUserMenu.value = false
+  router.push('/contato')   // ← ou a rota que você usa para contato
+}
 
     const goToLibrary = () => {
       showUserMenu.value = false
       router.push('/favoritas')
     }
 
-    const goToHelp = () => {
-      showUserMenu.value = false
-      router.push('/help')
-    }
+ const goToSupport = () => {
+  showUserMenu.value = false
+  router.push('/suporte')     // ← ajustado para /support
+}
 
     const handleAvatarError = () => {
       userAvatar.value = null
@@ -967,9 +967,9 @@ onMounted(async () => {
       handleRegister,
       handleLogout,
       goToProfile,
-      goToSettings,
+    goToContact,
+goToSupport,
       goToLibrary,
-      goToHelp,
       handleAvatarError,
       isAvatarGoldEquipped,
     }
@@ -984,15 +984,16 @@ onMounted(async () => {
 .navbar {
   position: fixed;
   top: 0;
-  left: 0;
+  left: 0;           /* ← ALTERADO: era left: 0 (mantém) */
   right: 0;
   height: 70px;
   z-index: 1000;
   transition: all 0.3s ease;
 }
 
+/* ADICIONE esta nova regra (não existe ainda): */
 .navbar.sidebar-open {
-  left: 260px;
+  left: 260px;       /* ← NOVO: empurra navbar quando sidebar abre */
 }
 
 .navbar.hidden {
@@ -1030,8 +1031,9 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 32px;
-    padding-left: 90px;
+  padding-left: 32px;   /* ← ALTERADO: era 90px, agora 32px normal */
 }
+
 
 /* ===== BRAND ===== */
 .navbar-brand {

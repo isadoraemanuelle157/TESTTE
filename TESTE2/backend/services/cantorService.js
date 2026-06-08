@@ -150,24 +150,44 @@ const updateCantor = async (id, data) => {
   const cantorAntigo = await Cantor.findById(id)
   if (!cantorAntigo) throw new Error('Cantor não encontrado')
 
-const payload = {
-  nome: data.nome?.trim() || cantorAntigo.nome,
-  foto: data.foto?.trim?.() || data.foto || cantorAntigo.foto || '',
-  generos: data.generos !== undefined
-    ? normalizeIds(data.generos)
-    : cantorAntigo.generos,
-  musicas: data.musicas !== undefined
-    ? normalizeIds(data.musicas)
-    : cantorAntigo.musicas,
-  albuns: data.albuns !== undefined
-    ? normalizeIds(data.albuns)
-    : cantorAntigo.albuns,
-  seguidoresBase: parseSeguidores(
-    data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase
-  ),
-  ano: data.ano ?? cantorAntigo.ano ?? null,
-  decada: getDecada(data.ano ?? cantorAntigo.ano)
-}
+  const payload = {}
+
+  // Só inclui campo se foi enviado (não undefined) — SEM validações obrigatórias no update
+  if (data.nome !== undefined) {
+    payload.nome = data.nome?.trim() || cantorAntigo.nome
+  }
+  if (data.foto !== undefined) {
+    payload.foto = data.foto?.trim?.() || data.foto || cantorAntigo.foto || ''
+  }
+  if (data.generos !== undefined) {
+    payload.generos = normalizeIds(data.generos)
+  }
+  if (data.musicas !== undefined) {
+    payload.musicas = normalizeIds(data.musicas)
+  }
+  if (data.albuns !== undefined) {
+    payload.albuns = normalizeIds(data.albuns)
+  }
+  if (data.seguidoresBase !== undefined || data.seguidores !== undefined) {
+    payload.seguidoresBase = parseSeguidores(
+      data.seguidoresBase ?? data.seguidores ?? cantorAntigo.seguidoresBase
+    )
+  }
+  if (data.ano !== undefined) {
+    payload.ano = data.ano || null
+    payload.decada = getDecada(data.ano)
+  }
+
+  // 🔥 NOVO: também permite atualizar bio, banner, redes sociais se enviados
+  if (data.bio !== undefined) payload.bio = data.bio
+  if (data.banner !== undefined) payload.banner = data.banner
+  if (data.sobre !== undefined) payload.sobre = data.sobre
+  if (data.origem !== undefined) payload.origem = data.origem
+  if (data.pais !== undefined) payload.pais = data.pais
+  if (data.instagram !== undefined) payload.instagram = data.instagram
+  if (data.spotifyUrl !== undefined) payload.spotifyUrl = data.spotifyUrl
+  if (data.youtubeUrl !== undefined) payload.youtubeUrl = data.youtubeUrl
+  if (data.siteOficial !== undefined) payload.siteOficial = data.siteOficial
 
 const musicasAntigas = (cantorAntigo.musicas || []).map(m => 
   m._id ? m._id.toString() : m.toString()

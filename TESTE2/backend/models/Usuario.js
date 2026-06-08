@@ -95,6 +95,14 @@ const usuarioSchema = new mongoose.Schema({
     }
   }],
 
+  // No schema do usuário
+avatarDourado: { type: Boolean, default: false },
+equippedItems: [{
+  itemId: String,
+  tipo: String, // 'avatar', 'tema', etc.
+  ativo: Boolean
+}],
+
   onboardingCompleto: { type: Boolean, default: false },
   membroDesde: { type: Date, default: Date.now }
 }, { 

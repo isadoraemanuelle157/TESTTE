@@ -60,6 +60,8 @@ const { checkChatLimit } = require('./middleware/chatLimit')
 const path = require('path')
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
+const rooms = new Map()
+
 const usuarioRoutes = safeRequire('./routes/usuarioRoutes')
 const musicaRoutes = safeRequire('./routes/musicaRoutes')
 const cantorRoutes = safeRequire('./routes/cantorRoutes')
@@ -82,6 +84,7 @@ const gameRoutes = safeRequire('./routes/gameRoutes')
 const suporteRoutes = safeRequire('./routes/suporteRoutes')
 const chatRoutes = safeRequire('./routes/chatRoutes')
 const karaokeRoutes = safeRequire('./routes/karaokeRoutes')
+const roomRoutes = require('./routes/roomRoutes')
 
 // ============================================
 // 📌 ROTAS APP
@@ -108,6 +111,8 @@ app.use('/genius', geniusRoutes)
 app.use('/game', gameRoutes)
 app.use('/suporte', suporteRoutes)
 app.use('/api/karaoke', karaokeRoutes)
+app.use('/api/rooms', roomRoutes)
+
 
 app.post('/chat/message', checkChatLimit, async (req, res) => {
   try {

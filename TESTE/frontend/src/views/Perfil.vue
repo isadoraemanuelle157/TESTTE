@@ -25,9 +25,14 @@
       <!-- Header do Perfil -->
       <div class="profile-header">
         <div class="cover-image" :style="coverStyle">
-          <div class="cover-gradient"></div>
-
-          <div class="cover-actions" v-if="isOwnProfile">
+  <div class="cover-gradient"></div>
+  
+  <!-- Ícone quando não tem capa -->
+  <div v-if="!usuario.cover" class="cover-default-icon">
+    <i class="fa fa-music"></i>
+  </div>
+  
+  <div class="cover-actions" v-if="isOwnProfile">
             <button
               type="button"
               class="btn-cover-action"
@@ -1765,18 +1770,18 @@ activityPrivacySummary() {
 
     return !!this.usuario.perfilPrivado
   },
-    coverStyle() {
-      return this.usuario.cover
-        ? {
-            backgroundImage: `url(${this.usuario.cover})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }
-        : {
-            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
-          }
-    },
+coverStyle() {
+  return this.usuario.cover
+    ? {
+        backgroundImage: `url(${this.usuario.cover})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }
+    : {
+        background: '#000'
+      }
+},
    
   hasCustomAvatar() {
   return !!this.usuario.avatar
@@ -1842,20 +1847,20 @@ isDefaultAvatar() {
   return !this.usuario.avatar
 },
    
-    previewCoverStyle() {
-      const cover = this.editForm.cover || this.usuario.cover
+  previewCoverStyle() {
+  const cover = this.editForm.cover || this.usuario.cover
 
-      return cover
-        ? {
-            backgroundImage: `url(${cover})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }
-        : {
-            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
-          }
-    },
+  return cover
+    ? {
+        backgroundImage: `url(${cover})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }
+    : {
+        background: '#000'
+      }
+},
    
 isNewMember() {
   if (!this.usuario.membroDesde) return false
@@ -8216,7 +8221,19 @@ html, body {
 .fade-leave-active {
   transition: all 0.2s ease;
 }
+.cover-default-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
 
+.cover-default-icon i {
+  font-size: 64px;
+  color: #111;  /* quase preto, igual o ícone da playlist */
+}
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

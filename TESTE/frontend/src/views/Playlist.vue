@@ -1435,12 +1435,14 @@ return {
           playlist.isFavorita = data.favorited
         }
 
-        this.showToast({
-          message: data.favorited
-            ? 'Adicionada às favoritas ⭐'
-            : 'Removida das favoritas',
-          type: 'success'
-        })
+         this.showToast({
+      message: data.favorited
+        ? 'Adicionada às favoritas'
+        : 'Removida das favoritas',
+      type: 'success',
+      timer: 5000
+    })
+
 
         window.dispatchEvent(new Event('favoritas-updated'))
       } catch (err) {
@@ -1523,22 +1525,24 @@ return {
     },
 
     // ===== TOAST =====
-    showToast({ message, type = 'success', icon = 'fa fa-check', title = '' }) {
-      if (this.toast.timer) clearTimeout(this.toast.timer)
+// ===== TOAST =====
+showToast({ message, type = 'success', icon = 'fa fa-check', title = '', timer = 3000 }) {
+  if (this.toast.timer) clearTimeout(this.toast.timer)
 
-      this.toast = {
-        show: true,
-        message,
-        title,
-        type,
-        icon,
-        timer: null
-      }
+  this.toast = {
+    show: true,
+    message,
+    title,
+    type,
+    icon,
+    timer: null
+  }
 
-      this.toast.timer = setTimeout(() => {
-        this.toast.show = false
-      }, 3000)
-    }
+  // 🔥 ALTERADO: Usa o timer passado (ou padrão 3000)
+  this.toast.timer = setTimeout(() => {
+    this.toast.show = false
+  }, timer)
+}
   }
 }
 </script>

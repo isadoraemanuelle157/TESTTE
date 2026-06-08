@@ -409,13 +409,12 @@
         </div>
       </div>
     </transition>
-    <!-- Toast Notification -->
-<transition name="toast-slide">
-  <div v-if="toast.show" :class="['toast', toast.type]">
-    <span class="toast-icon">
-      <i :class="toast.type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle'"></i>
-    </span>
-    <span class="toast-text">{{ toast.message }}</span>
+    
+<!-- Toast Notification -->
+<transition name="toast">
+  <div v-if="toast.show" :class="['toast-soundup', toast.type]">
+    <div class="toast-icon" v-html="toast.icon"></div>
+    <div class="toast-message">{{ toast.message }}</div>
   </div>
 </transition>
   </div>
@@ -443,7 +442,7 @@ export default {
       loading: false,
       loadingList: false,
       loadingDelete: false,
-      toast: { show: false, message: '', type: 'success' },
+      toast: { show: false, message: '', type: 'success', icon: '<i class="fas fa-check-circle"></i>' },
       modoEdicao: false,
       modalExcluir: false,
       generoParaExcluir: null,
@@ -463,8 +462,8 @@ categoriasPredefinidas: [
   { value: 'popular', label: 'Popular', icon: 'fas fa-star' },
   { value: 'regional', label: 'Regional', icon: 'fas fa-globe-americas' },
   { value: 'electronic', label: 'Eletrônico', icon: 'fas fa-bolt' },
-  { value: 'classical', label: 'Clássica', icon: 'fas fa-violin' },
-  { value: 'jazz', label: 'Jazz', icon: 'fas fa-saxophone' },
+  { value: 'classical', label: 'Clássica', icon: 'fas fa-music' },
+  { value: 'jazz', label: 'Jazz', icon: 'fas fa-drum' },
   { value: 'rock', label: 'Rock', icon: 'fas fa-guitar' },
   { value: 'pop', label: 'Pop', icon: 'fas fa-microphone' },
   { value: 'hiphop', label: 'Hip Hop', icon: 'fas fa-headphones' },
@@ -545,7 +544,7 @@ filteredIcons() {
     this.generos = data
 
   } catch (err) {
-    this.showToast("Erro ao carregar gêneros", "error")
+   this.showToast("Erro ao carregar gêneros", "error", '<i class="fas fa-times-circle"></i>')
     this.generos = [] // garantir que não fica undefined
   } finally {
     this.loadingList = false
@@ -561,7 +560,7 @@ filteredIcons() {
  !this.form.icon ||
  !this.form.color
 ){
-this.showToast("Preencha todos os campos obrigatórios", "error")
+	this.showToast("Preencha todos os campos obrigatórios", "error", '<i class="fas fa-exclamation-triangle"></i>')
  return
 }
  this.loading = true
@@ -569,10 +568,10 @@ this.showToast("Preencha todos os campos obrigatórios", "error")
       try {
         if (this.modoEdicao) {
           await axios.put(`${API_URL}/${this.form.id}`, this.form)
-          this.showToast("Gênero atualizado com sucesso!", "success")
+          this.showToast("Gênero atualizado com sucesso!", "success", '<i class="fas fa-check-circle"></i>')
         } else {
           await axios.post(API_URL, this.form)
-          this.showToast("Gênero cadastrado com sucesso!", "success")
+         this.showToast("Gênero cadastrado com sucesso!", "success", '<i class="fas fa-check-circle"></i>')
         }
 
         this.resetarFormulario()
@@ -580,7 +579,7 @@ this.showToast("Preencha todos os campos obrigatórios", "error")
 
       } catch (err) {
         const msg = err.response?.data?.error || "Erro ao salvar gênero"
-        this.showToast(msg, "error")
+        this.showToast(msg, "error", '<i class="fas fa-times-circle"></i>')
       } finally {
         this.loading = false
       }
@@ -594,7 +593,7 @@ this.showToast("Preencha todos os campos obrigatórios", "error")
       this.coresCustomizadas.push(cor)
       // Salvar no localStorage para persistir
       localStorage.setItem('coresCustomizadas', JSON.stringify(this.coresCustomizadas))
-      this.showToast("Cor adicionada à paleta!", "success")
+      this.showToast("Cor adicionada à paleta!", "success", '<i class="fas fa-check-circle"></i>')
     }
   },
   
@@ -602,14 +601,14 @@ this.showToast("Preencha todos os campos obrigatórios", "error")
   removerCorCustomizada(index) {
     this.coresCustomizadas.splice(index, 1)
     localStorage.setItem('coresCustomizadas', JSON.stringify(this.coresCustomizadas))
-    this.showToast("Cor removida da paleta", "success")
+    	this.showToast("Cor removida da paleta", "success", '<i class="fas fa-check-circle"></i>')
   },
   
   // Limpar todas as cores customizadas
   limparCoresCustomizadas() {
     this.coresCustomizadas = []
     localStorage.removeItem('coresCustomizadas')
-    this.showToast("Todas as cores customizadas removidas", "success")
+   this.showToast("Todas as cores customizadas removidas", "success", '<i class="fas fa-check-circle"></i>') 
   },
   
   // Quando muda no color picker nativo
@@ -654,12 +653,12 @@ iniciarEdicao(genero) {
       this.loadingDelete = true
       try {
         await axios.delete(`${API_URL}/${this.generoParaExcluir._id}`)
-        this.showToast("Gênero excluído com sucesso!", "success")
+        this.showToast("Gênero excluído com sucesso!", "success", '<i class="fas fa-check-circle"></i>')
         await this.carregarGeneros()
         this.modalExcluir = false
         this.generoParaExcluir = null
       } catch (err) {
-        this.showToast("Erro ao excluir gênero", "error")
+        this.showToast("Erro ao excluir gênero", "error", '<i class="fas fa-times-circle"></i>')
       } finally {
         this.loadingDelete = false
       }
@@ -701,14 +700,14 @@ resetarFormulario() {
   this.modoEdicao = false
 },
 
-showToast(message, type = 'success') {
+showToast(message, type = 'success', icon = '<i class="fas fa-check-circle"></i>') {
   this.toast.show = false
   this.$nextTick(() => {
-    this.toast = { show: true, message, type }
+    this.toast = { show: true, message, type, icon }
     if (this._toastTimer) clearTimeout(this._toastTimer)
     this._toastTimer = setTimeout(() => {
       this.toast.show = false
-    }, 5000)
+    }, 3000)
   })
 }
   }
@@ -1579,78 +1578,69 @@ button:disabled {
   to { transform: rotate(360deg); }
 }
 
-/* Alertas */
-/* Toast Notification */
-.toast {
+/* Toast */
+.toast-soundup {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 24px;
-  border-radius: 14px;
+  gap: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+  z-index: 2000;
+  animation: toastSlideUp 0.3s ease;
   color: white;
-  font-weight: 500;
-  font-size: 0.95rem;
-  z-index: 1001;
-  animation: toastIn 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  max-width: 400px;
-  line-height: 1.4;
 }
 
-.toast.success {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4);
+.toast-soundup.success {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
 }
 
-.toast.error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+.toast-soundup.error {
+  background: #dc2626;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
 }
 
 .toast-icon {
-  font-size: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
+  width: 24px;
+  height: 24px;
 }
 
 .toast-icon i {
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+  font-size: 1.1rem;
 }
 
-.toast-text {
-  flex: 1;
+.toast-message {
+  font-size: 0.95rem;
 }
 
-@keyframes toastIn {
+@keyframes toastSlideUp {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(-50%) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-.toast-slide-enter-active, .toast-slide-leave-active {
+.toast-enter-active,
+.toast-leave-active {
   transition: all 0.3s ease;
 }
 
-.toast-slide-enter-from {
+.toast-enter-from,
+.toast-leave-to {
   opacity: 0;
-  transform: translateX(100%);
-}
-
-.toast-slide-leave-to {
-  opacity: 0;
-  transform: translateX(100%);
+  transform: translateX(-50%) translateY(20px);
 }
 /* Lista Header */
 .list-header {

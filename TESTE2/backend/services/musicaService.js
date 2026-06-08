@@ -20,6 +20,9 @@ const normalizeIds = (value) => {
 const createMusica = async (data) => {
   console.log('🔥 CREATE MUSICA RODANDO')
 
+  // 🔥 CONVERTE ano para Number se vier como string
+  const anoNumero = data.ano ? parseInt(data.ano) : null
+
   const payload = {
     nome: data.nome?.trim(),
     duracao: data.duracao?.trim(),
@@ -28,22 +31,23 @@ const createMusica = async (data) => {
     letra: data.letra?.trim(),
     link: data.link?.trim(),
 
-    ano: data.ano || null,
-    decada: getDecada(data.ano),
+    // 🔥 USA O NÚMERO CONVERTIDO
+    ano: anoNumero,
+    decada: getDecada(anoNumero),
 
     generos: normalizeIds(data.generos),
-    albuns: normalizeIds(data.albuns), // pode vazio = single
+    albuns: normalizeIds(data.albuns),
     cantores: normalizeIds(data.cantores)
   }
 
-  // CAMPOS OBRIGATÓRIOS
+  // CAMPOS OBRIGATÓRIOS — REMOVIDO ano E decada
   if (!payload.nome) throw new Error('Nome da música é obrigatório')
   if (!payload.duracao) throw new Error('Duração é obrigatória')
   if (!payload.foto) throw new Error('Foto é obrigatória')
   if (!payload.humor) throw new Error('Humor é obrigatório')
   if (!payload.letra) throw new Error('Letra é obrigatória')
   if (!payload.link) throw new Error('Link é obrigatório')
-  if (!payload.ano) throw new Error('Ano é obrigatório')
+  // 🔥 REMOVIDO: if (!payload.ano) throw new Error('Ano é obrigatório')
 
   if (!payload.generos.length) {
     throw new Error('Selecione pelo menos um gênero')
@@ -53,7 +57,8 @@ const createMusica = async (data) => {
     throw new Error('Selecione pelo menos um cantor')
   }
 
-  // álbum pode ficar vazio (single)
+  // álbum pode ficar vazio (single) — JÁ ESTAVA OK
+
   const musica = await Musica.create(payload)
 
   if (payload.albuns.length > 0) {
@@ -91,6 +96,9 @@ const updateMusica = async (id, data) => {
     const musicaAntiga = await Musica.findById(id)
     if (!musicaAntiga) throw new Error('Música não encontrada')
 
+    // 🔥 CONVERTE ano para Number
+    const anoNumero = data.ano ? parseInt(data.ano) : null
+
     const payload = {
       nome: data.nome?.trim(),
       duracao: data.duracao?.trim(),
@@ -98,8 +106,11 @@ const updateMusica = async (id, data) => {
       humor: data.humor?.trim(),
       letra: data.letra?.trim(),
       link: data.link?.trim(),
-      ano: data.ano || null,
-      decada: getDecada(data.ano),
+      
+      // 🔥 USA O NÚMERO CONVERTIDO
+      ano: anoNumero,
+      decada: getDecada(anoNumero),
+      
       generos: normalizeIds(data.generos),
       albuns: normalizeIds(data.albuns),
       cantores: normalizeIds(data.cantores)
@@ -111,7 +122,6 @@ if (!payload.foto) throw new Error('Foto é obrigatória')
 if (!payload.humor) throw new Error('Humor é obrigatório')
 if (!payload.letra) throw new Error('Letra é obrigatória')
 if (!payload.link) throw new Error('Link é obrigatório')
-if (!payload.ano) throw new Error('Ano é obrigatório')
 
 if (!payload.generos.length) {
   throw new Error('Selecione pelo menos um gênero')
@@ -170,7 +180,8 @@ const deleteMusica = async (id) => {
 
 const getDecada = (ano) => {
   if (!ano) return null
-  return `${ano}s` // 🔥 melhor visual
+  const inicio = Math.floor(parseInt(ano) / 10) * 10
+  return `Anos ${inicio}s`  // ou `${inicio}s` se preferir
 }
 
 module.exports = {

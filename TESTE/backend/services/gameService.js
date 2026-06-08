@@ -46,26 +46,53 @@ const DIFICULTIES = {
 // 🎯 INICIALIZAÇÃO DE STATS
 // ============================================
 
+const CONQUISTAS_PADRAO = [
+  { id: 'first_win',    titulo: 'Primeira Vitória',  descricao: 'Complete seu primeiro jogo',           iconClass: 'fa-solid fa-trophy',          moedas: 50 },
+  { id: 'streak_3',     titulo: 'Sequência de Fogo', descricao: 'Acerte 3 perguntas seguidas',          iconClass: 'fa-solid fa-fire',            moedas: 100 },
+  { id: 'streak_5',     titulo: 'Imparável',         descricao: 'Acerte 5 perguntas seguidas',          iconClass: 'fa-solid fa-bolt',            moedas: 200 },
+  { id: 'perfect_game', titulo: 'Perfeição',         descricao: 'Acerte todas as perguntas',            iconClass: 'fa-solid fa-gem',             moedas: 500 },
+  { id: 'collector',    titulo: 'Colecionador',      descricao: 'Compre 3 itens na loja',               iconClass: 'fa-solid fa-bag-shopping',    moedas: 150 },
+  { id: 'daily_7',      titulo: 'Dedicado',          descricao: 'Resgate recompensas por 7 dias',       iconClass: 'fa-solid fa-calendar-check',  moedas: 300 }
+]
+
 const getOrCreateUserStats = async (userId) => {
   let stats = await UserGameStats.findOne({ usuario: userId })
   
   if (!stats) {
     stats = new UserGameStats({
       usuario: userId,
-conquistas: [
-  { id: 'first_win', titulo: 'Primeira Vitória', descricao: 'Complete seu primeiro jogo', iconClass: 'fa-solid fa-trophy', moedas: 50 },
-  { id: 'streak_3', titulo: 'Sequência de Fogo', descricao: 'Acerte 3 perguntas seguidas', iconClass: 'fa-solid fa-fire', moedas: 100 },
-  { id: 'streak_5', titulo: 'Imparável', descricao: 'Acerte 5 perguntas seguidas', iconClass: 'fa-solid fa-bolt', moedas: 200 },
-  { id: 'perfect_game', titulo: 'Perfeição', descricao: 'Acerte todas as perguntas', iconClass: 'fa-solid fa-gem', moedas: 500 },
-  { id: 'collector', titulo: 'Colecionador', descricao: 'Compre 3 itens na loja', iconClass: 'fa-solid fa-bag-shopping', moedas: 150 },
-  { id: 'daily_7', titulo: 'Dedicado', descricao: 'Resgate recompensas por 7 dias', iconClass: 'fa-solid fa-calendar-check', moedas: 300 }
-]
+      conquistas: CONQUISTAS_PADRAO.map(c => ({ ...c, desbloqueada: false, resgatada: false }))
     })
     await stats.save()
+    return stats
   }
+  
+  // ⚡ Sincroniza conquistas: adiciona as que faltam SEM apagar progresso existente
+  let precisaSalvar = false
+  const idsExistentes = stats.conquistas.map(c => c.id)
+  
+  CONQUISTAS_PADRAO.forEach(padrao => {
+    if (!idsExistentes.includes(padrao.id)) {
+      stats.conquistas.push({ ...padrao, desbloqueada: false, resgatada: false })
+      precisaSalvar = true
+    } else {
+      // Atualiza metadados (título, descrição, ícone, moedas) preservando desbloqueada/resgatada
+      const existente = stats.conquistas.find(c => c.id === padrao.id)
+      if (!existente.iconClass || existente.iconClass !== padrao.iconClass) {
+        existente.iconClass = padrao.iconClass
+        precisaSalvar = true
+      }
+      if (!existente.titulo) { existente.titulo = padrao.titulo; precisaSalvar = true }
+      if (!existente.descricao) { existente.descricao = padrao.descricao; precisaSalvar = true }
+      if (!existente.moedas) { existente.moedas = padrao.moedas; precisaSalvar = true }
+    }
+  })
+  
+  if (precisaSalvar) await stats.save()
   
   return stats
 }
+
 
 // ============================================
 // 🎵 BUSCAR MÚSICAS PARA O JOGO
@@ -323,7 +350,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual artista é conhecido como "Rei do Pop"?',
       categoria: 'História Musical',
       corCategoria: 'linear-gradient(135deg, #667eea, #764ba2)',
-      iconCategoria: '👑',
       opcoes: [
         { texto: 'Michael Jackson', correta: true },
         { texto: 'Elvis Presley', correta: false },
@@ -337,7 +363,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual instrumento tem 88 teclas?',
       categoria: 'Instrumentos',
       corCategoria: 'linear-gradient(135deg, #f093fb, #f5576c)',
-      iconCategoria: '🎹',
       opcoes: [
         { texto: 'Violão', correta: false },
         { texto: 'Piano', correta: true },
@@ -351,7 +376,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual banda britânica é famosa pela música "Bohemian Rhapsody"?',
       categoria: 'Rock Clássico',
       corCategoria: 'linear-gradient(135deg, #e74c3c, #c0392b)',
-      iconCategoria: '🎸',
       opcoes: [
         { texto: 'The Beatles', correta: false },
         { texto: 'Led Zeppelin', correta: false },
@@ -365,7 +389,6 @@ const TRIVIA_POOL = {
       pergunta: 'Quem cantou "Shape of You"?',
       categoria: 'Pop',
       corCategoria: 'linear-gradient(135deg, #3498db, #2980b9)',
-      iconCategoria: '🎤',
       opcoes: [
         { texto: 'Justin Bieber', correta: false },
         { texto: 'Ed Sheeran', correta: true },
@@ -379,7 +402,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual é o nome do álbum mais vendido de todos os tempos?',
       categoria: 'Recordes',
       corCategoria: 'linear-gradient(135deg, #f39c12, #e67e22)',
-      iconCategoria: '🏆',
       opcoes: [
         { texto: 'Back in Black', correta: false },
         { texto: 'Thriller', correta: true },
@@ -393,7 +415,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual artista feminina é conhecida como "Rainha do Pop"?',
       categoria: 'Pop',
       corCategoria: 'linear-gradient(135deg, #e91e63, #ad1457)',
-      iconCategoria: '👸',
       opcoes: [
         { texto: 'Lady Gaga', correta: false },
         { texto: 'Britney Spears', correta: false },
@@ -407,7 +428,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual instrumento Jimi Hendrix tocava?',
       categoria: 'Rock',
       corCategoria: 'linear-gradient(135deg, #ff5722, #d84315)',
-      iconCategoria: '🎸',
       opcoes: [
         { texto: 'Bateria', correta: false },
         { texto: 'Guitarra', correta: true },
@@ -421,7 +441,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual país de origem da banda ABBA?',
       categoria: 'Mundo',
       corCategoria: 'linear-gradient(135deg, #00bcd4, #0097a7)',
-      iconCategoria: '🌍',
       opcoes: [
         { texto: 'Noruega', correta: false },
         { texto: 'Dinamarca', correta: false },
@@ -435,7 +454,6 @@ const TRIVIA_POOL = {
       pergunta: 'Quem compôs "Garota de Ipanema"?',
       categoria: 'MPB',
       corCategoria: 'linear-gradient(135deg, #2ecc71, #27ae60)',
-      iconCategoria: '🇧🇷',
       opcoes: [
         { texto: 'Caetano Veloso', correta: false },
         { texto: 'Antônio Carlos Jobim', correta: true },
@@ -449,7 +467,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual música tem a famosa frase "We Are the Champions"?',
       categoria: 'Rock',
       corCategoria: 'linear-gradient(135deg, #9c27b0, #7b1fa2)',
-      iconCategoria: '🏆',
       opcoes: [
         { texto: 'Queen', correta: true },
         { texto: 'The Beatles', correta: false },
@@ -465,7 +482,6 @@ const TRIVIA_POOL = {
       pergunta: 'Em que ano foi lançado o álbum "Thriller"?',
       categoria: 'Álbuns Clássicos',
       corCategoria: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-      iconCategoria: '💿',
       opcoes: [
         { texto: '1980', correta: false },
         { texto: '1982', correta: true },
@@ -479,7 +495,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual foi o primeiro videoclipe exibido na MTV?',
       categoria: 'Curiosidades',
       corCategoria: 'linear-gradient(135deg, #43e97b, #38f9d7)',
-      iconCategoria: '📺',
       opcoes: [
         { texto: 'Video Killed the Radio Star', correta: true },
         { texto: 'Bohemian Rhapsody', correta: false },
@@ -493,7 +508,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual artista tem o recorde de mais Grammys ganhos?',
       categoria: 'Prêmios',
       corCategoria: 'linear-gradient(135deg, #ffd700, #ff8c00)',
-      iconCategoria: '🏅',
       opcoes: [
         { texto: 'Beyoncé', correta: true },
         { texto: 'Michael Jackson', correta: false },
@@ -507,7 +521,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual música ficou mais tempo em #1 na Billboard Hot 100?',
       categoria: 'Recordes',
       corCategoria: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
-      iconCategoria: '📈',
       opcoes: [
         { texto: 'Old Town Road', correta: true },
         { texto: 'Despacito', correta: false },
@@ -521,7 +534,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual banda é conhecida como "Os Fab Four"?',
       categoria: 'Rock',
       corCategoria: 'linear-gradient(135deg, #e67e22, #d35400)',
-      iconCategoria: '🤘',
       opcoes: [
         { texto: 'The Rolling Stones', correta: false },
         { texto: 'The Beatles', correta: true },
@@ -535,7 +547,6 @@ const TRIVIA_POOL = {
       pergunta: 'Em que ano o cantor Elvis Presley faleceu?',
       categoria: 'História',
       corCategoria: 'linear-gradient(135deg, #795548, #5d4037)',
-      iconCategoria: '🕊️',
       opcoes: [
         { texto: '1975', correta: false },
         { texto: '1976', correta: false },
@@ -549,7 +560,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual artista feminina tem mais #1 na Billboard Hot 100?',
       categoria: 'Recordes',
       corCategoria: 'linear-gradient(135deg, #673ab7, #512da8)',
-      iconCategoria: '👑',
       opcoes: [
         { texto: 'Madonna', correta: false },
         { texto: 'Rihanna', correta: false },
@@ -563,7 +573,6 @@ const TRIVIA_POOL = {
       pergunta: 'Quem compôs a "Nona Sinfonia"?',
       categoria: 'Clássica',
       corCategoria: 'linear-gradient(135deg, #607d8b, #455a64)',
-      iconCategoria: '🎼',
       opcoes: [
         { texto: 'Mozart', correta: false },
         { texto: 'Bach', correta: false },
@@ -577,7 +586,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual foi a primeira música a atingir 1 bilhão de views no YouTube?',
       categoria: 'Internet',
       corCategoria: 'linear-gradient(135deg, #ff0000, #cc0000)',
-      iconCategoria: '📱',
       opcoes: [
         { texto: 'Gangnam Style', correta: true },
         { texto: 'Baby', correta: false },
@@ -591,7 +599,6 @@ const TRIVIA_POOL = {
       pergunta: 'Em que país acontece o festival Tomorrowland?',
       categoria: 'Festivais',
       corCategoria: 'linear-gradient(135deg, #8bc34a, #689f38)',
-      iconCategoria: '🎪',
       opcoes: [
         { texto: 'Holanda', correta: false },
         { texto: 'Bélgica', correta: true },
@@ -607,7 +614,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual álbum de Pink Floyd tem uma capa com um prisma?',
       categoria: 'Álbuns',
       corCategoria: 'linear-gradient(135deg, #ff5722, #e64a19)',
-      iconCategoria: '💿',
       opcoes: [
         { texto: 'The Wall', correta: false },
         { texto: 'Animals', correta: false },
@@ -621,7 +627,6 @@ const TRIVIA_POOL = {
       pergunta: 'Quem foi o produtor do álbum "Nevermind" do Nirvana?',
       categoria: 'Produção',
       corCategoria: 'linear-gradient(135deg, #795548, #5d4037)',
-      iconCategoria: '🎛️',
       opcoes: [
         { texto: 'Rick Rubin', correta: false },
         { texto: 'Butch Vig', correta: true },
@@ -635,7 +640,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual música dos Beatles foi banida pela BBC por supostamente promover drogas?',
       categoria: 'Polêmica',
       corCategoria: 'linear-gradient(135deg, #9e9e9e, #616161)',
-      iconCategoria: '🚫',
       opcoes: [
         { texto: 'Lucy in the Sky with Diamonds', correta: true },
         { texto: 'Hey Jude', correta: false },
@@ -649,7 +653,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual foi o primeiro álbum de estúdio da Lady Gaga?',
       categoria: 'Pop',
       corCategoria: 'linear-gradient(135deg, #e91e63, #c2185b)',
-      iconCategoria: '💿',
       opcoes: [
         { texto: 'Born This Way', correta: false },
         { texto: 'The Fame', correta: true },
@@ -663,7 +666,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual guitarrista é conhecido por tocar com os dentes?',
       categoria: 'Rock',
       corCategoria: 'linear-gradient(135deg, #ff9800, #f57c00)',
-      iconCategoria: '🎸',
       opcoes: [
         { texto: 'Eric Clapton', correta: false },
         { texto: 'Jimi Hendrix', correta: true },
@@ -677,7 +679,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual é o nome real de Elton John?',
       categoria: 'Curiosidades',
       corCategoria: 'linear-gradient(135deg, #3f51b5, #303f9f)',
-      iconCategoria: '🎹',
       opcoes: [
         { texto: 'Reginald Dwight', correta: true },
         { texto: 'Richard Starkey', correta: false },
@@ -691,7 +692,6 @@ const TRIVIA_POOL = {
       pergunta: 'Qual banda gravou o álbum "OK Computer"?',
       categoria: 'Alternativo',
       corCategoria: 'linear-gradient(135deg, #009688, #00796b)',
-      iconCategoria: '🎧',
       opcoes: [
         { texto: 'Radiohead', correta: true },
         { texto: 'Muse', correta: false },
@@ -705,7 +705,6 @@ const TRIVIA_POOL = {
       pergunta: 'Quem produziu o álbum "Random Access Memories" do Daft Punk?',
       categoria: 'Eletrônica',
       corCategoria: 'linear-gradient(135deg, #cddc39, #afb42b)',
-      iconCategoria: '🤖',
       opcoes: [
         { texto: 'David Guetta', correta: false },
         { texto: 'Giorgio Moroder', correta: false },
@@ -993,8 +992,44 @@ const responderPergunta = async (sessionId, respostaIndex, tempoResposta) => {
 
   session.pontuacao += pontosGanhos
   session.moedasGanhas += moedasGanhas
-  session.acertos += acertou ? 1 : 0
-  session.erros += acertou ? 0 : 1
+// ✅ DEPOIS
+if (acertou) {
+  session.acertos += 1
+  session.sequenciaAtual = (session.sequenciaAtual || 0) + 1
+  if (session.sequenciaAtual > (session.maiorSequenciaSessao || 0)) {
+    session.maiorSequenciaSessao = session.sequenciaAtual
+  }
+} else {
+  session.erros += 1
+  session.sequenciaAtual = 0
+}
+
+// ⚡ Verifica conquistas de streak EM TEMPO REAL (durante a partida)
+const stats = await getOrCreateUserStats(session.usuario)
+const conquistasNovas = []
+
+if (session.sequenciaAtual >= 3) {
+  const c = stats.conquistas.find(x => x.id === 'streak_3')
+  if (c && !c.desbloqueada) {
+    c.desbloqueada = true
+    c.dataDesbloqueio = new Date()
+    conquistasNovas.push(c)
+  }
+}
+
+if (session.sequenciaAtual >= 5) {
+  const c = stats.conquistas.find(x => x.id === 'streak_5')
+  if (c && !c.desbloqueada) {
+    c.desbloqueada = true
+    c.dataDesbloqueio = new Date()
+    conquistasNovas.push(c)
+  }
+}
+
+if (conquistasNovas.length > 0) {
+  await stats.save()
+}
+
   session.perguntasRespondidas += 1
   session.tempoTotal += tempoResposta || 0
 
@@ -1018,6 +1053,7 @@ const responderPergunta = async (sessionId, respostaIndex, tempoResposta) => {
     pontuacaoTotal: session.pontuacao,
     progresso: `${session.perguntasRespondidas}/${session.totalPerguntas}`,
     proximaPergunta,
+      conquistasDesbloqueadas: conquistasNovas, // ⬅️ ADICIONAR
     config: {
       tempoLimite: diffConfig.tempo,
       perguntaAtual: session.perguntasRespondidas + 1
@@ -1097,23 +1133,47 @@ if (precisao >= 70) {
   // Verifica conquistas
   const conquistasDesbloqueadas = []
   
-  if (stats.estatisticas.totalPartidas === 1) {
-    const conquista = stats.conquistas.find(c => c.id === 'first_win')
-    if (conquista && !conquista.desbloqueada) {
-      conquista.desbloqueada = true
-      conquista.dataDesbloqueio = new Date()
-      conquistasDesbloqueadas.push(conquista)
-    }
+ // ⚡ Verifica todas as conquistas relacionadas à sessão finalizada
+
+// 1. Primeira vitória (já existe)
+if (stats.estatisticas.totalPartidas === 1) {
+  const c = stats.conquistas.find(x => x.id === 'first_win')
+  if (c && !c.desbloqueada) {
+    c.desbloqueada = true
+    c.dataDesbloqueio = new Date()
+    conquistasDesbloqueadas.push(c)
   }
-  
-  if (session.acertos === session.totalPerguntas) {
-    const conquista = stats.conquistas.find(c => c.id === 'perfect_game')
-    if (conquista && !conquista.desbloqueada) {
-      conquista.desbloqueada = true
-      conquista.dataDesbloqueio = new Date()
-      conquistasDesbloqueadas.push(conquista)
-    }
+}
+
+// 2. Jogo Perfeito — acertou TODAS as perguntas
+if (session.acertos === session.totalPerguntas) {
+  const c = stats.conquistas.find(x => x.id === 'perfect_game')
+  if (c && !c.desbloqueada) {
+    c.desbloqueada = true
+    c.dataDesbloqueio = new Date()
+    conquistasDesbloqueadas.push(c)
   }
+}
+
+// 3. Backup: verifica streaks usando maiorSequenciaSessao
+//    (caso responderPergunta não tenha desbloqueado por algum motivo)
+if ((session.maiorSequenciaSessao || 0) >= 3) {
+  const c = stats.conquistas.find(x => x.id === 'streak_3')
+  if (c && !c.desbloqueada) {
+    c.desbloqueada = true
+    c.dataDesbloqueio = new Date()
+    conquistasDesbloqueadas.push(c)
+  }
+}
+
+if ((session.maiorSequenciaSessao || 0) >= 5) {
+  const c = stats.conquistas.find(x => x.id === 'streak_5')
+  if (c && !c.desbloqueada) {
+    c.desbloqueada = true
+    c.dataDesbloqueio = new Date()
+    conquistasDesbloqueadas.push(c)
+  }
+}
   
   await stats.save()
   await session.save()
@@ -1251,7 +1311,18 @@ const claimDailyReward = async (userId, dia) => {
   recompensas.diaAtual += 1
   recompensas.historico.push({ dia, reivindicado: true, data: agora })
   
-  await stats.save()
+// ⚡ Verifica conquista de 7 dias resgatados
+const diasResgatados = recompensas.historico.filter(h => h.reivindicado).length
+if (diasResgatados >= 7) {
+  const conquista = stats.conquistas.find(c => c.id === 'daily_7')
+  if (conquista && !conquista.desbloqueada) {
+    conquista.desbloqueada = true
+    conquista.dataDesbloqueio = new Date()
+  }
+}
+
+await stats.save()
+
   
   return {
     moedasGanhas: recompensa.moedas,
@@ -1289,8 +1360,8 @@ const LOJA_ITENS = [
       id: 'badge_pro',
       nome: 'Badge PRO',
       descricao: 'Distintivo exclusivo PRO no seu perfil',
-      preco: 15000,
-      iconClass: 'fa-solid fa-certificate',
+      preco: 1500,
+        iconClass: 'fa-solid fa-sun',
       tipo: 'badge',
       possuido: false,
       equipado: false
@@ -1305,16 +1376,17 @@ const LOJA_ITENS = [
       possuido: false,
       equipado: false
     },
-    {
-      id: 'emoji_set',
-      nome: 'Pack de Emojis',
-      descricao: 'Conjunto de emojis musicais exclusivos',
-      preco: 2200,
-      iconClass: 'fa-solid fa-face-smile',
-      tipo: 'emoji',
-      possuido: false,
-      equipado: false
-    }
+   {
+  id: 'emoji_set',
+  nome: 'Pack de Ícones',
+  descricao: 'Ícones musicais exclusivos para usar na interface',
+  preco: 2200,
+  iconClass: 'fa-solid fa-icons', // ← ícone de ícones
+  tipo: 'emoji', // ← tipo especial
+  possuido: false,
+  equipado: false,
+  ativo: false
+}
   ];
 
 const getShopItems = async (userId) => {

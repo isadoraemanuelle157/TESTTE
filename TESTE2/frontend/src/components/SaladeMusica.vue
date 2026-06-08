@@ -46,6 +46,20 @@
       </div>
     </header>
 
+    <!-- Guest Limitation Banner -->
+<div v-if="!isLoggedIn" class="guest-banner">
+  <div class="guest-banner-content">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>Você está ouvindo apenas previews do Deezer. 
+      <a @click="redirectToLogin">Faça login</a> para músicas completas do Spotify.
+    </span>
+  </div>
+</div>
+
     <div class="room-layout">
       <!-- Main Stage -->
       <main class="stage-area">
@@ -313,79 +327,17 @@
     <!-- Invite Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showInviteModal" class="modal-overlay" @click.self="showInviteModal = false">
-          <div class="modal-content invite-modal">
-            <div class="modal-header">
-              <h3>Convidar amigos</h3>
-              <button class="close-btn" @click="showInviteModal = false">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-            
-            <div class="invite-link">
-              <label>Link da sala</label>
-              <div class="link-input-group">
-                <input type="text" :value="roomUrl" readonly ref="linkInput" />
-                <button @click="copyLink" class="copy-btn">
-                  <span v-if="!copied">Copiar</span>
-                  <span v-else class="copied">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Copiado!
-                  </span>
-                </button>
-              </div>
-              <p class="invite-hint">Envie este link por email, WhatsApp ou qualquer lugar. Quem clicar entrará automaticamente nesta sala.</p>
-            </div>
-
-            <div class="share-options">
-              <h4>Compartilhar via</h4>
-              <div class="share-buttons">
-                <button @click="shareVia('whatsapp')" class="share-btn whatsapp">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  WhatsApp
-                </button>
-                <button @click="shareVia('email')" class="share-btn email">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                  Email
-                </button>
-                <button @click="shareVia('telegram')" class="share-btn telegram">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                  </svg>
-                  Telegram
-                </button>
-              </div>
-            </div>
-
-            <div class="friends-list" v-if="onlineFriends.length > 0">
-              <h4>Amigos online</h4>
-              <div v-for="friend in onlineFriends" :key="friend.id" class="friend-item">
-                <img :src="friend.avatar" class="friend-avatar" />
-                <div class="friend-info">
-                  <span class="friend-name">{{ friend.name }}</span>
-                  <span class="friend-status">{{ friend.listeningTo || 'Online' }}</span>
-                </div>
-                <button 
-                  class="invite-btn" 
-                  :class="{ 'invited': friend.invited }"
-                  @click="inviteFriend(friend)"
-                >
-                  {{ friend.invited ? 'Convidado' : 'Convidar' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RoomShareModal v-if="showShareModal" v-model="showShareModal" :room="room" />
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <RoomJoinModal v-if="showJoinModal" v-model="showJoinModal" :room-id="roomId" @joined="onGuestJoined" />
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <RoomPreparationModal v-if="showSettingsModal" v-model="showSettingsModal" :is-editing="true" :room-data="room" @roomUpdated="onRoomUpdated" />
       </Transition>
     </Teleport>
 
@@ -486,17 +438,33 @@
                 </div>
               </div>
               
-              <div class="join-form">
-                <input 
-                  v-model="joinUserName" 
-                  placeholder="Seu nome"
-                  type="text"
-                  maxlength="20"
-                />
-                <button @click="joinRoom" :disabled="!joinUserName.trim()" class="join-btn">
-                  Entrar na Sala
-                </button>
-              </div>
+  <div class="join-form">
+  <input 
+    v-model="joinUserName" 
+    placeholder="Seu nome"
+    type="text"
+    maxlength="20"
+  />
+
+  <input
+    v-if="!room.isPublic"
+    v-model="joinPassword"
+    placeholder="Senha da sala"
+    type="password"
+    maxlength="30"
+  />
+
+  <p v-if="accessError" class="join-error">{{ accessError }}</p>
+
+  <button
+    @click="joinRoom"
+    :disabled="!joinUserName.trim() || (!room.isPublic && !joinPassword.trim())"
+    class="join-btn"
+  >
+    Entrar na Sala
+  </button>
+</div>
+
             </div>
           </div>
         </div>
@@ -507,6 +475,49 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+
+// Adicione estas refs
+const isLoggedIn = ref(false)
+const isRoomOwner = ref(false)
+const roomSource = ref('deezer') // 'deezer' ou 'spotify'
+
+// Adicione estas computed
+const canAddFullTracks = computed(() => isLoggedIn.value && roomSource.value === 'spotify')
+const showLoginPrompt = computed(() => !isLoggedIn.value && roomSource.value === 'deezer')
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
+
+const apiFetch = async (path, options = {}) => {
+  const token = localStorage.getItem('token')
+
+  const headers = {
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  }
+
+  return fetch(`${API_URL}${path}`, {
+    ...options,
+    headers
+  })
+}
+
+const normalizeRoom = (data = {}) => ({
+  ...data,
+  id: data.id || data._id,
+  createdBy: data.createdBy?.id || data.createdBy?._id || data.createdBy,
+  invitedUsers: Array.isArray(data.invitedUsers)
+    ? data.invitedUsers.map(u => u.id || u._id || u)
+    : []
+})
+
+const joinPassword = ref('')
+const accessError = ref('')
+
 
 // Room State - agora com ID da URL
 const room = ref({
@@ -651,6 +662,7 @@ async function fetchJsonDeezer(pathAndQuery) {
 
 // Computed
 const recentMessages = computed(() => messages.value.slice(-10))
+const roomId = computed(() => room.value.id)
 
 // Methods
 const togglePlay = () => {
@@ -771,17 +783,33 @@ const searchDeezer = async () => {
 
   isSearching.value = true
   try {
-    // endpoint mais comum: /search?q=
+    // If logged in with Spotify, search both
+    if (isLoggedIn.value && roomSource.value === 'spotify') {
+      // Try Spotify first for full tracks
+      try {
+        const token = localStorage.getItem('token')
+        const spotifyRes = await fetch(`/spotify/search?q=${encodeURIComponent(searchQuery.value)}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (spotifyRes.ok) {
+          const spotifyData = await spotifyRes.json()
+          // Process Spotify results...
+        }
+      } catch (e) {
+        console.log('Spotify search failed, falling back to Deezer')
+      }
+    }
+    
+    // Always search Deezer as fallback (or primary for guests)
     const data = await fetchJsonDeezer(`/search?q=${encodeURIComponent(searchQuery.value)}&limit=10`)
     searchResults.value = data.data || []
   } catch (error) {
-    console.error('Erro ao buscar no Deezer:', error)
+    console.error('Erro ao buscar:', error)
     searchResults.value = []
   } finally {
     isSearching.value = false
   }
 }
-
 
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
@@ -893,65 +921,79 @@ const leaveRoom = () => {
 // Join Room Logic
 const checkRoomAccess = () => {
   const urlParams = new URLSearchParams(window.location.search)
-  const roomId = urlParams.get('room')
+  const roomIdFromUrl = urlParams.get('room')
   
-  if (roomId) {
-    room.value.id = roomId
-    // Verificar se é o dono ou convidado
-    const isOwner = localStorage.getItem(`room_${roomId}_owner`) === 'true'
+  // Check auth status
+  const token = localStorage.getItem('token')
+  isLoggedIn.value = !!token
+  
+  if (roomIdFromUrl) {
+    room.value.id = roomIdFromUrl
+    const isOwner = localStorage.getItem(`room_${roomIdFromUrl}_owner`) === 'true'
+    isRoomOwner.value = isOwner
     
-    if (!isOwner) {
-      // Mostrar modal para entrar
+    // Load room data
+    loadRoomData(roomIdFromUrl)
+    
+    // Check if room requires auth
+    const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
+    if (savedRoom) {
+      const data = JSON.parse(savedRoom)
+      roomSource.value = data.source || 'deezer'
+      room.value.isPublic = data.isPublic !== false
+      
+      // If private room and not owner, check if invited
+      if (!data.isPublic && !isOwner && !isLoggedIn.value) {
+        showJoinModal.value = true
+        return
+      }
+    }
+    
+    if (!isOwner && !isLoggedIn.value) {
+      // Guest view - limited features
       showJoinModal.value = true
-      // Carregar dados da sala do backend/localStorage
-      loadRoomData(roomId)
     }
   } else {
-    // Criar nova sala
-    room.value.id = generateRoomId()
-    localStorage.setItem(`room_${room.value.id}_owner`, 'true')
-    updateUrlWithRoomId()
+    // No room ID - redirect to creation page
+    router.push('/rooms/create')
   }
 }
 
-const loadRoomData = (roomId) => {
-  // Simular carregamento de dados da sala
-  const savedRoom = localStorage.getItem(`room_${roomId}_data`)
-  if (savedRoom) {
-    const data = JSON.parse(savedRoom)
-    room.value.name = data.name || room.value.name
-    if (data.currentTrack) {
-      currentTrack.value = data.currentTrack
-    }
-    if (data.queue) {
-      queue.value = data.queue
-    }
-  }
-}
+const joinRoom = async () => {
+  accessError.value = ''
 
-const joinRoom = () => {
-  if (!joinUserName.value.trim()) return
-  
-  currentUser.value.name = joinUserName.value
+  if (!joinUserName.value.trim()) {
+    accessError.value = 'Digite seu nome'
+    return
+  }
+
+  if (!room.value.isPublic) {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/join`, {
+      method: 'POST',
+      body: JSON.stringify({
+        password: joinPassword.value
+      })
+    })
+
+    const data = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      accessError.value = data.error || 'Não foi possível entrar na sala'
+      return
+    }
+
+    applyRoomData(data)
+  }
+
+  currentUser.value.name = joinUserName.value.trim()
   showJoinModal.value = false
-  
-  // Adicionar à lista de ouvintes (simulado)
-  const newListener = {
-    id: currentUser.value.id,
-    name: joinUserName.value,
-    avatar: currentUser.value.avatar,
-    status: 'Entrou agora',
-    synced: true,
-    isFriend: false
-  }
-  
-  // Notificar outros usuários (em implementação real, usar WebSocket)
+
   messages.value.push({
     id: Date.now(),
     userId: 'system',
     userName: 'Sistema',
     avatar: 'https://via.placeholder.com/150',
-    text: `${joinUserName.value} entrou na sala!`,
+    text: `${joinUserName.value.trim()} entrou na sala!`,
     timestamp: Date.now()
   })
 }
@@ -988,26 +1030,94 @@ const drop = (event, dropIndex) => {
 
 // Lifecycle
 onMounted(() => {
+  checkAuth()
   checkRoomAccess()
   fetchDeezerChart()
   
-  // Salvar estado periodicamente
+  // Periodic save
   setInterval(saveRoomState, 5000)
-  
-  // Simular novos ouvintes entrando (para demo)
-  setTimeout(() => {
-    if (roomListeners.value.length < 5 && Math.random() > 0.5) {
-      roomListeners.value.push({
-        id: 'user-' + Date.now(),
-        name: 'Novo Ouvinte',
-        avatar: 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 70),
-        status: 'Sincronizado',
-        synced: true,
-        isFriend: false
-      })
-    }
-  }, 10000)
 })
+
+const checkAuth = () => {
+  const token = localStorage.getItem('token')
+  const userRaw = localStorage.getItem('usuario') || localStorage.getItem('user')
+
+  isLoggedIn.value = !!token
+
+  if (token && userRaw) {
+    try {
+      const userData = JSON.parse(userRaw)
+      currentUser.value = {
+        id: userData.id || userData._id,
+        name: userData.nome || userData.name || 'Você',
+        avatar: userData.avatar || userData.foto || `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 70)}`
+      }
+    } catch (e) {
+      console.error('Erro ao carregar usuário:', e)
+    }
+  }
+}
+
+const redirectToLogin = () => {
+  // Save current room to return after login
+  localStorage.setItem('redirect_after_login', window.location.href)
+  window.location.href = '/login'
+}
+
+const applyRoomData = (data) => {
+  const normalized = normalizeRoom(data)
+
+  room.value = {
+    ...room.value,
+    ...normalized
+  }
+
+  roomSource.value = normalized.source || 'deezer'
+  isRoomOwner.value = currentUser.value?.id && String(normalized.createdBy) === String(currentUser.value.id)
+
+  if (normalized.currentTrack?.id) {
+    currentTrack.value = {
+      ...currentTrack.value,
+      ...normalized.currentTrack
+    }
+  }
+
+  if (Array.isArray(normalized.queue)) {
+    queue.value = normalized.queue
+  }
+
+  if (Array.isArray(normalized.messages)) {
+    messages.value = normalized.messages.map((msg, index) => ({
+      id: msg.id || `${msg.userId || 'msg'}_${index}_${msg.timestamp || Date.now()}`,
+      ...msg
+    }))
+  }
+}
+
+const loadRoomData = async (roomId) => {
+  try {
+    const response = await apiFetch(`/api/rooms/${roomId}`)
+    if (response.ok) {
+      const data = await response.json()
+      applyRoomData(data)
+      return true
+    }
+  } catch (error) {
+    console.error('Erro ao carregar sala da API:', error)
+  }
+
+  // fallback convidado/localStorage
+  const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+  const guestRoom = guestRooms.find(r => String(r.id || r._id) === String(roomId))
+
+  if (guestRoom) {
+    applyRoomData(guestRoom)
+    return true
+  }
+
+  return false
+}
+
 
 onUnmounted(() => {
   clearTimeout(searchTimeout)
@@ -1937,7 +2047,30 @@ onUnmounted(() => {
   border-bottom-left-radius: 12px;
   border-bottom-right-radius: 4px;
 }
+/* Adicione no <style> */
+.guest-banner {
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(90deg, rgba(255, 107, 107, 0.2), rgba(255, 193, 7, 0.2));
+  border-bottom: 1px solid rgba(255, 107, 107, 0.3);
+  padding: 0.75rem 2rem;
+}
 
+.guest-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  color: #ffc107;
+  font-size: 0.875rem;
+}
+
+.guest-banner-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
 .msg-author {
   font-size: 0.75rem;
   font-weight: 700;
@@ -2201,6 +2334,12 @@ onUnmounted(() => {
   padding: 0.75rem;
   border-radius: 12px;
   transition: background 0.3s;
+}
+.join-error {
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  text-align: center;
+  margin: 0;
 }
 
 .friend-item:hover {

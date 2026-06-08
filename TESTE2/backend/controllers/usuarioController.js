@@ -1,4 +1,6 @@
  const userService = require('../services/usuarioService')
+ const Usuario = require('../models/Usuario')
+
 const jwt = require('jsonwebtoken')
 
 const create = async (req, res) => {
@@ -6,7 +8,10 @@ const create = async (req, res) => {
     const user = await userService.createUser(req.body)
 
 const token = jwt.sign(
-  { id: user.id },
+  { 
+    id: user.id,
+    role: user.role || 'user'  // ← ADICIONAR ISSO
+  },
   process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
   { expiresIn: '365d' }
 )
@@ -27,11 +32,14 @@ const login = async (req, res) => {
 
     const user = await userService.loginUser(email, senha)
 
-const token = jwt.sign(
-  { id: user.id },
-  process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
-  { expiresIn: '365d' }
-)
+    const token = jwt.sign(
+      { 
+        id: user.id,
+        role: user.role || 'user'
+      },
+      process.env.JWT_SECRET || "SEGREDO_SUPER_SECRETO",
+      { expiresIn: '365d' }
+    )
 
     res.json({
       message: 'Login realizado',
@@ -74,8 +82,10 @@ const getById = async (req, res) => {
 
 const update = async (req, res) => {
   try {
+    const usuarioLogado = await Usuario.findById(req.user?.id).select('role')
+
     const isOwner = String(req.user?.id) === String(req.params.id)
-    const isAdmin = req.user?.role === 'admin'
+    const isAdmin = usuarioLogado?.role === 'admin'
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Sem permissão para editar este usuário' })
@@ -371,6 +381,33 @@ const reportUser = async (req, res) => {
   }
 }
 
+// 🎯 NOVO: GET RECOMENDAÇÕES COMPLETAS (Feito para Você - Modal)
+const getRecomendacoes = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tipo = 'tudo', limit = 50 } = req.query
+    const viewerId = req.user?.id
+
+    // Verificar permissão de acesso ao perfil
+    const podeAcessar = await userService.canAccessProfile(id, viewerId)
+    if (!podeAcessar) {
+      return res.status(403).json({ message: "Perfil privado" })
+    }
+
+    const bloqueado = await userService.isResourceBlocked(id, viewerId, 'mixes')
+    if (bloqueado) {
+      return res.status(403).json({ message: "Recomendações ocultas para você" })
+    }
+
+    const recomendacoes = await userService.buscarRecomendacoesCompletas(id, tipo, parseInt(limit))
+    res.json(recomendacoes)
+
+  } catch (error) {
+    console.error('❌ Erro getRecomendacoes:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
 const RECURSOS_VALIDOS = [
   'curtidas',
   'playlists',
@@ -390,16 +427,16 @@ module.exports = {
   update,
   remove,
   search,
-  getMixes,           // 🎯 NOVO
+  getMixes,
+  getRecomendacoes,
   getPublicCurtidas,
   getPublicPlaylists,
   getEstatisticas,
   recuperarSenha,
-    getPublicSeguidores,
+  getPublicSeguidores,
   getPublicSeguindo,
   getBlockStatus,
   blockUser,
   unblockUser,
   reportUser
-
 }

@@ -37,145 +37,156 @@
       </div>
     </header>
 
-    <main class="rooms-content">
-      <!-- Search & Filter -->
-      <div class="search-section">
-        <div class="search-box">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input 
-            v-model="searchQuery" 
-            placeholder="Buscar salas..."
-            type="text"
-          />
-        </div>
-        <div class="filter-tabs">
-          <button 
-            class="filter-btn" 
-            :class="{ 'active': activeFilter === 'all' }"
-            @click="activeFilter = 'all'"
-          >
-            Todas
-          </button>
-          <button 
-            class="filter-btn" 
-            :class="{ 'active': activeFilter === 'public' }"
-            @click="activeFilter = 'public'"
-          >
-            Públicas
-          </button>
-          <button 
-            class="filter-btn" 
-            :class="{ 'active': activeFilter === 'private' }"
-            @click="activeFilter = 'private'"
-          >
-            Privadas
-          </button>
-        </div>
+<main class="rooms-content">
+  <!-- Search & Filter -->
+  <div class="search-section">
+    <div class="search-row">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input 
+          v-model="searchQuery" 
+          placeholder="Buscar salas..."
+          type="text"
+        />
       </div>
+      <button class="join-by-link-btn" @click="showJoinByLinkModal = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <polyline points="10 17 15 12 10 7"/>
+          <line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        Entrar com Link
+      </button>
+    </div>
+    
+    <div class="filter-tabs">
+      <button 
+        class="filter-btn" 
+        :class="{ 'active': activeFilter === 'all' }"
+        @click="activeFilter = 'all'"
+      >
+        Todas
+      </button>
+      <button 
+        class="filter-btn" 
+        :class="{ 'active': activeFilter === 'public' }"
+        @click="activeFilter = 'public'"
+      >
+        Públicas
+      </button>
+      <button 
+        class="filter-btn" 
+        :class="{ 'active': activeFilter === 'private' }"
+        @click="activeFilter = 'private'"
+      >
+        Privadas
+      </button>
+    </div>
+  </div>
 
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-state">
-        <div class="loader"></div>
-        <p>Carregando salas...</p>
-      </div>
+  <!-- Loading State -->
+  <div v-if="isLoading" class="loading-state">
+    <div class="loader"></div>
+    <p>Carregando salas...</p>
+  </div>
 
-      <!-- Empty State -->
-      <div v-else-if="filteredRooms.length === 0" class="empty-state">
-        <div class="empty-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+  <!-- Empty State -->
+  <div v-else-if="filteredRooms.length === 0" class="empty-state">
+    <div class="empty-icon">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <circle cx="12" cy="12" r="3"/>
+        <line x1="12" y1="2" x2="12" y2="4"/>
+        <line x1="12" y1="20" x2="12" y2="22"/>
+        <line x1="2" y1="12" x2="4" y2="12"/>
+        <line x1="20" y1="12" x2="22" y2="12"/>
+      </svg>
+    </div>
+    <h3>Nenhuma sala encontrada</h3>
+    <p v-if="searchQuery">Tente buscar com outro termo</p>
+    <p v-else-if="activeFilter === 'private'">Não há salas privadas disponíveis</p>
+    <p v-else>Seja o primeiro a criar uma sala!</p>
+    <button class="create-room-empty-btn" @click="$router.push('/rooms/create')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Criar Nova Sala
+    </button>
+  </div>
+
+  <!-- Rooms Grid -->
+  <div v-else class="rooms-grid">
+    <div 
+      v-for="room in filteredRooms" 
+      :key="room.id || room._id"
+      class="room-card"
+      @click="handleRoomClick(room)"
+    >
+      <div class="room-card-bg" :style="{ background: room.gradient || 'linear-gradient(135deg, #667eea, #764ba2)' }">
+        <div class="vinyl-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="12" cy="12" r="10"/>
             <circle cx="12" cy="12" r="3"/>
-            <line x1="12" y1="2" x2="12" y2="4"/>
-            <line x1="12" y1="20" x2="12" y2="22"/>
-            <line x1="2" y1="12" x2="4" y2="12"/>
-            <line x1="20" y1="12" x2="22" y2="12"/>
           </svg>
         </div>
-        <h3>Nenhuma sala encontrada</h3>
-        <p v-if="searchQuery">Tente buscar com outro termo</p>
-        <p v-else-if="activeFilter === 'private'">Não há salas privadas disponíveis</p>
-        <p v-else>Seja o primeiro a criar uma sala!</p>
-        <button class="create-room-empty-btn" @click="$router.push('/rooms/create')">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Criar Nova Sala
-        </button>
+        <div class="room-card-overlay">
+          <span class="enter-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            Entrar
+          </span>
+        </div>
       </div>
-
-      <!-- Rooms Grid -->
-      <div v-else class="rooms-grid">
-        <div 
-          v-for="room in filteredRooms" 
-          :key="room.id || room._id"
-          class="room-card"
-          @click="handleRoomClick(room)"
-        >
-          <div class="room-card-bg" :style="{ background: room.gradient || 'linear-gradient(135deg, #667eea, #764ba2)' }">
-            <div class="vinyl-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </div>
-            <div class="room-card-overlay">
-              <span class="enter-badge">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-                Entrar
-              </span>
-            </div>
-          </div>
-          <div class="room-card-info">
-            <h3>{{ room.name }}</h3>
-            <p v-if="room.description" class="room-description">{{ room.description }}</p>
-            <div class="room-card-meta">
-              <span class="visibility-badge" :class="{ 'public': room.isPublic }">
-                <svg v-if="room.isPublic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-                {{ room.isPublic ? 'Pública' : 'Privada' }}
-              </span>
-              <span class="listener-count">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                {{ room.listeners || 0 }} ouvindo
-              </span>
-            </div>
-            <div class="room-card-footer">
-              <div class="room-owner" v-if="room.createdBy">
-                <img :src="room.createdBy.avatar || 'https://via.placeholder.com/150'" class="owner-avatar" alt="owner" />
-                <span class="owner-name">{{ room.createdBy.name || room.createdBy.nome || 'Anônimo' }}</span>
-              </div>
-              <span class="source-tag" :class="room.source || 'deezer'">
-                {{ room.source === 'spotify' ? 'Spotify' : 'Deezer' }}
-              </span>
-            </div>
-          </div>
-          <!-- Lock Icon for Private Rooms -->
-          <div v-if="!room.isPublic" class="lock-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="room-card-info">
+        <h3>{{ room.name }}</h3>
+        <p v-if="room.description" class="room-description">{{ room.description }}</p>
+        <div class="room-card-meta">
+          <span class="visibility-badge" :class="{ 'public': room.isPublic }">
+            <svg v-if="room.isPublic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
+            {{ room.isPublic ? 'Pública' : 'Privada' }}
+          </span>
+          <span class="listener-count">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            {{ room.listeners || 0 }} ouvindo
+          </span>
+        </div>
+        <div class="room-card-footer">
+          <div class="room-owner" v-if="room.createdBy">
+            <img :src="room.createdBy.avatar || 'https://via.placeholder.com/150'" class="owner-avatar" alt="owner" />
+            <span class="owner-name">{{ room.createdBy.name || room.createdBy.nome || 'Anônimo' }}</span>
           </div>
+          <span class="source-tag" :class="room.source || 'deezer'">
+            {{ room.source === 'spotify' ? 'Spotify' : 'Deezer' }}
+          </span>
         </div>
       </div>
-    </main>
+      <!-- Lock Icon for Private Rooms -->
+      <div v-if="!room.isPublic" class="lock-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</main>
 
     <!-- Password Modal for Private Rooms -->
     <Teleport to="body">
@@ -236,12 +247,67 @@
           </div>
         </div>
       </Transition>
+          <!-- Join by Link Modal -->
+    <Transition name="modal">
+      <div v-if="showJoinByLinkModal" class="modal-overlay" @click.self="showJoinByLinkModal = false">
+        <div class="modal-content join-link-modal">
+          <div class="modal-header">
+            <h3>Entrar com Link da Sala</h3>
+            <button class="close-btn" @click="showJoinByLinkModal = false">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="join-link-content">
+            <div class="join-link-preview">
+              <div class="link-vinyl" :style="{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                  <circle cx="12" cy="12" r="10"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </div>
+              <p>Cole o link da sala ou digite o código para entrar</p>
+            </div>
+            
+            <div class="link-input-group">
+              <input 
+                v-model="joinLinkInput" 
+                type="text" 
+                placeholder="Cole o link ou código da sala"
+                @keyup.enter="submitJoinLink"
+                ref="joinLinkInputRef"
+              />
+            </div>
+
+            <p v-if="joinLinkError" class="join-link-error">{{ joinLinkError }}</p>
+
+            <button 
+              class="submit-link-btn"
+              :disabled="!joinLinkInput.trim() || isJoiningLink"
+              @click="submitJoinLink"
+            >
+              <span v-if="isJoiningLink" class="loader"></span>
+              <span v-else>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" y1="12" x2="3" y2="12"/>
+                </svg>
+                Entrar na Sala
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
     </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -318,6 +384,15 @@ const isJoining = ref(false)
 const passwordInput = ref(null)
 
 // ============================================
+// JOIN BY LINK MODAL STATE
+// ============================================
+const showJoinByLinkModal = ref(false)
+const joinLinkInput = ref('')
+const joinLinkError = ref('')
+const isJoiningLink = ref(false)
+const joinLinkInputRef = ref(null)
+
+// ============================================
 // COMPUTED
 // ============================================
 const filteredRooms = computed(() => {
@@ -343,7 +418,195 @@ const filteredRooms = computed(() => {
 
   return rooms
 })
+// ============================================
+// JOIN BY CODE STATE
+// ============================================
+const joinCode = ref('')
+const joinCodeError = ref('')
 
+// ============================================
+// JOIN BY CODE FUNCTION
+// ============================================
+const joinByCode = async () => {
+  const code = joinCode.value.trim()
+  if (!code) return
+
+  joinCodeError.value = ''
+
+  // Verifica se é uma sala do banco (MongoDB ID = 24 hex chars)
+  const isMongoId = /^[0-9a-fA-F]{24}$/.test(code)
+  
+  // Verifica se é sala de visitante (ID curto gerado no frontend)
+  const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+  const guestRoom = guestRooms.find(r => (r.id || r._id) === code)
+
+  try {
+    if (isMongoId) {
+      // Sala do banco - busca na API
+      const response = await apiFetch(`/api/rooms/${code}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          joinCodeError.value = 'Sala não encontrada'
+          return
+        }
+        throw new Error('Erro ao buscar sala')
+      }
+
+      const roomData = await response.json()
+      
+      // Se sala privada, mostra modal de senha
+      if (!roomData.isPublic) {
+        selectedRoom.value = normalizeRoom(roomData)
+        roomPassword.value = ''
+        passwordError.value = ''
+        showPasswordModal.value = true
+        nextTick(() => passwordInput.value?.focus())
+        return
+      }
+
+      // Sala pública - entra direto
+      enterRoom(code)
+      return
+    }
+
+    // Sala de visitante (localStorage)
+    if (guestRoom) {
+      if (!guestRoom.isPublic) {
+        // Sala privada de visitante - mostra modal de senha
+        selectedRoom.value = normalizeRoom(guestRoom)
+        roomPassword.value = ''
+        passwordError.value = ''
+        showPasswordModal.value = true
+        nextTick(() => passwordInput.value?.focus())
+        return
+      }
+      // Pública - entra direto
+      enterRoom(code)
+      return
+    }
+
+    joinCodeError.value = 'Sala não encontrada. Verifique o código.'
+
+  } catch (error) {
+    console.error('Erro ao entrar com código:', error)
+    joinCodeError.value = 'Erro ao conectar. Tente novamente.'
+  }
+}
+// ============================================
+// JOIN BY LINK FUNCTION
+// ============================================
+
+// Extrai o roomId de uma URL ou retorna o próprio valor se for só o ID
+const extractRoomId = (input) => {
+  const trimmed = input.trim()
+  
+  // Tenta extrair de uma URL completa tipo: http://localhost:5173/room?room=6a25f716aa636269fe4cf178
+  try {
+    const url = new URL(trimmed)
+    const roomId = url.searchParams.get('room')
+    if (roomId) return roomId
+  } catch {
+    // Não é uma URL válida, continua...
+  }
+  
+  // Tenta extrair de query string solta tipo: room?room=6a25f716aa636269fe4cf178
+  const queryMatch = trimmed.match(/[?&]room=([a-zA-Z0-9]+)/)
+  if (queryMatch) return queryMatch[1]
+  
+  // Retorna o input limpo (assumindo que é o ID puro)
+  return trimmed
+}
+
+const submitJoinLink = async () => {
+  const rawInput = joinLinkInput.value.trim()
+  if (!rawInput) return
+
+  isJoiningLink.value = true
+  joinLinkError.value = ''
+
+  const roomId = extractRoomId(rawInput)
+
+  try {
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(roomId)
+    
+    // Sala do banco (MongoDB)
+    if (isMongoId) {
+      const response = await apiFetch(`/api/rooms/${roomId}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          joinLinkError.value = 'Sala não encontrada'
+          isJoiningLink.value = false
+          return
+        }
+        throw new Error('Erro ao buscar sala')
+      }
+
+      const roomData = await response.json()
+      
+      // Se sala privada, mostra modal de senha
+      if (!roomData.isPublic) {
+        selectedRoom.value = normalizeRoom(roomData)
+        roomPassword.value = ''
+        passwordError.value = ''
+        showJoinByLinkModal.value = false
+        joinLinkInput.value = ''
+        showPasswordModal.value = true
+        nextTick(() => passwordInput.value?.focus())
+        isJoiningLink.value = false
+        return
+      }
+
+      // Sala pública - entra direto
+      showJoinByLinkModal.value = false
+      joinLinkInput.value = ''
+      enterRoom(roomId)
+      isJoiningLink.value = false
+      return
+    }
+
+    // Sala de visitante (localStorage)
+    const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+    const guestRoom = guestRooms.find(r => (r.id || r._id) === roomId)
+
+    if (guestRoom) {
+      if (!guestRoom.isPublic) {
+        // Sala privada de visitante - mostra modal de senha
+        selectedRoom.value = normalizeRoom(guestRoom)
+        roomPassword.value = ''
+        passwordError.value = ''
+        showJoinByLinkModal.value = false
+        joinLinkInput.value = ''
+        showPasswordModal.value = true
+        nextTick(() => passwordInput.value?.focus())
+        isJoiningLink.value = false
+        return
+      }
+      // Pública - entra direto
+      showJoinByLinkModal.value = false
+      joinLinkInput.value = ''
+      enterRoom(roomId)
+      isJoiningLink.value = false
+      return
+    }
+
+    joinLinkError.value = 'Sala não encontrada. Verifique o link ou código.'
+
+  } catch (error) {
+    console.error('Erro ao entrar com link:', error)
+    joinLinkError.value = 'Erro ao conectar. Tente novamente.'
+  } finally {
+    isJoiningLink.value = false
+  }
+}
+
+// Watch para focar no input quando abrir o modal
+watch(showJoinByLinkModal, (val) => {
+  if (val) {
+    nextTick(() => joinLinkInputRef.value?.focus())
+  }
+})
 // ============================================
 // API FUNCTIONS
 // ============================================
@@ -351,13 +614,37 @@ const fetchAllRooms = async () => {
   isLoading.value = true
   
   try {
-    // Fetch public rooms from API
-    const response = await apiFetch('/api/rooms/publicas')
+   const promises = [apiFetch('/api/rooms/todas')]
+
+    // Se usuário estiver logado, busca também as salas dele (incluindo privadas)
+    if (isLoggedIn.value) {
+      promises.push(apiFetch('/api/rooms/my'))
+    }
+
+    const responses = await Promise.all(promises)
     
     let apiRooms = []
-    if (response.ok) {
-      const data = await response.json()
-      apiRooms = Array.isArray(data) ? data.map(normalizeRoom) : []
+    
+    // Salas públicas
+    if (responses[0].ok) {
+      const publicData = await responses[0].json()
+      apiRooms = Array.isArray(publicData) ? publicData.map(normalizeRoom) : []
+    }
+
+    // Salas do usuário (inclui privadas)
+    if (isLoggedIn.value && responses[1]?.ok) {
+      const myData = await responses[1].json()
+      const myRooms = Array.isArray(myData) ? myData.map(normalizeRoom) : []
+      
+      // Merge: adiciona as salas do usuário que ainda não estão na lista
+      const existingIds = new Set(apiRooms.map(r => r.id || r._id))
+      for (const room of myRooms) {
+        const roomId = room.id || room._id
+        if (!existingIds.has(roomId)) {
+          apiRooms.push(room)
+          existingIds.add(roomId)
+        }
+      }
     }
 
     // Fetch guest rooms from localStorage
@@ -400,8 +687,11 @@ const handleRoomClick = (room) => {
   }
 }
 
+// SUBSTITUA O MÉTODO submitPassword() EXISTENTE POR ESTE:
+
 const submitPassword = async () => {
-  if (!roomPassword.value.trim() || !selectedRoom.value) return
+  const senha = roomPassword.value.trim()
+  if (!senha || !selectedRoom.value) return
 
   isJoining.value = true
   passwordError.value = ''
@@ -409,36 +699,68 @@ const submitPassword = async () => {
   try {
     const roomId = selectedRoom.value.id || selectedRoom.value._id
 
-    // Try API first
+    // ✅ Salas de visitante (localStorage): verifica localmente
+    const isGuestRoom = !String(roomId).match(/^[0-9a-fA-F]{24}$/)
+    
+    if (isGuestRoom) {
+      const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+      const guestRoom = guestRooms.find(r => (r.id || r._id) === roomId)
+      
+      if (!guestRoom) {
+        passwordError.value = 'Sala não encontrada.'
+        isJoining.value = false  // ← reset aqui antes do return
+        return
+      }
+
+      // Comparação direta de senha (visitante)
+      if (String(guestRoom.password || '') !== senha) {
+        passwordError.value = 'Senha incorreta. Tente novamente.'
+        roomPassword.value = ''
+        isJoining.value = false  // ← reset aqui antes do return
+        return
+      }
+
+      // ✅ Senha correta
+      showPasswordModal.value = false
+      enterRoom(roomId)
+      isJoining.value = false  // ← reset aqui antes do return
+      return
+    }
+
+    // ✅ Salas da API (MongoDB): valida no backend
     const response = await apiFetch(`/api/rooms/${roomId}/join`, {
       method: 'POST',
-      body: JSON.stringify({ password: roomPassword.value.trim() })
+      body: JSON.stringify({ password: senha })
     })
 
-    if (response.ok) {
-      showPasswordModal.value = false
-      enterRoom(roomId)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      passwordError.value = errorData.error || 'Senha incorreta. Tente novamente.'
+      roomPassword.value = ''
+      isJoining.value = false  // ← reset aqui antes do return
       return
     }
 
-    // If API fails, check localStorage for guest rooms
-    const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
-    const guestRoom = guestRooms.find(r => (r.id || r._id) === roomId)
-
-    if (guestRoom && guestRoom.password === roomPassword.value.trim()) {
-      showPasswordModal.value = false
-      enterRoom(roomId)
+    const data = await response.json().catch(() => null)
+    
+    if (!data || !(data._id || data.id)) {
+      passwordError.value = 'Resposta inválida do servidor. Tente novamente.'
+      isJoining.value = false  // ← reset aqui antes do return
       return
     }
 
-    passwordError.value = 'Senha incorreta. Tente novamente.'
+    // ✅ Tudo certo
+    showPasswordModal.value = false
+    enterRoom(roomId)
+
   } catch (error) {
     console.error('Erro ao entrar na sala:', error)
     passwordError.value = 'Erro ao verificar senha. Tente novamente.'
   } finally {
-    isJoining.value = false
+    isJoining.value = false  // ← garante reset no final
   }
 }
+
 
 const enterRoom = (roomId) => {
   router.push(`/room?room=${roomId}`)
@@ -452,8 +774,8 @@ const goBack = () => {
 // LIFECYCLE
 // ============================================
 onMounted(async () => {
-  checkAuth()
-  await fetchAllRooms()
+  checkAuth() // sincroniza o estado de login
+  await fetchAllRooms() // agora já sabe se está logado e busca /api/rooms/my também
 })
 </script>
 
@@ -682,7 +1004,140 @@ onMounted(async () => {
   color: var(--text-secondary);
   flex-shrink: 0;
 }
+/* Search Row */
+.search-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
 
+.search-box {
+  flex: 1;
+}
+
+.join-by-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: rgba(29, 185, 84, 0.15);
+  border: 1px solid rgba(29, 185, 84, 0.3);
+  border-radius: 16px;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.join-by-link-btn:hover {
+  background: rgba(29, 185, 84, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Join Link Modal */
+.join-link-modal {
+  max-width: 420px;
+}
+
+.join-link-content {
+  padding: 1.5rem;
+}
+
+.join-link-preview {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.link-vinyl {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.join-link-preview p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.link-input-group {
+  margin-bottom: 0.75rem;
+}
+
+.link-input-group input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  transition: all 0.3s;
+  box-sizing: border-box;
+}
+
+.link-input-group input:focus {
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.link-input-group input::placeholder {
+  color: var(--text-secondary);
+}
+
+.join-link-error {
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.submit-link-btn {
+  width: 100%;
+  padding: 1.25rem;
+  background: var(--primary);
+  border: none;
+  border-radius: 16px;
+  color: black;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.submit-link-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: var(--primary-dark);
+  box-shadow: 0 8px 32px rgba(29, 185, 84, 0.3);
+}
+
+.submit-link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .search-row {
+    flex-direction: column;
+  }
+  
+  .join-by-link-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
 .search-box input {
   flex: 1;
   background: transparent;
@@ -724,7 +1179,68 @@ onMounted(async () => {
   border-color: var(--primary);
   color: var(--primary);
 }
+.join-code-section {
+  margin-bottom: 1rem;
+}
 
+.join-code-input-group {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 400px;
+}
+
+.join-code-input-group input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.join-code-input-group input:focus {
+  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.join-code-input-group input::placeholder {
+  color: var(--text-secondary);
+}
+
+.join-code-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--primary);
+  border: none;
+  border-radius: 12px;
+  color: black;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.join-code-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.join-code-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.join-code-error {
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
 /* Loading State */
 .loading-state {
   display: flex;

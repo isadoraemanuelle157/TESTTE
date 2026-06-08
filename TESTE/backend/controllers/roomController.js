@@ -6,26 +6,34 @@ const criar = async (req, res) => {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
 
-    const { name, description, isPublic, invitedUsers, password, permissions } = req.body
+    // ✅ ADICIONAR moderators NA DESESTRUTURAÇÃO
+    const { name, description, isPublic, invitedUsers, moderators, password, permissions } = req.body
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Nome da sala é obrigatório' })
     }
 
-    if (isPublic === false && (!password || !String(password).trim())) {
-      return res.status(400).json({ error: 'Senha é obrigatória para sala privada' })
+    // Normaliza isPublic para booleano
+    const isPublicBool = isPublic === false || isPublic === 'false' ? false : true
+
+    // ✅ Validação de senha mais rígida
+    if (isPublicBool === false) {
+      const senhaLimpa = String(password || '').trim()
+      if (senhaLimpa.length < 4) {
+        return res.status(400).json({ error: 'Senha é obrigatória (mínimo 4 caracteres) para sala privada' })
+      }
     }
 
-const roomData = {
-  name: name.trim(),
-  description: description || '',
-  isPublic: isPublic !== false,
-  invitedUsers: invitedUsers || [],
-  moderators: moderators || [], // <-- ADICIONAR
-  password: isPublic === false ? String(password).trim() : undefined,
-  source: 'spotify',
-  permissions: permissions || { addMusic: 'everyone', invitePeople: 'moderators' }
-}
+    const roomData = {
+      name: name.trim(),
+      description: description || '',
+      isPublic: isPublicBool,
+      invitedUsers: invitedUsers || [],
+      moderators: moderators || [],
+      password: isPublicBool === false ? String(password || '').trim() : undefined,
+      source: 'spotify',
+      permissions: permissions || { addMusic: 'everyone', invitePeople: 'moderators' }
+    }
 
     const room = await roomService.criar(roomData, req.user.id)
     res.status(201).json(room)
@@ -39,6 +47,7 @@ const roomData = {
     res.status(400).json({ error: error.message })
   }
 }
+
 
 const listarMinhas = async (req, res) => {
   try {
@@ -73,11 +82,15 @@ const buscarPorId = async (req, res) => {
   }
 }
 
+// Arquivo: controllers/roomController.js
+// Local: método entrar()
+
 const entrar = async (req, res) => {
   try {
+    // ✅ Aceita userId do token (usuário logado do banco) ou null (visitante)
     const room = await roomService.entrar(
       req.params.id,
-      req.user?.id || null,
+      req.user?.id || null,        // ← userId do JWT (usuário do banco)
       req.body?.password || ''
     )
     res.json(room)
@@ -261,10 +274,89 @@ const enviarMensagem = async (req, res) => {
   }
 }
 
+const listarTodas = async (req, res) => {
+  try {
+    const rooms = await roomService.listarTodas(req.user?.id || null)
+    res.json(rooms)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
+// ========== LISTENERS ==========
+
+const adicionarListener = async (req, res) => {
+  try {
+    const roomId = req.params.id
+    const userData = {
+      userId: req.user?.id || req.body.guestId || `guest_${Date.now()}`,
+      name: req.body.name || req.user?.nome || 'Visitante',
+      avatar: req.body.avatar || req.user?.avatar || 'https://via.placeholder.com/150',
+      role: req.body.role || 'participant'
+    }
+
+    const room = await roomService.adicionarListener(roomId, userData)
+    
+    // Adiciona mensagem de sistema
+    await roomService.enviarMensagem(roomId, {
+      userId: 'system',
+      userName: 'Sistema',
+      avatar: 'https://via.placeholder.com/150',
+      text: `${userData.name} entrou na sala!`,
+      timestamp: new Date()
+    })
+
+    res.json(room)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const removerListener = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado' })
+    }
+
+    const { userIdToRemove } = req.body
+    if (!userIdToRemove) {
+      return res.status(400).json({ error: 'userIdToRemove é obrigatório' })
+    }
+
+    const room = await roomService.removerListener(
+      req.params.id,
+      userIdToRemove,
+      req.user.id
+    )
+
+    // Adiciona mensagem de sistema
+    await roomService.enviarMensagem(req.params.id, {
+      userId: 'system',
+      userName: 'Sistema',
+      avatar: 'https://via.placeholder.com/150',
+      text: `Um usuário foi removido da sala.`,
+      timestamp: new Date()
+    })
+
+    res.json({ message: 'Usuário removido da sala', room })
+  } catch (error) {
+    res.status(403).json({ error: error.message })
+  }
+}
+
+const listarListeners = async (req, res) => {
+  try {
+    const listeners = await roomService.listarListeners(req.params.id)
+    res.json(listeners)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
 module.exports = {
   criar,
   listarMinhas,
   listarPublicas,
+  listarTodas,
   buscarPorId,
   entrar,
   atualizar,
@@ -276,6 +368,9 @@ module.exports = {
   adicionarModerador,
   removerModerador,
   atualizarPermissoes,
+  adicionarListener,   // ← NOVO
+  removerListener,       // ← NOVO
+  listarListeners,     // ← NOVO
   atualizarTrack,
   adicionarNaFila,
   enviarMensagem

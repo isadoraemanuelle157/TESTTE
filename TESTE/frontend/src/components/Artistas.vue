@@ -250,7 +250,7 @@ export default {
       showAllModal: false,
       isLoading: false,
       error: null,
-      subtitle: 'Os maiores nomes da música global',
+      subtitle: 'Os maiores nomes da música brasileira hoje',
       toast: {
         show: false,
         title: '',

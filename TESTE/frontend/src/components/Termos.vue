@@ -382,50 +382,74 @@ export default {
   },
 
 mounted() {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
+  this.$nextTick(() => {
+    const content = this.getContentElement()
+    if (content) {
+      content.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   })
 
-  window.addEventListener('scroll', this.handleScroll)
+  const content = this.getContentElement()
+  if (content) {
+    content.addEventListener('scroll', this.handleScroll)
+  }
+
   this.animateStats()
   this.startTimeline()
   this.checkTermsAccepted()
 },
 
-  beforeDestroy() {
-    window.removeEventListener('scroll', this.handleScroll)
-  },
+ beforeDestroy() {
+  const content = this.getContentElement()
+  if (content) {
+    content.removeEventListener('scroll', this.handleScroll)
+  }
+},
 
   methods: {
-     goToPrivacy() {
-    this.$router.push('/privacidade')
-    this.$nextTick(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    })
-  },
+    getContentElement() {
+  return document.querySelector('.content')
+},
 
-  goToCookies() {
-    this.$router.push('/cookies')
+goToPrivacy() {
+  this.$router.push('/privacidade').then(() => {
     this.$nextTick(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const content = this.getContentElement()
+      if (content) {
+        content.scrollTo({ top: 0, behavior: 'smooth' })
+      }
     })
-  },
-  
-    scrollToTop() {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
   })
 },
 
-    handleScroll() {
-      this.isScrolled = window.scrollY > 50
-      
-      // Calculate scroll progress
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight
-      this.scrollProgress = (window.scrollY / docHeight) * 100
-    },
+goToCookies() {
+  this.$router.push('/cookies').then(() => {
+    this.$nextTick(() => {
+      const content = this.getContentElement()
+      if (content) {
+        content.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    })
+  })
+},
+  
+scrollToTop() {
+  const content = this.getContentElement()
+  if (content) {
+    content.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+},
+
+handleScroll() {
+  const content = this.getContentElement()
+  if (!content) return
+
+  this.isScrolled = content.scrollTop > 50
+  
+  // Calculate scroll progress
+  const scrollHeight = content.scrollHeight - content.clientHeight
+  this.scrollProgress = scrollHeight > 0 ? (content.scrollTop / scrollHeight) * 100 : 0
+},
 
     getParticleStyle(n) {
       return {
@@ -477,12 +501,26 @@ mounted() {
     },
 
 goHome() {
-  this.$router.push('/')
+  const isLoggedIn = !!localStorage.getItem('token')
+  this.$router.push(isLoggedIn ? '/dashboard' : '/').then(() => {
+    this.$nextTick(() => {
+      const content = this.getContentElement()
+      if (content) {
+        content.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    })
+  })
 },
 
-    goBack() {
-      this.$router.back()
-    },
+  goBack() {
+  this.$router.back()
+  this.$nextTick(() => {
+    const content = this.getContentElement()
+    if (content) {
+      content.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  })
+},
 
 acceptTerms() {
   localStorage.setItem('soundup_terms_accepted', 'true')
@@ -490,7 +528,15 @@ acceptTerms() {
   this.createConfetti()
   
   setTimeout(() => {
-    this.$router.push('/dashboard')
+    const isLoggedIn = !!localStorage.getItem('token')
+    this.$router.push(isLoggedIn ? '/dashboard' : '/').then(() => {
+      this.$nextTick(() => {
+        const content = this.getContentElement()
+        if (content) {
+          content.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+      })
+    })
   }, 1500)
 },
 
@@ -507,13 +553,444 @@ acceptTerms() {
       }
     },
 
-    downloadTerms() {
-      // Simulate PDF download
-      const link = document.createElement('a')
-      link.href = '#'
-      link.download = 'soundup-termos-de-uso.pdf'
-      link.click()
-    },
+async downloadTerms() {
+  try {
+    // Import dinâmico do jsPDF (funciona em Vite, Webpack, Vue CLI)
+    const { jsPDF } = await import('jspdf')
+    
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    })
+
+    const currentDate = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })
+
+    // === CONFIGURAÇÕES ===
+    const MARGIN = 25
+    const PAGE_WIDTH = 210
+    const CONTENT_WIDTH = PAGE_WIDTH - (MARGIN * 2)
+    let y = 30
+
+    const colors = {
+      primary: [37, 99, 235],
+      secondary: [124, 58, 237],
+      accent: [236, 72, 153],
+      text: [30, 30, 30],
+      muted: [100, 100, 100],
+      light: [245, 245, 250]
+    }
+
+    const centerText = (text, yPos, fontSize = 12, style = 'normal', color = colors.text) => {
+      doc.setFontSize(fontSize)
+      doc.setFont('helvetica', style)
+      doc.setTextColor(...color)
+      const textWidth = doc.getTextWidth(text)
+      doc.text(text, (PAGE_WIDTH - textWidth) / 2, yPos)
+    }
+
+    const drawLine = (yPos, color = colors.primary) => {
+      doc.setDrawColor(...color)
+      doc.setLineWidth(0.5)
+      doc.setLineDashPattern([3, 3], 0)
+      doc.line(MARGIN, yPos, PAGE_WIDTH - MARGIN, yPos)
+      doc.setLineDashPattern([], 0)
+    }
+
+    // === HEADER COLORIDO ===
+    doc.setFillColor(...colors.primary)
+    doc.rect(0, 0, PAGE_WIDTH, 8, 'F')
+    doc.setFillColor(...colors.secondary)
+    doc.rect(PAGE_WIDTH * 0.33, 0, PAGE_WIDTH * 0.33, 8, 'F')
+    doc.setFillColor(...colors.accent)
+    doc.rect(PAGE_WIDTH * 0.66, 0, PAGE_WIDTH * 0.34, 8, 'F')
+
+    y += 10
+    centerText('SOUNDUP', y, 24, 'bold', colors.primary)
+    y += 10
+    centerText('Termos e Condições de Uso', y, 16, 'bold', colors.text)
+    y += 8
+    centerText('Plataforma de Streaming Musical', y, 11, 'italic', colors.muted)
+    y += 12
+
+    // Metadata box
+    doc.setFillColor(250, 250, 252)
+    doc.roundedRect(MARGIN + 20, y, CONTENT_WIDTH - 40, 22, 3, 3, 'F')
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...colors.muted)
+    centerText(`Data: ${currentDate}  |  Versão: 1.0  |  Status: Vigente`, y + 8, 9, 'normal', colors.muted)
+    centerText('SoundUp Tecnologia Musical Ltda.', y + 15, 9, 'italic', colors.muted)
+    y += 32
+
+    drawLine(y, colors.secondary)
+    y += 10
+
+    // === RESUMO ===
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('RESUMO', MARGIN, y)
+    y += 8
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...colors.text)
+    const resumoText = 'O presente documento estabelece os termos e condições de uso da plataforma SoundUp, serviço de streaming musical que permite aos usuários descobrir músicas, criar playlists, curtir artistas e participar de experiências musicais interativas.'
+    const resumoLines = doc.splitTextToSize(resumoText, CONTENT_WIDTH)
+    doc.text(resumoLines, MARGIN, y)
+    y += (resumoLines.length * 5) + 5
+
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(...colors.muted)
+    doc.text('Palavras-chave: streaming musical; termos de uso; privacidade; direitos autorais; plataforma digital.', MARGIN, y)
+    y += 12
+
+    drawLine(y, colors.primary)
+    y += 10
+
+    // === INTRODUÇÃO ===
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('1. INTRODUÇÃO', MARGIN, y)
+    y += 8
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...colors.text)
+    const introText = 'A plataforma SoundUp foi desenvolvida para proporcionar uma experiência musical completa e imersiva. Ao utilizar os serviços oferecidos, o usuário terá acesso a milhões de faixas, playlists curadas por especialistas e ferramentas de descoberta musical personalizadas. A aceitação dos termos é condição indispensável para a utilização dos serviços.'
+    const introLines = doc.splitTextToSize(introText, CONTENT_WIDTH)
+    doc.text(introLines, MARGIN, y)
+    y += (introLines.length * 5) + 8
+
+    // === SEÇÕES DOS TERMOS ===
+    const sectionColors = ['primary', 'secondary', 'accent', 'primary', 'secondary', 'accent']
+    
+    this.termsList.forEach((term, index) => {
+      // Nova página se necessário
+      if (y > 250) {
+        doc.addPage()
+        y = 25
+        doc.setFillColor(...colors.primary)
+        doc.rect(0, 0, PAGE_WIDTH, 4, 'F')
+        y += 8
+      }
+
+      // Número grande
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(230, 230, 240)
+      doc.text(`0${index + 1}`, MARGIN, y + 5)
+
+      // Título
+      const secColor = colors[sectionColors[index]]
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...secColor)
+      doc.text(`${index + 1}. ${term.title.toUpperCase()}`, MARGIN + 15, y)
+      y += 10
+
+      // Descrição
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...colors.text)
+      const descLines = doc.splitTextToSize(term.fullDescription, CONTENT_WIDTH)
+      doc.text(descLines, MARGIN, y)
+      y += (descLines.length * 5) + 5
+
+      // Itens em caixa
+      const boxHeight = 5 + (term.details.length * 5) + 5
+      doc.setFillColor(248, 249, 255)
+      doc.setDrawColor(200, 200, 220)
+      doc.roundedRect(MARGIN, y - 3, CONTENT_WIDTH, boxHeight, 2, 2, 'FD')
+
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...colors.primary)
+      doc.text('O que está incluído:', MARGIN + 5, y + 5)
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...colors.text)
+      let itemY = y + 12
+      term.details.forEach(item => {
+        doc.setTextColor(...colors.secondary)
+        doc.text('•', MARGIN + 8, itemY)
+        doc.setTextColor(...colors.text)
+        doc.text(item, MARGIN + 13, itemY)
+        itemY += 5
+      })
+      y += boxHeight + 5
+
+      // Advertência
+      if (term.warning) {
+        doc.setFillColor(255, 248, 240)
+        doc.setDrawColor(245, 158, 11)
+        doc.roundedRect(MARGIN, y - 2, CONTENT_WIDTH, 12, 2, 2, 'FD')
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(245, 158, 11)
+        doc.text('!', MARGIN + 5, y + 4)
+
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(120, 80, 40)
+        const warnLines = doc.splitTextToSize(term.warning, CONTENT_WIDTH - 20)
+        doc.text(warnLines, MARGIN + 12, y + 4)
+        y += 14
+      }
+
+      drawLine(y, colors.secondary)
+      y += 10
+    })
+
+    // === COMPROMISSO ===
+    if (y > 230) {
+      doc.addPage()
+      y = 25
+      doc.setFillColor(...colors.primary)
+      doc.rect(0, 0, PAGE_WIDTH, 4, 'F')
+      y += 8
+    }
+
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('COMPROMISSO SOUNDUP', MARGIN, y)
+    y += 10
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...colors.text)
+    const compText = 'O compromisso da SoundUp é oferecer uma experiência musical moderna, segura e inspiradora para todos os usuários. A empresa protege os dados com criptografia de ponta e respeita a privacidade dos usuários.'
+    const compLines = doc.splitTextToSize(compText, CONTENT_WIDTH)
+    doc.text(compLines, MARGIN, y)
+    y += (compLines.length * 5) + 8
+
+    // Tags
+    const tags = ['Criptografia AES-256', 'GDPR Compliant', 'SSL Seguro']
+    let tagX = MARGIN
+    tags.forEach((tag) => {
+      const tagWidth = doc.getTextWidth(tag) + 16
+      doc.setFillColor(240, 240, 250)
+      doc.setDrawColor(200, 200, 220)
+      doc.roundedRect(tagX, y - 4, tagWidth, 10, 2, 2, 'FD')
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...colors.secondary)
+      doc.text('OK', tagX + 5, y + 2)
+      doc.setTextColor(...colors.text)
+      doc.text(tag, tagX + 12, y + 2)
+      tagX += tagWidth + 8
+    })
+    y += 18
+
+    // === ESTATÍSTICAS ===
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('ESTATÍSTICAS DA PLATAFORMA', MARGIN, y)
+    y += 12
+
+    const stats = [
+      { value: '50.000', label: 'Usuários Ativos', color: colors.primary },
+      { value: '1.200.000', label: 'Músicas Indexadas', color: colors.secondary },
+      { value: '99,9%', label: 'Uptime Garantido', color: [16, 185, 129] },
+      { value: '24/7', label: 'Suporte', color: colors.accent }
+    ]
+
+    const colWidth = CONTENT_WIDTH / 4
+    stats.forEach((stat, i) => {
+      const x = MARGIN + (i * colWidth)
+      doc.setFillColor(250, 250, 252)
+      doc.roundedRect(x + 2, y - 3, colWidth - 4, 28, 2, 2, 'F')
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...stat.color)
+      const valWidth = doc.getTextWidth(stat.value)
+      doc.text(stat.value, x + (colWidth / 2) - (valWidth / 2), y + 8)
+      doc.setFontSize(7)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...colors.muted)
+      const labelWidth = doc.getTextWidth(stat.label)
+      doc.text(stat.label, x + (colWidth / 2) - (labelWidth / 2), y + 16)
+    })
+    y += 35
+
+    // === TIMELINE ===
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('COMO FUNCIONA', MARGIN, y)
+    y += 12
+
+    this.timelineSteps.forEach((step, i) => {
+      doc.setFillColor(...colors.secondary)
+      doc.circle(MARGIN + 5, y + 3, 4, 'F')
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(255, 255, 255)
+      doc.text(`${i + 1}`, MARGIN + 3.5, y + 4.5)
+
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...colors.text)
+      doc.text(step.title, MARGIN + 15, y + 2)
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...colors.muted)
+      doc.text(step.description, MARGIN + 15, y + 8)
+
+      if (i < this.timelineSteps.length - 1) {
+        doc.setDrawColor(200, 200, 220)
+        doc.setLineWidth(0.5)
+        doc.line(MARGIN + 5, y + 8, MARGIN + 5, y + 20)
+      }
+      y += 18
+    })
+    y += 10
+
+    // === CONSIDERAÇÕES FINAIS ===
+    if (y > 240) {
+      doc.addPage()
+      y = 25
+      doc.setFillColor(...colors.primary)
+      doc.rect(0, 0, PAGE_WIDTH, 4, 'F')
+      y += 8
+    }
+
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('CONSIDERAÇÕES FINAIS', MARGIN, y)
+    y += 10
+
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...colors.text)
+    const finalText = 'Ao clicar em "Aceitar Termos", o usuário concorda com a Política de Privacidade e a Política de Cookies da SoundUp. A SoundUp reserva-se o direito de alterar os presentes termos a qualquer momento, mediante notificação prévia aos usuários.'
+    const finalLines = doc.splitTextToSize(finalText, CONTENT_WIDTH)
+    doc.text(finalLines, MARGIN, y)
+    y += (finalLines.length * 5) + 15
+
+    // === REFERÊNCIAS ===
+    doc.setFontSize(13)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...colors.primary)
+    doc.text('REFERÊNCIAS', MARGIN, y)
+    y += 10
+
+    const refs = [
+      'BRASIL. Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados Pessoais (LGPD).',
+      'BRASIL. Lei nº 9.610, de 19 de fevereiro de 1998. Lei de Direitos Autorais.',
+      'UNIÃO EUROPEIA. Regulamento Geral de Proteção de Dados (GDPR). Regulamento (UE) 2016/679.',
+      'ABNT. NBR 6022:2018. Informação e documentação – Artigo em publicação periódica científica.',
+      'ABNT. NBR 14724:2011. Informação e documentação – Trabalhos acadêmicos – Apresentação.'
+    ]
+
+    refs.forEach(ref => {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(...colors.muted)
+      const refLines = doc.splitTextToSize(ref, CONTENT_WIDTH - 10)
+      doc.text(refLines, MARGIN + 5, y)
+      y += (refLines.length * 4.5) + 3
+    })
+    y += 10
+
+    // === FOOTER ===
+    doc.setFillColor(...colors.primary)
+    doc.rect(0, 287, PAGE_WIDTH, 10, 'F')
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(255, 255, 255)
+    const footerText = `© SoundUp Tecnologia Musical Ltda.  |  ${currentDate}  |  Todos os direitos reservados.`
+    const footerWidth = doc.getTextWidth(footerText)
+    doc.text(footerText, (PAGE_WIDTH - footerWidth) / 2, 292)
+
+    // Número de páginas
+    const totalPages = doc.internal.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(150, 150, 150)
+      doc.text(`${i} / ${totalPages}`, PAGE_WIDTH - MARGIN, 292, { align: 'right' })
+    }
+
+    // Salvar
+    doc.save('SoundUp-Termos-e-Condicoes-de-Uso.pdf')
+
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error)
+    // Fallback: baixa como TXT se jsPDF falhar
+    this.downloadTermsFallback()
+  }
+},
+
+// Método de fallback caso jsPDF falhe
+downloadTermsFallback() {
+  const currentDate = new Date().toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })
+
+  let content = `SOUNDUP - TERMOS E CONDIÇÕES DE USO\n`
+  content += `Plataforma de Streaming Musical\n`
+  content += `Data: ${currentDate} | Versão: 1.0 | Status: Vigente\n\n`
+  content += `RESUMO\n`
+  content += `O presente documento estabelece os termos e condições de uso da plataforma SoundUp.\n\n`
+  content += `1. INTRODUÇÃO\n`
+  content += `A plataforma SoundUp foi desenvolvida para proporcionar uma experiência musical completa e imersiva.\n\n`
+
+  this.termsList.forEach((term, index) => {
+    content += `${index + 1}. ${term.title.toUpperCase()}\n`
+    content += `${term.fullDescription}\n\n`
+    content += `O que está incluído:\n`
+    term.details.forEach(d => content += `  • ${d}\n`)
+    if (term.warning) content += `\n  ⚠ ${term.warning}\n`
+    content += `\n`
+  })
+
+  content += `COMPROMISSO SOUNDUP\n`
+  content += `O compromisso da SoundUp é oferecer uma experiência musical moderna, segura e inspiradora.\n\n`
+  content += `ESTATÍSTICAS\n`
+  content += `• 50.000 Usuários Ativos\n`
+  content += `• 1.200.000 Músicas Indexadas\n`
+  content += `• 99,9% Uptime Garantido\n`
+  content += `• Suporte 24/7\n\n`
+  content += `COMO FUNCIONA\n`
+  this.timelineSteps.forEach((step, i) => {
+    content += `${i + 1}. ${step.title} - ${step.description}\n`
+  })
+  content += `\n`
+  content += `CONSIDERAÇÕES FINAIS\n`
+  content += `Ao clicar em "Aceitar Termos", o usuário concorda com a Política de Privacidade e Cookies.\n\n`
+  content += `REFERÊNCIAS\n`
+  content += `• BRASIL. Lei nº 13.709, de 2018. LGPD.\n`
+  content += `• BRASIL. Lei nº 9.610, de 1998. Lei de Direitos Autorais.\n`
+  content += `• UNIÃO EUROPEIA. GDPR. Regulamento (UE) 2016/679.\n`
+  content += `• ABNT. NBR 6022:2018.\n`
+  content += `• ABNT. NBR 14724:2011.\n\n`
+  content += `© SoundUp Tecnologia Musical Ltda. ${currentDate}. Todos os direitos reservados.`
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'SoundUp-Termos-e-Condicoes-de-Uso.txt'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+},
 
     openModal(term) {
       this.selectedTerm = term

@@ -4,6 +4,7 @@ const roomController = require('../controllers/roomController')
 const { requireAuth, optionalAuth } = require('../middleware/auth')
 
 router.get('/publicas', roomController.listarPublicas)
+router.get('/todas', optionalAuth, roomController.listarTodas)
 
 router.post('/', requireAuth, roomController.criar)
 router.get('/my', requireAuth, roomController.listarMinhas)
@@ -15,6 +16,11 @@ router.get('/:id/permissao/:acao', requireAuth, roomController.verificarPermissa
 router.post('/:id/moderadores', requireAuth, roomController.adicionarModerador)
 router.delete('/:id/moderadores', requireAuth, roomController.removerModerador)
 router.put('/:id/permissoes', requireAuth, roomController.atualizarPermissoes)
+// ========== ROTAS DE LISTENERS ==========
+router.post('/:id/listeners', optionalAuth, roomController.adicionarListener)
+router.get('/:id/listeners', roomController.listarListeners)
+router.delete('/:id/listeners', requireAuth, roomController.removerListener)
+// ======================================
 // ================================================
 
 router.get('/:id', roomController.buscarPorId)

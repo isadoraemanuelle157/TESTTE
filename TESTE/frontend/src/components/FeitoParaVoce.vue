@@ -4,23 +4,38 @@
       <div class="bg-layer" v-for="i in 3" :key="i" :class="{ active: headerStep === i }" :style="getBgStyle(i)"></div>
       <div class="noise-overlay"></div>
     </div>
+<header class="global-header onboarding-header">
+  <div class="progress-steps">
+    <div class="step completed">
+      <div class="step-number">1</div>
+      <span class="step-label">Conta</span>
+    </div>
 
-    <header class="global-header onboarding-header">
-      <div class="progress-steps">
-        <div v-for="(label, i) in ['Gêneros','Artistas','Vibes']" :key="i" class="step" :class="{ completed: headerStep > i+1, active: headerStep === i+1 }">
-          <div class="step-number">
-            <svg v-if="headerStep > i+1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-            <span v-else>{{ i+1 }}</span>
-          </div>
-          <span class="step-label">{{ label }}</span>
-        </div>
-        <template v-for="i in 2" :key="`line${i}`">
-          <div class="step-line" :class="{ completed: headerStep > i+1 }">
-            <svg class="arrow-icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </div>
-        </template>
-      </div>
-    </header>
+    <div class="step-line completed"></div>
+
+    <div class="step completed">
+      <div class="step-number">2</div>
+      <span class="step-label">Perfil</span>
+    </div>
+
+    <div class="step-line completed"></div>
+
+    <div class="step active">
+      <div class="step-number">3</div>
+      <span class="step-label">Preferências</span>
+    </div>
+  </div>
+</header>
+
+    <!-- ✅ ADICIONAR no template, logo após o </header> e antes do <main>: -->
+<div class="back-to-profile-bar">
+  <button class="btn-back-to-profile" @click="voltarParaEtapa2">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+    </svg>
+    Voltar para o Perfil
+  </button>
+</div>
 
     <main class="content-area">
       <section v-show="currentStep === 1" class="step-section" key="step1">
@@ -254,6 +269,11 @@ export default {
   },
   methods: {
     redirectToDashboard() { this.$router ? this.$router.replace('/dashboard') : window.location.href = '/dashboard' },
+    voltarParaEtapa2() {
+  // Salvar seleções atuais para recuperar depois
+  this.saveSelectionsToStorage()
+  this.$router.push('/registrar2')
+},
     async scrollToTop() { await this.$nextTick(); const el = document.querySelector('.content-area'); if (el) el.scrollTo({ top: 0, behavior: 'smooth' }) },
     getSplashParticleStyle(n) { const s = Math.random() * 3 + 1; return { width: `${s}px`, height: `${s}px`, left: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 4}s`, animationDuration: `${Math.random() * 8 + 8}s` } },
     async startSplashTransition() {
@@ -475,16 +495,66 @@ export default {
 .noise-overlay{position:absolute;inset:0;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");pointer-events:none}
 
 .global-header{position:sticky;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px 32px;background:rgba(10,10,10,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.05)}
-.progress-steps{display:flex;align-items:center;gap:12px}
-.step{display:flex;flex-direction:column;align-items:center;gap:4px;opacity:.4;transition:all .3s ease}
-.step.active{opacity:1;transform:scale(1.1)}
-.step.completed{opacity:1}
-.step-number{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;transition:background .3s ease}
-.step.active .step-number,.step.completed .step-number{background:#1DB954}
-.step-line{position:relative;width:60px;height:2px;background:rgba(255,255,255,.2);transition:all .3s ease}
-.step-line.completed{background:#1DB954}
-.arrow-icon{width:28px;height:28px;color:rgba(255,255,255,.5);transition:all .3s ease}
-.step-line.completed .arrow-icon{color:#1DB954;transform:scale(1.1)}
+.progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  color: #64748b;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.step.completed .step-number {
+  background: #22c55e;
+  color: white;
+}
+
+.step-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.step.active .step-label {
+  color: #f8fafc;
+}
+
+.step-line {
+  width: 60px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+}
+
+.step-line.completed {
+  background: #22c55e;
+}
 
 .content-area{flex:1;position:relative;z-index:1;overflow-y:auto;overflow-x:hidden;padding:24px 32px;width:100%;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
 .content-area::-webkit-scrollbar{width:6px}
@@ -675,7 +745,51 @@ export default {
 @keyframes riseUp{0%{transform:translateY(0) scale(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateY(-100vh) scale(1);opacity:0}}
 .expand-circle{position:absolute;width:100px;height:100px;background:#1db954;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);transition:transform .7s cubic-bezier(.34,1.56,.64,1);z-index:100;will-change:transform}
 .expand-circle.expand{transform:translate(-50%,-50%) scale(50)}
+/* ✅ ADICIONAR no style */
+.back-to-profile-bar {
+  position: sticky;
+  top: 73px; /* abaixo do header */
+  left: 0;
+  right: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(10px);
+}
 
+.btn-back-to-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-back-to-profile:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: translateX(-3px);
+}
+
+.btn-back-to-profile:active {
+  transform: scale(0.97);
+}
+
+.btn-back-to-profile svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
 @media(max-width:1024px){.global-header{padding:14px 20px}.content-area{padding:20px}.step-header h1{font-size:28px}.genres-masonry{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}.artists-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}.vibes-showcase{grid-template-columns:1fr}.step-footer{padding:16px 20px}.btn-nav{padding:10px 18px;font-size:14px}}
 @media(max-width:480px){.step-header h1{font-size:24px}.genre-tile.is-large{grid-column:span 1;grid-row:span 1}.preview-bar{bottom:80px;padding:10px 14px;width:95%}.preview-chip{padding:5px 10px;font-size:11px}.btn-back-modal{top:16px;left:16px;padding:10px 16px;font-size:13px}.btn-back-modal svg{width:18px;height:18px}.success-content{padding:24px}.success-content h2{font-size:22px}}
 @media(prefers-reduced-motion:reduce){.splash-logo-glow,.sound-wave span,.splash-progress-shine,.particle,.step-spinner,.loading-spinner,.btn-spinner{animation:none}.splash-title span{opacity:1;transform:none;animation:none}.genre-tile,.artist-card-large,.vibe-showcase-card,.btn-nav,.btn-start,.btn-back-modal,.btn-retry{transition:none}.genre-tile:hover,.artist-card-large:hover,.vibe-showcase-card:hover,.btn-primary:hover,.btn-start:hover{transform:none}.content-area{scroll-behavior:auto}}

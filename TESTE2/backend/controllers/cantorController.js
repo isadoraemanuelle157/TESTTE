@@ -66,14 +66,11 @@ const getByNome = async (req, res) => {
 }
 
 // ATUALIZAR CANTOR
+// ATUALIZAR CANTOR
 const update = async (req, res) => {
   try {
-    // 🔥 Garante que musicas seja sempre array de strings/IDs
-    if (req.body.musicas) {
-      req.body.musicas = req.body.musicas.map(m => 
-        typeof m === 'object' ? m._id : m
-      ).filter(Boolean)
-    }
+    // 🔥 REMOVIDO: não força normalização aqui, o service já faz no normalizeIds
+    // Deixa o service cuidar da conversão para manter consistência
 
     const cantor = await cantorService.updateCantor(req.params.id, req.body)
 

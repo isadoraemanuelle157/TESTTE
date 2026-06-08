@@ -90,9 +90,56 @@ const getTodasCurtidas = async (usuarioId) => {
   return { locais, externas }
 }
 
+// ========== VERIFICAR SE MÚSICA ESTÁ EM ALGUMA PLAYLIST DO USUÁRIO ==========
+const getPlaylistsComMusica = async (usuarioId, musicaId, source) => {
+  const userOid = mongoose.Types.ObjectId.isValid(usuarioId)
+    ? new mongoose.Types.ObjectId(usuarioId)
+    : usuarioId
+
+  const Playlist = mongoose.model('Playlist') // ou require('../models/Playlist')
+
+  const playlists = await Playlist.find({ usuario: userOid })
+
+  // Verifica em cada playlist se a música existe
+  const playlistsComMusica = playlists.filter(p => {
+    return p.musicas?.some(m => {
+      const idMusicaPlaylist = String(m.id || m._id || m.musicaId)
+      const idMusicaBuscada = String(musicaId)
+      return idMusicaPlaylist === idMusicaBuscada
+    })
+  }).map(p => String(p._id))
+
+  return playlistsComMusica
+}
+
+// ========== VERIFICAR SE MÚSICA ESTÁ NOS FAVORITOS ==========
+const isFavorita = async (usuarioId, musicaId, source) => {
+  const userOid = mongoose.Types.ObjectId.isValid(usuarioId)
+    ? new mongoose.Types.ObjectId(usuarioId)
+    : usuarioId
+
+  const Favorita = mongoose.model('Favorita') // ou require('../models/Favorita')
+
+  const query = { usuario: userOid }
+
+  if (source && source !== 'local') {
+    query.musicaId = String(musicaId)
+    query.source = source
+  } else {
+    query.musica = mongoose.Types.ObjectId.isValid(musicaId)
+      ? new mongoose.Types.ObjectId(musicaId)
+      : musicaId
+  }
+
+  const favorita = await Favorita.findOne(query)
+  return !!favorita
+}
+
 module.exports = {
   toggleCurtida,
   toggleCurtidaExterna,
   countCurtidas,
-  getTodasCurtidas
+  getTodasCurtidas,
+  getPlaylistsComMusica,  // ← ADICIONAR
+  isFavorita              // ← ADICIONAR
 }

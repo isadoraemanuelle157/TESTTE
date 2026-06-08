@@ -101,13 +101,14 @@
             </div>
             <div class="form-group half">
               <label for="onboarding-location">Cidade</label>
-              <input
-                id="onboarding-location"
-                v-model="onboardingData.location"
-                type="text"
-                class="onboarding-input"
-                placeholder="São Paulo, SP"
-              >
+           <input
+  id="onboarding-location"
+  v-model="onboardingData.location"
+  type="text"
+  class="onboarding-input"
+  placeholder="Cidade, Estado (ex: São Paulo, SP)"
+  required
+>
             </div>
           </div>
 
@@ -223,45 +224,51 @@
 
           <div class="form-group">
             <label for="onboarding-bio">Bio</label>
-            <textarea
-              id="onboarding-bio"
-              v-model="onboardingData.bio"
-              class="onboarding-textarea"
-              placeholder="Fale sobre você, seus estilos musicais favoritos, artistas preferidos..."
-              rows="3"
-              maxlength="150"
-            ></textarea>
+          <textarea
+  id="onboarding-bio"
+  v-model="onboardingData.bio"
+  class="onboarding-textarea"
+  placeholder="Fale sobre você, seus estilos musicais favoritos, artistas preferidos..."
+  rows="3"
+  maxlength="150"
+  @input="checkBioLimit"
+></textarea>
             <span class="input-hint">{{ onboardingData.bio.length }}/150</span>
           </div>
 
           <div class="form-group">
             <label>Estilos musicais favoritos (selecione até 3)</label>
             <div class="genre-selector">
-              <button
-                v-for="genre in availableGenres"
-                :key="genre._id"
-                @click="toggleGenre(genre)"
-                class="genre-select-btn"
-                :class="{ active: isGenreSelected(genre._id) }"
-                :disabled="
-                  !isGenreSelected(genre._id) &&
-                  onboardingData.favoriteGenres.length >= 3
-                "
-                :style="{
-                  borderColor: genre.color,
-                  color: isGenreSelected(genre._id) ? '#fff' : genre.color,
-                  background: isGenreSelected(genre._id)
-                    ? genre.color
-                    : 'transparent'
-                }"
-              >
-                <span v-html="genre.icon"></span>
-                {{ genre.nome }}
-              </button>
+          <button
+  v-for="genre in availableGenres"
+  :key="genre._id"
+  @click="toggleGenre(genre)"
+  class="genre-select-btn"
+  :class="{ active: isGenreSelected(genre._id) }"
+  :disabled="
+    !isGenreSelected(genre._id) &&
+    onboardingData.favoriteGenres.length >= 3
+  "
+  :style="{
+    borderColor: genre.color,
+    color: isGenreSelected(genre._id) ? '#fff' : genre.color,
+    background: isGenreSelected(genre._id)
+      ? genre.color
+      : 'transparent'
+  }"
+>
+  {{ genre.nome }}
+</button>
             </div>
-            <span class="input-hint" :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }">
-              {{ onboardingData.favoriteGenres.length }}/3 selecionados
-            </span>
+         <div style="text-align: center; margin-top: 1rem;">
+  <span 
+    class="input-hint" 
+    :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }"
+    style="position: static; transform: none;"
+  >
+    {{ onboardingData.favoriteGenres.length }}/3 selecionados
+  </span>
+</div>
           </div>
 
           <button
@@ -1681,6 +1688,12 @@ showPreviewMidia: false,
             this.editForm.age <= 100 &&
             this.editForm.bio.trim().length > 0
         },
+canProceedStep2() {
+  return this.onboardingData.name.trim().length >= 2 &&
+    this.onboardingData.age >= 18 &&
+    this.onboardingData.age <= 100 &&
+    this.onboardingData.location.trim().length >= 3  // ← ADICIONAR
+},
 
         canProceedStep2() {
           return this.onboardingData.name.trim().length >= 2 &&
@@ -1708,6 +1721,17 @@ showPreviewMidia: false,
   },
 
       methods: {
+        // ADICIONAR nos methods:
+checkBioLimit() {
+  if (this.onboardingData.bio.length >= 150) {
+    this.showToast({
+      type: 'warning',
+      title: 'Limite atingido',
+      message: 'A bio tem o limite máximo de 150 caracteres.',
+      duration: 3000
+    })
+  }
+},
          handleAvatarGoldChanged(e) {
     this.isAvatarGoldEquipped = e.detail?.equipped || false;
   },

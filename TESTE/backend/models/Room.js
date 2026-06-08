@@ -83,6 +83,26 @@ const roomSchema = new mongoose.Schema({
     preview: String,
     deezerId: String
   }],
+  // ========== LISTENERS ATIVOS ==========
+activeListeners: [{
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true
+  },
+  name: String,
+  avatar: String,
+  role: {
+    type: String,
+    enum: ['owner', 'moderator', 'participant'],
+    default: 'participant'
+  },
+  joinedAt: {
+    type: Date,
+    default: Date.now
+  }
+}],
+// ======================================
   messages: [{
     userId: String,
     userName: String,
@@ -105,6 +125,21 @@ roomSchema.pre('save', function(next) {
   if (this.isPublic) {
     this.passwordHash = null
     this.hasPassword = false
+  } else {
+    // Garante que hasPassword esteja sincronizado com passwordHash
+    this.hasPassword = !!this.passwordHash
+  }
+  next()
+})
+
+// Adicionar APÓS o pre('save')
+roomSchema.pre('findOneAndUpdate', function(next) {
+  const update = this.getUpdate()
+  if (update.isPublic === true || update.$set?.isPublic === true) {
+    this.set({ passwordHash: null, hasPassword: false })
+  } else if ((update.isPublic === false || update.$set?.isPublic === false) && !update.passwordHash && !update.$set?.passwordHash) {
+    // Se está tornando privada sem senha, mantém hasPassword false
+    this.set({ hasPassword: false })
   }
   next()
 })

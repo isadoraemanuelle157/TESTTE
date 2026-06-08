@@ -511,14 +511,13 @@
     </transition>
 
     <!-- Toast -->
-    <transition name="toast-slide">
-      <div v-if="toast.show" :class="['toast', toast.type]">
-        <span class="toast-icon">
-          <i :class="toast.type === 'success' ? 'fas fa-check' : 'fas fa-exclamation'"></i>  <!-- 🔄 emojis ✓ / ! -->
-        </span>
-        <span>{{ toast.message }}</span>
-      </div>
-    </transition>
+   <!-- Toast -->
+<transition name="toast">
+  <div v-if="toast.show" :class="['toast-soundup', toast.type]">
+    <div class="toast-icon" v-html="toast.icon"></div>
+    <div class="toast-message">{{ toast.message }}</div>
+  </div>
+</transition>
   </div>
 </template>
 
@@ -554,7 +553,7 @@ export default {
       imageError: false,
       defaultCover: DEFAULT_COVER,
 
-      toast: { show: false, message: '', type: 'success' },
+      toast: { show: false, message: '', type: 'success', icon: '<i class="fas fa-check-circle"></i>' },
 
 
       // Search
@@ -667,7 +666,7 @@ export default {
         const res = await fetch('http://localhost:3002/cantores')
         this.cantores = await res.json()
       } catch {
-        this.showToast('Erro ao carregar cantores', 'error')
+        this.showToast('Erro ao carregar cantores', 'error', '<i class="fas fa-times-circle"></i>')
       }
     },
 
@@ -687,7 +686,7 @@ export default {
 
       } catch {
         this.generos = []
-        this.showToast('Erro ao carregar gêneros', 'error')
+        this.showToast('Erro ao carregar gêneros', 'error', '<i class="fas fa-times-circle"></i>')
       }
     },
     async carregarMusicas() {
@@ -696,7 +695,7 @@ export default {
         // 🔥 Extrai o array corretamente (suporta tanto paginado quanto array direto)
         this.musicas = Array.isArray(res.data) ? res.data : (res.data.results || [])
       } catch {
-        this.showToast('Erro ao carregar músicas', 'error')
+        this.showToast('Erro ao carregar músicas', 'error', '<i class="fas fa-times-circle"></i>')
       }
     },
 
@@ -710,7 +709,7 @@ export default {
           generos: Array.isArray(album.generos) ? album.generos : []
         }))
       } catch {
-        this.showToast('Erro ao carregar álbuns', 'error')
+       this.showToast('Erro ao carregar álbuns', 'error', '<i class="fas fa-times-circle"></i>')
       }
     },
 
@@ -829,18 +828,18 @@ export default {
         if (this.modoEdicao && this.form.id) {
           await axios.put(`${API}/${this.form.id}`, payload)
           await this.carregarAlbuns()
-          this.showToast('Álbum atualizado!')
+         this.showToast('Álbum atualizado!', 'success', '<i class="fas fa-check-circle"></i>')
         } else {
           await axios.post(API, payload)
           await this.carregarAlbuns()
-          this.showToast('Álbum criado!')
+         	this.showToast('Álbum criado!', 'success', '<i class="fas fa-check-circle"></i>')
         }
 
         this.reset()
       } catch (err) {
         // Mostra erro específico do backend
         const msg = err.response?.data?.error || err.message || 'Erro ao salvar'
-        this.showToast(msg, 'error')
+        this.showToast(msg, 'error', '<i class="fas fa-times-circle"></i>')
         console.error('Erro completo:', err.response?.data)
       } finally {
         this.saving = false
@@ -878,7 +877,7 @@ export default {
 
         await this.scrollToForm(true)
       } catch (err) {
-        this.showToast('Erro ao carregar dados do álbum para edição', 'error')
+       this.showToast('Erro ao carregar dados do álbum para edição', 'error', '<i class="fas fa-times-circle"></i>')
       }
     },
 
@@ -901,11 +900,11 @@ export default {
 
         await this.carregarAlbuns()
 
-        this.showToast('Álbum removido')
+      this.showToast('Álbum removido', 'success', '<i class="fas fa-check-circle"></i>')
         this.showDeleteModal = false
         this.albumParaExcluir = null
       } catch (err) {
-        this.showToast(err.response?.data?.error || 'Erro ao excluir', 'error')
+        	this.showToast(err.response?.data?.error || 'Erro ao excluir', 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.deleting = false
       }
@@ -961,7 +960,7 @@ export default {
       this.reset()
     },
 
-  showToast(message, type = 'success') {
+showToast(message, type = 'success', icon = '<i class="fas fa-check-circle"></i>') {
   if (this.toastTimer) {
     clearTimeout(this.toastTimer)
   }
@@ -969,10 +968,11 @@ export default {
   this.toast.show = true
   this.toast.message = message
   this.toast.type = type
+  this.toast.icon = icon
 
   this.toastTimer = setTimeout(() => {
     this.toast.show = false
-  }, 15000) // 15 segundos
+  }, 3000) // 3 segundos
 }
   }
 }
@@ -2319,63 +2319,61 @@ textarea {
 }
 
 /* Toast */
-.toast {
+.toast-soundup {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-radius: 12px;
+  gap: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+  z-index: 2000;
+  animation: toastSlideUp 0.3s ease;
   color: white;
-  font-weight: 500;
-  z-index: 1001;
-  animation: toastIn 0.3s ease;
-  backdrop-filter: blur(10px);
 }
 
-.toast.success {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.3);
+.toast-soundup.success {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
 }
 
-.toast.error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+.toast-soundup.error {
+  background: #dc2626;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
 }
 
-.toast-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
+.toast-icon i {
+  font-size: 1.25rem;
 }
 
-@keyframes toastIn {
+.toast-message {
+  font-size: 0.95rem;
+}
+
+@keyframes toastSlideUp {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(-50%) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-.toast-slide-enter-active, .toast-slide-leave-active {
-  transition: all 0.3s;
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
 }
 
-.toast-slide-leave-to {
+.toast-enter-from,
+.toast-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateX(-50%) translateY(20px);
 }
-
 /* Responsive */
 @media (max-width: 768px) {
   .studio-header {

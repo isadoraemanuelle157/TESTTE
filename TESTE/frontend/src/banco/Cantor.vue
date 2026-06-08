@@ -866,12 +866,12 @@ export default {
         foto: ''
       },
      
-      toast: {
-        show: false,
-        message: '',
-        type: 'success',
-        icon: '✅'
-      }
+   toast: {
+  show: false,
+  message: '',
+  type: 'success',
+  icon: '<i class="fas fa-check-circle"></i>'
+}
     }
   },
 
@@ -1070,7 +1070,7 @@ async toggleSeguirCantor(cantor) {
       'success'
     )
   } catch (error) {
-    this.mostrarToast(error.message || 'Erro ao seguir cantor', 'error', '❌')
+    this.mostrarToast(error.message || 'Erro ao seguir cantor', 'error', '<i class="fas fa-times-circle"></i>')
   }
 },
 
@@ -1257,7 +1257,7 @@ const musicaPayload = {
     await this.carregarMusicas()
 
   } catch (error) {
-    this.mostrarToast(error.message || 'Erro ao salvar música', 'error', '❌')
+    this.mostrarToast(error.message || 'Erro ao salvar música', 'error', '<i class="fas fa-times-circle"></i>')
   }
 },
 
@@ -1307,7 +1307,7 @@ fecharModalMusica() {
 
     salvarAlbumLocal() {
       if (!this.albumForm.nome.trim()) {
-        this.mostrarToast('Nome do álbum é obrigatório', 'error', '⚠️')
+        this.mostrarToast('Nome do álbum é obrigatório', 'error', '<i class="fas fa-exclamation-triangle"></i>')
         return
       }
 
@@ -1557,7 +1557,7 @@ for (const album of albunsParaCriar) {
         this.carregarCantores()
 
       } catch (error) {
-        this.mostrarToast(error.message, 'error', '❌')
+        this.mostrarToast(error.message, 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.salvando = false
       }
@@ -1573,7 +1573,7 @@ for (const album of albunsParaCriar) {
         this.showDeleteModal = false
         this.carregarCantores()
       } catch (error) {
-        this.mostrarToast(error.message, 'error', '❌')
+        this.mostrarToast(error.message, 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.excluindo = false
         this.cantorParaExcluir = null
@@ -1705,7 +1705,7 @@ async editarCantor(cantor) {
 
   } catch (error) {
     console.error(error)
-    this.mostrarToast('Erro ao carregar dados do artista', 'error', '❌')
+    this.mostrarToast('Erro ao carregar dados do artista', 'error', '<i class="fas fa-times-circle"></i>')
     this.showModal = false
   }
 },

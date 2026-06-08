@@ -2,6 +2,8 @@ const express = require('express')
 const router = express.Router()
 const { requireAuth } = require('../middleware/auth')
 
+const musicaController = require('../controllers/musicaController')
+
 // ============================================
 // CARREGA O MODEL
 // ============================================
@@ -151,8 +153,21 @@ router.get('/:id', checkModel, async (req, res) => {
 // ============================================
 router.post('/', requireAuth, checkModel, async (req, res) => {
   try {
-    const musica = new Musica(req.body)
-    await musica.save()
+    const body = { ...req.body }
+    if (body.ano) body.ano = parseInt(body.ano)
+
+    const musicaService = require('../services/musicaService')
+    const Genero = require('../models/GenerosMusicais')
+    
+    const musica = await musicaService.createMusica(body)
+    
+    // 🔥 ADICIONA A MÚSICA NOS GÊNEROS (faltava!)
+    if (body.generos && body.generos.length > 0) {
+      await Genero.updateMany(
+        { _id: { $in: body.generos } },
+        { $addToSet: { musicas: musica._id } }
+      )
+    }
     
     const populada = await Musica.findById(musica._id)
       .populate('cantores', 'nome foto')
@@ -166,8 +181,8 @@ router.post('/', requireAuth, checkModel, async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Erro criar musica:', error.message)
-    res.status(500).json({ 
+    console.error('❌ ERRO CRIAR MÚSICA:', error)
+    res.status(400).json({ 
       error: 'Erro ao criar musica',
       message: error.message 
     })
@@ -179,20 +194,12 @@ router.post('/', requireAuth, checkModel, async (req, res) => {
 // ============================================
 router.put('/:id', requireAuth, checkModel, async (req, res) => {
   try {
-    const musica = await Musica.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    )
-    .populate('cantores', 'nome foto')
-    .populate('generos', 'nome icon color')
-    .populate('albuns', 'nome capa')
+    // 🔥 CONVERTE ano para Number
+    const body = { ...req.body }
+    if (body.ano) body.ano = parseInt(body.ano)
 
-    if (!musica) {
-      return res.status(404).json({ 
-        error: 'Musica nao encontrada' 
-      })
-    }
+    const musicaService = require('../services/musicaService')
+    const musica = await musicaService.updateMusica(req.params.id, body)
 
     res.json({
       success: true,
@@ -202,7 +209,7 @@ router.put('/:id', requireAuth, checkModel, async (req, res) => {
 
   } catch (error) {
     console.error('Erro atualizar musica:', error.message)
-    res.status(500).json({ 
+    res.status(400).json({ 
       error: 'Erro ao atualizar musica',
       message: error.message 
     })

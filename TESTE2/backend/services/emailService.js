@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   }
 })
 
-const SUPPORT_RECEIVER = process.env.SUPPORT_RECEIVER || 'isa@gmail.com'
+const SUPPORT_RECEIVER = process.env.SUPPORT_RECEIVER || 'isa@gmail.com, pablo@gmail.com'
 
 async function enviarEmailSuporte({ nome, email, assunto, mensagem }) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return

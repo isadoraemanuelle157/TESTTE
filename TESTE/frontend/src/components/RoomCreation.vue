@@ -46,7 +46,7 @@
           <label>Nome da Sala <span class="required">*</span></label>
           <input 
             v-model="roomForm.name" 
-            placeholder="Ex: Sessão Chill Vibes 🎵"
+            placeholder="Ex: Sessão Chill Vibes"
             maxlength="50"
             :disabled="!canCreate"
           />
@@ -133,9 +133,10 @@
               <strong>Deezer</strong> — Apenas previews (30s)
             </span>
           </div>
-          <p v-if="!isLoggedIn" class="source-hint">
-            🔒 <a @click="$router.push('/login')">Conecte-se</a> para ouvir músicas completas do Spotify
-          </p>
+         <p v-if="!isLoggedIn" class="source-hint">
+  <i class="fa-solid fa-lock"></i>
+  <a @click="$router.push('/login')">Conecte-se</a> para ouvir músicas completas do Spotify
+</p>
         </div>
 
         <!-- Permissions Section (only for logged users) -->
@@ -234,7 +235,7 @@
               >
                 Seguidores
                 <span class="tab-count" v-if="isLoggedIn">{{ followers.length }}</span>
-                <span class="tab-count" v-else>🔒</span>
+               <span class="tab-count" v-else><i class="fa-solid fa-lock"></i></span>
               </button>
               <button 
                 class="tab-btn" 
@@ -382,9 +383,11 @@
             <div class="room-card-info">
               <h3>{{ room.name }}</h3>
               <div class="room-card-meta">
-                <span class="visibility-badge" :class="{ 'public': room.isPublic }">
-                  {{ room.isPublic ? '🌐 Pública' : '🔒 Privada' }}
-                </span>
+            <span class="visibility-badge" :class="{ 'public': room.isPublic }">
+  <i v-if="room.isPublic" class="fa-solid fa-globe"></i>
+  <i v-else class="fa-solid fa-lock"></i>
+  {{ room.isPublic ? ' Pública' : ' Privada' }}
+</span>
                 <span class="listener-count">{{ room.listeners || 0 }} ouvindo</span>
               </div>
               <div class="room-card-source">
@@ -760,6 +763,8 @@ const createRoom = async () => {
         messages: [],
         createdAt: new Date().toISOString()
       }
+
+      localStorage.setItem(`room_${guestRoom.id}_owner`, 'true')
 
       guestRooms.unshift(guestRoom)
       localStorage.setItem('guest_rooms', JSON.stringify(guestRooms))
@@ -1457,7 +1462,19 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
 }
+.visibility-badge i {
+  margin-right: 0.375rem;
+  font-size: 0.875rem;
+}
 
+.source-hint i {
+  margin-right: 0.375rem;
+  color: var(--primary);
+}
+
+.tab-count i {
+  font-size: 0.75rem;
+}
 .cancel-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.2);
 }

@@ -208,12 +208,26 @@ const seguirArtistaExterno = async (seguidor_id, artistData) => {
   return seguir(seguidor_id, cantor._id.toString(), 'cantor')
 }
 
+const getSeguidoresPublicos = async (seguindo_id) => {
+  return Follow.find({ seguindo_id, tipo: 'usuario' })
+    .populate('seguidor_id', 'nome username avatar')
+    .sort({ createdAt: -1 })
+}
+
+const getSeguindoPublicos = async (seguidor_id) => {
+  return Follow.find({ seguidor_id, tipo: 'usuario' })
+    .populate('seguindo_id', 'nome username avatar foto')
+    .sort({ createdAt: -1 })
+}
+
 module.exports = {
   seguir,
   seguirArtistaExterno,
   desseguir,
   getSeguidores,
   getSeguindo,
+  getSeguidoresPublicos,
+  getSeguindoPublicos,
   contarSeguidores,
   verificar,
   aceitarSolicitacao

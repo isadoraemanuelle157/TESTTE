@@ -238,30 +238,37 @@
                                  
                       <!-- Tab: Décadas -->
                       <div v-if="activeCategoryTab === 'decades'" class="category-tab-content">
-                        <div class="decade-timeline">
-                          <div
-                            v-for="decade in detailedCategories.decades"
-                            :key="decade.name"
-                            class="decade-item"
-                            @click="searchByDecade(decade.name); showCategoriesDropdown = false"
-                          >
+                        <div class="local-section" style="margin: 0;">
+                          <div class="local-header" style="margin-bottom: 16px;">
+                            <h4 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 0 0 4px 0;">
+                              🕰️ Explorar por Década
+                            </h4>
+                            <p style="font-size: 12px; color: #888; margin: 0;">Descubra músicas, artistas e álbuns da época</p>
+                          </div>
+                          <div class="local-grid decade-grid" style="grid-template-columns: repeat(4, 1fr); gap: 12px;">
                             <div
-                              class="decade-bar"
-                              :style="{ width: decade.popularity + '%', background: getDecadeColor(decade.name) }"
-                            ></div>
-                            <div class="decade-info">
-                              <span
-                                class="decade-name"
-                                :style="{ color: getDecadeColor(decade.name) }"
+                              v-for="decade in detailedCategories.decades"
+                              :key="decade.name"
+                              class="local-card decade-card"
+                              @click="goToDecadeCollection(decade.name); showCategoriesDropdown = false"
+                              style="padding: 10px; border-radius: 10px;"
+                            >
+                              <div
+                                class="local-card-bg"
+                                :style="getDecadeGradient(decade.name)"
+                                style="aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 8px;"
                               >
-                                {{ decade.name }}
-                              </span>
-                              <span class="decade-desc">{{ decade.description }}</span>
+                                <div class="decade-icon-badge">
+                                  <i :class="getDecadeIcon(decade.name)"></i>
+                                </div>
+                              </div>
+                              <span class="local-name" style="font-size: 12px;">{{ decade.name }}</span>
+                              <span class="local-desc" style="font-size: 10px;">{{ decade.description }}</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                                             
+
                       <!-- Tab: Locais -->
                       <div v-if="activeCategoryTab === 'locals'" class="category-tab-content">
                         <div class="local-section" style="margin: 0;">
@@ -280,7 +287,9 @@
                               style="padding: 10px; border-radius: 10px;"
                             >
                               <div class="local-card-bg" :style="getLocalGradient(loc)" style="aspect-ratio: 16/9; border-radius: 8px; margin-bottom: 8px;">
-                                <span class="local-emoji" style="font-size: 24px;">📍</span>
+                                <div class="local-icon-badge">
+                                  <i :class="getLocalIcon(loc)"></i>
+                                </div>
                               </div>
                               <span class="local-name" style="font-size: 12px;">{{ loc }}</span>
                               <span class="local-desc" style="font-size: 10px;">Música local</span>
@@ -583,13 +592,38 @@
                 @click="goToLocalPlaylist(loc)"
               >
                 <div class="local-result-bg" :style="getLocalGradient(loc)">
-                  <span class="local-result-emoji">📍</span>
+                  <div class="local-icon-badge">
+                    <i :class="getLocalIcon(loc)"></i>
+                  </div>
                 </div>
                 <span class="local-result-name">{{ loc }}</span>
                 <span class="local-result-desc">Música local</span>
               </div>
             </div>
           </div>
+          <!-- 🕰️ SEÇÃO DE DÉCADAS EM DESTAQUE -->
+          <div class="top-section" v-if="detailedCategories.decades.length > 0">
+            <div class="top-header">
+              <h3>🕰️ Explorar por Década</h3>
+            </div>
+            <div class="locals-grid">
+              <div
+                v-for="decade in detailedCategories.decades"
+                :key="decade.name"
+                class="local-result-card decade-result-card"
+                @click="goToDecadeCollection(decade.name); showCategoriesDropdown = false"
+              >
+                <div class="local-result-bg" :style="getDecadeGradient(decade.name)">
+                  <div class="decade-icon-badge">
+                    <i :class="getDecadeIcon(decade.name)"></i>
+                  </div>
+                </div>
+                <span class="local-result-name">{{ decade.name }}</span>
+                <span class="local-result-desc">{{ decade.description }}</span>
+              </div>
+            </div>
+          </div>
+
 
         </div>
 
@@ -682,7 +716,7 @@
                 v-for="artist in getFilteredByType('artist')"
                 :key="artist.id"
                 class="artist-card"
-                @click="handleResultClick(artist)"
+                @click="goToArtistDetail(artist)"
               >
                 <div class="artist-card-img">
                   <img :src="getBestImage(artist)" :alt="getResultTitle(artist)" @error="$event.target.src='/default-avatar.png'">
@@ -780,9 +814,9 @@
                 class="user-card"
                 @click="goToUserProfile(user)"
               >
-                <div class="user-card-img">
-                  <img :src="user.picture || user.avatar || '/default-avatar.png'" :alt="user.name">
-                </div>
+               <div class="user-card-img" :class="{ 'avatar-gold': user.hasGoldenAvatar || isAvatarGoldEquipped && isCurrentUser(user) }">
+  <img :src="user.picture || user.avatar || '/default-avatar.png'" :alt="user.name">
+</div>
                 <span class="user-card-name">{{ user.name || user.username }}</span>
                 <span class="user-card-type">Perfil</span>
                 <span v-if="user.perfilPrivado" class="user-privacy">🔒 Privado</span>
@@ -803,7 +837,9 @@
                 @click="goToLocalPlaylist(loc.name)"
               >
                 <div class="local-result-bg" :style="getLocalGradient(loc.name)">
-                  <span class="local-result-emoji">📍</span>
+                  <div class="local-icon-badge">
+                    <i :class="getLocalIcon(loc.name)"></i>
+                  </div>
                 </div>
                 <span class="local-result-name">{{ loc.name }}</span>
                 <span class="local-result-desc">
@@ -852,6 +888,7 @@
 
   </div>
 </template>
+
 <script>
 export default {
   name: 'Search',
@@ -878,6 +915,8 @@ export default {
       spotifyPlayer: null,
       spotifyDeviceId: null,
       isSpotifyPremium: false,
+      isAvatarGoldEquipped: false,
+    currentUserId: null,
       spotifyToken: null,
      
       activeCategoryTab: 'genres',
@@ -1273,11 +1312,26 @@ export default {
     this.loadLocalizacoes()
     this.loadRecentCategories()
     this.checkSpotifyStatus()
+     const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
+  if (savedGoldState !== null) {
+    this.isAvatarGoldEquipped = savedGoldState === 'true';
+  }
+  
+  // Pegar ID do usuário logado
+  const storedUser = localStorage.getItem('usuario');
+  if (storedUser) {
+    const userData = JSON.parse(storedUser);
+    this.currentUserId = userData.id || userData._id;
+  }
+  
+  // Listener para mudanças no avatar dourado
+  window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
   beforeUnmount() {
     document.removeEventListener('click', this.handleClickOutside)
     if (this.searchTimeout) clearTimeout(this.searchTimeout)
+     window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
   watch: {
@@ -1294,11 +1348,64 @@ export default {
   },
 
   methods: {
+     handleAvatarGoldChanged(e) {
+    this.isAvatarGoldEquipped = e.detail?.equipped || false;
+  },
+  
+  isCurrentUser(user) {
+    return this.currentUserId && String(user.id) === String(this.currentUserId);
+  },
+    goToArtistDetail(artist) {
+      if (!artist) return
+      if (artist.source === 'local' && artist.id) {
+        this.showSuggestions = false
+        this.showHistory = false
+        return this.$router.push(`/cantor/${artist.id}`)
+      }
+      this.searchQuery = artist.name || this.getResultTitle(artist)
+      this.performSearch()
+    },
+
+    getLocalIcon(loc = '') {
+      const value = String(loc).toLowerCase()
+      if (/(rio de janeiro|salvador|fortaleza|recife|maceió|natal|santos|florianópolis|florianopolis|vitória|vitoria)/.test(value)) return 'fa fa-sun-o'
+      if (/(são paulo|sao paulo|campinas|curitiba|porto alegre|belo horizonte|guarulhos)/.test(value)) return 'fa fa-building'
+      if (/(manaus|belém|belem|amazona|amazônia|amazonia|pará|para|acre|roraima|amapá|amapa|rondônia|rondonia)/.test(value)) return 'fa fa-tree'
+      if (/(brasília|brasilia|goiás|goias|mato grosso|tocantins|campo grande|cuiabá|cuiaba)/.test(value)) return 'fa fa-road'
+      if (/(bahia|pernambuco|ceará|ceara|sergipe|alagoas|maranhão|maranhao|piauí|piaui|paraíba|paraiba)/.test(value)) return 'fa fa-compass'
+      return 'fa fa-map-marker'
+    },
+
+    getDecadeIcon(decade = '') {
+      const icons = {
+        '2020s': 'fa fa-rocket', '2010s': 'fa fa-wifi', '2000s': 'fa fa-play-circle',
+        '90s': 'fa fa-television', '80s': 'fa fa-bolt', '70s': 'fa fa-dot-circle-o',
+        '60s': 'fa fa-magic', '50s': 'fa fa-headphones', '40s': 'fa fa-volume-up',
+        '30s': 'fa fa-microphone', '20s': 'fa fa-bullhorn'
+      }
+      return icons[decade] || 'fa fa-calendar'
+    },
+
+    getDecadeGradient(decade) {
+      const color = this.getDecadeColor(decade)
+      return { background: `linear-gradient(135deg, ${color} 0%, rgba(10, 10, 26, 0.92) 100%)` }
+    },
+
+    goToDecadeCollection(decadeName) {
+      this.showCategoriesDropdown = false
+      this.showSuggestions = false
+      this.showHistory = false
+      this.$router.push({
+        name: 'DecadePlaylist',
+        params: { nome: encodeURIComponent(decadeName) }
+      })
+    },
+
     async registrarHistoricoLocal(track) {
   try {
     const token = localStorage.getItem('token')
     if (!token) return
-    
+   
     await fetch('http://localhost:3002/historico/reproducao', {
       method: 'POST',
       headers: {
@@ -2140,25 +2247,22 @@ window.dispatchEvent(new CustomEvent('play-song', {
 
     // ===== ATUALIZADO: handleResultClick com redirecionamento para local =====
     handleResultClick(result) {
-      if (result.type === 'track') {
-        return this.playTrack(result)
-      }
-
-      if (result.type === 'album' && result.source === 'local') {
-        return this.$router.push(`/album/${result.id}`)
-      }
-
-      if (result.type === 'artist' && result.source === 'local') {
-        return this.$router.push(`/cantor/${result.id}`)
-      }
-
-      if (result.type === 'user') {
-        return this.goToUserProfile(result)
-      }
-     
-      // ✅ LOCAL: vai pra playlist do local
+      if (result.type === 'track') return this.playTrack(result)
+      if (result.type === 'album' && result.source === 'local') return this.$router.push(`/album/${result.id}`)
+      if (result.type === 'artist') return this.goToArtistDetail(result)
+      if (result.type === 'user') return this.goToUserProfile(result)
       if (result.type === 'local') {
         this.goToLocalPlaylist(result.name)
+        return
+      }
+
+      if (result.type === 'decade' || result.type === 'decada') {
+        this.goToDecadeCollection(result.name)
+        return
+      }
+
+      if (result.type === 'decade') {
+        this.goToDecadeCollection(result.name)
         return
       }
     },
@@ -3206,10 +3310,9 @@ window.dispatchEvent(new CustomEvent('play-song', {
     },
 
     selectSuggestion(sugg, item = null) {
-      if (item && item.type === 'user') {
-        return this.goToUserProfile(item)
-      }
-
+      if (item?.type === 'user') return this.goToUserProfile(item)
+      if (item?.type === 'artist') return this.goToArtistDetail(item)
+      if (item?.type === 'local') return this.goToLocalPlaylist(item.name || sugg)
       this.searchQuery = sugg
       this.performSearch()
     },
@@ -3319,6 +3422,13 @@ window.dispatchEvent(new CustomEvent('play-song', {
           return
         }
 
+        // ✅ SE FOR DÉCADA: vai direto pra playlist da década
+        const isDecade = this.detailedCategories.decades.some(d => d.name === term)
+        if (isDecade) {
+          this.goToDecadeCollection(term)
+          return
+        }
+
         this.currentTopCategory = term || 'Brasil'
         this.searchQuery = term
         this.hasSearched = true
@@ -3416,6 +3526,7 @@ window.dispatchEvent(new CustomEvent('play-song', {
   }
 }
 </script>
+
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
@@ -6233,4 +6344,67 @@ html, body, #app {
     display: none;
   }
 }
-</style>
+
+
+/* NOVOS ESTILOS PARA ÍCONES E DÉCADAS */
+.local-icon-badge, .decade-icon-badge {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.local-icon-badge i, .decade-icon-badge i {
+  font-size: 24px;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.local-card:hover .local-icon-badge,
+.decade-card:hover .decade-icon-badge,
+.local-result-card:hover .local-icon-badge {
+  transform: scale(1.1) rotate(5deg);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.decade-result-card .local-result-bg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* ===== AVATAR DOURADO NO SEARCH ===== */
+.user-card-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin: 0 auto 12px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.user-card-img.avatar-gold {
+  padding: 3px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  box-shadow: 
+    0 0 0 2px #B8860B,
+    0 0 15px rgba(255, 215, 0, 0.5),
+    0 4px 20px rgba(0, 0, 0, 0.3);
+  border: none;
+}
+
+.user-card-img.avatar-gold img {
+  border-radius: 50%;
+  border: 2px solid #1a1a2e;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+</style>    

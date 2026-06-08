@@ -366,9 +366,14 @@
                   <div class="tonearm-mini"></div>
                 </div>
                
-                <div class="audio-visualizer-large" v-if="isAudioPlaying">
-                  <div v-for="n in 12" :key="n" class="viz-bar" :style="{ animationDelay: `${n * 0.1}s` }"></div>
-                </div>
+             <div class="audio-visualizer-large" v-if="isAudioPlaying" @mouseenter="showPauseButton = true" @mouseleave="showPauseButton = false">
+  <div v-for="n in 12" :key="n" class="viz-bar" :style="{ animationDelay: `${n * 0.1}s` }"></div>
+  <button v-if="showPauseButton" class="btn-pause-overlay" @click.stop="toggleAudio">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+    </svg>
+  </button>
+</div>
                
                 <div v-else class="play-prompt">
                   <button class="btn-play-large" @click="toggleAudio">
@@ -509,7 +514,7 @@
                 </div>
                
                 <div class="trivia-question">
-                  <div class="question-icon"><i :class="currentTrack?.iconClass || 'fa-solid fa-circle-question'"></i></div>
+                 <div class="question-icon">{{ currentTrack?.iconCategoria || '🎵' }}</div>
                   <h3>{{ currentTrack?.pergunta }}</h3>
                 </div>
               </div>
@@ -586,7 +591,7 @@
             </div>
             <div class="stat-box">
               <span class="stat-icon"><i class="fa-solid fa-bullseye"></i></span>
-              <span class="stat-number">{{ accuracy }}%</span>
+           <span class="stat-number">{{ overallAccuracy }}%</span>
               <span class="stat-label">Precisão</span>
             </div>
           </div>
@@ -596,17 +601,17 @@
         <div class="daily-rewards">
           <h3>Recompensa Diária</h3>
           <div class="rewards-track">
-            <div
-              v-for="(day, idx) in serverDailyRewards"
-              :key="idx"
-              class="reward-day"
-              :class="{
-              'claimed': day.claimed,
-    'available': day.disponivel && !day.claimed && canClaimDaily,
+        <div
+  v-for="(day, idx) in serverDailyRewards"
+  :key="idx"
+  class="reward-day"
+  :class="{
+    'claimed': day.claimed,
+    'available': day.disponivel && !day.claimed,
     'locked': !day.disponivel && !day.claimed
-              }"
-              @click="claimDailyReward(day)"
-            >
+  }"
+  @click="claimDailyReward(day)"
+>
                 <div class="day-number">Dia {{ day.dia }}</div>
               <div class="reward-icon"><i :class="day.iconClass || 'fa-solid fa-gift'"></i></div>
               <div class="reward-amount"><i class="fa-solid fa-coins"></i> {{ day.moedas }}</div>
@@ -987,6 +992,7 @@ export default {
       isPlaying: true,
       isPaused: false,
       isAudioPlaying: false,
+      showPauseButton: false,
       hoveredMode: null,
       currentGame: null,
       currentDifficulty: null,
@@ -999,7 +1005,7 @@ export default {
       totalCoins: 0,
       totalScore: 0,
       streak: 1,
-      accuracy: 0,
+      overallAccuracy: 0,
       timerWidth: 100,
       selectedAnswer: null,
       showAnswer: false,
@@ -1089,137 +1095,148 @@ export default {
       currentTrivia: null,
       answerTime: 0,
       timerInterval: null,
-      lastClaimDate: null
+      lastClaimDate: null,
+       cardsInterval: null
     }
   },
 
-  computed: {
-    accuracy() {
-  if (this.totalQuestions === 0) return 0;
-  // Só conta perguntas respondidas, não o total do jogo
-  const answered = this.currentQuestionNum - 1; // perguntas já respondidas
-  if (answered === 0) return 0;
-  return Math.round((this.correctAnswers / answered) * 100);
-},
+ computed: {
+  sessionAccuracy() {
+    const answered = Math.max(this.currentQuestionNum - 1, 0)
+    if (answered === 0) return 0
+    return Math.round((this.correctAnswers / answered) * 100)
+  },
 
-   top1() {
-    return this.serverLeaderboard?.[0] || null;
+  top1() {
+    return this.serverLeaderboard?.[0] || null
   },
   top2() {
-    return this.serverLeaderboard?.[1] || null;
+    return this.serverLeaderboard?.[1] || null
   },
   top3() {
-    return this.serverLeaderboard?.[2] || null;
+    return this.serverLeaderboard?.[2] || null
   },
   restLeaderboard() {
-    return this.serverLeaderboard?.slice(3) || [];
+    return this.serverLeaderboard?.slice(3) || []
   },
 
-   canClaimDaily() {
-      return this.serverDailyRewards.some(d => d.disponivel && !d.claimed);
-    },
-   
-    nextClaimTime() {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      const diff = tomorrow - new Date();
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      return `${hours}h ${minutes}m`;
-    },
-   
-    // Preview apenas em Easy e Medium para Adivinhe o Artista
-    showArtistPreviewButton() {
-      return this.currentGame?.id === 'guess-artist' && 
-             ['easy', 'medium'].includes(this.currentDifficulty?.level);
-    },
-   
-    // Verifica se pode avançar para próximo nível
-canAdvanceLevel() {
-  if (!this.currentDifficulty) return false;
-  const levels = ['easy', 'medium', 'hard'];
-  const currentIndex = levels.indexOf(this.currentDifficulty.level);
-  if (currentIndex < 0 || currentIndex >= levels.length - 1) return false;
-  
-  // ⚡ NOVO: precisão mínima de 70% para liberar próximo nível
-  const precision = this.totalQuestions > 0 
-    ? Math.round((this.correctAnswers / this.totalQuestions) * 100) 
-    : 0;
-  return precision >= 70;
+canClaimDaily() {
+  const token = localStorage.getItem('token')
+  if (!token) return false  // Offline não tem recompensa diária do servidor
+  return this.serverDailyRewards.some(d => d.disponivel && !d.claimed)
 },
 
-nextDifficulty() {
-  if (!this.currentDifficulty) return null;
-  const levels = ['easy', 'medium', 'hard'];
-  const currentIndex = levels.indexOf(this.currentDifficulty.level);
-  if (currentIndex < 0 || currentIndex >= levels.length - 1) return null;
-  const nextLevel = levels[currentIndex + 1];
-  
-  // ⚡ Sempre retorna um objeto válido (mesmo se não estiver em serverDifficulties)
-  const found = this.serverDifficulties.find(d => d.level === nextLevel);
-  if (found) return found;
-  
-  const names = { easy: 'Fácil', medium: 'Médio', hard: 'Difícil' };
-  const times = { easy: 30, medium: 20, hard: 15 };
-  const mults = { easy: 1, medium: 1.5, hard: 2.5 };
-  return {
-    level: nextLevel,
-    name: names[nextLevel],
-    timeLimit: times[nextLevel],
-    multiplier: mults[nextLevel],
-    description: `${times[nextLevel]}s por pergunta`,
-    completed: false,
-    locked: false,
-    bestScore: 0
-  };
-},
-   
-    // Título com palavras mascaradas para Complete a Música
-   maskedTitle() {
-      if (!this.currentTrack?.tituloMascarado) return [];
-      return this.currentTrack.tituloMascarado.map((word, idx) => ({
-        text: word.texto,
-        hidden: word.oculto,
-        revealed: !word.oculto || this.showAnswer
-      }));
+  nextClaimTime() {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(0, 0, 0, 0)
+    const diff = tomorrow - new Date()
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}m`
+  },
+
+  showArtistPreviewButton() {
+    return this.currentGame?.id === 'guess-artist' &&
+      ['easy', 'medium'].includes(this.currentDifficulty?.level)
+  },
+
+  canAdvanceLevel() {
+    if (!this.currentDifficulty) return false
+    const levels = ['easy', 'medium', 'hard']
+    const currentIndex = levels.indexOf(this.currentDifficulty.level)
+    if (currentIndex < 0 || currentIndex >= levels.length - 1) return false
+
+    const precision = this.totalQuestions > 0
+      ? Math.round((this.correctAnswers / this.totalQuestions) * 100)
+      : 0
+
+    return precision >= 70
+  },
+
+  nextDifficulty() {
+    if (!this.currentDifficulty) return null
+    const levels = ['easy', 'medium', 'hard']
+    const currentIndex = levels.indexOf(this.currentDifficulty.level)
+    if (currentIndex < 0 || currentIndex >= levels.length - 1) return null
+
+    const nextLevel = levels[currentIndex + 1]
+    const found = this.serverDifficulties.find(d => d.level === nextLevel)
+    if (found) return found
+
+    const names = { easy: 'Fácil', medium: 'Médio', hard: 'Difícil' }
+    const times = { easy: 30, medium: 20, hard: 15 }
+    const mults = { easy: 1, medium: 1.5, hard: 2.5 }
+
+    return {
+      level: nextLevel,
+      name: names[nextLevel],
+      timeLimit: times[nextLevel],
+      multiplier: mults[nextLevel],
+      description: `${times[nextLevel]}s por pergunta`,
+      completed: false,
+      locked: false,
+      bestScore: 0
     }
   },
 
+  maskedTitle() {
+    if (!this.currentTrack?.tituloMascarado) return []
+    return this.currentTrack.tituloMascarado.map(word => ({
+      text: word.texto,
+      hidden: word.oculto,
+      revealed: !word.oculto || this.showAnswer
+    }))
+  }
+},
+
 async mounted() {
-    window.addEventListener('scroll', this.handleScroll);
-    this.animateCards();
-    await this.loadServerData();
+  window.addEventListener('scroll', this.handleScroll)
+  this.animateCards()
+  await this.loadServerData()
+},
+
+ 
+beforeUnmount() {
+  window.removeEventListener('scroll', this.handleScroll)
+  this.cleanupAudio()
+
+  if (this.timerInterval) clearInterval(this.timerInterval)
+  if (this.cardsInterval) clearInterval(this.cardsInterval)
 },
  
-  beforeDestroy() {
-    window.removeEventListener('scroll', this.handleScroll);
-    this.cleanupAudio();
-    if (this.timerInterval) clearInterval(this.timerInterval);
-  },
- 
   methods: {
-  async buyItem(item) {
+    showNotification(message, type = 'info') {
+  console.log(`[${type}] ${message}`)
+  alert(message)
+},
+
+showCoinAnimation(coins) {
+  console.log(`+${coins} moedas`)
+},
+
+ async buyItem(item) {
   if (item.possuido) {
-    this.showNotification('Item já possuído!', 'warning');
-    return;
+    this.showNotification('Item já possuído!', 'warning')
+    return
   }
+
   if (this.totalCoins < item.preco) {
-    this.showNotification('Moedas insuficientes!', 'error');
-    return;
+    this.showNotification('Moedas insuficientes!', 'error')
+    return
   }
-  
-  const token = localStorage.getItem('token');
-  
-  // Modo offline
+
+  const token = localStorage.getItem('token')
+
   if (!token) {
     try {
-      const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]')
+
       if (offlineInventory.some(i => i.itemId === item.id)) {
-        this.showNotification('Item já possuído!', 'warning');
-        return;
+        this.showNotification('Item já possuído!', 'warning')
+        return
       }
-      
+
       offlineInventory.push({
         itemId: item.id,
         nome: item.nome,
@@ -1228,50 +1245,48 @@ async mounted() {
         comprado: true,
         ativo: true,
         dataCompra: new Date().toISOString()
-      });
-      
-      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
-      this.totalCoins -= item.preco;
-      localStorage.setItem('soundup_coins', this.totalCoins);
-      
-      // Atualiza lista local
-      const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
+      })
+
+      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory))
+
+      this.totalCoins -= item.preco
+      localStorage.setItem('soundup_coins', String(this.totalCoins))
+
+      const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id)
       if (itemIndex >= 0) {
-        this.serverShopItems[itemIndex].possuido = true;
-        this.serverShopItems[itemIndex].equipado = true;
-        this.serverShopItems[itemIndex].podeComprar = false;
+        this.serverShopItems[itemIndex].possuido = true
+        this.serverShopItems[itemIndex].equipado = true
+        this.serverShopItems[itemIndex].podeComprar = false
       }
-      
-      this.showNotification(`🛒 ${item.nome} comprado e ativado!`, 'success');
+
+      this.showNotification(`🛒 ${item.nome} comprado e ativado!`, 'success')
     } catch (error) {
-      console.error('Erro compra offline:', error);
-      this.showNotification('Erro ao comprar item', 'error');
+      console.error('Erro compra offline:', error)
+      this.showNotification('Erro ao comprar item', 'error')
     }
-    return;
+    return
   }
-  
-  // Modo online
+
   try {
-    const res = await gameApi.buyItem({ itemId: item.id });
-    
+    const res = await gameApi.buyItem({ itemId: item.id })
+
     if (res.data.success) {
-      this.totalCoins = res.data.moedasRestantes;
-      
-      // Recarrega shop do servidor
-      const shopRes = await gameApi.getShop();
+      this.totalCoins = res.data.moedasRestantes
+
+      const shopRes = await gameApi.getShop()
       this.serverShopItems = shopRes.data.items.map(i => ({
         ...i,
-        equipado: i.ativo || false
-      }));
-      
-      this.showNotification(`🛒 ${item.nome} comprado!`, 'success');
+        equipado: i.ativo || i.equipado || false
+      }))
+
+      this.showNotification(`🛒 ${item.nome} comprado!`, 'success')
     } else {
-      throw new Error(res.data.error || 'Erro desconhecido');
+      throw new Error(res.data.error || 'Erro desconhecido')
     }
   } catch (error) {
-    console.error('Erro ao comprar:', error);
-    const msg = error.response?.data?.error || error.message || 'Erro ao comprar item';
-    this.showNotification(msg, 'error');
+    console.error('Erro ao comprar:', error)
+    const msg = error.response?.data?.error || error.message || 'Erro ao comprar item'
+    this.showNotification(msg, 'error')
   }
 },
 
@@ -1368,7 +1383,7 @@ async toggleEquipItem(item) {
     return names[diff] || diff;
   },
 
-    normalizeQuestion(pergunta) {
+normalizeQuestion(pergunta) {
   if (!pergunta) return null
 
   return {
@@ -1384,26 +1399,28 @@ async toggleEquipItem(item) {
       name: pergunta?.musica?.artista || pergunta?.artist?.name || '',
       picture_medium: pergunta?.musica?.artistaImagem || pergunta?.artist?.picture_medium || ''
     },
-    musica: pergunta?.musica || {}
+    musica: pergunta?.musica || {},
+    opcoes: pergunta?.opcoes || [],
+    respostaCorreta: pergunta?.respostaCorreta,
+    categoria: pergunta?.categoria || '',
+    corCategoria: pergunta?.corCategoria || '',
+    iconCategoria: pergunta?.iconCategoria || '🎵'
   }
 },
 
-   async loadServerData() {
+async loadServerData() {
   try {
-    // Verifica se usuário está logado
     const token = localStorage.getItem('token')
     const isLoggedIn = !!token
 
-    // Leaderboard é público - sempre carrega
     try {
       const leaderboardRes = await gameApi.getLeaderboard()
-      this.serverLeaderboard = leaderboardRes.data.leaderboard
+      this.serverLeaderboard = leaderboardRes.data.leaderboard || []
     } catch (e) {
       console.warn('Leaderboard offline:', e.message)
       this.serverLeaderboard = []
     }
 
-    // Atividades ao vivo - público
     try {
       const activitiesRes = await gameApi.getLiveActivities()
       this.activities = activitiesRes.data.activities || this.activities
@@ -1411,48 +1428,52 @@ async toggleEquipItem(item) {
       console.warn('Activities offline:', e.message)
     }
 
-    // Só carrega dados protegidos se estiver logado
+    try {
+      const shopRes = await gameApi.getShop()
+      this.serverShopItems = (shopRes.data.items || []).map(i => ({
+        ...i,
+        possuido: i.possuido || i.owned || false,
+  equipado: i.equipado || i.equipped || false,
+  preco: i.preco || i.price || 0,
+  tipo: i.tipo || i.type || 'geral'
+      }))
+    } catch (e) {
+      console.warn('Shop offline:', e.message)
+    }
+
     if (!isLoggedIn) {
-      console.log('Usuário não logado - modo offline')
-      this.loadOfflineData();
-      this.loadOfflineInventory();
+      this.loadOfflineData()
+      this.loadOfflineInventory()
       return
     }
 
-    // Dados protegidos (precisam de token)
     try {
       const statsRes = await gameApi.getStats()
       this.serverStats = statsRes.data
       this.totalCoins = this.serverStats.estatisticas?.totalMoedas || 0
       this.totalScore = this.serverStats.estatisticas?.totalPontos || 0
-      this.accuracy = this.serverStats.estatisticas?.precisaoMedia || 0
+      this.overallAccuracy = this.serverStats.estatisticas?.precisaoMedia || 0
+      this.streak = this.serverStats.estatisticas?.maiorSequencia || 0
     } catch (e) {
       console.error('Erro stats:', e.message)
     }
 
     try {
       const achievementsRes = await gameApi.getAchievements()
-      this.serverAchievements = achievementsRes.data.achievements
+      this.serverAchievements = achievementsRes.data.achievements || []
     } catch (e) {
       console.error('Erro achievements:', e.message)
     }
 
     try {
       const rewardsRes = await gameApi.getDailyRewards()
-      this.serverDailyRewards = rewardsRes.data.dias.map(day => ({
+      this.serverDailyRewards = (rewardsRes.data.dias || []).map(day => ({
         ...day,
-        claimed: day.reivindicado,
-        available: day.disponivel
+        claimed: !!day.reivindicado,
+        disponivel: !!day.disponivel
       }))
     } catch (e) {
       console.error('Erro rewards:', e.message)
-    }
-
-    try {
-      const shopRes = await gameApi.getShop()
-      this.serverShopItems = shopRes.data.items
-    } catch (e) {
-      console.error('Erro shop:', e.message)
     }
 
   } catch (error) {
@@ -1462,10 +1483,9 @@ async toggleEquipItem(item) {
 },
 
 loadOfflineData() {
-  // Dados padrão para modo offline
   this.serverStats = {
     estatisticas: {
-      totalMoedas: 0,
+      totalMoedas: parseInt(localStorage.getItem('soundup_coins') || '0'),
       totalPontos: 0,
       precisaoMedia: 0
     }
@@ -1473,6 +1493,8 @@ loadOfflineData() {
   this.serverAchievements = []
   this.serverDailyRewards = []
   this.serverShopItems = []
+
+   this.loadOfflineInventory()
 },
     
 async loadDifficulties(modoId) {
@@ -1495,51 +1517,53 @@ async loadDifficulties(modoId) {
 },
     
 async startGameWithDifficulty(difficulty) {
-  if (difficulty.locked) return;
-  
-  this.currentDifficulty = difficulty;
-  this.showDifficultyModal = false;
-  this.currentGame = this.selectedMode;
-  this.resetGame();
-  
-  // Verifica se está logado
-  const token = localStorage.getItem('token');
-  
+  if (difficulty.locked) return
+
+  this.currentDifficulty = difficulty
+  this.showDifficultyModal = false
+  this.currentGame = this.selectedMode
+  this.resetGame()
+  this.isLoading = true
+  this.loadError = false
+
+  const token = localStorage.getItem('token')
+
   if (!token) {
-    // Modo offline - inicia direto sem API
-    this.isOfflineMode = true;
-    this.isLoading = false;
-    this.loadNextOfflineQuestion();
-    
-    setTimeout(() => {
-      const gameSection = document.getElementById('game-demo');
-      if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-    return;
+    this.isOfflineMode = true
+    this.loadNextOfflineQuestion()
+    this.isLoading = false
+    this.startTimer()
+
+    this.$nextTick(() => {
+      const gameSection = document.getElementById('game-demo')
+      if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' })
+    })
+    return
   }
-  
-  // Modo online com API
-   // Modo online com API
+
   try {
-    const res = await gameApi.startGame(this.selectedMode.id, difficulty.level);
-    this.sessionId = res.data.sessionId;
-    this.currentTrack = this.normalizeQuestion(res.data.pergunta);
-    this.totalQuestions = res.data.config.totalPerguntas || 10;
-    this.currentQuestionNum = res.data.config.perguntaAtual || 1;
-    this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
-    this.correctAnswerIndex = this.currentTrack.respostaCorreta;
-    this.isLoading = false;
-    this.isOfflineMode = !!res.data.demo; // Marca como offline se for demo
-    
-    setTimeout(() => {
-      const gameSection = document.getElementById('game-demo');
-      if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-    
+    const res = await gameApi.startGame(this.selectedMode.id, difficulty.level)
+
+    this.sessionId = res.data.sessionId
+    this.currentTrack = this.normalizeQuestion(res.data.pergunta)
+    this.totalQuestions = res.data.config.totalPerguntas || 10
+    this.currentQuestionNum = res.data.config.perguntaAtual || 1
+    this.currentOptions = (this.currentTrack.opcoes || []).map(o => o.texto || o)
+    this.correctAnswerIndex = this.currentTrack.respostaCorreta
+    this.isOfflineMode = !!res.data.demo
+    this.isLoading = false
+
+    this.startTimer()
+
+    this.$nextTick(() => {
+      const gameSection = document.getElementById('game-demo')
+      if (gameSection) gameSection.scrollIntoView({ behavior: 'smooth' })
+    })
   } catch (error) {
-    console.error('Erro ao iniciar jogo:', error);
-    // Fallback para offline
-    this.useOfflineMode();
+    console.error('Erro ao iniciar jogo:', error)
+    this.useOfflineMode()
+    this.isLoading = false
+    this.startTimer()
   }
 },
     
@@ -1709,18 +1733,35 @@ async nextQuestion() {
   this.startTimer();
 },
     
-    async claimDailyReward(day) {
-      if (!day.disponivel || day.claimed) return;
-      try {
-        const res = await gameApi.claimDailyReward(day.dia);
-        this.totalCoins = res.data.moedasTotais;
-        const rewardsRes = await gameApi.getDailyRewards();
-        this.serverDailyRewards = rewardsRes.data.dias;
-        alert(`🎉 +${res.data.moedasGanhas} moedas!`);
-      } catch (error) {
-        alert(error.response?.data?.error || 'Erro');
-      }
-    },
+async claimDailyReward(day) {
+  // ⚡ VALIDAÇÃO: garante que day.dia existe e é válido
+  const diaNum = parseInt(day?.dia)
+  
+  if (!day || isNaN(diaNum) || diaNum < 1 || diaNum > 7) {
+    console.error('Dia inválido:', day)
+    this.showNotification('Erro: dia da recompensa inválido', 'error')
+    return
+  }
+
+  // Só permite clicar se está disponível E não foi claimed
+  if (!day.disponivel || day.claimed) return
+
+  try {
+    const res = await gameApi.claimDailyReward({ dia: day.dia })
+    this.totalCoins = res.data.moedasTotais
+
+    const rewardsRes = await gameApi.getDailyRewards()
+    this.serverDailyRewards = rewardsRes.data.dias.map(d => ({
+      ...d,
+      claimed: !!d.reivindicado,
+      disponivel: !!d.disponivel
+    }))
+
+    this.showNotification(`🎉 +${res.data.moedasGanhas} moedas!`, 'success')
+  } catch (error) {
+    this.showNotification(error.response?.data?.error || 'Erro', 'error')
+  }
+},
     
  async claimAchievement(achievement) {
   // Só permite resgatar se estiver desbloqueada e não resgatada
@@ -1745,47 +1786,6 @@ async nextQuestion() {
   } catch (error) {
     console.error('Erro ao resgatar conquista:', error);
     alert(error.response?.data?.error || 'Erro ao resgatar conquista');
-  }
-},
-    
-  async buyItem(item) {
-  if (item.possuido || this.totalCoins < item.preco) return;
-  const token = localStorage.getItem('token');
-  if (!token) {
-    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
-    if (offlineInventory.some(i => i.itemId === item.id)) {
-      alert('Item já possuído!');
-      return;
-    }
-    offlineInventory.push({
-      itemId: item.id,
-      nome: item.nome,
-      icon: item.icon,
-      tipo: item.tipo || 'geral',
-      comprado: true,
-      ativo: true,
-      dataCompra: new Date().toISOString()
-    });
-    localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
-    this.totalCoins -= item.preco;
-    localStorage.setItem('soundup_coins', this.totalCoins);
-    const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
-    if (itemIndex >= 0) {
-      this.serverShopItems[itemIndex].possuido = true;
-      this.serverShopItems[itemIndex].podeComprar = false;
-    }
-    alert(`🛒 ${item.nome} comprado!`);
-    return;
-  }
-  try {
-const res = await gameApi.buyItem({ itemId: item.id });
-    this.totalCoins = res.data.moedasRestantes;
-    const shopRes = await gameApi.getShop();
-    this.serverShopItems = shopRes.data.items;
-    alert(`🛒 ${item.nome} comprado!`);
-  } catch (error) {
-    console.error('Erro ao comprar:', error);
-    alert(error.response?.data?.error || 'Erro ao comprar item');
   }
 },
     
@@ -1892,107 +1892,93 @@ async advanceToNextLevel() {
        this.loadNextOfflineQuestion();
     },
 
-   loadNextOfflineQuestion() {
-  const mode = this.currentGame?.id || 'guess-song';
-  
-  if (mode === 'complete-lyric') {
-    const tracks = OFFLINE_TRACKS.completeLyric;
-    if (tracks.length > 0) {
-      const usedInSession = JSON.parse(sessionStorage.getItem('soundup_used_lyrics') || '[]');
-      const available = tracks.filter(t => !usedInSession.includes(t.id));
-      let randomTrack;
-      if (available.length > 0) {
-        randomTrack = available[Math.floor(Math.random() * available.length)];
-      } else {
-        sessionStorage.removeItem('soundup_used_lyrics');
-        randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-      }
-      usedInSession.push(randomTrack.id);
-      sessionStorage.setItem('soundup_used_lyrics', JSON.stringify(usedInSession));
-      
-      const words = randomTrack.title.split(' ');
-      const maskCount = this.currentDifficulty?.level === 'easy' 
-        ? Math.max(1, Math.floor(words.length * 0.3))
-        : this.currentDifficulty?.level === 'medium'
-        ? Math.max(1, Math.floor(words.length * 0.6))
-        : Math.max(1, words.length - 1);
-      
-      const indicesToMask = [];
-      const allIndices = words.map((_, i) => i).sort(() => Math.random() - 0.5);
-      for (let i = 0; i < maskCount && i < allIndices.length; i++) {
-        indicesToMask.push(allIndices[i]);
-      }
-      
-      const tituloMascarado = words.map((word, idx) => ({
-        texto: word,
-        oculto: indicesToMask.includes(idx)
-      }));
-      
-      const wrongTracks = tracks
-        .filter(t => t.id !== randomTrack.id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3);
-      
-      const options = [
-        { texto: randomTrack.title, correta: true },
-        ...wrongTracks.map(t => ({ texto: t.title, correta: false }))
-      ].sort(() => Math.random() - 0.5);
-      
-      this.currentTrack = {
-        modo: 'complete-lyric',
-        musica: {
-          titulo: randomTrack.title,
-          artista: randomTrack.artist?.name,
-          album: randomTrack.album?.title,
-          capa: randomTrack.album?.cover_medium,
-          previewUrl: randomTrack.preview,
-          ano: randomTrack.release_date?.split('-')[0]
-        },
-        tituloMascarado,
-        opcoes: options,
-        respostaCorreta: options.findIndex(o => o.correta)
-      };
-      
-      this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
-      this.correctAnswerIndex = this.currentTrack.respostaCorreta;
-      this.isLoading = false;
+loadNextOfflineQuestion() {
+  const mode = this.currentGame?.id || 'guess-song'
+
+  if (mode === 'music-trivia') {
+    const used = new Set(this.usedTriviaIndices)
+    let available = TRIVIA_QUESTIONS.map((q, i) => ({ ...q, _index: i }))
+      .filter(q => !used.has(q._index))
+
+    if (available.length === 0) {
+      this.usedTriviaIndices = []
+      available = TRIVIA_QUESTIONS.map((q, i) => ({ ...q, _index: i }))
     }
-    return;
+
+    const randomTrivia = available[Math.floor(Math.random() * available.length)]
+    this.usedTriviaIndices.push(randomTrivia._index)
+
+    this.currentTrack = {
+      modo: 'music-trivia',
+      pergunta: randomTrivia.question,
+      categoria: randomTrivia.category,
+      corCategoria: randomTrivia.categoryColor,
+      iconCategoria: randomTrivia.icon,
+      opcoes: randomTrivia.options.map((texto, idx) => ({
+        texto,
+        correta: idx === randomTrivia.correct
+      })),
+      respostaCorreta: randomTrivia.correct
+    }
+
+    this.currentOptions = this.currentTrack.opcoes.map(o => o.texto)
+    this.correctAnswerIndex = this.currentTrack.respostaCorreta
+    this.isLoading = false
+    return
   }
-  
-  const tracks = OFFLINE_TRACKS[mode] || OFFLINE_TRACKS.guessSong;
-  if (tracks.length > 0) {
-    const randomTrack = tracks[Math.floor(Math.random() * tracks.length)];
-    this.currentTrack = this.normalizeQuestion({
-      musica: {
-        titulo: randomTrack.title,
-        artista: randomTrack.artist?.name,
-        album: randomTrack.album?.title,
-        capa: randomTrack.album?.cover_medium,
-        previewUrl: randomTrack.preview,
-        ano: randomTrack.release_date?.split('-')[0]
-      },
-      opcoes: this.generateOptions(randomTrack, tracks),
-      respostaCorreta: 0
-    });
-    this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o);
-    this.correctAnswerIndex = 0;
-    this.isLoading = false;
+
+  if (mode === 'complete-lyric') {
+    // mantenha sua lógica atual do título mascarado
+    // ela está quase certa
   }
+
+  const tracks = OFFLINE_TRACKS[mode] || OFFLINE_TRACKS.guessSong
+  if (!tracks.length) {
+    this.loadError = true
+    this.isLoading = false
+    return
+  }
+
+  const randomTrack = tracks[Math.floor(Math.random() * tracks.length)]
+  const options = this.generateOptions(randomTrack, tracks, mode)
+
+  this.currentTrack = this.normalizeQuestion({
+    musica: {
+      titulo: randomTrack.title,
+      artista: randomTrack.artist?.name,
+      album: randomTrack.album?.title,
+      capa: randomTrack.album?.cover_medium,
+      previewUrl: randomTrack.preview,
+      ano: randomTrack.release_date?.split('-')[0],
+      artistaImagem: randomTrack.artist?.picture_medium || null
+    },
+    opcoes: options,
+    respostaCorreta: options.findIndex(o => o.correta)
+  })
+
+  this.currentOptions = this.currentTrack.opcoes.map(o => o.texto || o)
+  this.correctAnswerIndex = this.currentTrack.respostaCorreta
+  this.isLoading = false
 },
 
-generateOptions(correctTrack, allTracks) {
+generateOptions(correctTrack, allTracks, mode) {
+  const getLabel = (track) => {
+    if (mode === 'guess-artist') return track.artist?.name
+    return track.title
+  }
+
   const wrong = allTracks
     .filter(t => t.id !== correctTrack.id)
+    .filter(t => getLabel(t) !== getLabel(correctTrack))
     .sort(() => Math.random() - 0.5)
-    .slice(0, 3);
-  
+    .slice(0, 3)
+
   const options = [
-    { texto: correctTrack.title, correta: true },
-    ...wrong.map(t => ({ texto: t.title, correta: false }))
-  ].sort(() => Math.random() - 0.5);
-  
-  return options;
+    { texto: getLabel(correctTrack), correta: true },
+    ...wrong.map(t => ({ texto: getLabel(t), correta: false }))
+  ].sort(() => Math.random() - 0.5)
+
+  return options
 },
 
 markDifficultyCompleted() {
@@ -2115,10 +2101,10 @@ if (precision >= 70) {
     },
 
     // Recomeça no mesmo nível
-    restartSameLevel() {
-      this.resetGame();
-     this.useOfflineMode();
-    },
+restartSameLevel() {
+  if (!this.currentDifficulty) return
+  this.startGameWithDifficulty(this.currentDifficulty)
+},
 
     // Sai para o menu
     exitToMenu() {
@@ -2192,17 +2178,19 @@ this.serverDifficulties = [
       this.selectMode(this.gameModes[0]);
     },
    
-    animateCards() {
-      setInterval(() => {
-      this.cardStyles = this.cardStyles.map((style, idx) => {
-  const offset = Math.sin(Date.now() / 1000 + idx) * 10;
-  const rotate = (idx - 1.5) * 4 + Math.sin(Date.now() / 1500 + idx) * 3;
-  return {
-    transform: `translateY(${offset}px) rotate(${rotate}deg)`
-  };
-});
-      }, 50);
-    }
+animateCards() {
+  if (this.cardsInterval) clearInterval(this.cardsInterval)
+
+  this.cardsInterval = setInterval(() => {
+    this.cardStyles = this.cardStyles.map((style, idx) => {
+      const offset = Math.sin(Date.now() / 1000 + idx) * 10
+      const rotate = (idx - 1.5) * 4 + Math.sin(Date.now() / 1500 + idx) * 3
+      return {
+        transform: `translateY(${offset}px) rotate(${rotate}deg)`
+      }
+    })
+  }, 50)
+}
   }
 }
 
@@ -4240,7 +4228,46 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
   50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
 }
+.audio-visualizer-large {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  height: 100px;
+  margin-bottom: 2rem;
+}
 
+.btn-pause-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.btn-pause-overlay:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: var(--error);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.btn-pause-overlay svg {
+  width: 28px;
+  height: 28px;
+}
 .day-number {
   font-size: 0.875rem;
   color: var(--text-muted);

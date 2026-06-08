@@ -62,20 +62,26 @@
           </div>
         </div>
 
-        <!-- Email -->
-        <div class="input-group" :class="{ 'focused': focused === 'email', 'filled': form.email }">
+              <!-- Email -->
+        <div class="input-group" :class="{ 'focused': focused === 'email', 'filled': form.email, 'has-error': fieldErrors.email }">
           <div class="input-wrapper">
             <span class="input-icon"><i class="fas fa-envelope"></i></span>
             <input
               v-model="form.email"
               type="email"
               required
-              @focus="focused = 'email'"
-              @blur="focused = null"
+              @focus="focused = 'email'; clearFieldError('email')"
+             @blur="focused = null; verificarEmailExistente().then(() => validateField('email'))"
               placeholder=" "
             />
             <label>Email</label>
           </div>
+          <transition name="field-error">
+            <div v-if="fieldErrors.email" class="field-error-msg">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>{{ fieldErrors.email }}</span>
+            </div>
+          </transition>
         </div>
 
         <!-- Senha -->
@@ -206,12 +212,14 @@ export default {
         senha: "",
         confirmarSenha: ""
       },
+      fieldErrors: { email: "" },
       loading: false,
       focused: null,
       showPassword: false,
       showConfirmPassword: false,
       toasts: [],
-      toastId: 0
+      toastId: 0,
+      emailJaExiste: false
     }
   },
   computed: {
@@ -239,9 +247,20 @@ export default {
     senhasNaoCoincidem() {
       return this.form.confirmarSenha && this.form.senha !== this.form.confirmarSenha
     },
+     emailValido() {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return regex.test(this.form.email)
+  },
+
+emailDisponivel() {
+      return !this.emailJaExiste
+    },
+
     isValid() {
       return this.form.nome &&
              this.form.email &&
+             this.emailValido &&
+             this.emailDisponivel &&    // ← ADICIONE ISSO
              this.form.senha.length >= 6 &&
              this.form.confirmarSenha &&
              !this.senhasNaoCoincidem
@@ -293,8 +312,53 @@ export default {
       }
     },
 
-    async continuar() {
+      validateField(field) {
+      this.fieldErrors[field] = ""
+      if (field === 'email') {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!this.form.email) {
+          this.fieldErrors.email = "O email é obrigatório"
+        } else if (!emailRegex.test(this.form.email)) {
+          this.fieldErrors.email = "Digite um email válido (ex: usuario@email.com)"
+        } else if (this.emailJaExiste) {
+          this.fieldErrors.email = "Este email já está cadastrado"
+        }
+      }
+    },
+
+    clearFieldError(field) {
+      this.fieldErrors[field] = ""
+    },
+
+        async verificarEmailExistente() {
+      if (!this.emailValido || !this.form.email) {
+        this.emailJaExiste = false
+        return
+      }
+
+      try {
+        const response = await axios.get(
+          `http://localhost:3002/usuarios/verificar-email?email=${encodeURIComponent(this.form.email)}`
+        )
+        this.emailJaExiste = response.data.existe
+      } catch (err) {
+        console.error('Erro ao verificar email:', err)
+        this.emailJaExiste = false
+      }
+    },
+
+       async continuar() {
       this.loading = true
+
+      // Verificar se email já existe no backend
+      await this.verificarEmailExistente()
+
+      // Validar email (inclui check de existência)
+      this.validateField('email')
+      if (this.fieldErrors.email) {
+        this.loading = false
+        return
+      }
 
       if (!this.isValid) {
         if (this.senhasNaoCoincidem) {
@@ -309,7 +373,6 @@ export default {
       }
 
       // Apenas salvar dados localmente e ir para etapa 2
-      // NÃO criar conta ainda - isso será feito na etapa 2
       localStorage.setItem('registrar_etapa1_dados', JSON.stringify({
         nome: this.form.nome,
         email: this.form.email,
@@ -608,7 +671,14 @@ label {
   background: transparent;
   padding: 0 4px;
 }
+.input-group.has-error input {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
 
+.input-group.has-error .input-icon {
+  color: #ef4444;
+}
 input:focus + label,
 input:not(:placeholder-shown) + label,
 .input-group.filled label {
@@ -984,7 +1054,48 @@ input:not(:placeholder-shown) + label,
 .link:hover .link-arrow {
   transform: translateX(4px);
 }
+/* ===== ESTILO DE ERRO NOS CAMPOS (igual do login) ===== */
+.input-group.has-error input {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
 
+.input-group.has-error .input-icon {
+  color: #ef4444;
+}
+
+.input-group.has-error label {
+  color: #ef4444 !important;
+}
+
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #f87171;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.field-error-msg i {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.field-error-enter-active, .field-error-leave-active {
+  transition: all 0.25s ease;
+}
+
+.field-error-enter-from, .field-error-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 /* Responsive */
 @media (max-width: 480px) {
   .card {

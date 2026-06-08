@@ -17,4 +17,7 @@ router.get('/:id/is-curtida', optionalAuth, controller.isCurtida)
 // Listar minhas curtidas — SÓ COM LOGIN
 router.get('/', requireAuth, controller.getMinhasCurtidas)
 
+// Verificar estado da música (playlists + favorito) — COM LOGIN
+router.get('/:id/estado', requireAuth, controller.verificarEstadoMusica)
+
 module.exports = router

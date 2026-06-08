@@ -28,6 +28,23 @@
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </button>
+          <button 
+  v-if="hasThemeItem"
+  class="btn-theme-toggle"
+  :class="{ 'dark': themeDark }"
+  @click="toggleTheme"
+  title="Alternar tema claro/escuro"
+>
+  <i :class="themeDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
+</button>
+<button 
+  v-else
+  class="btn-theme-locked"
+  title="Compre o Tema Noturno na loja para desbloquear"
+  @click="showNotification('Compre o Tema Noturno na loja para desbloquear!', 'info')"
+>
+  <i class="fa-solid fa-lock"></i>
+</button>
         </div>
 
         <button class="mobile-toggle" @click="mobileMenuOpen = !mobileMenuOpen">
@@ -100,13 +117,37 @@
 
       <!-- Hero Visual -->
       <div class="hero-visual">
-        <div class="vinyl-record" :class="{ 'playing': isPlaying }">
-          <div class="vinyl-grooves"></div>
-          <div class="vinyl-label">
-            <div class="label-center"></div>
-          </div>
-          <div class="tonearm" :class="{ 'active': isPlaying }"></div>
-        </div>
+     <div 
+  class="vinyl-record" 
+  :class="{ 
+    'playing': isPlaying, 
+    'rare-vinyl': hasRareVinyl,
+    'rare-vinyl-equipped': hasRareVinylEquipped 
+  }"
+>
+  <div class="vinyl-grooves"></div>
+  <div class="vinyl-label">
+    <div class="label-center"></div>
+  </div>
+  <div class="tonearm" :class="{ 'active': isPlaying }"></div>
+     </div>
+  <!-- Botão de equipar/desequipar do vinil raro -->
+<div v-if="hasRareVinyl" class="vinil-controls" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10;">
+  <button 
+    v-if="!hasRareVinylEquipped"
+    class="btn-equip-vinil"
+    @click="equipRareVinyl"
+  >
+    <i class="fa-solid fa-compact-disc"></i> Equipar Vinil
+  </button>
+  <button 
+    v-else
+    class="btn-unequip-vinil"
+    @click="unequipRareVinyl"
+  >
+    <i class="fa-solid fa-xmark"></i> Desequipar
+  </button>
+</div>
        
     <div class="floating-cards">
 
@@ -513,10 +554,12 @@
                   {{ currentTrack?.categoria }}
                 </div>
                
-                <div class="trivia-question">
-                 <div class="question-icon">{{ currentTrack?.iconCategoria || '🎵' }}</div>
-                  <h3>{{ currentTrack?.pergunta }}</h3>
-                </div>
+               <div class="trivia-question">
+  <div class="question-icon">
+    <i :class="getTriviaIcon(currentTrack?.categoria)"></i>
+  </div>
+  <h3>{{ currentTrack?.pergunta }}</h3>
+</div>
               </div>
 
               <div class="timer-bar">
@@ -675,12 +718,13 @@
   :class="{ 
     'owned': item.possuido, 
     'affordable': totalCoins >= item.preco && !item.possuido,
-    'equipped': item.equipado
+    'equipped': item.equipado || item.ativo
   }"
-  @click="item.possuido ? toggleEquipItem(item) : buyItem(item)"
-  :disabled="!item.possuido && totalCoins < item.preco"
+  @click="item.possuido ? (item.tipo === 'emoji' ? toggleActivateEmoji(item) : toggleEquipItem(item)) : buyItem(item)"
+  :disabled="!item.possuido && totalCoins < item.preco || (item.tipo === 'emoji' && item.ativo)"
 >
-  <span v-if="item.possuido && item.equipado">✓ Equipado</span>
+  <span v-if="item.possuido && (item.equipado || item.ativo)">✓ Ativado</span>
+  <span v-else-if="item.possuido && item.tipo === 'emoji'">Ativar Ícones</span>
   <span v-else-if="item.possuido">Equipar</span>
   <span v-else><i class="fa-solid fa-coins"></i> {{ item.preco }}</span>
 </button>
@@ -854,7 +898,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'História',
     categoryColor: '#e74c3c',
-    icon: '📚',
     question: 'Qual artista tem o recorde de mais Grammys ganhos?',
     options: ['Beyoncé', 'Michael Jackson', 'Georg Solti', 'Alison Krauss'],
     correct: 2
@@ -862,7 +905,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Recordes',
     categoryColor: '#f39c12',
-    icon: '🏆',
     question: 'Qual música ficou mais tempo em #1 na Billboard?',
     options: ['Old Town Road', 'Despacito', 'One Sweet Day', 'Uptown Funk'],
     correct: 0
@@ -870,7 +912,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Curiosidades',
     categoryColor: '#9b59b6',
-    icon: '💡',
     question: 'Qual é o álbum mais vendido de todos os tempos?',
     options: ['Thriller', 'Back in Black', 'The Dark Side of the Moon', 'Rumours'],
     correct: 0
@@ -878,7 +919,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Rock',
     categoryColor: '#e67e22',
-    icon: '🎸',
     question: 'Qual banda é conhecida como "Os Fab Four"?',
     options: ['The Rolling Stones', 'The Beatles', 'Led Zeppelin', 'Pink Floyd'],
     correct: 1
@@ -886,7 +926,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Pop',
     categoryColor: '#3498db',
-    icon: '🎤',
     question: 'Quem é conhecido como o "Rei do Pop"?',
     options: ['Elvis Presley', 'Prince', 'Michael Jackson', 'Justin Timberlake'],
     correct: 2
@@ -894,7 +933,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Brasil',
     categoryColor: '#2ecc71',
-    icon: '🇧🇷',
     question: 'Quem compôs "Garota de Ipanema"?',
     options: ['Caetano Veloso', 'Antônio Carlos Jobim', 'Gilberto Gil', 'Chico Buarque'],
     correct: 1
@@ -902,7 +940,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Instrumentos',
     categoryColor: '#1abc9c',
-    icon: '🎹',
     question: 'Qual instrumento Beethoven continuou a compor mesmo após ficar surdo?',
     options: ['Violino', 'Piano', 'Violoncelo', 'Flauta'],
     correct: 1
@@ -910,7 +947,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Hip Hop',
     categoryColor: '#34495e',
-    icon: '🎧',
     question: 'Quem é considerado o "Rei do Hip Hop"?',
     options: ['Tupac', 'The Notorious B.I.G.', 'Jay-Z', 'Eminem'],
     correct: 2
@@ -918,7 +954,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Anos 80',
     categoryColor: '#e91e63',
-    icon: '🕺',
     question: 'Qual música de Queen foi usada no filme "Wayne\'s World"?',
     options: ['We Will Rock You', 'Bohemian Rhapsody', 'Another One Bites the Dust', 'Don\'t Stop Me Now'],
     correct: 1
@@ -926,7 +961,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Prêmios',
     categoryColor: '#9c27b0',
-    icon: '🏅',
     question: 'Qual foi o primeiro videoclipe a passar na MTV?',
     options: ['Video Killed the Radio Star', 'Billie Jean', 'Money for Nothing', 'Vogue'],
     correct: 0
@@ -934,7 +968,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Rock',
     categoryColor: '#ff5722',
-    icon: '🤘',
     question: 'Em que ano o cantor Elvis Presley faleceu?',
     options: ['1975', '1976', '1977', '1978'],
     correct: 2
@@ -942,7 +975,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Pop',
     categoryColor: '#673ab7',
-    icon: '👑',
     question: 'Qual artista feminina tem mais #1 na Billboard Hot 100?',
     options: ['Madonna', 'Rihanna', 'Mariah Carey', 'Taylor Swift'],
     correct: 2
@@ -950,7 +982,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Clássica',
     categoryColor: '#795548',
-    icon: '🎼',
     question: 'Quem compôs a "Nona Sinfonia"?',
     options: ['Mozart', 'Bach', 'Beethoven', 'Chopin'],
     correct: 2
@@ -958,7 +989,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Moderno',
     categoryColor: '#607d8b',
-    icon: '📱',
     question: 'Qual foi a primeira música a atingir 1 bilhão de views no YouTube?',
     options: ['Gangnam Style', 'Baby', 'Despacito', 'See You Again'],
     correct: 0
@@ -966,7 +996,6 @@ const TRIVIA_QUESTIONS = [
   {
     category: 'Festival',
     categoryColor: '#8bc34a',
-    icon: '🎪',
     question: 'Em que país acontece o festival Tomorrowland?',
     options: ['Holanda', 'Bélgica', 'Alemanha', 'França'],
     correct: 1
@@ -1026,6 +1055,8 @@ export default {
       completedDifficulties: [],
       usedTriviaIndices: [],
       nextQuestionData: null,
+      themeDark: false,
+      customIconsActive: false,
      
       cardStyles: [
         { transform: 'translateY(0px) rotate(-5deg)' },
@@ -1100,7 +1131,43 @@ export default {
     }
   },
 
+  watch: {
+  customIconsActive(val) {
+    document.body.classList.toggle('custom-icons-active', val);
+  }
+},
+
  computed: {
+  hasRareVinyl() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    return offlineInventory.some(i => i.itemId === 'vinyl_rare' && i.comprado);
+  }
+  return this.serverShopItems.some(i => i.id === 'vinyl_rare' && i.possuido);
+},
+
+hasRareVinylEquipped() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    const item = offlineInventory.find(i => i.itemId === 'vinyl_rare');
+    return item?.ativo || false;
+  }
+  const item = this.serverShopItems.find(i => i.id === 'vinyl_rare');
+  return item?.equipado || false;
+},
+
+  hasThemeItem() {
+  // Verifica se comprou o tema na loja (online ou offline)
+  const token = localStorage.getItem('token');
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    return offlineInventory.some(i => i.itemId === 'theme_dark' && i.comprado);
+  }
+  return this.serverShopItems.some(i => i.id === 'theme_dark' && i.possuido);
+},
+
   sessionAccuracy() {
     const answered = Math.max(this.currentQuestionNum - 1, 0)
     if (answered === 0) return 0
@@ -1193,7 +1260,14 @@ canClaimDaily() {
 async mounted() {
   window.addEventListener('scroll', this.handleScroll)
   this.animateCards()
-  await this.loadServerData()
+  const savedTheme = localStorage.getItem('soundup_theme');
+  if (savedTheme) {
+    this.themeDark = savedTheme === 'dark';
+    document.body.classList.toggle('theme-dark', this.themeDark);
+    this.customIconsActive = localStorage.getItem('soundup_custom_icons') === 'true';
+  }
+  
+  await this.loadServerData();
 },
 
  
@@ -1206,6 +1280,92 @@ beforeUnmount() {
 },
  
   methods: {
+    async toggleActivateEmoji(item) {
+  if (item.ativo) return; // já ativo
+  
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    const invItem = offlineInventory.find(i => i.itemId === item.id);
+    if (invItem) {
+      invItem.ativo = true;
+      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+      this.customIconsActive = true;
+      localStorage.setItem('soundup_custom_icons', 'true');
+      this.loadOfflineInventory();
+    }
+    return;
+  }
+  
+  try {
+    await gameApi.equipItem(item.id);
+    this.customIconsActive = true;
+    localStorage.setItem('soundup_custom_icons', 'true');
+    const shopRes = await gameApi.getShop();
+    this.serverShopItems = shopRes.data.items.map(i => ({
+      ...i,
+      equipado: i.ativo || false,
+      ativo: i.ativo || false
+    }));
+  } catch (error) {
+    console.error('Erro ao ativar ícones:', error);
+  }
+},
+    async equipRareVinyl() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    const invItem = offlineInventory.find(i => i.itemId === 'vinyl_rare');
+    if (invItem) {
+      invItem.ativo = true;
+      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+      this.loadOfflineInventory();
+    }
+    return;
+  }
+  try {
+    await gameApi.equipItem('vinyl_rare');
+    const shopRes = await gameApi.getShop();
+    this.serverShopItems = shopRes.data.items.map(i => ({
+      ...i,
+      equipado: i.ativo || false
+    }));
+  } catch (error) {
+    console.error('Erro ao equipar vinil:', error);
+  }
+},
+
+async unequipRareVinyl() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+    const invItem = offlineInventory.find(i => i.itemId === 'vinyl_rare');
+    if (invItem) {
+      invItem.ativo = false;
+      localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+      this.loadOfflineInventory();
+    }
+    return;
+  }
+  try {
+    await gameApi.unequipItem('vinyl_rare');
+    const shopRes = await gameApi.getShop();
+    this.serverShopItems = shopRes.data.items.map(i => ({
+      ...i,
+      equipado: i.ativo || false
+    }));
+  } catch (error) {
+    console.error('Erro ao desequipar vinil:', error);
+  }
+},
+
+    toggleTheme() {
+  this.themeDark = !this.themeDark;
+  document.body.classList.toggle('theme-dark', this.themeDark);
+  localStorage.setItem('soundup_theme', this.themeDark ? 'dark' : 'light');
+},
+
     showNotification(message, type = 'info') {
   console.log(`[${type}] ${message}`)
   alert(message)
@@ -1292,30 +1452,32 @@ showCoinAnimation(coins) {
 
 // ⚡ NOVO: Equipar/Desequipar item
 async toggleEquipItem(item) {
+  // Só equipa, não desequipa mais
+  if (item.equipado) return; // já equipado, não faz nada
+  
   const token = localStorage.getItem('token');
   
   if (!token) {
-    // Modo offline — toggle no localStorage
+    // Modo offline
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
     const invItem = offlineInventory.find(i => i.itemId === item.id);
     if (invItem) {
-      // Se for avatar/tema, desativa outros do mesmo tipo
-      if (['avatar', 'tema'].includes(invItem.tipo)) {
+      // Desativa outros do mesmo tipo
+      if (['avatar', 'tema', 'badge', 'vinil', 'emoji'].includes(invItem.tipo)) {
         offlineInventory.forEach(i => {
           if (i.tipo === invItem.tipo && i.itemId !== item.id) {
             i.ativo = false;
           }
         });
       }
-      invItem.ativo = !invItem.ativo;
+      invItem.ativo = true;
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
       
       // Atualiza UI
       const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
       if (itemIndex >= 0) {
-        this.serverShopItems[itemIndex].equipado = invItem.ativo;
-        // Desmarca outros do mesmo tipo
-        if (['avatar', 'tema'].includes(invItem.tipo)) {
+        this.serverShopItems[itemIndex].equipado = true;
+        if (['avatar', 'tema', 'badge', 'vinil', 'emoji'].includes(invItem.tipo)) {
           this.serverShopItems.forEach((si, idx) => {
             if (si.tipo === invItem.tipo && si.id !== item.id) {
               this.serverShopItems[idx].equipado = false;
@@ -1327,15 +1489,9 @@ async toggleEquipItem(item) {
     return;
   }
   
-  // Modo online
+  // Modo online — só equipa
   try {
-    if (item.equipado) {
-      await gameApi.unequipItem(item.id);
-    } else {
-      await gameApi.equipItem(item.id);
-    }
-    
-    // Recarrega shop
+    await gameApi.equipItem(item.id);
     const shopRes = await gameApi.getShop();
     this.serverShopItems = shopRes.data.items.map(i => ({
       ...i,
@@ -2397,7 +2553,51 @@ body {
 .nav-link:hover {
   color: var(--text);
 }
+.btn-theme-toggle, .btn-theme-locked {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 0.5rem;
+}
 
+.btn-theme-toggle:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-theme-toggle.dark {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--dark);
+}
+
+.btn-theme-locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-theme-locked:hover {
+  opacity: 0.7;
+}
+
+/* Tema escuro aplicado no body */
+body.theme-dark {
+  --darker: #f0f0f5;
+  --dark: #e8e8f0;
+  --card: #ffffff;
+  --card-hover: #f5f5fa;
+  --text: #1a1a2e;
+  --text-muted: #64748b;
+  --border: rgba(0,0,0,0.1);
+}
 .nav-link::after {
   content: '';
   position: absolute;
@@ -2505,6 +2705,155 @@ body {
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.2); }
+}
+/* Vinil Raro brilhante */
+.vinyl-record.rare-vinyl {
+  box-shadow: 
+    0 0 0 10px #111,
+    0 0 0 12px #333,
+    0 20px 60px rgba(0,0,0,0.8),
+    0 0 30px rgba(255, 215, 0, 0.3);
+}
+
+.vinyl-record.rare-vinyl-equipped {
+  animation: rareVinylGlow 3s ease-in-out infinite;
+  box-shadow: 
+    0 0 0 10px #111,
+    0 0 0 12px #ffd700,
+    0 20px 60px rgba(0,0,0,0.8),
+    0 0 50px rgba(255, 215, 0, 0.6),
+    0 0 100px rgba(255, 215, 0, 0.3);
+}
+
+@keyframes rareVinylGlow {
+  0%, 100% { 
+    box-shadow: 
+      0 0 0 10px #111,
+      0 0 0 12px #ffd700,
+      0 20px 60px rgba(0,0,0,0.8),
+      0 0 50px rgba(255, 215, 0, 0.6),
+      0 0 100px rgba(255, 215, 0, 0.3);
+  }
+  50% { 
+    box-shadow: 
+      0 0 0 10px #111,
+      0 0 0 14px #ffd700,
+      0 20px 60px rgba(0,0,0,0.8),
+      0 0 70px rgba(255, 215, 0, 0.8),
+      0 0 120px rgba(255, 215, 0, 0.5);
+  }
+}
+
+.vinil-controls {
+  position: absolute;
+  bottom: 20px;        /* ajuste conforme necessário */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+} 
+
+.btn-equip-vinil, .btn-unequip-vinil {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-equip-vinil {
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #1a1a2e;
+}
+
+.btn-equip-vinil:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
+}
+
+.btn-unequip-vinil {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.btn-unequip-vinil:hover {
+  background: var(--error);
+  color: white;
+}
+/* Badge PRO - Sol com pontinhas */
+.badge-pro-sun {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badge-pro-sun .sun-core {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.badge-pro-sun .sun-ray {
+  position: absolute;
+  width: 3px;
+  height: 12px;
+  background: linear-gradient(to bottom, #ffd700, transparent);
+  border-radius: 2px;
+  top: 50%;
+  left: 50%;
+  transform-origin: center bottom;
+  animation: sunRayFloat 3s ease-in-out infinite;
+}
+
+.badge-pro-sun .sun-ray:nth-child(1) { transform: translate(-50%, -100%) rotate(0deg); animation-delay: 0s; }
+.badge-pro-sun .sun-ray:nth-child(2) { transform: translate(-50%, -100%) rotate(45deg); animation-delay: 0.2s; }
+.badge-pro-sun .sun-ray:nth-child(3) { transform: translate(-50%, -100%) rotate(90deg); animation-delay: 0.4s; }
+.badge-pro-sun .sun-ray:nth-child(4) { transform: translate(-50%, -100%) rotate(135deg); animation-delay: 0.6s; }
+.badge-pro-sun .sun-ray:nth-child(5) { transform: translate(-50%, -100%) rotate(180deg); animation-delay: 0.8s; }
+.badge-pro-sun .sun-ray:nth-child(6) { transform: translate(-50%, -100%) rotate(225deg); animation-delay: 1.0s; }
+.badge-pro-sun .sun-ray:nth-child(7) { transform: translate(-50%, -100%) rotate(270deg); animation-delay: 1.2s; }
+.badge-pro-sun .sun-ray:nth-child(8) { transform: translate(-50%, -100%) rotate(315deg); animation-delay: 1.4s; }
+
+@keyframes sunRayFloat {
+  0%, 100% { 
+    opacity: 1; 
+    transform: translate(-50%, -100%) rotate(var(--rotation, 0deg)) scaleY(1);
+  }
+  50% { 
+    opacity: 0.6; 
+    transform: translate(-50%, -110%) rotate(var(--rotation, 0deg)) scaleY(1.3);
+  }
+}
+
+/* Quando equipado, pontinhas soltas flutuam */
+.badge-pro-equipped .sun-ray {
+  animation: sunRayLoose 2s ease-in-out infinite;
+}
+
+@keyframes sunRayLoose {
+  0%, 100% { 
+    transform: translate(-50%, -100%) rotate(var(--rotation, 0deg)) scaleY(1);
+    opacity: 1;
+  }
+  25% { 
+    transform: translate(-50%, -120%) rotate(calc(var(--rotation, 0deg) + 10deg)) scaleY(1.2);
+    opacity: 0.8;
+  }
+  75% { 
+    transform: translate(-50%, -90%) rotate(calc(var(--rotation, 0deg) - 5deg)) scaleY(0.9);
+    opacity: 0.9;
+  }
 }
 
 .hero-title {
@@ -3750,7 +4099,11 @@ body {
   color: var(--text-muted);
   font-size: 0.875rem;
 }
-
+/* Quando custom icons estão ativos */
+body.custom-icons-active .card-icon i.fa-music::before { content: '\f7a6'; } /* guitar */
+body.custom-icons-active .card-icon i.fa-microphone-lines::before { content: '\f569'; } /* drum */
+body.custom-icons-active .card-icon i.fa-guitar::before { content: '\f7d8'; } /* record-vinyl */
+body.custom-icons-active .card-icon i.fa-headphones::before { content: '\f1de'; } /* sliders */
 .btn-play-voice {
   background: rgba(255,255,255,0.05);
   border: 2px solid var(--border);

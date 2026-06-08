@@ -208,9 +208,35 @@ const listarCurtidasPublicas = async (req, res) => {
   }
 }
 
+// ========== VERIFICAR ESTADO DA MÚSICA (playlists + favorito) ==========
+const verificarEstadoMusica = async (req, res) => {
+  try {
+    const userId = req.user.id
+    const musicaId = req.params.id
+    const { source } = req.query
+
+    const userObjectId = new mongoose.Types.ObjectId(userId)
+
+    const [playlistsComMusica, isFav] = await Promise.all([
+      curtidaService.getPlaylistsComMusica(userObjectId, musicaId, source),
+      curtidaService.isFavorita(userObjectId, musicaId, source)
+    ])
+
+    res.json({
+      playlists: playlistsComMusica, // array de IDs das playlists
+      favoritada: isFav
+    })
+
+  } catch (err) {
+    console.error('Erro ao verificar estado:', err)
+    res.status(500).json({ error: 'Erro ao verificar estado da música' })
+  }
+}
+
 module.exports = {
   toggle: toggleCurtida,
   getMinhasCurtidas,
   isCurtida,
-  listarCurtidasPublicas
+  listarCurtidasPublicas,
+  verificarEstadoMusica  // ← ADICIONAR
 }

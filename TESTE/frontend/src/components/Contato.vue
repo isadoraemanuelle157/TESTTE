@@ -76,7 +76,7 @@
               </div>
               <div class="link-info">
                 <span class="link-name">E-mail</span>
-                <span class="link-handle">isa@gmail.com</span>
+                <span class="link-handle">soundup@gmail.com</span>
               </div>
               <i class="fa fa-external-link arrow-icon"></i>
             </a>
@@ -305,6 +305,28 @@
           <div class="alert-progress" :style="{ animationDuration: alert.duration + 'ms' }"></div>
         </div>
       </transition>
+          <!-- Modal de Confirmação -->
+    <transition name="modal-fade">
+      <div v-if="confirmModal.visible" class="confirm-modal-overlay" @click.self="closeConfirmModal">
+        <div class="confirm-modal">
+          <div class="modal-icon">
+            <i class="fa fa-trash"></i>
+          </div>
+          <h3 class="modal-title">{{ confirmModal.title }}</h3>
+          <p class="modal-message">{{ confirmModal.message }}</p>
+          <div class="modal-actions">
+            <button class="modal-btn cancel" @click="closeConfirmModal">
+              <i class="fa fa-times"></i>
+              Cancelar
+            </button>
+            <button class="modal-btn confirm" @click="handleConfirmAction">
+              <i class="fa fa-trash"></i>
+              Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
     </div>
   </template>
 
@@ -334,7 +356,14 @@
           message: '',
           duration: 4000,
           timer: null
-        }
+        },
+        confirmModal: {
+  visible: false,
+  title: '',
+  message: '',
+  action: null,      // função a executar se confirmar
+  actionId: null     // ID do item a ser deletado
+}
       }
     },
 
@@ -415,27 +444,46 @@
         this.collapsedThreads[suporteId] = !this.collapsedThreads[suporteId]
       },
 
-      async deleteConversation(suporteId) {
-        const confirmar = confirm('Deseja realmente excluir esta conversa? Esta ação não pode ser desfeita.')
+    deleteConversation(suporteId) {
+  this.confirmModal = {
+    visible: true,
+    title: 'Excluir conversa',
+    message: 'Deseja realmente excluir esta conversa? Esta ação não pode ser desfeita.',
+    action: this.executeDeleteConversation,
+    actionId: suporteId
+  }
+},
 
-        if (!confirmar) return
-
-        try {
-          await axios.delete(
-            `http://localhost:3002/suporte/${suporteId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${this.getToken()}`
-              }
-            }
-          )
-
-          this.myMessages = this.myMessages.filter(item => item._id !== suporteId)
-          this.showAlert('success', 'Sucesso!', 'Conversa excluída com sucesso.')
-        } catch (error) {
-          this.showAlert('error', 'Erro', error.response?.data?.error || 'Erro ao excluir conversa.')
+async executeDeleteConversation(suporteId) {
+  try {
+    await axios.delete(
+      `http://localhost:3002/suporte/${suporteId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.getToken()}`
         }
-      },
+      }
+    )
+
+    this.myMessages = this.myMessages.filter(item => item._id !== suporteId)
+    this.showAlert('success', 'Sucesso!', 'Conversa excluída com sucesso.')
+  } catch (error) {
+    this.showAlert('error', 'Erro', error.response?.data?.error || 'Erro ao excluir conversa.')
+  }
+},
+
+closeConfirmModal() {
+  this.confirmModal.visible = false
+  this.confirmModal.action = null
+  this.confirmModal.actionId = null
+},
+
+handleConfirmAction() {
+  if (this.confirmModal.action && this.confirmModal.actionId) {
+    this.confirmModal.action(this.confirmModal.actionId)
+  }
+  this.closeConfirmModal()
+},
 
       loadAuth() {
         this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
@@ -1134,7 +1182,127 @@
     color: var(--primary);
     border: 1px solid rgba(99, 102, 241, 0.2);
   }
+/* ===== MODAL DE CONFIRMAÇÃO ===== */
+.confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
 
+.confirm-modal {
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  animation: modal-pop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.1));
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 1.6rem;
+  color: #fca5a5;
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--text-primary);
+}
+
+.modal-message {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 14px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-btn.cancel {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: translateY(-2px);
+}
+
+.modal-btn.confirm {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.modal-btn.confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.4);
+}
+
+/* Transição do modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .confirm-modal,
+.modal-fade-leave-to .confirm-modal {
+  transform: scale(0.9) translateY(20px);
+}
   .history-empty p {
     font-size: 1.05rem;
     margin-bottom: 8px;

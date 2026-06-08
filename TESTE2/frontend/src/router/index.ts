@@ -37,6 +37,10 @@ import Contato from '@/components/Contato.vue'
 import Ajuda from '@/components/Ajuda.vue'
 import Suporte from '@/components/Suporte.vue'
 import SpotifyConnected from '@/components/SpotifyConnected.vue'
+import LocalPlaylist from '@/views/LocalPlaylist.vue'
+import RoomCreation from '@/components/RoomCreation.vue'
+import DecadasPlaylist from '@/views/DecadasPlaylist.vue'
+import Rooms from '@/components/Rooms.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -127,10 +131,32 @@ const router = createRouter({
       name: 'karaoke',
       component: Karaoke,
     },
+     {
+      path: '/rooms/create',
+      name: 'RoomCreation',
+      component: RoomCreation,
+       meta: { requiresAuth: false }
+    },
     {
-      path: '/salademusica',
+      path: '/room',
       name: 'salademusica',
       component: SaladeMusica,
+      meta: { requiresAuth: false }
+    },
+     {
+      path: '/rooms',
+      name: 'RoomsList',
+      component: Rooms,
+    },
+     {
+      path: '/local/:nome',
+      name: 'LocalPlaylist',
+      component: LocalPlaylist,
+    },
+      {
+      path: '/decada/:nome',
+      name: 'DecadePlaylist',
+      component: DecadasPlaylist,
     },
     {
       path: '/matchmusical',

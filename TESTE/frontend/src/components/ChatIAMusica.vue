@@ -1,6 +1,6 @@
 <template>
   <!-- Modal de Confirmação de Exclusão -->
-<<Transition name="modal-scale">
+<Transition name="modal-scale">
   <div v-if="showDeleteModal" class="delete-modal-overlay" @click.self="cancelDelete">
     <div class="delete-modal">
       <div class="delete-modal-icon">
@@ -375,7 +375,7 @@
                           >
 <i :class="isFavorite(track) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
                           </button>
-<button class="action-btn" @click.stop="addToPlaylist(track)">
+<button class="action-btn" @click.stop="openAddToPlaylistModal(track)">
     <i class="fa-solid fa-plus"></i>
   </button>
                         </div>
@@ -482,8 +482,7 @@
  <span class="hint-tag" @click="inputMessage = 'álbum '" title="Buscar álbum"><i class="fa-solid fa-compact-disc" style="margin-right: 4px;"></i> Álbum</span>
 <span class="hint-tag" @click="inputMessage = 'quando lançou '" title="Data de lançamento"><i class="fa-solid fa-calendar" style="margin-right: 4px;"></i> Lançamento</span>
  <span class="hint-tag" @click="inputMessage = 'curiosidade '" title="Curiosidades"><i class="fa-solid fa-lightbulb" style="margin-right: 4px;"></i> Curiosidade</span>
-            <span class="hint-tag" @click="inputMessage = 'pop'">Pop</span>
-            <span class="hint-tag" @click="inputMessage = 'rock'">Rock</span>
+         
           </p>
         </div>
           </template>
@@ -539,7 +538,7 @@
               <button class="action-btn active" @click.stop="toggleFavorite(track)">
                 <i class="fa-solid fa-heart"></i>
               </button>
-              <button class="action-btn" @click.stop="addToPlaylist(track)">
+             <button class="action-btn" @click.stop="openAddToPlaylistModal(track)">
                 <i class="fa-solid fa-plus"></i>
               </button>
             </div>
@@ -549,19 +548,29 @@
     </div>
   </template>
  <!-- VIEW DE PLAYLISTS -->
-  <template v-else-if="activeNav === 'playlists'">
-    <div class="view-content">
-      <header class="chat-header">
-        <div class="header-info">
-          <div class="ai-avatar" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
-            <i class="fa-solid fa-headphones" style="font-size: 24px; color: white;"></i>
-          </div>
-          <div class="header-text">
-            <h2>Minhas Playlists</h2>
-            <p>{{ userPlaylists.length }} playlists</p>
-          </div>
+<template v-else-if="activeNav === 'playlists'">
+  <div class="view-content">
+    <header class="chat-header">
+      <div class="header-info">
+        <div class="ai-avatar" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);">
+          <i class="fa-solid fa-headphones" style="font-size: 24px; color: white;"></i>
         </div>
-      </header>
+        <div class="header-text">
+          <h2>Minhas Playlists</h2>
+          <p>{{ userPlaylists.length }} playlists</p>
+        </div>
+      </div>
+      <!-- BOTÃO CRIAR PLAYLIST -->
+      <button 
+        @click="openCreatePlaylistModal"
+        style="display: flex; align-items: center; gap: 8px; padding: 10px 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border: none; border-radius: 12px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;"
+        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(99,102,241,0.4)'"
+        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+      >
+        <i class="fa-solid fa-plus"></i>
+        <span>Nova Playlist</span>
+      </button>
+    </header>
       <div class="chat-container">
         <div v-if="userPlaylists.length === 0" class="empty-state">
           <i class="fa-solid fa-headphones" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
@@ -575,7 +584,12 @@
             class="playlist-card"
             @click="loadPlaylist(playlist)"
           >
-            <div class="playlist-cover" :style="{ background: playlist.color || 'linear-gradient(135deg, #667eea, #764ba2)' }">
+          <div 
+  class="playlist-cover" 
+  :style="playlist.cover 
+    ? { background: `url(${playlist.cover}) center/cover` } 
+    : { background: playlist.color || 'linear-gradient(135deg, #667eea, #764ba2)' }"
+>
               <i class="fa-solid fa-music" style="font-size: 40px; color: white;"></i>
             </div>
             <h4>{{ playlist.name }}</h4>
@@ -598,6 +612,12 @@
             <h2>Histórico</h2>
             <p>{{ playHistory.length }} reproduções</p>
           </div>
+      </div>
+        <!-- ⬇️ ADICIONAR AQUI -->
+        <div class="header-actions">
+          <button class="icon-btn" @click="openClearHistoryModal" title="Limpar histórico">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
         </div>
       </header>
       <div class="chat-container">
@@ -682,7 +702,7 @@
               <button class="action-btn" @click.stop="toggleFavorite(track)">
                 <i :class="isFavorite(track) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
               </button>
-              <button class="action-btn" @click.stop="addToPlaylist(track)">
+             <button class="action-btn" @click.stop="openAddToPlaylistModal(track)">
                 <i class="fa-solid fa-plus"></i>
               </button>
             </div>
@@ -835,6 +855,176 @@
       </div>
     </div>
   </Transition>
+  <!-- ═══════════════════════════════════════════════════════
+   MODAL: ESCOLHER PLAYLIST PARA ADICIONAR MÚSICA
+   ═══════════════════════════════════════════════════════ -->
+<Transition name="modal-scale">
+  <div v-if="showAddToPlaylistModal" class="delete-modal-overlay" @click.self="closeAddToPlaylistModal">
+    <div class="delete-modal" style="max-width: 420px; padding: 28px;">
+      <!-- Header -->
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
+        <div class="delete-modal-icon" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)); border-color: rgba(99, 102, 241, 0.4); animation: none;">
+          <i class="fa-solid fa-plus" style="font-size: 24px; color: var(--primary-light);"></i>
+        </div>
+        <div style="text-align: left;">
+          <h3 class="delete-modal-title" style="margin-bottom: 2px; font-size: 18px;">Adicionar à Playlist</h3>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            "{{ trackToAdd?.title }}"
+          </p>
+        </div>
+      </div>
+
+<!-- Lista de playlists -->
+<div style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+  <div
+    v-for="playlist in sortedPlaylistsForModal"
+    :key="playlist.id"
+    @click="confirmAddToPlaylist(playlist.id)"
+    :style="{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px 14px',
+      background: playlist.id === 'default' 
+        ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15))' 
+        : 'var(--bg-card)',
+      border: playlist.id === 'default' 
+        ? '1px solid rgba(99, 102, 241, 0.4)' 
+        : '1px solid var(--border)',
+      borderRadius: '12px',
+      cursor: 'pointer',
+      transition: 'all 0.3s ease',
+      position: 'relative'
+    }"
+    onmouseover="this.style.transform='translateX(4px)'; this.style.borderColor='var(--primary)'"
+    onmouseout="this.style.transform='translateX(0)'; this.style.borderColor=this.dataset.defaultBorder || 'var(--border)'"
+    :data-default-border="playlist.id === 'default' ? 'rgba(99, 102, 241, 0.4)' : 'var(--border)'"
+  >
+    <div 
+      style="width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;"
+      :style="playlist.cover 
+        ? { background: `url(${playlist.cover}) center/cover` } 
+        : { background: playlist.color || 'linear-gradient(135deg, #667eea, #764ba2)' }"
+    >
+      <i v-if="!playlist.cover" class="fa-solid fa-music" style="font-size: 18px; color: white;"></i>
+    </div>
+    <div style="flex: 1; min-width: 0;">
+      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+        <h4 style="font-size: 14px; font-weight: 600;">{{ playlist.name }}</h4>
+        <span 
+          v-if="playlist.id === 'default'"
+          style="font-size: 9px; padding: 2px 6px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 6px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;"
+        >
+          <i class="fa-solid fa-star" style="font-size: 8px; margin-right: 2px;"></i>Padrão
+        </span>
+      </div>
+      <p style="font-size: 12px; color: var(--text-muted);">{{ playlist.tracks?.length || 0 }} músicas</p>
+    </div>
+    <i class="fa-solid fa-chevron-right" style="color: var(--text-muted); font-size: 12px;"></i>
+  </div>
+</div>
+
+      <!-- Footer -->
+      <div style="display: flex; gap: 10px;">
+        <button class="btn-cancel" @click="closeAddToPlaylistModal" style="flex: 1;">
+          <span>Cancelar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</Transition>
+<!-- ═══════════════════════════════════════════════════════
+   MODAL: CRIAR NOVA PLAYLIST
+   ═══════════════════════════════════════════════════════ -->
+<Transition name="modal-scale">
+  <div v-if="showCreatePlaylistModal" class="delete-modal-overlay" @click.self="closeCreatePlaylistModal">
+    <div class="delete-modal" style="max-width: 420px; padding: 32px;">
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div class="delete-modal-icon" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2)); border-color: rgba(99, 102, 241, 0.4); animation: none; margin: 0 auto 16px;">
+          <i class="fa-solid fa-headphones" style="font-size: 28px; color: var(--primary-light);"></i>
+        </div>
+        <h3 class="delete-modal-title" style="margin-bottom: 4px;">Criar Playlist</h3>
+        <p style="font-size: 13px; color: var(--text-muted);">Dê um nome e escolha uma capa</p>
+      </div>
+
+      <!-- Preview da capa -->
+      <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+        <div 
+          style="width: 120px; height: 120px; border-radius: 16px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 2px dashed var(--border); transition: all 0.3s ease;"
+          :style="newPlaylistCover ? { background: `url(${newPlaylistCover}) center/cover` } : { background: 'var(--bg-card)' }"
+        >
+          <i v-if="!newPlaylistCover" class="fa-solid fa-image" style="font-size: 32px; color: var(--text-muted);"></i>
+          <img v-else :src="newPlaylistCover" style="width: 100%; height: 100%; object-fit: cover;">
+          
+          <!-- Botão upload -->
+          <label 
+            style="position: absolute; bottom: 8px; right: 8px; width: 32px; height: 32px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.3s ease;"
+            onmouseover="this.style.transform='scale(1.1)'"
+            onmouseout="this.style.transform='scale(1)'"
+          >
+            <i class="fa-solid fa-camera" style="font-size: 14px; color: white;"></i>
+            <input type="file" accept="image/*" @change="handleCoverUpload" style="display: none;">
+          </label>
+        </div>
+      </div>
+
+      <!-- Input nome -->
+      <div style="margin-bottom: 20px;">
+        <input
+          v-model="newPlaylistName"
+          type="text"
+          placeholder="Nome da playlist..."
+          style="width: 100%; padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; color: var(--text-primary); font-size: 15px; outline: none; font-family: inherit; transition: all 0.3s ease;"
+          @keyup.enter="confirmCreatePlaylist"
+          ref="playlistNameInput"
+          onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.1)'"
+          onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'"
+        >
+      </div>
+
+      <!-- Actions -->
+      <div style="display: flex; gap: 12px;">
+        <button class="btn-cancel" @click="closeCreatePlaylistModal" style="flex: 1;">
+          <span>Cancelar</span>
+        </button>
+        <button 
+          class="btn-confirm-delete" 
+          @click="confirmCreatePlaylist"
+          style="flex: 1; background: linear-gradient(135deg, var(--primary), var(--secondary));"
+          :disabled="!newPlaylistName.trim()"
+        >
+          <span><i class="fa-solid fa-check" style="margin-right: 6px;"></i> Criar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</Transition>
+  <!-- ═══════════════════════════════════════════════════════
+   MODAL: CONFIRMAR LIMPAR HISTÓRICO
+   ═══════════════════════════════════════════════════════ -->
+  <Transition name="modal-scale">
+    <div v-if="showClearHistoryModal" class="delete-modal-overlay" @click.self="cancelClearHistory">
+      <div class="delete-modal">
+        <div class="delete-modal-icon" style="background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.3);">
+          <i class="fa-solid fa-clock-rotate-left" style="font-size: 28px; color: #06b6d4;"></i>
+        </div>
+        <h3 class="delete-modal-title">Limpar Histórico</h3>
+        <p class="delete-modal-text">
+          Deseja remover todas as {{ playHistory.length }} reproduções do histórico?
+        </p>
+        <p class="delete-modal-warning"><i class="fa-solid fa-triangle-exclamation"></i> Esta ação não pode ser desfeita.</p>
+        <div class="delete-modal-actions">
+          <button class="btn-cancel" @click="cancelClearHistory">
+            <span>Cancelar</span>
+          </button>
+          <button class="btn-confirm-delete" @click="confirmClearHistory" style="background: linear-gradient(135deg, #06b6d4, #14b8a6);">
+            <span>Limpar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </Transition>
 
   <router-view />
   <MusicPlayer />
@@ -880,6 +1070,10 @@ const isDeleting = ref(false)
 const showPlaylistModal = ref(false)
 const selectedPlaylistModal = ref(null)
 const isRemovingTrack = ref(false)
+const showCreatePlaylistModal = ref(false)
+const newPlaylistName = ref('')
+const newPlaylistCover = ref(null)
+const showClearHistoryModal = ref(false)
 
 // Chat History
 const savedChats = ref([])
@@ -999,6 +1193,19 @@ const favoritesList = computed(() => {
   }).filter(Boolean)
 })
 
+const sortedPlaylistsForModal = computed(() => {
+  const playlists = [...userPlaylists.value]
+  // Move "Minha Playlist" (id === 'default') para o topo
+  return playlists.sort((a, b) => {
+    if (a.id === 'default') return -1
+    if (b.id === 'default') return 1
+    // Resto mantém ordem de criação (mais novas primeiro)
+    return new Date(b.createdAt) - new Date(a.createdAt)
+  })
+})
+
+const showAddToPlaylistModal = ref(false)
+const trackToAdd = ref(null)
 const libraryTracks = ref([])
 const playHistory = ref([])
 const userPlaylists = ref([])
@@ -1120,13 +1327,26 @@ const playTrackFromLyrics = (song) => {
 
 function saveCurrentChat() {
   if (!isAuthenticated.value || messages.value.length <= 1) return
-  const title = messages.value.find(m => m.type === 'user')?.content?.substring(0, 30) + '...' || 'Nova conversa'
+  
+  const firstUserMsg = messages.value.find(m => m.type === 'user')
+  const title = firstUserMsg 
+    ? firstUserMsg.content.substring(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '')
+    : 'Nova conversa'
+  
+  // 🔥 Serializa mensagens convertendo Date para string ISO
+  const serializedMessages = messages.value.map(msg => ({
+    ...msg,
+    timestamp: msg.timestamp instanceof Date 
+      ? msg.timestamp.toISOString() 
+      : msg.timestamp
+  }))
+  
   if (currentChatId.value) {
     const index = savedChats.value.findIndex(c => c.id === currentChatId.value)
     if (index > -1) {
       savedChats.value[index] = {
         ...savedChats.value[index],
-        messages: [...messages.value],
+        messages: serializedMessages,
         title,
         updatedAt: new Date().toISOString()
       }
@@ -1135,7 +1355,7 @@ function saveCurrentChat() {
     const newChat = {
       id: Date.now().toString(),
       title,
-      messages: [...messages.value],
+      messages: serializedMessages,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -1145,17 +1365,55 @@ function saveCurrentChat() {
   saveChats()
 }
 
+
 function loadChat(chatId) {
   const chat = savedChats.value.find(c => c.id === chatId)
-  if (!chat) return
-  if (currentChatId.value && currentChatId.value !== chatId) {
+  if (!chat) {
+    showToastFn('Conversa não encontrada', 'error')
+    return
+  }
+  
+  // Salva chat atual antes de trocar (se houver mudanças)
+  if (currentChatId.value && currentChatId.value !== chatId && messages.value.length > 1) {
     saveCurrentChat()
   }
+  
+  // 🔥 IMPORTANTE: Muda a view ANTES de carregar mensagens
+  activeNav.value = 'chat'
+  currentView.value = 'chat'
+  
+  // Atualiza o ID do chat atual
   currentChatId.value = chatId
-  messages.value = [...chat.messages]
-  showToastFn('Conversa carregada', 'success')
-  nextTick(() => scrollToBottom())
+  
+  // 🔥 Aguarda o próximo tick para garantir que o template <template v-if="activeNav === 'chat'"> esteja renderizado
+  nextTick(() => {
+    // RESTAURA AS MENSAGENS com deep copy e timestamps corretos
+    if (chat.messages && chat.messages.length > 0) {
+      messages.value = chat.messages.map(msg => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp) // 🔥 Reconverte string em Date
+      }))
+    } else {
+      messages.value = [{
+        id: Date.now(),
+        type: 'ai',
+        content: `Olá! Sou seu assistente musical pessoal. Como posso te ajudar?`,
+        timestamp: new Date(),
+        recommendations: null,
+        lyricResults: null
+      }]
+    }
+    
+    showToastFn('Conversa carregada', 'success')
+    
+    // Scroll e foco após renderizar
+    nextTick(() => {
+      scrollToBottom()
+      inputRef.value?.focus()
+    })
+  })
 }
+
 
 const openDeleteModal = (chatId) => {
   const chat = savedChats.value.find(c => c.id === chatId)
@@ -1701,7 +1959,11 @@ const scrollToBottom = async () => {
 }
 
 const showToastFn = (message, type = 'info') => {
-  toast.value = { show: true, message, type }
+  // Força reset antes para garantir reatividade
+  toast.value = { show: false, message: '', type: 'info' }
+  nextTick(() => {
+    toast.value = { show: true, message, type }
+  })
   setTimeout(() => {
     toast.value.show = false
   }, 3000)
@@ -1856,7 +2118,12 @@ const sendMessage = async () => {
       }, 2000)
     }
     // Auto-save chat after each message for logged users
-    if (isAuthenticated.value) {
+      // Auto-save chat after each message for logged users
+    // ✅ Só salva se estiver em um chat ativo (não cria chat novo toda hora)
+    if (isAuthenticated.value && currentChatId.value) {
+      saveCurrentChat()
+    } else if (isAuthenticated.value && !currentChatId.value && messages.value.length > 1) {
+      // Primeira mensagem de um novo chat → cria o chat
       saveCurrentChat()
     }
     await scrollToBottom()
@@ -1867,6 +2134,56 @@ const handleQuickQuestion = (question) => {
   inputMessage.value = question.text
   selectedGenre.value = question.genre
   sendMessage()
+}
+
+const openCreatePlaylistModal = () => {
+  newPlaylistName.value = ''
+  newPlaylistCover.value = null
+  showCreatePlaylistModal.value = true
+}
+
+const closeCreatePlaylistModal = () => {
+  showCreatePlaylistModal.value = false
+  newPlaylistName.value = ''
+  newPlaylistCover.value = null
+}
+
+const handleCoverUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    newPlaylistCover.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const confirmCreatePlaylist = () => {
+  const name = newPlaylistName.value.trim()
+  if (!name) {
+    showToastFn('Digite um nome para a playlist', 'error')
+    return
+  }
+  
+  const stored = localStorage.getItem('user_playlists')
+  let playlists = stored ? JSON.parse(stored) : []
+  
+  const newPlaylist = {
+    id: Date.now().toString(),
+    name: name,
+    color: getRandomGradient(playlists.length),
+    cover: newPlaylistCover.value, // base64 da imagem ou null
+    tracks: [],
+    createdAt: new Date().toISOString()
+  }
+  
+  playlists.push(newPlaylist)
+  localStorage.setItem('user_playlists', JSON.stringify(playlists))
+  userPlaylists.value = playlists
+  
+  showToastFn(`Playlist "${name}" criada!`, 'success')
+  closeCreatePlaylistModal()
 }
 
 const selectGenre = (genre) => {
@@ -1995,38 +2312,85 @@ const isFavorite = (track) => {
   return favorites.value.has(track.id)
 }
 
-const addToPlaylist = (track) => {
-  // Carrega playlists do localStorage
+const addToPlaylist = (track, playlistId = null) => {
   const stored = localStorage.getItem('user_playlists')
   let playlists = stored ? JSON.parse(stored) : []
   
-  // Cria playlist padrão se não existir
-  let defaultPlaylist = playlists.find(p => p.id === 'default')
-  if (!defaultPlaylist) {
-    defaultPlaylist = {
+  let targetPlaylist
+  if (playlistId) {
+    targetPlaylist = playlists.find(p => p.id === playlistId)
+  } else {
+    targetPlaylist = playlists.find(p => p.id === 'default')
+    if (!targetPlaylist) {
+      targetPlaylist = {
+        id: 'default',
+        name: 'Minha Playlist',
+        color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        tracks: [],
+        createdAt: new Date().toISOString()
+      }
+      playlists.push(targetPlaylist)
+    }
+  }
+  
+  if (!targetPlaylist) {
+    showToastFn('Playlist não encontrada', 'error')
+    return
+  }
+  
+  // Verifica se música já existe
+  if (!targetPlaylist.tracks.find(t => t.id === track.id)) {
+    targetPlaylist.tracks.push(track)
+    const idx = playlists.findIndex(p => p.id === targetPlaylist.id)
+    playlists[idx] = targetPlaylist
+    localStorage.setItem('user_playlists', JSON.stringify(playlists))
+    userPlaylists.value = playlists
+    // ✅ ALERT: mostra nome da playlist onde foi salva
+    showToastFn(`"${track.title}" adicionada em "${targetPlaylist.name}"!`, 'success')
+  } else {
+    showToastFn(`"${track.title}" já está em "${targetPlaylist.name}"`, 'info')
+  }
+}
+const openAddToPlaylistModal = (track) => {
+  // Carrega playlists atualizadas
+  const stored = localStorage.getItem('user_playlists')
+  let playlists = stored ? JSON.parse(stored) : []
+  
+  // 🔥 GARANTE que a "Minha Playlist" (default) SEMPRE exista
+  const hasDefault = playlists.some(p => p.id === 'default')
+  if (!hasDefault) {
+    const defaultPlaylist = {
       id: 'default',
       name: 'Minha Playlist',
       color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       tracks: [],
       createdAt: new Date().toISOString()
     }
-    playlists.push(defaultPlaylist)
+    // Adiciona no INÍCIO do array para garantir prioridade
+    playlists.unshift(defaultPlaylist)
+    localStorage.setItem('user_playlists', JSON.stringify(playlists))
   }
   
-  // Verifica se música já existe
-  if (!defaultPlaylist.tracks.find(t => t.id === track.id)) {
-    defaultPlaylist.tracks.push(track)
-    // Atualiza no array
-    const idx = playlists.findIndex(p => p.id === 'default')
-    playlists[idx] = defaultPlaylist
-    // Salva
-    localStorage.setItem('user_playlists', JSON.stringify(playlists))
-    // Atualiza estado reativo
-    userPlaylists.value = playlists
-    showToastFn(`"${track.title}" adicionada à sua playlist!`, 'success')
-  } else {
-    showToastFn(`"${track.title}" já está na playlist`, 'info')
-  }
+  // Atualiza estado reativo
+  userPlaylists.value = playlists
+  
+  // Define a música e abre o modal
+  trackToAdd.value = track
+  showAddToPlaylistModal.value = true
+}
+
+
+const closeAddToPlaylistModal = () => {
+  showAddToPlaylistModal.value = false
+  trackToAdd.value = null
+}
+
+const confirmAddToPlaylist = (playlistId) => {
+  if (!trackToAdd.value) return
+  // Chama addToPlaylist que já mostra o toast internamente
+  addToPlaylist(trackToAdd.value, playlistId)
+  // Fecha o modal APÓS adicionar (o toast já foi disparado)
+  closeAddToPlaylistModal()
 }
 
 const togglePlay = () => {
@@ -2082,6 +2446,25 @@ const askAboutAlbum = (album) => {
     showClearChatModal.value = false
   }
 
+  const openClearHistoryModal = () => {
+  if (playHistory.value.length === 0) {
+    showToastFn('O histórico já está vazio', 'info')
+    return
+  }
+  showClearHistoryModal.value = true
+}
+
+const cancelClearHistory = () => {
+  showClearHistoryModal.value = false
+}
+
+const confirmClearHistory = () => {
+  playHistory.value = []
+  localStorage.removeItem('play_history')
+  showClearHistoryModal.value = false
+  showToastFn('Histórico limpo com sucesso', 'success')
+}
+
   const confirmClearChat = () => {
     showClearChatModal.value = false
     messages.value = [{
@@ -2121,7 +2504,9 @@ const formatMessage = (text) => {
 }
 
 const formatTime = (date) => {
-  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  // 🔥 Aceita tanto string quanto Date
+  const d = date instanceof Date ? date : new Date(date)
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 const getPlaceholder = () => {
@@ -2695,6 +3080,7 @@ body {
   background: var(--bg-glass);
   border-right: 1px solid var(--border);
   padding: 24px;
+   padding-bottom: 120px;
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(20px);
@@ -2702,7 +3088,12 @@ body {
   overflow-x: hidden;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  height: 100vh;
+  justify-content: flex-start;
+  /* Garante que o conteúdo ocupe no mínimo a altura total para scroll funcionar */
+  min-height: 0;
 }
+
 .sidebar-collapsed {
   width: 0;
   padding: 0;
@@ -3277,7 +3668,7 @@ body {
 
 /* Now Playing Widget */
 .now-playing {
-  margin-top: auto;
+  margin-top: 16px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -4512,7 +4903,8 @@ body {
   position: fixed;
   bottom: 100px;
   left: 50%;
-  transform: translateX(-50%) translateY(100px);
+  transform: translateX(-50%) translateY(0);
+    opacity: 1;
   padding: 16px 24px;
   background: var(--bg-glass);
   border: 1px solid var(--border);
@@ -4547,7 +4939,11 @@ body {
   transition: all 0.3s ease;
 }
 
-.toast-enter-from,
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(20px);
+}
+
 .toast-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(20px);

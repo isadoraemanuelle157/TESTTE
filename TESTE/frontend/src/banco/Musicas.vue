@@ -46,8 +46,8 @@
         <section ref="formSection" class="form-section" :class="{ 'editing': modoEdicao }">
           <div class="section-header">
             <div class="section-icon">
-              <span v-if="!modoEdicao">➕</span>
-              <span v-else>✏️</span>
+              <span v-if="!modoEdicao"><i class="fas fa-plus"></i></span>
+              <span v-else><i class="fas fa-pen"></i></span>
             </div>
             <h2>{{ modoEdicao ? 'Editar Música' : 'Nova Música' }}</h2>
             <p class="section-subtitle">
@@ -60,7 +60,7 @@
               <!-- Left Column -->
               <div class="form-column">
                 <div class="input-group" :class="{ 'focused': focused === 'nome', 'filled': form.nome }">
-                  <div class="input-icon">🎵</div>
+                  <div class="input-icon"><i class="fas fa-music"></i></div>
                   <input 
                     v-model="form.nome" 
                     type="text" 
@@ -73,7 +73,7 @@
                 </div>
 
                 <div class="input-group" :class="{ 'focused': focused === 'duracao', 'filled': form.duracao }">
-                  <div class="input-icon">⏱️</div>
+                  <div class="input-icon"><i class="fas fa-clock"></i></div>
                   <input 
                     v-model="form.duracao" 
                     type="text" 
@@ -87,7 +87,7 @@
                 </div>
 
     <div class="input-group" :class="{ 'focused': focused === 'ano', 'filled': form.ano }">
-  <div class="input-icon">📅</div>
+  <div class="input-icon"><i class="fas fa-calendar-alt"></i></div>
 
   <select
     v-model="form.ano"
@@ -110,7 +110,7 @@
 </div>
 
                 <div class="input-group" :class="{ 'focused': focused === 'humor', 'filled': form.humor }">
-                  <div class="input-icon">🎭</div>
+                  <div class="input-icon"><i class="fas fa-theater-masks"></i></div>
                   <select 
                     v-model="form.humor" 
                     required
@@ -118,13 +118,13 @@
                     @blur="focused = null"
                   >
                     <option value="" disabled>Selecione o humor</option>
-                    <option value="😊 Feliz">😊 Feliz</option>
-                    <option value="😢 Triste">😢 Triste</option>
-                    <option value="💪 Animado">💪 Animado</option>
-                    <option value="😌 Relaxante">😌 Relaxante</option>
-                    <option value="❤️ Romântico">❤️ Romântico</option>
-                    <option value="😤 Raivoso">😤 Raivoso</option>
-                  </select>
+  <option value="Feliz">Feliz</option>
+  <option value="Triste">Triste</option>
+  <option value="Animado">Animado</option>
+  <option value="Relaxante">Relaxante</option>
+  <option value="Romântico">Romântico</option>
+  <option value="Raivoso">Raivoso</option>
+</select>
                   <label>Humor / Vibe</label>
                 </div>
 
@@ -133,7 +133,7 @@
                  :class="{
                    'focused': dropdownOpen === 'generos',
                   'filled': form.generos.length > 0 }">
-                  <div class="input-icon">🎶</div>
+                  <div class="input-icon"><i class="fas fa-guitar"></i></div>
                   
                   <div class="custom-dropdown" :class="{ 'open': dropdownOpen === 'generos' }">
                     <div class="dropdown-trigger" @click.stop="toggleDropdown('generos')">
@@ -191,7 +191,7 @@
 
                 <!-- ÁLBUM - SIMPLES -->
                 <div class="input-group" :class="{ 'focused': focused === 'album', 'filled': form.album }">
-                  <div class="input-icon">💿</div>
+                  <div class="input-icon"><i class="fas fa-compact-disc"></i></div>
                   <select v-model="form.album" @focus="focused = 'album'" @blur="focused = null">
                     <option value="">Sem álbum (Single)</option>
                     <option 
@@ -207,7 +207,7 @@
 
                 <!-- CANTORES - MÚLTIPLOS COM DROPDOWN -->
                 <div class="input-group selection-dropdown-group" :class="{ 'focused': dropdownOpen === 'cantores', 'filled': form.cantores.length > 0 }">
-                  <div class="input-icon">🎤</div>
+                  <div class="input-icon"><i class="fas fa-microphone"></i></div>
                   
                   <div class="custom-dropdown" :class="{ 'open': dropdownOpen === 'cantores' }">
                     <div class="dropdown-trigger" @click.stop="toggleDropdown('cantores')">
@@ -264,7 +264,7 @@
                 </div>
 
                 <div class="input-group" :class="{ 'focused': focused === 'link', 'filled': form.link }">
-                  <div class="input-icon">🔗</div>
+                  <div class="input-icon"><i class="fas fa-link"></i></div>
                   <input 
                     v-model="form.link" 
                     type="url" 
@@ -280,7 +280,7 @@
               <!-- Right Column -->
               <div class="form-column">
                 <div class="input-group" :class="{ 'focused': focused === 'foto', 'filled': form.foto }">
-                  <div class="input-icon">🖼️</div>
+                  <div class="input-icon"><i class="fas fa-image"></i></div>
                   <input 
                     v-model="form.foto" 
                     type="text"
@@ -316,7 +316,7 @@
                 </div>
 
                 <div class="input-group textarea-group" :class="{ 'focused': focused === 'letra', 'filled': form.letra }">
-                  <div class="input-icon textarea-icon">📝</div>
+                  <div class="input-icon textarea-icon"><i class="fas fa-align-left"></i></div>
                   <textarea 
                     v-model="form.letra" 
                     required
@@ -369,23 +369,43 @@
         <!-- Divider -->
         <div class="section-divider">
           <div class="divider-line"></div>
-          <div class="divider-icon">🎧</div>
+          <div class="divider-icon"><i class="fas fa-headphones"></i></div>
           <div class="divider-line"></div>
         </div>
 
         <!-- List Section -->
         <section class="list-section">
           <div class="section-header list-header">
-            <h2>📚 Catálogo</h2>
+            <h2><i class="fas fa-list"></i> Catálogo</h2>
             <div class="list-filters">
-              <button 
-                v-for="filter in ['Todas', 'Feliz', 'Triste', 'Animado', 'Relaxante', 'Romântico', 'Raivoso']" 
-                :key="filter"
-                :class="['filter-btn', { active: activeFilter === filter }]"
-                @click="activeFilter = filter"
-              >
-                {{ filter }}
-              </button>
+            <button 
+  v-for="filter in ['Todas', 'Feliz', 'Triste', 'Animado', 'Relaxante', 'Romântico', 'Raivoso']" 
+  :key="filter"
+  :class="['filter-btn', { active: activeFilter === filter }]"
+  @click="activeFilter = filter"
+>
+  <template v-if="filter === 'Todas'">
+    <i class="fas fa-layer-group"></i> {{ filter }}
+  </template>
+  <template v-else-if="filter === 'Feliz'">
+    <i class="fas fa-smile"></i> {{ filter }}
+  </template>
+  <template v-else-if="filter === 'Triste'">
+    <i class="fas fa-sad-tear"></i> {{ filter }}
+  </template>
+  <template v-else-if="filter === 'Animado'">
+    <i class="fas fa-bolt"></i> {{ filter }}
+  </template>
+  <template v-else-if="filter === 'Relaxante'">
+    <i class="fas fa-spa"></i> {{ filter }}
+  </template>
+  <template v-else-if="filter === 'Romântico'">
+    <i class="fas fa-heart"></i> {{ filter }}
+  </template>
+  <template v-else-if="filter === 'Raivoso'">
+    <i class="fas fa-fire"></i> {{ filter }}
+  </template>
+</button>
             </div>
           </div>
 
@@ -436,25 +456,25 @@
                 </div>
 
                 <!-- Mood Badge -->
-                <div class="mood-badge" :class="getMoodClass(musica.humor)">
-                  {{ getMoodEmoji(musica.humor) }}
-                </div>
+              <div class="mood-badge" :class="getMoodClass(musica.humor)">
+  <i :class="getMoodIcon(musica.humor)"></i>
+</div>
               </div>
 
               <!-- Card Content -->
               <div class="card-content">
                 <h3 class="music-title">{{ musica.nome }}</h3>
                 <div class="music-meta">
-                  <span class="duration">⏱️ {{ musica.duracao }}</span>
+                  <span class="duration"><i class="fas fa-clock"></i> {{ musica.duracao }}</span>
         <span class="year">
-  📅 {{ musica.ano ? `${Math.floor(musica.ano / 10) * 10}s` : '---' }}
+  <i class="fas fa-calendar-alt"></i> {{ musica.ano ? `${Math.floor(musica.ano / 10) * 10}s` : '---' }}
 </span>
-                  <span class="mood">{{ musica.humor }}</span>
-                  <span class="generos">🎶 {{ musica.generos?.map(g => g.nome).join(', ') || 'Sem gênero' }}</span>
+                <span class="mood"><i :class="getMoodIcon(musica.humor)"></i> {{ musica.humor }}</span>
+                  <span class="generos"><i class="fas fa-guitar"></i> {{ musica.generos?.map(g => g.nome).join(', ') || 'Sem gênero' }}</span>
                 </div>
                 
                 <div class="cantores" v-if="musica.cantores?.length">
-                  🎤 {{ musica.cantores.map(c => c.nome).join(', ') }}
+                  <i class="fas fa-microphone"></i> {{ musica.cantores.map(c => c.nome).join(', ') }}
                 </div>
                 
                 <!-- Lyrics Preview -->
@@ -502,7 +522,7 @@
     <transition name="modal">
       <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
         <div class="modal-content">
-          <div class="modal-icon warning">🗑️</div>
+          <div class="modal-icon warning"><i class="fas fa-trash-alt"></i></div>
           <h3>Excluir Música</h3>
           <p>Tem certeza que deseja excluir <strong>"{{ musicaParaExcluir?.nome }}"</strong>?</p>
           <p class="modal-warning">Esta ação não pode ser desfeita.</p>
@@ -525,12 +545,12 @@
     </transition>
 
     <!-- Toast -->
-    <transition name="toast">
-      <div v-if="toast.show" :class="['toast', toast.type]">
-        <div class="toast-icon">{{ toast.type === 'success' ? '✓' : '!' }}</div>
-        <span>{{ toast.message }}</span>
-      </div>
-    </transition>
+ <transition name="toast">
+  <div v-if="toast.show" :class="['toast-soundup', toast.type]">
+    <div class="toast-icon" v-html="toast.icon"></div>
+    <div class="toast-message">{{ toast.message }}</div>
+  </div>
+</transition>
   </div>
 </template>
 
@@ -572,7 +592,12 @@ export default {
       musicaParaExcluir: null,
       imageLoaded: false,
       defaultImage: DEFAULT_IMAGE,
-      toast: { show: false, message: '', type: 'success' },
+     toast: {
+  show: false,
+  message: '',
+  type: 'success',
+  icon: '<i class="fas fa-check-circle"></i>'
+},
       
       // Dropdown control
       dropdownOpen: null,
@@ -753,7 +778,7 @@ getCantorNome(id) {
     // Handler de erro de imagem no preview
     handleImageError() {
       this.imageLoaded = false
-      this.showToast('Erro ao carregar imagem. Verifique a URL.', 'error')
+    this.mostrarToast('Erro ao carregar imagem. Verifique a URL.', 'error', '<i class="fas fa-exclamation-triangle"></i>')
     },
 
 forceFloatingLabels() {
@@ -786,7 +811,7 @@ async carregarMusicas() {
   } catch (err) {
     console.error('❌ ERRO CARREGAR MÚSICAS:', err)
     this.musicas = []
-    this.showToast('Erro ao carregar músicas', 'error')
+  this.mostrarToast('Erro ao carregar músicas', 'error', '<i class="fas fa-times-circle"></i>')
   }
 },
 
@@ -807,7 +832,7 @@ async carregarGeneros() {
   } catch (err) {
     console.error('❌ ERRO CARREGAR GENEROS:', err)
     this.generos = []
-    this.showToast('Erro ao carregar gêneros', 'error')
+ this.mostrarToast('Erro ao carregar gêneros', 'error', '<i class="fas fa-times-circle"></i>')
   }
 },
 
@@ -819,7 +844,7 @@ async carregarAlbuns() {
   } catch (err) {
     console.error('❌ ERRO CARREGAR ALBUNS:', err)
     this.albuns = []
-    this.showToast('Erro ao carregar álbuns', 'error')
+   this.mostrarToast('Erro ao carregar álbuns', 'error', '<i class="fas fa-times-circle"></i>')
   }
 },
 
@@ -831,7 +856,7 @@ async carregarCantores() {
   } catch (err) {
     console.error('❌ ERRO CARREGAR CANTORES:', err)
     this.cantores = []
-    this.showToast('Erro ao carregar cantores', 'error')
+   this.mostrarToast('Erro ao carregar cantores', 'error', '<i class="fas fa-times-circle"></i>')
   }
 },
 
@@ -862,16 +887,16 @@ async salvarMusica() {
 
         if (this.modoEdicao) {
           await axios.put(`${API}/${this.form.id}`, payload)
-          this.showToast('Música atualizada com sucesso!')
+         this.mostrarToast('Música atualizada com sucesso!', 'success', '<i class="fas fa-check-circle"></i>')
         } else {
           await axios.post(API, payload)
-          this.showToast('Música adicionada ao catálogo!')
+      this.mostrarToast('Música adicionada ao catálogo!', 'success', '<i class="fas fa-music"></i>')
         }
 
         this.reset()
         this.carregarMusicas()
       } catch (err) {
-        this.showToast(err.response?.data?.error || err.message, 'error')
+        this.mostrarToast(err.response?.data?.error || err.message, 'error', '<i class="fas fa-exclamation-triangle"></i>')
 console.error(err)
       } finally {
         this.loading = false
@@ -939,11 +964,11 @@ editarMusica(musica) {
       
       try {
         await axios.delete(`${API}/${this.musicaParaExcluir._id}`)
-        this.showToast('Música excluída')
+        this.mostrarToast('Música excluída', 'success', '<i class="fas fa-trash-alt"></i>')
         this.carregarMusicas()
         this.showDeleteModal = false
       } catch (err) {
-        this.showToast('Erro ao excluir', 'error')
+        this.mostrarToast('Erro ao excluir', 'error', '<i class="fas fa-times-circle"></i>')
       } finally {
         this.deleting = false
         this.musicaParaExcluir = null
@@ -959,29 +984,29 @@ editarMusica(musica) {
       }
     },
 
-    getMoodClass(humor) {
-      const classes = {
-        'Feliz': 'mood-happy',
-        'Triste': 'mood-sad',
-        'Animado': 'mood-energetic',
-        'Relaxante': 'mood-relax',
-        'Romântico': 'mood-romantic',
-        'Raivoso': 'mood-angry'
-      }
-      return classes[Object.keys(classes).find(k => humor?.includes(k))] || 'mood-default'
-    },
+  getMoodClass(humor) {
+  const classes = {
+    'Feliz': 'mood-happy',
+    'Triste': 'mood-sad',
+    'Animado': 'mood-energetic',
+    'Relaxante': 'mood-relax',
+    'Romântico': 'mood-romantic',
+    'Raivoso': 'mood-angry'
+  }
+  return classes[Object.keys(classes).find(k => humor?.includes(k))] || 'mood-default'
+},
 
-    getMoodEmoji(humor) {
-      const emojis = {
-        'Feliz': '😊',
-        'Triste': '😢',
-        'Animado': '💪',
-        'Relaxante': '😌',
-        'Romântico': '❤️',
-        'Raivoso': '😤'
-      }
-      return emojis[Object.keys(emojis).find(k => humor?.includes(k))] || '🎵'
-    },
+ getMoodIcon(humor) {
+  const icons = {
+    'Feliz': 'fas fa-smile',
+    'Triste': 'fas fa-sad-tear',
+    'Animado': 'fas fa-bolt',
+    'Relaxante': 'fas fa-spa',
+    'Romântico': 'fas fa-heart',
+    'Raivoso': 'fas fa-fire'
+  }
+  return icons[Object.keys(icons).find(k => humor?.includes(k))] || 'fas fa-music'
+},
 
     truncateLetra(letra) {
       if (!letra) return ''
@@ -1030,10 +1055,10 @@ reset() {
       this.reset()
     },
 
-    showToast(message, type = 'success') {
-      this.toast = { show: true, message, type }
-      setTimeout(() => this.toast.show = false, 3000)
-    }
+ mostrarToast(message, type = 'success', icon = '<i class="fas fa-check-circle"></i>') {
+  this.toast = { show: true, message, type, icon }
+  setTimeout(() => this.toast.show = false, 3000)
+}
   }
 }
 </script>
@@ -1894,6 +1919,13 @@ select:has(option:checked:not([value=""])) + label {
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-btn i {
+  font-size: 0.85rem;
 }
 
 .filter-btn:hover, .filter-btn.active {
@@ -2071,10 +2103,14 @@ select:has(option:checked:not([value=""])) + label {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   background: rgba(17, 24, 39, 0.8);
   backdrop-filter: blur(10px);
   border: 2px solid;
+}
+
+.mood-badge i {
+  font-size: 1.1rem;
 }
 
 .mood-happy { border-color: #fbbf24; }
@@ -2126,14 +2162,21 @@ select:not([value=""]) + label,
   padding: 0 6px;
   font-weight: 500;
 }
-
 .mood {
   color: #c4b5fd;
   background: rgba(139, 92, 246, 0.2);
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 12px;
   font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
+
+.mood i {
+  font-size: 0.8rem;
+}
+
 
 .generos {
   color: #94a3b8;
@@ -2324,60 +2367,66 @@ select:not([value=""]) + label,
   opacity: 0;
 }
 
-/* Toast */
-.toast {
+.toast-soundup {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-radius: 12px;
+  gap: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 10px 40px rgba(37, 99, 235, 0.3);
+  z-index: 2000;
+  animation: toastSlideUp 0.3s ease;
   color: white;
-  font-weight: 500;
-  z-index: 1001;
-  animation: toastIn 0.3s ease;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
 }
 
-.toast.success {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+.toast-soundup.success {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
 }
 
-.toast.error {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+.toast-soundup.error {
+  background: #dc2626;
+  box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
 }
 
-.toast-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
+.toast-icon i {
+  font-size: 1.25rem;
 }
 
-@keyframes toastIn {
+.toast-message {
+  font-size: 0.95rem;
+}
+
+@keyframes toastSlideUp {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(-50%) translateY(20px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-.toast-enter-active, .toast-leave-active {
-  transition: all 0.3s;
+/* Transição do toast */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
 }
 
+.toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateX(100%);
+  transform: translateX(-50%) translateY(20px);
+}
+
+.section-icon i {
+  font-size: 1.5rem;
+  color: inherit;
 }
 
 /* Responsive */
