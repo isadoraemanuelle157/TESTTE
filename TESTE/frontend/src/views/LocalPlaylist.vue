@@ -13,7 +13,7 @@
           </div>
           <div class="local-text">
             <h1>{{ localNome }}</h1>
-            <p>Música local • {{ totalResultados }} resultados</p>
+
           </div>
         </div>
       </header>
@@ -67,12 +67,41 @@
                 <span class="track-list-name">{{ track.title }}</span>
                 <span class="track-list-artist">{{ track.artist?.name || 'Artista desconhecido' }}</span>
               </div>
-              <span class="track-list-source">
-                <span class="source-badge" :class="track.source">
-                  <i :class="getSourceIcon(track.source)"></i>
-                </span>
-              </span>
-              <span v-if="track.duration" class="track-list-duration">{{ formatDuration(track.duration) }}</span>
+             <span class="track-list-source">
+  <span class="source-badge" :class="track.source">
+    <i :class="getSourceIcon(track.source)"></i>
+  </span>
+</span>
+
+<button
+  v-if="!isLogged"
+  class="btn-like-list"
+  @click.stop="openLoginModal"
+  title="Faça login para curtir"
+>
+  <i class="fa fa-heart-o"></i>
+</button>
+
+<button
+  v-else-if="track.source !== 'spotify'"
+  class="btn-like-list disabled"
+  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
+  title="Deezer: login necessário"
+>
+  <i class="fa fa-heart-o"></i>
+</button>
+
+<button
+  v-else
+  class="btn-like-list"
+  @click.stop="toggleLikeTrack(track)"
+  :class="{ liked: isTrackLiked(track.id) }"
+>
+  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+</button>
+
+<span v-if="track.duration" class="track-list-duration">{{ formatDuration(track.duration) }}</span>
+
             </div>
           </div>
         </div>
@@ -108,21 +137,21 @@
           </div>
           
           <div v-else class="albums-grid">
-            <div
-              v-for="album in albums"
-              :key="album.id"
-              class="album-card"
-              @click="goToAlbum(album)"
-            >
-              <div class="album-card-img">
-                <img :src="album.cover || album.cover_medium || '/default-cover.png'" :alt="album.title">
-                <div class="album-card-overlay">
-                  <i class="fa fa-play"></i>
-                </div>
-              </div>
-              <span class="album-card-name">{{ album.title }}</span>
-              <span class="album-card-artist">{{ album.artist?.name || 'Artista' }}</span>
-            </div>
+<div
+  v-for="album in albums"
+  :key="album.id"
+  class="album-card"
+  @click="openAlbumModal(album)"
+>
+  <div class="album-card-img">
+    <img :src="album.cover || album.cover_medium || '/default-cover.png'" :alt="album.title">
+    <div class="album-card-overlay" @click.stop="openAlbumModal(album)">
+      <i class="fa fa-play"></i>
+    </div>
+  </div>
+  <span class="album-card-name">{{ album.title }}</span>
+  <span class="album-card-artist">{{ album.artist?.name || 'Artista' }}</span>
+</div>
           </div>
         </div>
 
@@ -135,6 +164,117 @@
       <div v-if="toast.show" class="toast" :class="toast.type">
         <i :class="toast.icon"></i>
         <span>{{ toast.message }}</span>
+      </div>
+    </transition>
+    <!-- MODAL DE LOGIN -->
+<transition name="modal">
+  <div v-if="showLoginModal" class="login-modal-overlay" @click="closeLoginModal">
+    <div class="login-modal" @click.stop>
+      <div class="modal-icon">
+        <i class="fa fa-lock"></i>
+      </div>
+      <h3>Login Necessário</h3>
+      <p>Faça login para curtir músicas do Spotify.</p>
+
+      <div class="modal-actions">
+        <button class="btn-primary" @click="goToLogin">
+          <i class="fa fa-sign-in"></i>
+          Fazer Login
+        </button>
+        <button class="btn-secondary" @click="closeLoginModal">
+          Continuar Navegando
+        </button>
+      </div>
+    </div>
+  </div>
+</transition>
+    <!-- MODAL DE ÁLBUM -->
+    <transition name="modal">
+      <div v-if="showAlbumModal" class="album-modal-overlay" @click="closeAlbumModal">
+        <div class="album-modal" @click.stop>
+          <!-- Header -->
+          <div class="album-modal-header">
+            <div class="album-modal-cover">
+              <img :src="selectedAlbum?.cover || selectedAlbum?.cover_medium || '/default-cover.png'" :alt="selectedAlbum?.title">
+              <button class="album-play-all-btn" @click="playAllAlbumTracks" v-if="albumTracks.length > 0">
+                <i class="fa fa-play"></i>
+              </button>
+            </div>
+            <div class="album-modal-info">
+              <h2>{{ selectedAlbum?.title }}</h2>
+              <p class="album-modal-artist">{{ selectedAlbum?.artist?.name || 'Artista' }}</p>
+              <span class="album-modal-count">{{ albumTracks.length }} {{ albumTracks.length === 1 ? 'música' : 'músicas' }}</span>
+              <span class="source-badge" :class="selectedAlbum?.source">
+                <i :class="getSourceIcon(selectedAlbum?.source)"></i>
+                {{ selectedAlbum?.source === 'spotify' ? 'Spotify' : 'Deezer' }}
+              </span>
+            </div>
+            <button class="album-modal-close" @click="closeAlbumModal">
+              <i class="fa fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Tracks -->
+          <div class="album-modal-body">
+            <div v-if="albumTracksLoading" class="album-modal-loading">
+              <div class="spinner"></div>
+              <span>Carregando músicas...</span>
+            </div>
+
+            <div v-else-if="albumTracks.length === 0" class="album-modal-empty">
+              <i class="fa fa-music"></i>
+              <p>Nenhuma música disponível neste álbum</p>
+            </div>
+
+            <div v-else class="album-tracks-list">
+              <div
+                v-for="(track, index) in albumTracks"
+                :key="track.id"
+                class="album-track-item"
+                @click="playAlbumTrack(track)"
+              >
+                <span class="album-track-number">{{ index + 1 }}</span>
+                <div class="album-track-thumb">
+                  <img :src="getBestImage(track)" :alt="track.title" @error="$event.target.style.display='none'">
+                  <div class="album-track-play-overlay">
+                    <i class="fa fa-play"></i>
+                  </div>
+                </div>
+                <div class="album-track-info">
+                  <span class="album-track-name">{{ track.title }}</span>
+                  <span class="album-track-artist">{{ track.artist?.name || 'Artista desconhecido' }}</span>
+                </div>
+                <span v-if="track.duration" class="album-track-duration">{{ formatDuration(track.duration) }}</span>
+                
+                <!-- Botão de curtir seguindo a lógica existente -->
+                <button
+                  v-if="!isLogged"
+                  class="btn-like-list"
+                  @click.stop="openLoginModal"
+                  title="Faça login para curtir"
+                >
+                  <i class="fa fa-heart-o"></i>
+                </button>
+                <button
+                  v-else-if="track.source !== 'spotify'"
+                  class="btn-like-list disabled"
+                  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
+                  title="Deezer: login necessário"
+                >
+                  <i class="fa fa-heart-o"></i>
+                </button>
+                <button
+                  v-else
+                  class="btn-like-list"
+                  @click.stop="toggleLikeTrack(track)"
+                  :class="{ liked: isTrackLiked(track.id) }"
+                >
+                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </transition>
   </div>
@@ -152,7 +292,18 @@ export default {
       tracks: [],
       artists: [],
       albums: [],
-      
+
+      spotifyConnected: false,
+      isLogged: false,
+      currentMusicSource: 'deezer',
+
+      likedTracks: [],
+      showLoginModal: false,
+            showAlbumModal: false,
+      selectedAlbum: null,
+      albumTracks: [],
+      albumTracksLoading: false,
+
       tabs: [
         { id: 'tracks', label: 'Músicas', icon: 'fa fa-music', count: 0 },
         { id: 'artists', label: 'Artistas', icon: 'fa fa-user', count: 0 },
@@ -177,78 +328,319 @@ export default {
   watch: {
     '$route.params.nome': {
       immediate: true,
-      handler(newVal) {
+      async handler(newVal) {
         if (newVal) {
           this.localNome = decodeURIComponent(newVal)
-          this.loadLocalData()
+          await this.loadLocalData()
         }
       }
     }
   },
 
   methods: {
-    async loadLocalData() {
-      this.isLoading = true
-      try {
-        const res = await fetch(
-          `http://localhost:3002/locais/${encodeURIComponent(this.localNome)}/musicas`
-        )
-        const data = await res.json()
+    async checkSpotifyStatus() {
+      const token = localStorage.getItem('token')
+      this.isLogged = !!token
 
-        if (data.results && Array.isArray(data.results)) {
-          this.tracks = data.results.filter(r => r.type === 'track').map(r => ({
+      if (!token) {
+        this.spotifyConnected = false
+        return false
+      }
+
+      try {
+        const res = await fetch('http://localhost:3002/spotify/status', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (!res.ok) {
+          this.spotifyConnected = false
+          return false
+        }
+
+        const data = await res.json()
+        this.spotifyConnected = !!(data.connected && data.tokenValid)
+        return this.spotifyConnected
+      } catch (err) {
+        console.error('[LocalPlaylist] Erro ao verificar Spotify:', err)
+        this.spotifyConnected = false
+        return false
+      }
+    },
+
+    async fetchSpotifyLocalData() {
+      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Usuário não logado')
+
+      const searchQuery = encodeURIComponent(this.localNome)
+
+      const res = await fetch(
+        `http://localhost:3002/spotify/search?q=${searchQuery}&type=track,artist,album&limit=20&market=BR`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error('Spotify falhou')
+      }
+
+      const spotifyData = await res.json()
+
+      return {
+        results: [
+          ...(spotifyData.tracks?.items || []).map(t => ({
+            id: t.id,
+            type: 'track',
+            title: t.name,
+            artist: {
+              name: t.artists?.map(a => a.name).join(', ') || 'Artista desconhecido'
+            },
+            album: {
+              title: t.album?.name || '',
+              cover: t.album?.images?.[1]?.url || t.album?.images?.[0]?.url || '',
+              cover_medium: t.album?.images?.[1]?.url || t.album?.images?.[0]?.url || ''
+            },
+            cover: t.album?.images?.[1]?.url || t.album?.images?.[0]?.url || '',
+            preview: t.preview_url || '',
+            duration: Math.round((t.duration_ms || 0) / 1000),
+            source: 'spotify'
+          })),
+
+          ...(spotifyData.artists?.items || []).map(a => ({
+            id: a.id,
+            type: 'artist',
+            name: a.name,
+            picture: a.images?.[1]?.url || a.images?.[0]?.url || '',
+            picture_medium: a.images?.[1]?.url || a.images?.[0]?.url || '',
+            nb_fan: a.followers?.total || 0,
+            source: 'spotify'
+          })),
+
+          ...(spotifyData.albums?.items || []).map(al => ({
+            id: al.id,
+            type: 'album',
+            title: al.name,
+            artist: {
+              name: al.artists?.map(a => a.name).join(', ') || 'Artista'
+            },
+            cover: al.images?.[1]?.url || al.images?.[0]?.url || '',
+            cover_medium: al.images?.[1]?.url || al.images?.[0]?.url || '',
+            source: 'spotify'
+          }))
+        ]
+      }
+    },
+
+    async fetchDeezerLocalData() {
+      const res = await fetch(
+        `http://localhost:3002/locais/${encodeURIComponent(this.localNome)}/musicas`
+      )
+
+      if (!res.ok) {
+        throw new Error('Deezer falhou')
+      }
+
+      return await res.json()
+    },
+
+applyResults(data) {
+  if (data.results && Array.isArray(data.results)) {
+    // Define qual source é permitida baseado no login
+    const allowedSource = this.isLogged ? 'spotify' : 'deezer'
+        this.tracks = data.results
+      .filter(r => r.type === 'track' && (r.source || this.currentMusicSource) === allowedSource)
+          .map(r => ({
             id: r.id,
             title: r.title,
-            artist: { name: r.artist?.name || 'Artista desconhecido' },
+            artist: {
+              name: r.artist?.name || 'Artista desconhecido'
+            },
             album: {
               title: r.album?.title || '',
-              cover: r.album?.cover_medium || r.cover || ''
+              cover: r.album?.cover || r.album?.cover_medium || r.cover || '',
+              cover_medium: r.album?.cover_medium || r.album?.cover || r.cover || ''
             },
-            cover: r.cover || r.album?.cover_medium,
-            preview: r.preview,
-            duration: r.duration,
-            source: r.source || 'local',
+            cover: r.cover || r.album?.cover_medium || r.album?.cover || '',
+            preview: r.preview || '',
+            duration: r.duration || 0,
+            source: r.source || this.currentMusicSource || 'deezer',
             type: 'track'
           }))
 
-          this.artists = data.results.filter(r => r.type === 'artist').map(r => ({
+    this.artists = data.results
+      .filter(r => r.type === 'artist' && (r.source || this.currentMusicSource) === allowedSource)
+          .map(r => ({
             id: r.id,
             name: r.name,
-            picture: r.picture || r.picture_medium,
-            picture_medium: r.picture_medium,
+            picture: r.picture || r.picture_medium || '',
+            picture_medium: r.picture_medium || r.picture || '',
             nb_fan: r.nb_fan || 0,
-            source: r.source || 'local',
+            source: r.source || this.currentMusicSource || 'deezer',
             type: 'artist'
           }))
 
-          this.albums = data.results.filter(r => r.type === 'album').map(r => ({
+    this.albums = data.results
+      .filter(r => r.type === 'album' && (r.source || this.currentMusicSource) === allowedSource)
+          .map(r => ({
             id: r.id,
             title: r.title,
-            artist: { name: r.artist?.name || 'Artista' },
-            cover: r.cover || r.cover_medium,
-            cover_medium: r.cover_medium,
-            source: r.source || 'local',
+            artist: {
+              name: r.artist?.name || 'Artista'
+            },
+            cover: r.cover || r.cover_medium || '',
+            cover_medium: r.cover_medium || r.cover || '',
+            source: r.source || this.currentMusicSource || 'deezer',
             type: 'album'
           }))
-        } else {
-          this.tracks = []
-          this.artists = []
-          this.albums = []
+      } else {
+        this.tracks = []
+        this.artists = []
+        this.albums = []
+      }
+
+      this.tabs[0].count = this.tracks.length
+      this.tabs[1].count = this.artists.length
+      this.tabs[2].count = this.albums.length
+    },
+
+    async loadLikedTracks() {
+      try {
+        const token = localStorage.getItem('token')
+
+        if (!token) {
+          this.likedTracks = []
+          return
         }
 
-        // Atualiza counts
-        this.tabs[0].count = this.tracks.length
-        this.tabs[1].count = this.artists.length
-        this.tabs[2].count = this.albums.length
+        const res = await fetch('http://localhost:3002/curtidas', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
 
+        const data = await res.json()
+        this.likedTracks = Array.isArray(data)
+          ? data.map(c => String(c.id)).filter(Boolean)
+          : []
       } catch (err) {
+        this.likedTracks = []
+      }
+    },
+
+    isTrackLiked(trackId) {
+      if (!trackId) return false
+      return this.likedTracks.some(id => String(id) === String(trackId))
+    },
+
+    async toggleLikeTrack(track) {
+      if (!this.isLogged) {
+        this.openLoginModal()
+        return
+      }
+
+      if (track.source !== 'spotify') {
+        this.showToast('Faça login com Spotify para curtir', 'info')
+        return
+      }
+
+      try {
+        const trackId = track.id
+
+        const body = {
+          source: 'spotify',
+          dadosMusica: {
+            titulo: track.title || 'Sem título',
+            artista: track.artist?.name || 'Desconhecido',
+            capa: this.getBestImage(track) || '',
+            previewUrl: track.preview || '',
+            duration: track.duration || 30,
+            album: track.album?.title || ''
+          }
+        }
+
+        const res = await fetch(`http://localhost:3002/curtidas/${trackId}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        })
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          this.showToast(
+            errorData.error || errorData.message || `Erro ${res.status}`,
+            'error'
+          )
+          return
+        }
+
+        const data = await res.json()
+
+        if (data.liked) {
+          if (!this.likedTracks.includes(String(trackId))) {
+            this.likedTracks.push(String(trackId))
+          }
+          this.showToast(`"${track.title}" curtida ❤️`, 'success')
+        } else {
+          this.likedTracks = this.likedTracks.filter(id => String(id) !== String(trackId))
+          this.showToast(`"${track.title}" descurtida 💔`, 'info')
+        }
+      } catch (err) {
+        console.error('[LocalPlaylist] Erro ao curtir:', err)
+        this.showToast('Erro ao processar curtida', 'error')
+      }
+    },
+
+async loadLocalData() {
+  this.isLoading = true
+
+  try {
+    const canUseSpotify = await this.checkSpotifyStatus()
+
+    if (this.isLogged) {
+      await this.loadLikedTracks()
+    } else {
+      this.likedTracks = []
+    }
+
+    let data
+
+    if (this.isLogged && canUseSpotify) {
+      // Logado + Spotify conectado: SÓ Spotify
+      data = await this.fetchSpotifyLocalData()
+      this.currentMusicSource = 'spotify'
+    } else {
+      // Não logado OU Spotify não conectado: SÓ Deezer
+      data = await this.fetchDeezerLocalData()
+      this.currentMusicSource = 'deezer'
+    }
+
+        this.applyResults(data)
+      } catch (err) {
+        console.error('[LocalPlaylist] Erro ao carregar dados:', err)
         this.showToast('Erro ao carregar dados do local', 'error')
         this.tracks = []
         this.artists = []
         this.albums = []
+        this.currentMusicSource = 'deezer'
+        this.tabs[0].count = 0
+        this.tabs[1].count = 0
+        this.tabs[2].count = 0
       } finally {
         this.isLoading = false
       }
+    },
+
+    openLoginModal() {
+      this.showLoginModal = true
+    },
+
+    closeLoginModal() {
+      this.showLoginModal = false
+    },
+
+    goToLogin() {
+      this.$router.push('/login')
     },
 
     playTrack(track) {
@@ -256,12 +648,12 @@ export default {
         id: track.id,
         title: track.title,
         artist: track.artist?.name || 'Artista desconhecido',
-        cover: this.getBestImage(track) || track.album?.cover_medium,
+        cover: this.getBestImage(track) || track.album?.cover_medium || '',
         url: track.preview || '',
         preview: track.preview || '',
         duration: track.duration || 30,
         type: 'track',
-        source: track.source || 'local'
+        source: track.source || this.currentMusicSource || 'deezer'
       }
 
       window.dispatchEvent(new CustomEvent('play-song', {
@@ -275,19 +667,134 @@ export default {
     },
 
     goToArtist(artist) {
-      if (artist.source === 'local') {
-        this.$router.push(`/cantor/${artist.id}`)
-      } else {
-        this.showToast('Artista externo - redirecionamento limitado', 'info')
+      this.$router.push({
+        name: 'DetalheCantor',
+        params: { id: artist.id },
+        query: {
+          source: artist.source || 'local',
+          name: artist.name,
+          picture: artist.picture || artist.picture_medium || ''
+        }
+      })
+    },
+        async openAlbumModal(album) {
+      this.selectedAlbum = album
+      this.showAlbumModal = true
+      this.albumTracksLoading = true
+      this.albumTracks = []
+
+      try {
+        // Buscar músicas do álbum baseado na source
+        if (album.source === 'spotify' && this.isLogged) {
+          const token = localStorage.getItem('token')
+          const res = await fetch(
+            `http://localhost:3002/spotify/albums/${album.id}/tracks?limit=50`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          if (!res.ok) throw new Error('Erro ao buscar tracks do álbum Spotify')
+          const data = await res.json()
+          this.albumTracks = (data.items || []).map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: {
+              name: t.artists?.map(a => a.name).join(', ') || album.artist?.name || 'Artista desconhecido'
+            },
+            album: {
+              title: album.title,
+              cover: album.cover || album.cover_medium || '',
+              cover_medium: album.cover_medium || album.cover || ''
+            },
+            cover: album.cover || album.cover_medium || '',
+            preview: t.preview_url || '',
+            duration: Math.round((t.duration_ms || 0) / 1000),
+            source: 'spotify',
+            type: 'track'
+          }))
+        } else {
+          // Deezer ou local - buscar na API de locais ou álbum Deezer
+        const res = await fetch(
+  `http://localhost:3002/deezer/album/${encodeURIComponent(album.id)}/tracks`
+)
+          if (!res.ok) throw new Error('Erro ao buscar tracks do álbum')
+          const data = await res.json()
+          this.albumTracks = (data.data || data.tracks || data || []).map(t => ({
+            id: t.id,
+            title: t.title,
+            artist: {
+              name: t.artist?.name || album.artist?.name || 'Artista desconhecido'
+            },
+            album: {
+              title: album.title,
+              cover: album.cover || album.cover_medium || '',
+              cover_medium: album.cover_medium || album.cover || ''
+            },
+            cover: album.cover || album.cover_medium || '',
+            preview: t.preview || '',
+            duration: t.duration || 0,
+            source: album.source || 'deezer',
+            type: 'track'
+          }))
+        }
+      } catch (err) {
+        console.error('[LocalPlaylist] Erro ao carregar tracks do álbum:', err)
+        this.showToast('Erro ao carregar músicas do álbum', 'error')
+      } finally {
+        this.albumTracksLoading = false
       }
     },
 
-    goToAlbum(album) {
-      if (album.source === 'local') {
-        this.$router.push(`/album/${album.id}`)
-      } else {
-        this.showToast('Álbum externo - redirecionamento limitado', 'info')
+    closeAlbumModal() {
+      this.showAlbumModal = false
+      this.selectedAlbum = null
+      this.albumTracks = []
+    },
+
+    playAlbumTrack(track) {
+      const playerSong = {
+        id: track.id,
+        title: track.title,
+        artist: track.artist?.name || 'Artista desconhecido',
+        cover: this.getBestImage(track) || track.album?.cover_medium || '',
+        url: track.preview || '',
+        preview: track.preview || '',
+        duration: track.duration || 30,
+        type: 'track',
+        source: track.source || 'deezer'
       }
+
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: [playerSong],
+          index: 0,
+          context: 'album'
+        }
+      }))
+    },
+
+    playAllAlbumTracks() {
+      if (this.albumTracks.length === 0) return
+      
+      const tracks = this.albumTracks.map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: t.artist?.name || 'Artista desconhecido',
+        cover: this.getBestImage(t) || t.album?.cover_medium || '',
+        url: t.preview || '',
+        preview: t.preview || '',
+        duration: t.duration || 30,
+        type: 'track',
+        source: t.source || 'deezer'
+      }))
+
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: tracks[0],
+          playlist: tracks,
+          index: 0,
+          context: 'album'
+        }
+      }))
     },
 
     getBestImage(item) {
@@ -344,8 +851,17 @@ export default {
         error: 'fa fa-exclamation-circle',
         info: 'fa fa-info-circle'
       }
-      this.toast = { show: true, message, type, icon: icons[type] }
-      setTimeout(() => { this.toast.show = false }, 3000)
+
+      this.toast = {
+        show: true,
+        message,
+        type,
+        icon: icons[type]
+      }
+
+      setTimeout(() => {
+        this.toast.show = false
+      }, 3000)
     }
   }
 }
@@ -369,6 +885,143 @@ export default {
   width: 100%;
   max-width: 1400px;
   padding: 0 32px;
+}
+.btn-like-list {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  opacity: 0;
+}
+
+.track-list-item:hover .btn-like-list {
+  opacity: 1;
+}
+
+.btn-like-list:hover {
+  color: #ec4899;
+  transform: scale(1.2);
+}
+
+.btn-like-list.liked {
+  opacity: 1;
+  color: #ec4899;
+}
+
+.btn-like-list.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.btn-like-list.disabled:hover {
+  transform: none;
+  color: #888;
+}
+
+/* MODAL DE LOGIN */
+.login-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease;
+}
+
+.login-modal {
+  background: #181818;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(29, 185, 84, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.modal-icon i {
+  font-size: 28px;
+  color: #1db954;
+}
+
+.login-modal h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.login-modal p {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-primary {
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  border: none;
+  border-radius: 500px;
+  color: #000;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(29, 185, 84, 0.4);
+}
+
+.btn-secondary {
+  padding: 14px 24px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 500px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Header */
@@ -394,7 +1047,28 @@ export default {
   transition: all 0.2s;
   flex-shrink: 0;
 }
-
+.source-indicator {
+  margin-top: 4px;
+}
+.source-indicator .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.source-indicator .badge.spotify {
+  background: rgba(29, 185, 84, 0.15);
+  color: #1db954;
+  border: 1px solid rgba(29, 185, 84, 0.3);
+}
+.source-indicator .badge.deezer {
+  background: rgba(255, 102, 0, 0.15);
+  color: #ff6600;
+  border: 1px solid rgba(255, 102, 0, 0.3);
+}
 .btn-back:hover {
   background: rgba(255,255,255,0.1);
   transform: translateX(-2px);
@@ -673,36 +1347,38 @@ export default {
 /* Artists Grid */
 .artists-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 24px;
 }
 
 .artist-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 16px;
-  border-radius: 8px;
-  background: #181818;
-}
-
-.artist-card:hover {
-  background: #282828;
-  transform: translateY(-4px);
 }
 
 .artist-card-img {
-  width: 100%;
-  aspect-ratio: 1;
+  width: 180px;
+  height: 180px;
+  min-width: 180px;
+  min-height: 180px;
   border-radius: 50%;
   overflow: hidden;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .artist-card-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.artist-card:hover {
+  background: #282828;
+  transform: translateY(-4px);
 }
 
 .artist-card-name {
@@ -724,16 +1400,36 @@ export default {
 /* Albums Grid */
 .albums-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 24px;
 }
 
 .album-card {
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 16px;
-  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
   background: #181818;
+  border-radius: 8px;
+  padding: 16px;
+  overflow: hidden;
+  height: 100%;
+}
+
+.album-card-img {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  min-height: 220px;
+  max-height: 220px;
+  overflow: hidden;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.album-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .album-card:hover {
@@ -741,20 +1437,17 @@ export default {
   transform: translateY(-4px);
 }
 
-.album-card-img {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 12px;
+/* Adicione APÓS .artist-card e .album-card: */
+.artist-card,
+.album-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.album-card-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
+.artist-card-img,
+.album-card-img {
+  flex-shrink: 0;
 }
 
 .album-card:hover .album-card-img img {
@@ -782,19 +1475,26 @@ export default {
 }
 
 .album-card-name {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* permite 2 linhas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  width: 100%;
+  margin-top: 12px;
+
   font-size: 14px;
   font-weight: 600;
   color: #fff;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
+  min-height: 40px; /* mantém todos alinhados */
 }
 
 .album-card-artist {
+  width: 100%;
   font-size: 12px;
   color: #888;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -897,6 +1597,327 @@ export default {
   }
   
   .track-list-duration {
+    display: none;
+  }
+}
+/* ═══════════════════════════════════════════════════════
+   🔥 MODAL DE ÁLBUM
+   ═══════════════════════════════════════════════════════ */
+
+.album-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+  animation: fadeIn 0.3s ease;
+  padding: 20px;
+}
+
+.album-modal {
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.7);
+  animation: modalSlideUp 0.3s ease;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.album-modal-header {
+  display: flex;
+  gap: 24px;
+  padding: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+}
+
+.album-modal-cover {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.album-modal-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.album-play-all-btn {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.album-modal-cover:hover .album-play-all-btn {
+  opacity: 1;
+}
+
+.album-play-all-btn i {
+  font-size: 48px;
+  color: #1db954;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+
+.album-modal-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.album-modal-info h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.album-modal-artist {
+  font-size: 16px;
+  color: #1db954;
+  margin: 0;
+  font-weight: 500;
+}
+
+.album-modal-count {
+  font-size: 13px;
+  color: #888;
+}
+
+.album-modal-info .source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  width: fit-content;
+  margin-top: 4px;
+}
+
+.album-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.album-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+.album-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.album-modal-loading,
+.album-modal-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 16px;
+  color: #888;
+}
+
+.album-modal-empty i {
+  font-size: 48px;
+  color: #1db954;
+  opacity: 0.3;
+}
+
+.album-tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.album-track-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.album-track-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.album-track-number {
+  width: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.album-track-thumb {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.album-track-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.album-track-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.album-track-play-overlay i {
+  font-size: 14px;
+  color: #fff;
+}
+
+.album-track-item:hover .album-track-play-overlay {
+  opacity: 1;
+}
+
+.album-track-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.album-track-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-track-artist {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.album-track-duration {
+  font-size: 12px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Scrollbar do modal */
+.album-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.album-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.album-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .album-modal-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    padding: 24px;
+  }
+
+  .album-modal-cover {
+    width: 140px;
+    height: 140px;
+  }
+
+  .album-modal-info h2 {
+    font-size: 20px;
+  }
+
+  .album-modal-close {
+    top: 12px;
+    right: 12px;
+  }
+
+  .album-track-number {
+    display: none;
+  }
+
+  .album-track-duration {
     display: none;
   }
 }

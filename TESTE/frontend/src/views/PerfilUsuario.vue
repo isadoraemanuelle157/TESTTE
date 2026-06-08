@@ -56,7 +56,7 @@
               <span class="badge badge-verified" v-if="usuario.verificado">
                 <i class="fa fa-check-circle"></i> Verificado
               </span>
-              <span class="badge badge-new" v-if="isNewMember">NOVO</span>
+             
             </div>
            
             <h1 class="user-name">{{ usuario.nome || 'Usuário' }}</h1>

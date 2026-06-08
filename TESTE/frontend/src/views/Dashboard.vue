@@ -97,66 +97,6 @@
         </div>
       </div>
 
-      <section class="section curtidas-section" v-if="musicas.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title"><i class="fa fa-heart section-icon liked"></i> Músicas Curtidas</h2>
-            <span class="section-subtitle">{{ musicas.length }} {{ musicas.length === 1 ? 'música' : 'músicas' }} que você ama</span>
-          </div>
-          <div class="header-actions-group">
-            <button class="btn-play-all" @click="playAllCurtidas"><i class="fa fa-play"></i> Tocar todas</button>
-            <button class="see-all" @click="goToCurtidas">Ver tudo <i class="fa fa-chevron-right"></i></button>
-          </div>
-        </div>
-        <div class="curtidas-list">
-          <div v-for="(musica, index) in musicas.slice(0, showAllCurtidas ? musicas.length : 5)" :key="`${musica.source}-${musica.id}`" class="curtida-item" @dblclick="playCurtida(index)" :class="{ 'active': isCurrentTrack(musica) && isPlaying }">
-            <div class="curtida-number">{{ index + 1 }}</div>
-            <div class="curtida-cover-wrapper">
-              <img :src="musica.cover || '/default-cover.png'" :alt="musica.title" @error="handleImageError" />
-              <div class="curtida-play-overlay"><i class="fa" :class="isCurrentTrack(musica) && isPlaying ? 'fa-pause' : 'fa-play'"></i></div>
-              <div class="equalizer-mini" v-if="isCurrentTrack(musica) && isPlaying"><span v-for="n in 4" :key="n"></span></div>
-            </div>
-            <div class="curtida-info">
-              <h3 class="curtida-title">{{ musica.title }}</h3>
-              <p class="curtida-artist">
-                <span class="source-badge" :class="musica.source"><i :class="getSourceIcon(musica.source)"></i></span>
-                {{ musica.artist }}
-                <span v-if="musica.album" class="album-dot">•</span>
-                <span v-if="musica.album" class="album-name">{{ musica.album }}</span>
-              </p>
-            </div>
-            <div class="curtida-duration" v-if="musica.duration">{{ formatTime(musica.duration) }}</div>
-            <div class="curtida-actions">
-              <button class="btn-like active" @click.stop="removerCurtida(musica, index)" title="Remover dos curtidos"><i class="fa fa-heart"></i></button>
-              <div class="dropdown-container" ref="dropdownContainers">
-                <button class="btn-more" @click.stop="toggleMenu(index, $event)" :class="{ active: activeMenuIndex === index }"><i class="fa fa-ellipsis-v"></i></button>
-                <transition name="menu-pop">
-                  <div v-if="activeMenuIndex === index" class="modern-dropdown" ref="dropdownMenus">
-                    <div class="dropdown-options">
-                      <button class="dropdown-option" @click="adicionarAPlaylist(musica)">
-                        <div class="option-icon playlist-icon"><i class="fa fa-plus-square-o"></i></div>
-                        <div class="option-content"><span class="option-label">Adicionar à playlist</span><span class="option-hint">Escolha uma playlist existente</span></div>
-                        <i class="fa fa-chevron-right option-arrow"></i>
-                      </button>
-                      <button class="dropdown-option" @click="favoritarMusica(musica)">
-                        <div class="option-icon favorite-icon"><i class="fa fa-star-o"></i></div>
-                        <div class="option-content"><span class="option-label">Favoritar</span><span class="option-hint">Adicionar aos favoritos especiais</span></div>
-                        <i class="fa fa-chevron-right option-arrow"></i>
-                      </button>
-                    </div>
-                    <div class="dropdown-footer">
-                      <button class="dropdown-close" @click="closeMenu"><i class="fa fa-times"></i> Fechar</button>
-                    </div>
-                  </div>
-                </transition>
-              </div>
-            </div>
-          </div>
-        </div>
-        <button v-if="musicas.length > 5" class="btn-show-more" @click="showAllCurtidas = !showAllCurtidas">
-          {{ showAllCurtidas ? 'Ver menos' : 'Ver mais' }}<i class="fa" :class="showAllCurtidas ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-        </button>
-      </section>
 <section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
   <div class="section-header">
     <div class="section-title-wrapper">
@@ -171,12 +111,12 @@
   </div>
   
   <!-- Cards de Mixes (visão resumida) -->
-  <div class="cards-row" :class="{ 'expanded': showAllPersonalContent }">
-    <div v-for="(mix, index) in madeForYou.slice(0, showAllPersonalContent ? 10 : 5)" 
-         :key="'mix-'+mix.id" 
-         class="music-card mix-card" 
-         @click="openMixModal(mix)" 
-         :class="{ 'active': isCurrentMix(mix) }">
+   <div class="cards-row" :class="{ 'expanded': showAllReleases }">
+<div v-for="(mix, index) in madeForYou.slice(0, showAllReleases ? 50 : 5)" 
+     :key="'mix-'+mix.id" 
+     class="music-card album-card" 
+     @click="openMixModal(mix)" 
+     :class="{ 'active': isCurrentMix(mix) }">
       <div class="card-image">
         <img :src="mix.cover" @error="handleImageError" alt="Mix Cover" />
         <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
@@ -553,10 +493,17 @@
               <span v-if="spotifyNewReleases.length > 0" class="spotify-badge"><i class="fa fa-spotify"></i> Spotify</span>
             </span>
           </div>
-          <button class="see-all" @click="loadMoreReleases">Ver mais <i class="fa fa-chevron-right"></i></button>
+<button class="see-all" @click="toggleShowAllReleases" :disabled="loadingMoreTracks">
+  <i class="fa" :class="showAllReleases ? 'fa-chevron-up' : 'fa-chevron-right'"></i>
+  {{ showAllReleases ? 'Ver menos' : 'Ver mais' }}
+</button>
         </div>
-        <div class="cards-row">
-          <div v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, 5)" :key="'release-'+album.id" class="music-card album-card" @click="playAlbumTracks(album)" :class="{ 'active': isCurrentAlbum(album) }">
+<div class="cards-row" :class="{ 'expanded': showAllReleases }">
+  <div v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, showAllReleases ? 50 : 5)" 
+       :key="'release-'+album.id" 
+       class="music-card album-card" 
+       @click="playAlbumTracks(album)" 
+       :class="{ 'active': isCurrentAlbum(album) }">
             <div class="card-image">
               <img :src="album.cover || album.cover_medium" @error="handleImageError" alt="Album Cover" />
               <div class="play-button-overlay"><i class="fa fa-play-circle"></i></div>
@@ -572,45 +519,7 @@
         </div>
       </section>
 
-      <section class="section artists-section" v-if="spotifyPopularArtists.length > 0">
-        <div class="section-header">
-          <div class="section-title-wrapper">
-            <h2 class="section-title"><i class="fa fa-users section-icon artist"></i> Artistas em Alta</h2>
-            <span class="section-subtitle">Os maiores nomes da música global <span class="spotify-badge"><i class="fa fa-spotify"></i> Spotify</span></span>
-          </div>
-          <button @click="openAllArtists" class="see-all">Ver todos <i class="fa fa-chevron-right"></i></button>
-        </div>
-        <div v-if="spotifyPopularArtists.length && !error" class="carousel-container">
-          <button v-if="showLeft" class="nav-btn prev" @click="scroll(-320)" aria-label="Anterior"><i class="fa fa-chevron-left"></i></button>
-          <div class="artists-track" ref="scrollContainer" @scroll="checkArrows">
-            <article v-for="artist in spotifyPopularArtists" :key="artist.id" class="artist-card" @click="goToArtist(artist)">
-              <div class="image-wrapper">
-                <div class="image-container">
-                  <img :src="artist.picture_big || artist.picture_medium || artist.picture" :alt="artist.name" loading="lazy" @error="handleImageError" />
-                </div>
-                <div class="source-badge spotify">SP</div>
-                <button class="follow-btn-float" :class="{ 'following': isFollowing(artist.id) }" @click.stop="toggleFollow(artist)">
-                  <i v-if="!isFollowing(artist.id)" class="fa fa-plus"></i>
-                  <i v-else class="fa fa-check"></i>
-                </button>
-              </div>
-              <div class="artist-info">
-                <h3 class="artist-name">{{ artist.name }}</h3>
-                <p class="artist-genre">{{ getArtistGenre(artist) }}</p>
-                <div class="monthly-listeners">
-                  <span class="listeners-count">{{ formatListeners(artist.followers) }}</span>
-                  <span class="listeners-label">seguidores</span>
-                </div>
-                <button class="follow-btn" :class="{ 'following': isFollowing(artist.id) }" @click.stop="toggleFollow(artist)">
-                  <span class="btn-text">{{ isFollowing(artist.id) ? 'Seguindo' : 'Seguir' }}</span>
-                </button>
-              </div>
-            </article>
-          </div>
-          <button v-if="showRight" class="nav-btn next" @click="scroll(320)" aria-label="Próximo"><i class="fa fa-chevron-right"></i></button>
-        </div>
-      </section>
-
+   
       <transition name="modal">
         <div v-if="showAllModal" class="modal-overlay" @click.self="closeAllModal">
           <div class="modal-content">
@@ -801,6 +710,7 @@ export default {
         progress: 100,
         timer: null
       },
+      
 
       musicas: [],
       isLoading: false,
@@ -822,7 +732,7 @@ export default {
         "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
         "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)"
       ],
-
+showAllReleases: false,
           showRecommendationsModal: false,
       activeRecommendationTab: 'tudo',
       loadingRecommendations: false,
@@ -858,7 +768,38 @@ export default {
 
   created() {
   // Carregar mock pool do localStorage ou definir aqui
-  this.MOCK_TRACKS_POOL = [ /* tracks */ ]
+// Pool de músicas mockadas sincronizado com o backend
+this.MOCK_TRACKS_POOL = [
+  { id: "mock_rock_1", title: "Bohemian Rhapsody", artist: "Queen", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273e8b066f70c206551210d902b", url: "https://p.scdn.co/mp3-preview/sample1", duration: 354, source: "spotify" },
+  { id: "mock_rock_2", title: "Stairway to Heaven", artist: "Led Zeppelin", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273c8a11e3f7e6e7b5e5b5b5b5b", url: "https://p.scdn.co/mp3-preview/sample2", duration: 482, source: "spotify" },
+  { id: "mock_rock_3", title: "Hotel California", artist: "Eagles", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273b5d4c4c4c4c4c4c4c4c4c4c4", url: "https://p.scdn.co/mp3-preview/sample3", duration: 391, source: "spotify" },
+  { id: "mock_rock_4", title: "Sweet Child O' Mine", artist: "Guns N' Roses", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273a1a1a1a1a1a1a1a1a1a1a1a1", url: "https://p.scdn.co/mp3-preview/sample4", duration: 356, source: "spotify" },
+  { id: "mock_rock_5", title: "Smells Like Teen Spirit", artist: "Nirvana", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273b2b2b2b2b2b2b2b2b2b2b2b2", url: "https://p.scdn.co/mp3-preview/sample5", duration: 301, source: "spotify" },
+  { id: "mock_pop_1", title: "Blinding Lights", artist: "The Weeknd", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36", url: "https://p.scdn.co/mp3-preview/sample6", duration: 200, source: "spotify" },
+  { id: "mock_pop_2", title: "Levitating", artist: "Dua Lipa", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273bd6f8ac82dc5fe1028c14f7d", url: "https://p.scdn.co/mp3-preview/sample7", duration: 203, source: "spotify" },
+  { id: "mock_pop_3", title: "Anti-Hero", artist: "Taylor Swift", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273bb54dde68cd23e2a268a0d6d", url: "https://p.scdn.co/mp3-preview/sample8", duration: 200, source: "spotify" },
+  { id: "mock_pop_4", title: "As It Was", artist: "Harry Styles", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273b46f74097655d7f353caac71", url: "https://p.scdn.co/mp3-preview/sample9", duration: 167, source: "spotify" },
+  { id: "mock_pop_5", title: "Flowers", artist: "Miley Cyrus", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273f5e7b2e5e5e5e5e5e5e5e5e5", url: "https://p.scdn.co/mp3-preview/sample10", duration: 200, source: "spotify" },
+  { id: "mock_funk_1", title: "Dançarina", artist: "MC Pedrinho", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273c3c3c3c3c3c3c3c3c3c3c3c3", url: "https://p.scdn.co/mp3-preview/sample11", duration: 180, source: "spotify" },
+  { id: "mock_funk_2", title: "Tá OK", artist: "DENNIS", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273d4d4d4d4d4d4d4d4d4d4d4d4", url: "https://p.scdn.co/mp3-preview/sample12", duration: 175, source: "spotify" },
+  { id: "mock_funk_3", title: "Vai Descendo", artist: "MC Zaac", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273e5e5e5e5e5e5e5e5e5e5e5e5", url: "https://p.scdn.co/mp3-preview/sample13", duration: 190, source: "spotify" },
+  { id: "mock_funk_4", title: "Bum Bum Tam Tam", artist: "MC Fioti", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273f6f6f6f6f6f6f6f6f6f6f6f6", url: "https://p.scdn.co/mp3-preview/sample14", duration: 185, source: "spotify" },
+  { id: "mock_funk_5", title: "Envolver", artist: "Anitta", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273a7a7a7a7a7a7a7a7a7a7a7a7", url: "https://p.scdn.co/mp3-preview/sample15", duration: 193, source: "spotify" },
+  { id: "mock_sert_1", title: "Notificação Preferida", artist: "Zé Neto & Cristiano", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273e3e3e3e3e3e3e3e3e3e3e3e3", url: "https://p.scdn.co/mp3-preview/sample31", duration: 185, source: "spotify" },
+  { id: "mock_sert_2", title: "Ciumeira", artist: "Marília Mendonça", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273f4f4f4f4f4f4f4f4f4f4f4f4", url: "https://p.scdn.co/mp3-preview/sample32", duration: 190, source: "spotify" },
+  { id: "mock_sert_3", title: "Infiel", artist: "Marília Mendonça", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273f4f4f4f4f4f4f4f4f4f4f4f4", url: "https://p.scdn.co/mp3-preview/sample33", duration: 188, source: "spotify" },
+  { id: "mock_sert_4", title: "Mal Feito", artist: "Henrique & Juliano", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273a5a5a5a5a5a5a5a5a5a5a5a5", url: "https://p.scdn.co/mp3-preview/sample34", duration: 192, source: "spotify" },
+  { id: "mock_sert_5", title: "Evidências", artist: "Chitãozinho & Xororó", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273b6b6b6b6b6b6b6b6b6b6b6b6", url: "https://p.scdn.co/mp3-preview/sample35", duration: 280, source: "spotify" },
+  { id: "mock_samb_1", title: "Garota de Ipanema", artist: "Tom Jobim", genre: "samba", cover: "https://i.scdn.co/image/ab67616d0000b273f8f8f8f8f8f8f8f8f8f8f8f8", url: "https://p.scdn.co/mp3-preview/sample26", duration: 185, source: "spotify" },
+  { id: "mock_samb_2", title: "Mas Que Nada", artist: "Sérgio Mendes", genre: "samba", cover: "https://i.scdn.co/image/ab67616d0000b273a9a9a9a9a9a9a9a9a9a9a9a9", url: "https://p.scdn.co/mp3-preview/sample27", duration: 180, source: "spotify" },
+  { id: "mock_gosp_1", title: "Oceans", artist: "Hillsong United", genre: "gospel", cover: "https://i.scdn.co/image/ab67616d0000b273a3a3a3a3a3a3a3a3a3a3a3a3", url: "https://p.scdn.co/mp3-preview/sample21", duration: 560, source: "spotify" },
+  { id: "mock_elec_1", title: "Titanium", artist: "David Guetta ft. Sia", genre: "eletronica", cover: "https://i.scdn.co/image/ab67616d0000b273b8b8b8b8b8b8b8b8b8b8b8b8", url: "https://p.scdn.co/mp3-preview/sample16", duration: 245, source: "spotify" },
+  { id: "mock_indi_1", title: "Do I Wanna Know?", artist: "Arctic Monkeys", genre: "indie", cover: "https://i.scdn.co/image/ab67616d0000b2734c4c4c4c4c4c4c4c4c4c4c4c", url: "https://p.scdn.co/mp3-preview/sample36", duration: 272, source: "spotify" },
+  { id: "mock_rap_1", title: "Lose Yourself", artist: "Eminem", genre: "rap", cover: "https://i.scdn.co/image/ab67616d0000b273c2c2c2c2c2c2c2c2c2c2c2c2", url: "https://p.scdn.co/mp3-preview/sample41", duration: 326, source: "spotify" },
+  { id: "mock_regg_1", title: "No Woman, No Cry", artist: "Bob Marley", genre: "reggae", cover: "https://i.scdn.co/image/ab67616d0000b273d7d7d7d7d7d7d7d7d7d7d7d7", url: "https://p.scdn.co/mp3-preview/sample56", duration: 230, source: "spotify" },
+  { id: "mock_lat_1", title: "Despacito", artist: "Luis Fonsi", genre: "latino", cover: "https://i.scdn.co/image/ab67616d0000b273c2c2c2c2c2c2c2c2c2c2c2c2", url: "https://p.scdn.co/mp3-preview/sample61", duration: 228, source: "spotify" },
+  { id: "mock_lofi_1", title: "lofi study beats", artist: "ChilledCow", genre: "lofi", cover: "https://i.scdn.co/image/ab67616d0000b273a3a3a3a3a3a3a3a3a3a3a3a3", url: "https://p.scdn.co/mp3-preview/sample71", duration: 180, source: "spotify" }
+]
 },
 
   async mounted() {
@@ -872,7 +813,13 @@ export default {
     window.addEventListener('player-track-ended', this.handlePlayerTrackEnded)
     window.addEventListener('play-song', this.handlePlaySongFromDashboard)
     window.addEventListener('artists-updated', this.loadFollowedArtists)
-    window.addEventListener('feito-para-voce-updated', this.handleFeitoParaVoceUpdate)
+window.addEventListener('feito-para-voce-updated', this.handleFeitoParaVoceUpdate)
+window.addEventListener('storage', (e) => {
+  if (e.key === 'feitoParaVoceUpdated') {
+    this.loadMadeForYou()
+    this.loadFeitoParaVoceData()
+  }
+})
     window.addEventListener('playlist-updated', this.loadUserPlaylists)
     window.addEventListener('curtidas-updated', this.carregarCurtidas)
     window.addEventListener('likes-updated', this.carregarCurtidas)
@@ -904,7 +851,34 @@ export default {
   },
 
   methods: {
-    
+    getGenreAliases(genero) {
+  const aliases = {
+    'sertanejo': ['sertanejo'],
+    'funk': ['funk'],
+    'rock': ['rock', 'indie'],
+    'pop': ['pop'],
+    'mpb': ['mpb', 'samba'],
+    'samba': ['samba', 'pagode'],
+    'gospel': ['gospel'],
+    'eletronica': ['eletronica'], 'eletrônica': ['eletronica'],
+    'rap': ['rap'], 'hip hop': ['rap'], 'hiphop': ['rap'],
+    'reggae': ['reggae'],
+    'indie': ['indie', 'rock'],
+    'latino': ['latino'], 'reggaeton': ['latino'],
+    'lo-fi': ['lofi'], 'lofi': ['lofi'],
+    'chill': ['lofi', 'indie', 'mpb']
+  }
+  const key = (genero || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').trim()
+  return aliases[key] || [key]
+},
+
+    toggleShowAllReleases() {
+  // Se ainda não carregou mais, carrega primeiro
+  if (!this.showAllReleases && this.spotifyNewReleases.length <= 5) {
+    this.loadMoreReleases()
+  }
+  this.showAllReleases = !this.showAllReleases
+},
     gerarMockTracksParaMix(genero, seed) {
   const aliases = this.getGenreAliases ? this.getGenreAliases(genero) : [genero]
   const pool = this.MOCK_TRACKS_POOL || []
@@ -1450,7 +1424,29 @@ async loadSequencia() {
 
     async loadSpotifyTop10() { this.spotifyTop10 = [] },
     async loadSpotifyNewReleases() { this.spotifyNewReleases = [] },
-    async loadSpotifyPopularArtists() { this.spotifyPopularArtists = [] },
+   async loadSpotifyPopularArtists() {
+  try {
+    const response = await fetch(`${this.API_BASE_URL}/spotify/artists/popular?limit=45&market=BR`)
+    const data = await response.json()
+    
+    // Seu backend retorna { artists: [...], groups: [...] }
+    if (data.artists) {
+      this.spotifyPopularArtists = data.artists.map(artist => ({
+        id: artist.id,
+        name: artist.name,
+        picture_big: artist.images?.[0]?.url || '',
+        picture_medium: artist.images?.[1]?.url || artist.images?.[0]?.url || '',
+        picture: artist.images?.[2]?.url || '',
+        followers: artist.followers?.total || artist.nb_fan || 0,
+        genres: artist.genres || [artist.genreGroup],
+        source: 'spotify'
+      }))
+    }
+  } catch (error) {
+    console.error('Erro artistas populares:', error)
+    this.spotifyPopularArtists = []
+  }
+},
 
     openAllArtists() {
       this.showAllModal = true
@@ -1575,66 +1571,75 @@ async loadSequencia() {
       }
     },
 
-      loadMockMadeForYou() {
-      this.madeForYou = [
-        { 
-          id: 'mix_mock_1', 
-          title: "Mix Diário 1", 
-          description: "Marília Mendonça, Maiara & Maraisa...", 
-          tracks: 50, 
-          cover: "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", 
-          gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-          _tracks: this.gerarMockTracksParaMix('sertanejo', 1),
-          tipo: 'mix',
-          basedOn: 'Sertanejo'
-        },
-        { 
-          id: 'mix_mock_2', 
-          title: "Mix Diário 2", 
-          description: "Henrique & Juliano, Jorge & Mateus...", 
-          tracks: 45, 
-          cover: "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", 
-          gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", 
-          _tracks: [],
-          tipo: 'mix',
-          basedOn: 'Sertanejo'
-        },
-        { 
-          id: 'mix_mock_3', 
-          title: "Descobertas", 
-          description: "Novas músicas para você", 
-          tracks: 30, 
-          cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", 
-          gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", 
-          _tracks: [],
-          tipo: 'descobertas',
-          basedOn: 'múltiplos gostos'
-        },
-        { 
-          id: 'mix_mock_4', 
-          title: "On Repeat", 
-          description: "Músicas que você ama", 
-          tracks: 100, 
-          cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", 
-          gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", 
-          _tracks: [],
-          tipo: 'mix',
-          basedOn: 'Funk, Pop'
-        },
-        { 
-          id: 'mix_mock_5', 
-          title: "Radar", 
-          description: "Atualizado toda sexta", 
-          tracks: 30, 
-          cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", 
-          gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", 
-          _tracks: [],
-          tipo: 'top',
-          basedOn: 'Pop'
-        }
-      ]
-      this.recommendationPreferencesText = 'Sertanejo, Funk, Pop'
+loadMockMadeForYou() {
+  // Usar preferências reais do usuário se disponíveis, senão usar defaults
+  const generoPrincipal = this.selectedGenres[0]?.name || 'pop'
+  const artistaPrincipal = this.selectedArtists[0]?.name || ''
+  
+  // Gêneros disponíveis no pool para mapeamento
+  const generosDisponiveis = ['rock', 'pop', 'funk', 'sertanejo', 'samba', 'gospel', 'eletronica', 'indie', 'rap', 'reggae', 'latino', 'lofi']
+  const generoNormalizado = this.getGenreAliases ? this.getGenreAliases(generoPrincipal)[0] : generoPrincipal.toLowerCase()
+  const generoPool = generosDisponiveis.includes(generoNormalizado) ? generoNormalizado : 'pop'
+
+  this.madeForYou = [
+    { 
+      id: 'mix_mock_1', 
+      title: `Mix ${generoPrincipal}`, 
+      description: `Baseado em suas escolhas de ${generoPrincipal}`, 
+      tracks: 15, 
+      cover: this.selectedGenres[0]?.gradient || "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", 
+      gradient: this.selectedGenres[0]?.gradient || "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
+      _tracks: this.gerarMockTracksParaMix(generoPool, 1),
+      tipo: 'mix',
+      basedOn: generoPrincipal
     },
+    { 
+      id: 'mix_mock_2', 
+      title: "Descobertas", 
+      description: "Novas músicas para você", 
+      tracks: 15, 
+      cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", 
+      gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", 
+      _tracks: this.gerarMockTracksParaMix(generoPool, 2),
+      tipo: 'descobertas',
+      basedOn: 'múltiplos gostos'
+    },
+    { 
+      id: 'mix_mock_3', 
+      title: "On Repeat", 
+      description: "Músicas que você ama", 
+      tracks: 15, 
+      cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", 
+      gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", 
+      _tracks: this.gerarMockTracksParaMix(generoPool, 3),
+      tipo: 'mix',
+      basedOn: `${generoPrincipal}, Pop`
+    },
+    { 
+      id: 'mix_mock_4', 
+      title: "Radar", 
+      description: "Atualizado toda sexta", 
+      tracks: 15, 
+      cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", 
+      gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", 
+      _tracks: this.gerarMockTracksParaMix(generoPool, 4),
+      tipo: 'top',
+      basedOn: generoPrincipal
+    },
+    { 
+      id: 'mix_mock_5', 
+      title: artistaPrincipal ? `Mix ${artistaPrincipal}` : "Mix Diário", 
+      description: artistaPrincipal ? `Hits de ${artistaPrincipal}` : "Personalizado para você", 
+      tracks: 15, 
+      cover: this.selectedArtists[0]?.photo || "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", 
+      gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", 
+      _tracks: this.gerarMockTracksParaMix(generoPool, 5),
+      tipo: 'mix',
+      basedOn: artistaPrincipal || generoPrincipal
+    }
+  ]
+  this.recommendationPreferencesText = [generoPrincipal, artistaPrincipal].filter(Boolean).join(', ') || 'Suas escolhas'
+},
 
     async loadAllData() {
       this.loading = true
@@ -2104,14 +2109,31 @@ async loadSequencia() {
       this.$router?.push('/artistas') || this.showToast('Artistas', 'Ver todos os artistas...', 'info')
     },
 
-    async loadNewReleases() {
-      try {
-        const response = await fetch(`${this.API_BASE_URL}/deezer/chart/0/albums?limit=10`)
-        const data = await response.json()
-        if (data.data) this.newReleases = data.data
-      } catch (error) { console.error('Erro lançamentos:', error) }
-    },
-
+async loadNewReleases() {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${this.API_BASE_URL}/spotify/search?q=tag:new&type=album&limit=10&market=BR`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await response.json()
+    // Spotify retorna estrutura diferente, precisa mapear
+    if (data.albums?.items) {
+      this.newReleases = data.albums.items.map(album => ({
+        id: album.id,
+        title: album.name,
+        artist: album.artists?.[0]?.name || 'Artista',
+        cover: album.images?.[0]?.url || '',
+        cover_medium: album.images?.[1]?.url || album.images?.[0]?.url,
+        release_date: album.release_date,
+        total_tracks: album.total_tracks,
+        source: 'spotify'
+      }))
+    }
+  } catch (error) { 
+    console.error('Erro lançamentos:', error)
+    this.newReleases = [] 
+  }
+},
     async loadGenres() {
       try {
         const response = await fetch(`${this.API_BASE_URL}/deezer/genre`)
@@ -2138,15 +2160,17 @@ async loadSequencia() {
         const resCantores = await fetch('http://localhost:3002/cantores')
         const cantores = await resCantores.json()
 
-        this.followedArtists = cantores
-          .filter(c => ids.includes(String(c._id)))
-          .map(c => ({
-            id: c._id,
-            name: c.nome,
-            picture_medium: c.foto,
-            isFollowing: true,
-            hasNewRelease: false
-          }))
+this.followedArtists = cantores
+  .filter(c => ids.includes(String(c._id)))
+  .map(c => ({
+    id: c._id,
+    name: c.nome,
+    picture_medium: c.foto,
+    photo: c.foto,
+    isFollowing: true,
+    hasNewRelease: false,
+    source: 'db'  // ← ADICIONAR ISSO
+  }))
       } catch (error) {
         console.error('Erro ao carregar artistas seguidos:', error)
         this.followedArtists = []
@@ -2262,39 +2286,44 @@ async loadSequencia() {
       } finally { this.loading = false }
     },
 
-    async playAlbumTracks(album) {
-      this.loading = true
-      try {
-        const response = await fetch(`${this.API_BASE_URL}/deezer/album/${album.id}/tracks`)
-        const data = await response.json()
-        if (data.data?.length > 0) {
-          this.currentAlbum = album
-          const playerSong = {
-            id: data.data[0].id,
-            title: data.data[0].title,
-            artist: album.artist?.name,
-            cover: album.cover_medium,
-            url: data.data[0].preview,
-            duration: data.data[0].duration || 30,
-            source: 'album'
-          }
+   async playAlbumTracks(album) {
+  this.loading = true
+  try {
+    const response = await fetch(`${this.API_BASE_URL}/spotify/album/${album.id}`)
+    const data = await response.json()
+    
+    if (data.tracks?.items?.length > 0) {
+      this.currentAlbum = album
+      const playerSong = {
+        id: data.tracks.items[0].id,
+        title: data.tracks.items[0].name,
+        artist: data.tracks.items[0].artists?.[0]?.name,
+        cover: album.cover || album.images?.[0]?.url,
+        url: data.tracks.items[0].preview_url,
+        duration: Math.floor((data.tracks.items[0].duration_ms || 30000) / 1000),
+        source: 'spotify'
+      }
 
-          window.dispatchEvent(new CustomEvent('play-song', {
-            detail: {
-              song: playerSong,
-              playlist: data.data.map(t => ({
-                id: t.id, title: t.title, artist: album.artist?.name,
-                cover: album.cover_medium, url: t.preview, duration: t.duration || 30
-              })),
-              index: 0,
-              context: 'album'
-            }
-          }))
+      window.dispatchEvent(new CustomEvent('play-song', {
+        detail: {
+          song: playerSong,
+          playlist: data.tracks.items.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: t.artists?.[0]?.name,
+            cover: album.cover || album.images?.[0]?.url,
+            url: t.preview_url,
+            duration: Math.floor((t.duration_ms || 30000) / 1000)
+          })),
+          index: 0,
+          context: 'album'
         }
-      } catch (error) {
-        this.showToast('Erro', 'Falha ao carregar álbum', 'error', 'fa fa-exclamation-circle')
-      } finally { this.loading = false }
-    },
+      }))
+    }
+  } catch (error) {
+    this.showToast('Erro', 'Falha ao carregar álbum', 'error', 'fa fa-exclamation-circle')
+  } finally { this.loading = false }
+},
 
     playNextInQueue() {
       window.dispatchEvent(new CustomEvent('player-next-track'))
@@ -2322,9 +2351,47 @@ async loadSequencia() {
       }, 1000)
     },
 
-    loadMoreReleases() {
-      this.showToast('Carregando', 'Buscando mais lançamentos...', 'info', 'fa fa-spinner fa-spin')
-    },
+ async loadMoreReleases() {
+  this.loadingMoreTracks = true
+  this.showToast('Carregando', 'Buscando mais lançamentos...', 'info', 'fa fa-spinner fa-spin')
+  
+  try {
+    const token = localStorage.getItem('token')
+    const offset = this.spotifyNewReleases.length  // ← MUDADO
+    
+    const response = await fetch(
+      `${this.API_BASE_URL}/spotify/search?q=tag:new&type=album&limit=10&offset=${offset}&market=BR`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    const data = await response.json()
+    
+    if (data.albums?.items && data.albums.items.length > 0) {
+      const newAlbums = data.albums.items.map(album => ({
+        id: album.id,
+        title: album.name,
+        artist: album.artists?.[0]?.name || 'Artista',
+        cover: album.images?.[0]?.url || '',
+        cover_medium: album.images?.[1]?.url || album.images?.[0]?.url,
+        release_date: album.release_date,
+        total_tracks: album.total_tracks,
+        source: 'spotify'
+      }))
+      
+      const existingIds = new Set(this.spotifyNewReleases.map(a => a.id))  // ← MUDADO
+      const uniqueNewAlbums = newAlbums.filter(a => !existingIds.has(a.id))
+      
+      this.spotifyNewReleases = [...this.spotifyNewReleases, ...uniqueNewAlbums]  // ← MUDADO
+      this.showToast('Pronto!', `${uniqueNewAlbums.length} novos lançamentos carregados`, 'success', 'fa fa-check')
+    } else {
+      this.showToast('Fim', 'Não há mais lançamentos disponíveis', 'info', 'fa fa-info-circle')
+    }
+  } catch (error) {
+    console.error('Erro ao carregar mais lançamentos:', error)
+    this.showToast('Erro', 'Falha ao carregar lançamentos', 'error', 'fa fa-times')
+  } finally {
+    this.loadingMoreTracks = false
+  }
+},
 
     isCurrentTrack(track) {
       if (!this.currentTrack || !track) return false
@@ -3497,9 +3564,10 @@ async loadSequencia() {
   grid-template-columns: repeat(5, 1fr);
   gap: 24px;
 }
-
 .cards-row.expanded {
-  grid-template-columns: repeat(6, 1fr);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 24px;
 }
 
 .music-card {
@@ -3533,6 +3601,17 @@ async loadSequencia() {
   overflow: hidden;
   margin-bottom: 16px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.album-card .card-image {
+  aspect-ratio: 1;
+  height: auto;
+}
+.album-card .card-image img {
+  aspect-ratio: 1;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
 }
 
 .card-image img {

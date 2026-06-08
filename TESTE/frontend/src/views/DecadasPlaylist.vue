@@ -15,6 +15,9 @@
             <div class="playlist-stats">
               <span class="stat-item"><i class="fa fa-music"></i> {{ results.length }} músicas</span>
               <span class="stat-item"><i class="fa fa-clock-o"></i> {{ totalDuration }}</span>
+             <!-- ✅ DEPOIS (correto): -->
+<span v-if="isLogged && spotifyConnected" class="stat-item source-badge"><i class="fa fa-spotify"></i> Spotify</span>
+<span v-else class="stat-item source-badge deezer"><i class="si si-deezer"></i> Deezer</span>
             </div>
           </div>
         </div>
@@ -35,10 +38,14 @@
         <div v-if="isLoading" class="loading-state">
           <div class="spinner"></div>
           <span>Carregando sucessos dos anos {{ decadeName }}...</span>
+<!-- ✅ DEPOIS (correto): -->
+<span v-if="!isLogged || !spotifyConnected" class="loading-source"><i class="si si-deezer"></i> via Deezer</span>
+<span v-else class="loading-source"><i class="fa fa-spotify"></i> via Spotify</span>
         </div>
 
         <div v-else-if="results.length === 0" class="empty-state">
-          <i class="fa fa-search"></i>
+      <!-- ✅ DEPOIS (correto): -->
+<i :class="(isLogged && spotifyConnected) ? 'fa fa-spotify' : 'si si-deezer'"></i>
           <h3>Nenhuma música encontrada</h3>
           <p>Não conseguimos encontrar músicas para esta década no momento.</p>
           <button @click="$router.back()" class="btn-secondary">Voltar para Busca</button>
@@ -74,30 +81,35 @@
               <span class="source-badge-list" :class="track.source">
                 <i :class="getSourceIcon(track.source)"></i>
               </span>
-              <button 
-                v-if="isLogged && track.source !== 'deezer'" 
-                class="btn-like" 
-                @click.stop="toggleLike(track)"
-                :class="{ liked: isTrackLiked(track.id) }"
-              >
-                <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-              </button>
-              <button 
-                v-else-if="isLogged && track.source === 'deezer'"
-                class="btn-like disabled"
-                @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
-                title="Deezer: login necessário"
-              >
-                <i class="fa fa-heart-o"></i>
-              </button>
-              <button 
-                v-else
-                class="btn-like"
-                @click.stop="openLoginModal"
-                title="Faça login para curtir"
-              >
-                <i class="fa fa-heart-o"></i>
-              </button>
+              
+              <!-- Curtir: só aparece se logado e Spotify conectado -->
+             <button
+  v-if="!isLogged"
+  class="btn-like"
+  @click.stop="openLoginModal"
+  title="Faça login para curtir"
+>
+  <i class="fa fa-heart-o"></i>
+</button>
+
+<button
+  v-else-if="track.source !== 'spotify'"
+  class="btn-like disabled"
+  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
+  title="Deezer: login necessário"
+>
+  <i class="fa fa-heart-o"></i>
+</button>
+
+<button
+  v-else
+  class="btn-like"
+  @click.stop="toggleLike(track)"
+  :class="{ liked: isTrackLiked(track.id) }"
+>
+  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+</button>
+              
               {{ formatDuration(track.duration) }}
             </div>
           </div>
@@ -136,7 +148,6 @@
     </transition>
   </div>
 </template>
-
 <script>
 export default {
   name: 'DecadePlaylist',
@@ -146,6 +157,7 @@ export default {
       results: [],
       isLoading: true,
       isLogged: false,
+      spotifyConnected: false,
       likedTracks: [],
       showLoginModal: false,
       toast: {
@@ -154,6 +166,7 @@ export default {
         type: 'success',
         icon: 'fa fa-check-circle'
       },
+    
       detailedCategories: {
         decades: [
           { name: '2020s', description: 'O som do presente e as novas tendências.', popularity: 95 },
@@ -182,29 +195,61 @@ export default {
       return hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`
     }
   },
-  async mounted() {
-    const nomeParam = this.$route.params.nome
-    this.decadeName = nomeParam ? decodeURIComponent(nomeParam) : ''
-    this.checkLoginStatus()
+
+async mounted() {
+  const nomeParam = this.$route.params.nome
+  this.decadeName = nomeParam ? decodeURIComponent(nomeParam) : ''
+  
+  await this.checkSpotifyStatus()
+  
+  if (this.isLogged) {
     await this.loadLikedTracks()
-    await this.loadDecadeTracks()
-  },
-  watch: {
-    '$route.params.nome': {
-      immediate: true,
-      handler(newVal) {
-        if (newVal) {
-          this.decadeName = decodeURIComponent(newVal)
-          this.loadDecadeTracks()
-        }
+  }
+  await this.loadDecadeTracks()
+},
+
+watch: {
+  '$route.params.nome': {
+    immediate: true,
+    async handler(newVal) {
+      if (newVal) {
+        this.decadeName = decodeURIComponent(newVal)
+        await this.checkSpotifyStatus()
+        await this.loadDecadeTracks()
       }
     }
-  },
+  }
+},
+
   methods: {
-    checkLoginStatus() {
-      const token = localStorage.getItem('token')
-      this.isLogged = !!token
-    },
+async checkSpotifyStatus() {
+  const token = localStorage.getItem('token')
+  this.isLogged = !!token
+
+  if (!token) {
+    this.spotifyConnected = false
+    return false
+  }
+
+  try {
+    const res = await fetch('http://localhost:3002/spotify/status', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) {
+      this.spotifyConnected = false
+      return false
+    }
+
+    const data = await res.json()
+    this.spotifyConnected = !!(data.connected && data.tokenValid)
+    return this.spotifyConnected
+  } catch (err) {
+    console.error('[DecadePlaylist] Erro ao verificar Spotify:', err)
+    this.spotifyConnected = false
+    return false
+  }
+},
 
     openLoginModal() {
       this.showLoginModal = true
@@ -216,128 +261,48 @@ export default {
       this.$router.push('/login')
     },
 
-    async loadDecadeTracks() {
-      this.isLoading = true
-      this.results = []
-      
+ async loadDecadeTracks() {
+  this.isLoading = true
+  this.results = []
+  try {
+    const range = this.getDecadeRange(this.decadeName)
+    if (!range) {
+      this.isLoading = false
+      return
+    }
+
+    // ← MUDANÇA PRINCIPAL: usa this.spotifyConnected em vez de só this.isLogged
+    if (this.isLogged && this.spotifyConnected) {
       try {
-        const range = this.getDecadeRange(this.decadeName)
-        if (!range) {
-          this.isLoading = false
-          return
-        }
+        await this.loadSpotifyDecadeTracks(range)
+      } catch (err) {
+        console.error('Spotify falhou, fallback Deezer:', err)
+        this.showToast('Spotify indisponível. Usando Deezer...', 'info')
+        await this.loadDeezerDecadeTracks(range)
+      }
+    } else {
+      await this.loadDeezerDecadeTracks(range)
+    }
+  } catch (err) {
+    console.error('Erro ao carregar décadas:', err)
+    this.results = []
+  } finally {
+    this.isLoading = false
+  }
+},
 
-        const promises = []
+    // ========== DEEZER (NÃO LOGADO) ==========
+    async loadDeezerDecadeTracks(range) {
+      const deezerQuery = this.getDeezerDecadeQuery(this.decadeName)
 
-        // 1. Buscar músicas do banco local por ano
-        promises.push(
-          fetch('http://localhost:3002/musicas').then(r => r.json()).catch(() => [])
+      try {
+        const res = await fetch(
+          `http://localhost:3002/deezer/search?q=${encodeURIComponent(deezerQuery)}&limit=50`
         )
+        const deezerData = await res.json()
 
-        // 2. Buscar álbuns do banco local por ano
-        promises.push(
-          fetch('http://localhost:3002/albuns').then(r => r.json()).catch(() => [])
-        )
-
-        // 3. Buscar artistas do banco local por ano
-        promises.push(
-          fetch('http://localhost:3002/cantores').then(r => r.json()).catch(() => [])
-        )
-
-        // 4. Buscar no Deezer via proxy (usar termo de busca por década)
-        const deezerQuery = this.getDeezerDecadeQuery(this.decadeName)
-        promises.push(
-          fetch(`http://localhost:3002/deezer/search?q=${encodeURIComponent(deezerQuery)}&limit=30`)
-            .then(r => r.json())
-            .catch(() => ({ data: [] }))
-        )
-
-        const [musicasData, albunsData, cantoresData, deezerData] = await Promise.all(promises)
-
-        let results = []
-
-        // Processar músicas do banco local
-        if (Array.isArray(musicasData)) {
-          const musicasDaDecada = musicasData.filter(m => {
-            if (!m.ano) return false
-            const year = parseInt(m.ano)
-            return year >= range.start && year <= range.end
-          })
-
-          results.push(...musicasDaDecada.map(m => ({
-            id: m._id,
-            title: m.nome,
-            artist: {
-              name: m.cantores?.map(c => c.nome).join(', ') || 'Artista desconhecido'
-            },
-            album: {
-              title: m.albuns?.[0]?.nome || '',
-              cover: m.albuns?.[0]?.foto || m.foto || ''
-            },
-            cover: m.foto,
-            preview: m.link || m.preview || '',
-            duration: m.duracao || m.duration || 30,
-            ano: m.ano,
-            type: 'track',
-            source: 'local'
-          })))
-        }
-
-        // Processar álbuns do banco local
-        if (Array.isArray(albunsData)) {
-          const albunsDaDecada = albunsData.filter(a => {
-            if (!a.ano) return false
-            const year = parseInt(a.ano)
-            return year >= range.start && year <= range.end
-          })
-
-          results.push(...albunsDaDecada.map(a => ({
-            id: a._id,
-            title: a.nome,
-            artist: {
-              name: a.cantor?.nome || ''
-            },
-            album: {
-              title: a.nome,
-              cover: a.foto || ''
-            },
-            cover: a.foto,
-            ano: a.ano,
-            type: 'album',
-            source: 'local'
-          })))
-        }
-
-        // Processar artistas do banco local
-        if (Array.isArray(cantoresData)) {
-          const cantoresDaDecada = cantoresData.filter(c => {
-            if (!c.ano) return false
-            const year = parseInt(c.ano)
-            return year >= range.start && year <= range.end
-          })
-
-          results.push(...cantoresDaDecada.map(c => ({
-            id: c._id,
-            title: c.nome,
-            name: c.nome,
-            artist: {
-              name: c.nome
-            },
-            album: {
-              title: '',
-              cover: c.foto || ''
-            },
-            cover: c.foto,
-            picture: c.foto,
-            ano: c.ano,
-            type: 'artist',
-            source: 'local'
-          })))
-        }
-
-        // Processar resultados do Deezer
         if (deezerData.data && Array.isArray(deezerData.data)) {
-          results.push(...deezerData.data.map(t => ({
+          this.results = deezerData.data.map(t => ({
             id: t.id,
             title: t.title,
             artist: {
@@ -352,16 +317,66 @@ export default {
             duration: t.duration,
             type: 'track',
             source: 'deezer'
-          })))
+          }))
+        }
+      } catch (err) {
+        console.error('Erro Deezer:', err)
+        this.results = []
+      }
+    },
+
+    // ========== SPOTIFY (LOGADO) ==========
+    async loadSpotifyDecadeTracks(range) {
+      const token = localStorage.getItem('token')
+      const spotifyQuery = this.getSpotifyDecadeQuery(this.decadeName)
+
+      try {
+        // Busca tracks da década no Spotify
+        const searchRes = await fetch(
+          `http://localhost:3002/spotify/search?q=${encodeURIComponent(spotifyQuery)}&type=track&limit=50&market=BR`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        )
+
+        if (!searchRes.ok) {
+          // Se der erro no Spotify (token expirado, etc), cai no fallback Deezer
+          if (searchRes.status === 401 || searchRes.status === 403) {
+            this.showToast('Spotify desconectado. Usando Deezer...', 'info')
+            this.isSpotifyConnected = false
+            await this.loadDeezerDecadeTracks(range)
+            return
+          }
+          throw new Error(`Spotify search error: ${searchRes.status}`)
         }
 
-        this.results = results
+        const searchData = await searchRes.json()
 
+        if (searchData.tracks?.items && Array.isArray(searchData.tracks.items)) {
+          this.results = searchData.tracks.items.map(t => ({
+            id: t.id,
+            title: t.name,
+            artist: {
+              name: t.artists?.map(a => a.name).join(', ') || 'Artista desconhecido'
+            },
+            album: {
+              title: t.album?.name || '',
+              cover: t.album?.images?.[0]?.url || ''
+            },
+            cover: t.album?.images?.[0]?.url,
+            preview: t.preview_url || '',
+            duration: Math.floor(t.duration_ms / 1000),
+            type: 'track',
+            source: 'spotify',
+            spotifyUri: t.uri,
+            explicit: t.explicit,
+            popularity: t.popularity
+          }))
+        }
       } catch (err) {
-        console.error('Erro ao carregar décadas:', err)
-        this.results = []
-      } finally {
-        this.isLoading = false
+        console.error('Erro Spotify, fallback para Deezer:', err)
+        this.showToast('Erro no Spotify. Usando Deezer...', 'info')
+        await this.loadDeezerDecadeTracks(range)
       }
     },
 
@@ -380,6 +395,25 @@ export default {
         '20s': 'top hits 1920 1925 1926 1927 1928 1929'
       }
       return queries[decade] || `top hits ${decade}`
+    },
+
+    getSpotifyDecadeQuery(decade) {
+      const queries = {
+        '2020s': 'year:2020-2024',
+        '2010s': 'year:2010-2019',
+        '2000s': 'year:2000-2009',
+        '90s': 'year:1990-1999',
+        '80s': 'year:1980-1989',
+        '70s': 'year:1970-1979',
+        '60s': 'year:1960-1969',
+        '50s': 'year:1950-1959',
+        '40s': 'year:1940-1949',
+        '30s': 'year:1930-1939',
+        '20s': 'year:1920-1929'
+      }
+      // Spotify search query com filtro de ano + termo popular
+      const baseQuery = queries[decade] || ''
+      return `${baseQuery} genre:pop`
     },
 
     getDecadeRange(decadeName) {
@@ -421,7 +455,7 @@ export default {
       try {
         const token = localStorage.getItem('token')
         if (!token) return
-        
+
         await fetch('http://localhost:3002/historico/reproducao', {
           method: 'POST',
           headers: {
@@ -464,10 +498,13 @@ export default {
     },
 
     getTrackImage(track) {
-      if (track.source === 'local') {
-        return track.cover || track.album?.cover || track.picture || '/default-cover.png'
+      if (track.source === 'spotify') {
+        return track.cover || track.album?.cover || '/default-cover.png'
       }
-      return track.album?.cover || track.album?.cover_medium || track.cover || '/default-cover.png'
+      if (track.source === 'deezer') {
+        return track.cover || track.album?.cover || '/default-cover.png'
+      }
+      return track.cover || track.album?.cover || track.picture || '/default-cover.png'
     },
 
     getSourceIcon(source) {
@@ -537,26 +574,23 @@ export default {
       }
     },
 
-    async toggleLike(track) {
-      if (!this.isLogged) {
-        this.openLoginModal()
-        return
-      }
-
-      if (track.source === 'deezer') {
-        this.showToast('Faça login com Spotify para curtir', 'info')
-        return
-      }
+async toggleLike(track) {
+  if (!this.isLogged) {
+    this.openLoginModal()
+    return
+  }
+  if (track.source !== 'spotify') {
+    this.showToast('Faça login com Spotify para curtir', 'info')
+    return
+  }
 
       try {
         const trackId = track.id
-        const source = track.source || 'local'
-        const isExternal = source !== 'local'
+        const source = track.source || 'spotify'
 
-        const body = { source: source }
-
-        if (isExternal) {
-          body.dadosMusica = {
+        const body = {
+          source: source,
+          dadosMusica: {
             titulo: track.title || 'Sem título',
             artista: track.artist?.name || 'Desconhecido',
             capa: this.getTrackImage(track) || '',
@@ -614,7 +648,6 @@ export default {
   }
 }
 </script>
-
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
 
@@ -709,6 +742,21 @@ export default {
   gap: 8px;
 }
 
+.source-badge {
+  background: rgba(29, 185, 84, 0.15);
+  border: 1px solid rgba(29, 185, 84, 0.4);
+  color: #1db954;
+  padding: 4px 12px;
+  border-radius: 500px;
+  font-size: 12px;
+}
+
+.source-badge.deezer {
+  background: rgba(255, 102, 0, 0.15);
+  border-color: rgba(255, 102, 0, 0.4);
+  color: #ff6600;
+}
+
 .header-actions {
   display: flex;
   gap: 16px;
@@ -757,7 +805,6 @@ export default {
 .btn-back:hover {
   background: rgba(255, 255, 255, 0.2);
 }
-
 /* Lista de Músicas */
 .tracks-list {
   background: rgba(255, 255, 255, 0.02);
@@ -948,6 +995,14 @@ export default {
   gap: 20px;
   color: #888;
   text-align: center;
+}
+
+.loading-source {
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .empty-state i {
@@ -1161,6 +1216,10 @@ export default {
   }
   .decade-title {
     font-size: 48px;
+  }
+  .spotify-connect-banner {
+    flex-direction: column;
+    text-align: center;
   }
   .col-album {
     display: none;

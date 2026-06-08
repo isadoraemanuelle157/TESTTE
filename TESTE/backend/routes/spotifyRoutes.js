@@ -24,6 +24,7 @@ router.get('/artist/:id/top-tracks', requireAuth, requireSpotifyAuth, spotifyCon
 router.get('/artist/:id/albums', requireAuth, requireSpotifyAuth, spotifyController.getArtistAlbums)
 router.get('/artist/:id/related-artists', requireAuth, requireSpotifyAuth, spotifyController.getRelatedArtists)
 router.get('/album/:id', requireAuth, requireSpotifyAuth, spotifyController.getAlbum)
+router.get('/albums/:id/tracks', requireAuth, requireSpotifyAuth, spotifyController.getAlbumTracks)
 router.get('/playlist/:id', requireAuth, requireSpotifyAuth, spotifyController.getPlaylist)
 
 // ============================================

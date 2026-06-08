@@ -64,6 +64,13 @@
               </router-link>
             </li>
 
+<li>
+  <router-link to="/artistas" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-users"></i>
+    <span>Artistas</span>
+  </router-link>
+</li>
+
             <li v-if="isLoggedIn">
               <router-link to="/curtidas" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-heart"></i>

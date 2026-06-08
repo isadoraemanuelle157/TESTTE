@@ -241,7 +241,7 @@
                         <div class="local-section" style="margin: 0;">
                           <div class="local-header" style="margin-bottom: 16px;">
                             <h4 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 0 0 4px 0;">
-                              🕰️ Explorar por Década
+                              Explorar por Década
                             </h4>
                             <p style="font-size: 12px; color: #888; margin: 0;">Descubra músicas, artistas e álbuns da época</p>
                           </div>
@@ -274,7 +274,7 @@
                         <div class="local-section" style="margin: 0;">
                           <div class="local-header" style="margin-bottom: 16px;">
                             <h4 style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 0 0 4px 0;">
-                              🗺️ Explorar por Local
+                              Explorar por Local
                             </h4>
                             <p style="font-size: 12px; color: #888; margin: 0;">Descubra sons de cada canto do Brasil</p>
                           </div>
@@ -579,50 +579,7 @@
             </div>
           </div>
 
-          <!-- 🔥 SEÇÃO DE LOCAIS EM DESTAQUE -->
-          <div class="top-section" v-if="localizacoes.length > 0">
-            <div class="top-header">
-              <h3>🗺️ Explorar por Local</h3>
-            </div>
-            <div class="locals-grid">
-              <div
-                v-for="loc in localizacoes.slice(0, 10)"
-                :key="loc"
-                class="local-result-card"
-                @click="goToLocalPlaylist(loc)"
-              >
-                <div class="local-result-bg" :style="getLocalGradient(loc)">
-                  <div class="local-icon-badge">
-                    <i :class="getLocalIcon(loc)"></i>
-                  </div>
-                </div>
-                <span class="local-result-name">{{ loc }}</span>
-                <span class="local-result-desc">Música local</span>
-              </div>
-            </div>
-          </div>
-          <!-- 🕰️ SEÇÃO DE DÉCADAS EM DESTAQUE -->
-          <div class="top-section" v-if="detailedCategories.decades.length > 0">
-            <div class="top-header">
-              <h3>🕰️ Explorar por Década</h3>
-            </div>
-            <div class="locals-grid">
-              <div
-                v-for="decade in detailedCategories.decades"
-                :key="decade.name"
-                class="local-result-card decade-result-card"
-                @click="goToDecadeCollection(decade.name); showCategoriesDropdown = false"
-              >
-                <div class="local-result-bg" :style="getDecadeGradient(decade.name)">
-                  <div class="decade-icon-badge">
-                    <i :class="getDecadeIcon(decade.name)"></i>
-                  </div>
-                </div>
-                <span class="local-result-name">{{ decade.name }}</span>
-                <span class="local-result-desc">{{ decade.description }}</span>
-              </div>
-            </div>
-          </div>
+         
 
 
         </div>
@@ -1363,6 +1320,7 @@ export default {
         return this.$router.push(`/cantor/${artist.id}`)
       }
       this.searchQuery = artist.name || this.getResultTitle(artist)
+       this.activeFilter = 'Todos'
       this.performSearch()
     },
 
@@ -5776,7 +5734,7 @@ html, body, #app {
 /* ===== ALBUMS GRID ===== */
 .albums-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 24px;
 }
 
@@ -5797,16 +5755,17 @@ html, body, #app {
 .album-card-img {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 1;          /* ← FORÇA QUADRADO PERFEITO */
   border-radius: 6px;
   overflow: hidden;
   margin-bottom: 12px;
+  min-height: 200px;        /* ← GARANTE ALTURA MÍNIMA */
 }
 
 .album-card-img img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: cover;        /* ← COBRE TUDO, CORTA SE PRECISAR */
   transition: transform 0.3s;
 }
 

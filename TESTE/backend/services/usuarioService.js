@@ -2027,5 +2027,9 @@ module.exports = {
   unblockUser,
   getBlockStatus,
   reportUser,
+    gerarMockTracks,
+  gerarMockAlbuns,
+  gerarMockArtistas,
+  gerarMockPlaylists,
   buscarRecomendacoesCompletas
 }

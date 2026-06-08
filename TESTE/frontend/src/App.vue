@@ -32,7 +32,7 @@
       <!-- NAVBAR - SEMPRE VISÍVEL -->
       <Navbar :sidebarOpen="sidebarOpen" />
       
-      <div class="content">
+      <div class="content" ref="contentRef">
         <router-view />
         <!-- FOOTER - SÓ SOME NAS PÁGINAS DE AUTH E KARAOKE -->
         <Footer v-show="showFooter" />
@@ -75,13 +75,34 @@ export default {
         const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical', '/matchmusical', 'chatiamusica']
         this.showFooter = !noFooterPages.includes(newPath)
         console.log('[App] Rota:', newPath, '| Footer visível:', this.showFooter)
+        
+        // ⬇️ SEMPRE VOLTA PRO TOPO AO MUDAR DE PÁGINA
+        this.scrollToTop()
       }
     }
+  },
+
+  mounted() {
+    // ⬇️ SEMPRE VOLTA PRO TOPO AO DAR F5 / RECARREGAR A PÁGINA
+    this.scrollToTop()
   },
 
   methods: {
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen
+    },
+    
+    scrollToTop() {
+      // Scrolla o container .content pro topo
+      const content = this.$refs.contentRef
+      if (content) {
+        content.scrollTop = 0
+      }
+      
+      // Também garante que o window/document esteja no topo
+      window.scrollTo(0, 0)
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
     }
   }
 }
@@ -95,6 +116,8 @@ export default {
 html, body, #app {
   margin: 0;
   height: 100%;
+  /* ⬇️ Garante scroll suave */
+  scroll-behavior: smooth;
 }
 
 .app {

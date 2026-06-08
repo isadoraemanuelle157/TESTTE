@@ -234,6 +234,147 @@ exports.getAlbum = async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar álbum', details: error.message })
   }
 }
+
+// ================= ATUALIZAR CACHE EM BACKGROUND =================
+async function atualizarCacheArtistas(cacheKey, market, limit) {
+  try {
+    console.log('🔄 Atualizando cache em background:', cacheKey)
+    
+    const generos = [
+      'brazilian funk', 'sertanejo', 'pagode', 'samba', 'mpb',
+      'brazilian rock', 'pop', 'hip hop', 'rap', 'gospel'
+    ]
+    
+    let searchResults = []
+    let spotifyFailed = false
+    const batchSize = 3
+
+    for (let i = 0; i < generos.length; i += batchSize) {
+      const batch = generos.slice(i, i + batchSize)
+      
+      const results = await Promise.allSettled(
+        batch.map(async (genero) => {
+          try {
+            const response = await spotifyRequest({
+              method: 'GET',
+              url: `${SPOTIFY_API_URL}/search`,
+              params: { q: `genre:"${genero}"`, type: 'artist', limit: 3, market }
+            })
+            const artists = response.data?.artists?.items || []
+            if (artists.length === 0) return null
+            
+            const best = artists.sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0]
+            return {
+              genre: genero,
+              id: best.id,
+              name: best.name,
+              popularity: best.popularity || 0,
+              images: best.images || []
+            }
+          } catch (err) {
+            if (err.isRateLimit || err.response?.status === 429) spotifyFailed = true
+            return null
+          }
+        })
+      )
+      
+      results.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) searchResults.push(r.value)
+      })
+    }
+
+    // Busca followers reais
+    const artistIds = searchResults.map(r => r.id)
+    let realFollowersMap = new Map()
+    
+    if (artistIds.length > 0) {
+      const idsBatchSize = 50
+      for (let i = 0; i < artistIds.length; i += idsBatchSize) {
+        const batchIds = artistIds.slice(i, i + idsBatchSize).join(',')
+        try {
+          const response = await spotifyRequest({
+            method: 'GET',
+            url: `${SPOTIFY_API_URL}/artists`,
+            params: { ids: batchIds }
+          })
+          
+          const artistsDetails = response.data?.artists || []
+          artistsDetails.forEach(a => {
+            if (a && a.id) {
+              realFollowersMap.set(a.id, a.followers?.total || 0)
+            }
+          })
+        } catch (err) {
+          console.warn('⚠️ Erro ao buscar detalhes batch:', err.message)
+        }
+      }
+    }
+
+    // Monta groups
+    let groups = []
+    searchResults.forEach(sr => {
+      let followers = realFollowersMap.get(sr.id) || 0
+      
+      if (followers === 0) {
+        const fallbackGenre = FALLBACK_ARTISTS.find(f => f.genre === sr.genre)
+        const fallbackArtist = fallbackGenre?.artists.find(fa => 
+          fa.name.toLowerCase() === sr.name.toLowerCase()
+        )
+        if (fallbackArtist?.followers?.total) {
+          followers = fallbackArtist.followers.total
+        }
+      }
+
+      groups.push({
+        genre: sr.genre,
+        artists: [{
+          id: sr.id,
+          name: sr.name,
+          images: sr.images,
+          popularity: sr.popularity,
+          nb_fan: followers,
+          fans: followers,
+          original_nb_fan: followers,
+          followers: { total: followers },
+          genres: [sr.genre]
+        }]
+      })
+    })
+
+    const finalGroups = groups.length === 0 ? FALLBACK_ARTISTS : groups
+    
+    const allArtistsFlat = finalGroups.flatMap(g => 
+      (g.artists || []).map(a => ({
+        id: a.id,
+        name: a.name,
+        images: a.images,
+        popularity: a.popularity,
+        nb_fan: a.nb_fan || a.followers?.total || 0,
+        fans: a.fans || a.followers?.total || 0,
+        original_nb_fan: a.original_nb_fan || a.nb_fan || a.followers?.total || 0,
+        followers: a.followers || { total: 0 },
+        genres: a.genres,
+        genreGroup: g.genre
+      }))
+    )
+
+    const result = {
+      groups: finalGroups,
+      artists: allArtistsFlat,
+      totalGroups: finalGroups.length,
+      totalArtists: allArtistsFlat.length,
+      fromCache: false,
+      usedFallback: groups.length === 0 || spotifyFailed
+    }
+
+    setCache(cacheKey, result, CACHE_TTL.popular)
+    console.log('✅ Cache atualizado em background:', cacheKey)
+
+  } catch (error) {
+    console.error('❌ Erro ao atualizar cache em background:', error.message)
+  }
+}
+
 // ================= POPULAR ARTISTS =================
 exports.getPopularArtists = async (req, res) => {
   const { limit = 45, market = 'BR' } = req.query
@@ -684,5 +825,28 @@ exports.getSpotifyStatus = async (req, res) => {
     })
   } catch (error) {
     res.status(500).json({ error: 'Erro ao verificar status' })
+  }
+}
+
+// ================= ALBUM TRACKS =================
+exports.getAlbumTracks = async (req, res) => {
+  try {
+    const { id } = req.params
+    const limit = parseInt(req.query.limit) || 50
+    const market = req.query.market || 'BR'
+    
+    // ✅ USA O TOKEN DO USUÁRIO para full tracks
+    const userToken = req.spotifyUserToken
+
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/albums/${id}/tracks`,
+      params: { limit, market }
+    }, 3, userToken)
+
+    res.json(response.data)
+  } catch (error) {
+    console.error('❌ Album tracks error:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar tracks do álbum', details: error.message })
   }
 }

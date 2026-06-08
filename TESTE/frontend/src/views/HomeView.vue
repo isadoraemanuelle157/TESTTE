@@ -458,7 +458,7 @@
     </button>
   </div>
   
-  <div class="cards-row" :class="{ 'expanded': showAllTop10 }">
+ <div class="cards-row">
     <div
       v-for="(track, index) in chartTracks.slice(0, showAllTop10 ? 10 : 5)"
       :key="'top10-'+track.id"
@@ -1896,12 +1896,12 @@ addToRecentlyPlayed(track) {
 /* ========== CARDS ========== */
 .cards-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 24px;
 }
 
 .cards-row.expanded {
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);  /* mesmo que o padrão */
 }
 
 .music-card {
