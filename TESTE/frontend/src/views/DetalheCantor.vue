@@ -367,39 +367,7 @@
         </div>
       </section>
 
-      <!-- Shows -->
-      <section v-show="activeTab === 'shows'" class="section shows-section">
-        <div class="section-header">
-          <h2>Próximos Shows</h2>
-        </div>
-
-        <div v-if="showsLoading" class="loading-musicas">
-          <div class="spinner-musicas"></div>
-          <p>Carregando shows...</p>
-        </div>
-
-        <div v-else-if="!shows || shows.length === 0" class="empty-state">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <p>Nenhum show agendado</p>
-        </div>
-
-        <div v-else class="shows-list">
-          <div v-for="(show, idx) in shows" :key="idx" class="show-card">
-            <div class="show-date">
-              <div class="show-day">{{ getShowDay(show) }}</div>
-              <div class="show-month">{{ getShowMonth(show) }}</div>
-            </div>
-            <div class="show-info">
-              <h3 class="show-title">{{ show.nome || show.name || 'Show' }}</h3>
-              <p class="show-venue">{{ show.local || show.venue || 'Local não informado' }}</p>
-              <p class="show-date-full">{{ formatarData(show.data || show.date) }}</p>
-            </div>
-            <button class="show-btn">Ingressos</button>
-          </div>
-        </div>
-      </section>
+    
     </div>
 
     <!-- ============================================ -->
@@ -516,7 +484,6 @@ export default {
     return {
       loading: true,
       cantor: null,
-      shows: [],
       showsLoading: false,
       isFollowing: false,
       followLoading: false,
@@ -594,8 +561,7 @@ export default {
       return [
         { id: 'musicas', label: 'Músicas', icon: '🎵', count: this.artistTracks.length },
         { id: 'albuns', label: 'Discografia', icon: '💿', count: this.artistAlbums.length },
-        { id: 'sobre', label: 'Sobre', icon: '👤' },
-        { id: 'shows', label: 'Shows', icon: '🎤', count: this.shows?.length || 0 }
+        { id: 'sobre', label: 'Sobre', icon: '👤' }
       ]
     },
 
