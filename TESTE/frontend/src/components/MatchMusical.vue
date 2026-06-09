@@ -4,7 +4,7 @@
     <!-- ONBOARDING / PROFILE CREATION FLOW           -->
     <!-- ============================================ -->
     <div v-if="!hasProfile" class="onboarding-flow">
-      
+     
       <!-- Step 1: Welcome -->
       <div v-if="onboardingStep === 1" class="onboarding-step welcome-step">
         <div class="onboarding-content">
@@ -111,7 +111,13 @@
 >
             </div>
           </div>
-
+ <div class="login-line">
+            <span>Já tem uma conta?</span>
+            <button @click="openLoginModal" class="btn-login-link">
+              Fazer login
+            </button>
+          </div>
+   
           <button
             @click="nextStep"
             class="btn-primary btn-large"
@@ -261,8 +267,8 @@
 </button>
             </div>
          <div style="text-align: center; margin-top: 1rem;">
-  <span 
-    class="input-hint" 
+  <span
+    class="input-hint"
     :class="{ 'limit-reached': onboardingData.favoriteGenres.length >= 3 }"
     style="position: static; transform: none;"
   >
@@ -309,17 +315,21 @@
               <span v-if="totalUnread > 0" class="badge chat-badge">{{ totalUnread }}</span>
             </button>
 
-            <button class="icon-btn" @click="showMatches = true" :disabled="matches.length === 0">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-              </svg>
-              <span v-if="unreadMatches > 0" class="badge">{{ unreadMatches }}</span>
-              <span v-if="matches.length === 0" class="lock-icon">
-  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+         <button
+  class="icon-btn"
+  @click="showMatches = true"
+  :disabled="matches.length === 0 && chats.length === 0"
+>
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
   </svg>
-</span>
-            </button>
+  <span v-if="unreadMatches > 0" class="badge">{{ unreadMatches }}</span>
+  <span v-if="matches.length === 0 && chats.length === 0" class="lock-icon">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+    </svg>
+  </span>
+</button>
 
   <button class="icon-btn profile-btn" @click="openProfile">
   <div class="avatar-small-wrapper" :class="{ 'avatar-gold': isAvatarGoldEquipped }">
@@ -350,9 +360,9 @@
           <h2>Você explorou todas as músicas!</h2>
           <p>Descubra seus matches musicais ou volte mais tarde para novas recomendações</p>
           <div class="empty-actions">
-            <button v-if="matches.length > 0" @click="showMatches = true" class="btn-primary">
-              Ver Meus Matches ({{ matches.length }})
-            </button>
+<button v-if="matches.length > 0 || chats.length > 0" @click="showMatches = true" class="btn-primary">
+  Ver Meus Matches ({{ matches.length }})
+</button>
             <button @click="loadMoreSongs" class="btn-secondary">
               Carregar Mais
             </button>
@@ -487,7 +497,7 @@
 
             <p class="instructions">
               Arraste para os lados ou use os botões
-              <span v-if="matches.length === 0" class="unlock-hint">• Desbloqueie matches curtindo músicas</span>
+            <span v-if="matches.length === 0 && chats.length === 0" class="unlock-hint">• Desbloqueie matches curtindo músicas</span>
             </p>
           </div>
         </div>
@@ -720,7 +730,7 @@
                   </svg>
                   Sair da conta
                 </button>
-                
+               
                 <button @click="confirmDeleteAccount" class="btn-delete-account">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                     <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
@@ -1031,9 +1041,9 @@
                   </svg>
                   <span>{{ chatSilenciado ? 'Dessilenciar chat' : 'Silenciar chat' }}</span>
                 </button>
-<button 
-  v-if="!chatBloqueado || !bloqueadoPorMim" 
-  @click="abrirModalBloqueio" 
+<button
+  v-if="!chatBloqueado || !bloqueadoPorMim"
+  @click="abrirModalBloqueio"
   class="dropdown-item danger"
 >
   <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
@@ -1042,9 +1052,9 @@
   <span>Bloquear</span>
 </button>
 
-<button 
-  v-else 
-  @click="desbloquearUsuario" 
+<button
+  v-else
+  @click="desbloquearUsuario"
   class="dropdown-item"
   :disabled="unblockingUser"
 >
@@ -1137,10 +1147,10 @@
 
               <!-- Image Message -->
               <div v-else-if="msg.tipo === 'imagem'" class="image-message">
-                <img 
-                  :src="getFullUrl(msg.arquivo?.url)" 
-                  alt="Foto" 
-                  class="chat-image" 
+                <img
+                  :src="getFullUrl(msg.arquivo?.url)"
+                  alt="Foto"
+                  class="chat-image"
                   @click="abrirImagem(msg)"
                   @error="handleImageError($event, msg)"
                 >
@@ -1167,17 +1177,30 @@
               <!-- Text Message -->
               <p v-else class="message-text">{{ msg.conteudo }}</p>
 
-              <div class="message-meta">
-                <span class="message-time">{{ formatChatTime(msg.createdAt) }}</span>
-                <span v-if="msg.remetente === currentUserId" class="message-status">
-                  <svg v-if="msg.lida" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="read">
-                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                    <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
-                  </svg>
-                </span>
-              </div>
+             <div class="message-meta">
+  <span class="message-time">{{ formatChatTime(msg.createdAt) }}</span>
+ 
+  <!-- Botão de apagar mensagem (apenas para mensagens enviadas pelo usuário) -->
+  <button
+    v-if="msg.remetente === currentUserId"
+    class="delete-msg-btn"
+    @click="abrirModalDeletarMensagem(msg)"
+    title="Apagar mensagem"
+  >
+    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+    </svg>
+  </button>
+ 
+  <span v-if="msg.remetente === currentUserId" class="message-status">
+    <svg v-if="msg.lida" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" class="read">
+      <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+    </svg>
+    <svg v-else viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+      <path d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
+    </svg>
+  </span>
+</div>
             </div>
           </div>
 
@@ -1239,8 +1262,8 @@
                 </div>
 
                 <div class="picker-categories">
-                  <button 
-                    v-for="cat in emojiCategories" 
+                  <button
+                    v-for="cat in emojiCategories"
                     :key="cat.name"
                     @click="activeEmojiCategory = cat.name"
                     :class="{ active: activeEmojiCategory === cat.name }"
@@ -1313,10 +1336,10 @@
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                 </svg>
               </button>
-              
+             
               <!-- Mic Button (when no text) -->
-              <button 
-                v-else-if="!gravandoAudio" 
+              <button
+                v-else-if="!gravandoAudio"
                 class="chat-mic-btn"
                 @mousedown="iniciarGravacao"
                 @touchstart.prevent="iniciarGravacao"
@@ -1331,8 +1354,8 @@
               </button>
 
               <!-- Cancel Recording -->
-              <button 
-                v-if="gravandoAudio" 
+              <button
+                v-if="gravandoAudio"
                 @click="cancelarGravacao"
                 class="chat-cancel-audio"
               >
@@ -1342,8 +1365,8 @@
               </button>
 
               <!-- Confirm Recording -->
-              <button 
-                v-if="gravandoAudio" 
+              <button
+                v-if="gravandoAudio"
                 @click="pararGravacao"
                 class="chat-send-btn"
               >
@@ -1361,7 +1384,7 @@
 </span>
               <span>Foto</span>
             </button>
-            
+           
             <button @click="selecionarArquivo" class="attach-option">
              <span class="attach-icon">
 </span>
@@ -1370,21 +1393,44 @@
           </div>
 
           <!-- Hidden File Inputs -->
-          <input 
-            ref="fileInputFoto" 
-            type="file" 
+          <input
+            ref="fileInputFoto"
+            type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
-            class="hidden-input" 
+            class="hidden-input"
             @change="(e) => onFileSelected(e, 'imagem')"
           />
 
-          <input 
-            ref="fileInputArquivo" 
+          <input
+            ref="fileInputArquivo"
             type="file"
             accept=".pdf,.txt,.doc,.docx"
-            class="hidden-input" 
+            class="hidden-input"
             @change="(e) => onFileSelected(e, 'arquivo')"
           />
+ <!-- ============================================ -->
+          <!-- DELETE MESSAGE CONFIRMATION MODAL            -->
+          <!-- ============================================ -->
+          <Transition name="modal">
+            <div v-if="showDeleteMessageConfirm" class="modal-overlay logout-confirm-overlay" @click.self="cancelarDeletarMensagem">
+              <div class="modal-content logout-confirm-modal">
+                <div class="logout-icon" style="background: rgba(220, 38, 38, 0.1); color: #dc2626;">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                  </svg>
+                </div>
+                <h3>Apagar mensagem?</h3>
+                <p>Esta ação é <strong>irreversível</strong>. A mensagem será removida permanentemente.</p>
+                <div class="logout-actions">
+                  <button @click="cancelarDeletarMensagem" class="btn-secondary">Cancelar</button>
+                  <button @click="confirmarDeletarMensagem" class="btn-logout-confirm" style="background: #dc2626;" :disabled="deletingMessage">
+                    <span v-if="deletingMessage">Apagando...</span>
+                    <span v-else>Apagar</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Transition>
 
            <!-- ============================================ -->
     <!-- BLOCK USER CONFIRMATION MODAL                -->
@@ -1472,7 +1518,57 @@
     </button>
   </div>
 </Transition>
-  </div>
+    <!-- ============================================ -->
+    <!-- LOGIN MODAL                                  -->
+    <!-- ============================================ -->
+    <Transition name="modal">
+      <div v-if="showLoginModal" class="modal-overlay login-confirm-overlay" @click.self="closeLoginModal">
+        <div class="modal-content login-confirm-modal">
+          <div class="login-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+         
+          <h3>Entrar na conta</h3>
+          <p>Digite seu nome de usuário para verificar se você já tem uma conta.</p>
+         
+          <div class="login-form-group">
+            <input
+              v-model="loginUsername"
+              type="text"
+              class="login-input"
+              placeholder="Nome de usuário"
+              @keyup.enter="verifyAndLogin"
+              ref="loginInputRef"
+            >
+          </div>
+         
+          <p v-if="loginError" class="login-error">{{ loginError }}</p>
+          <p v-if="loginSuccess" class="login-success">Conta encontrada! Entrando...</p>
+          <div v-if="!loginError && !loginSuccess" class="login-info-alert">
+  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+  </svg>
+  <span>Digite seu nome exato para verificar se já possui uma conta</span>
+</div>
+         
+          <div class="login-actions">
+            <button @click="closeLoginModal" class="btn-secondary">Cancelar</button>
+            <button
+              @click="verifyAndLogin"
+              class="btn-login-confirm"
+              :disabled="!loginUsername.trim() || loginLoading"
+            >
+              <span v-if="loginLoading">Verificando...</span>
+              <span v-else>Entrar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+  </div>   <!-- ← fecha a div raiz .musical-match -->
 </template>
 
     <script>
@@ -1501,6 +1597,11 @@ const EMOJI_DATA = {
           onboardingStep: 1,
           creatingProfile: false,
           showEmojiPicker: false,
+                    showLoginModal: false,
+          loginUsername: '',
+          loginError: '',
+          loginSuccess: false,
+          loginLoading: false,
 emojiSearch: '',
 activeEmojiCategory: 'Recentes',
 emojiCategories: [
@@ -1589,6 +1690,9 @@ showPreviewMidia: false,
           lastFavorited: null,
           loading: true,
           audio: null,
+          showDeleteMessageConfirm: false,
+    deletingMessage: false,
+    messageToDelete: null,
 
            showChatList: false,
     showChat: false,
@@ -1630,7 +1734,7 @@ showPreviewMidia: false,
         filteredChatEmojis() {
   const emojis = EMOJI_DATA[this.activeEmojiCategory] || []
   if (!this.emojiSearch) return emojis
-  
+ 
   const search = this.emojiSearch.toLowerCase()
   return Object.values(EMOJI_DATA).flat().filter(emoji => {
     return emoji.includes(search)
@@ -1650,7 +1754,7 @@ showPreviewMidia: false,
     spotify: { text: 'Spotify', color: '#1ed760', icon: '<i class="fas fa-headphones"></i>' }
   }
 
-  return badges[song.source] || { text: 'Desconhecido', color: '#666', 	icon: '<i class="fas fa-question"></i>' }
+  return badges[song.source] || { text: 'Desconhecido', color: '#666', icon: '<i class="fas fa-question"></i>' }
 },
         favoriteGenreObjects() {
           return this.availableGenres.filter(g =>
@@ -1715,12 +1819,151 @@ canProceedStep2() {
   if (savedGoldState !== null) {
     this.isAvatarGoldEquipped = savedGoldState === 'true';
   }
-  
+ 
   // Listener para mudanças
   window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
       methods: {
+                // ========== LOGIN MODAL ==========
+        openLoginModal() {
+          this.showLoginModal = true
+          this.loginUsername = ''
+          this.loginError = ''
+          this.loginSuccess = false
+          this.loginLoading = false
+          this.$nextTick(() => {
+            this.$refs.loginInputRef?.focus()
+          })
+        },
+
+        closeLoginModal() {
+          this.showLoginModal = false
+          this.loginUsername = ''
+          this.loginError = ''
+          this.loginSuccess = false
+          this.loginLoading = false
+        },
+
+async verifyAndLogin() {
+  const username = this.loginUsername.trim()
+ 
+  // ✅ ALERTA DE VALIDAÇÃO — antes de chamar a API
+  if (!username) {
+    this.loginError = 'Digite um nome de usuário'
+    return
+  }
+
+  if (username.length < 2) {
+    this.loginError = 'Nome muito curto (mínimo 2 caracteres)'
+    return
+  }
+
+  this.loginLoading = true
+  this.loginError = ''
+  this.loginSuccess = false
+
+  try {
+    // 1. Buscar usuário pelo nome (rota agora é pública)
+    const { data } = await api.get('/usuarios/buscar', {
+      params: { nome: username }
+    })
+
+    const user = data.user || data.usuario || data
+
+    // ✅ ALERTA: Conta NÃO encontrada
+    if (!user || !user._id) {
+      this.loginError = 'Conta não encontrada. Verifique o nome ou crie uma nova conta.'
+      this.loginLoading = false
+      return
+    }
+
+    // 2. Verificar se existe token no localStorage (de outra sessão)
+    const token = localStorage.getItem('token')
+   
+    // ✅ ALERTA: Conta existe mas usuário precisa fazer login no app principal
+    if (!token) {
+      this.loginError = `Conta \"${user.nome || username}\" encontrada! Faça login no app principal primeiro para sincronizar.`
+      this.loginLoading = false
+      return
+    }
+
+            // Salvar dados do usuário
+            localStorage.setItem('user', JSON.stringify(user))
+            localStorage.setItem('usuario', JSON.stringify(user))
+
+            // 3. Atualizar estado do componente
+            this.currentUser = this.mapApiUserToCurrentUser(user)
+            this.hasProfile = true
+            this.showLoginModal = false
+
+            // 4. Carregar dados do usuário
+            await Promise.all([
+              this.buscarCurtidas(),
+              this.buscarFavoritos(),
+              this.buscarMatches()
+            ])
+            await this.buscarSugestoes()
+
+            this.showToast({
+              type: 'success',
+              title: 'Bem-vindo de volta!',
+              message: `Você entrou como ${user.nome || username}`
+            })
+
+          } catch (error) {
+            console.error('Erro ao verificar conta:', error)
+            if (error.response?.status === 404) {
+              this.loginError = 'Conta não encontrada. Verifique o nome ou crie uma nova conta.'
+            } else {
+              this.loginError = error.response?.data?.error || 'Erro ao verificar conta. Tente novamente.'
+            }
+          } finally {
+            this.loginLoading = false
+          }
+        },
+
+        abrirModalDeletarMensagem(msg) {
+    this.messageToDelete = msg
+    this.showDeleteMessageConfirm = true
+  },
+ 
+  cancelarDeletarMensagem() {
+    this.showDeleteMessageConfirm = false
+    this.messageToDelete = null
+  },
+ 
+  async confirmarDeletarMensagem() {
+    if (!this.messageToDelete || !this.activeChat) return
+   
+    try {
+      this.deletingMessage = true
+     
+      await api.delete(`/chats/${this.activeChat.id}/mensagens/${this.messageToDelete.id}`)
+     
+      // Remove da lista local
+      this.chatMessages = this.chatMessages.filter(m => m.id !== this.messageToDelete.id)
+     
+      this.showDeleteMessageConfirm = false
+      this.messageToDelete = null
+     
+      this.showToast({
+        type: 'success',
+        title: 'Mensagem apagada',
+        message: 'Mensagem removida com sucesso'
+      })
+     
+    } catch (error) {
+      console.error('Erro ao deletar mensagem:', error)
+      this.showToast({
+        type: 'error',
+        title: 'Erro',
+        message: error.response?.data?.error || 'Erro ao apagar mensagem'
+      })
+    } finally {
+      this.deletingMessage = false
+    }
+  },
         // ADICIONAR nos methods:
 checkBioLimit() {
   if (this.onboardingData.bio.length >= 150) {
@@ -1966,7 +2209,7 @@ focusInputForEmoji() {
       this.audioRecorder.onstop = async () => {
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' })
         await this.enviarAudio(audioBlob)
-        
+       
         // Parar todas as tracks
         stream.getTracks().forEach(track => track.stop())
       }
@@ -1974,7 +2217,7 @@ focusInputForEmoji() {
       this.audioRecorder.start()
       this.gravandoAudio = true
       this.tempoGravacao = 0
-      
+     
       this.intervaloGravacao = setInterval(() => {
         this.tempoGravacao++
         // Limite de 2 minutos
@@ -2063,7 +2306,7 @@ this.showToast({
   }
 
   const url = tipo === 'imagem' ? URL.createObjectURL(file) : null
-  
+ 
   this.previewMidia = {
     tipo,
     file,  // ← guarda o File real para upload
@@ -2072,7 +2315,7 @@ this.showToast({
     tamanho: file.size
   }
   this.showPreviewMidia = true
-  
+ 
   event.target.value = '' // reset
 },
 
@@ -2136,16 +2379,16 @@ if (!this.activeChat || audioBlob.size === 0 || this.chatBloqueado) return
   try {
     const formData = new FormData()
     formData.append('midia', audioBlob, 'audio.webm')
-    
+   
     // Envia duração como campo extra (multer ignora, mas podemos usar)
     // ou envia via query param se precisar
-    
+   
     const { data } = await api.post(`/chats/${this.activeChat.id}/midia`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
     this.showAttachMenu = false
-    
+   
     if (data) {
       this.chatMessages.push({
         id: data.id || Date.now(),
@@ -2163,7 +2406,7 @@ if (!this.activeChat || audioBlob.size === 0 || this.chatBloqueado) return
     // Refresh
     const { data: refreshData } = await api.get(`/chats/${this.activeChat.id}/mensagens`)
     this.chatMessages = refreshData.mensagens || []
-    
+   
   } catch (error) {
     console.error('Erro ao enviar áudio:', error)
   this.showToast({
@@ -2186,12 +2429,12 @@ if (!this.activeChat || audioBlob.size === 0 || this.chatBloqueado) return
 async limparChat() {
   if (!confirm('Limpar todas as mensagens desta conversa?')) return
   if (!this.activeChat) return
-  
+ 
   try {
     await api.delete(`/chats/${this.activeChat.id}/limpar`)
     this.chatMessages = []
     this.showChatMenu = false
-    
+   
     // Atualiza última mensagem na lista de chats
     await this.buscarChats()
   } catch (error) {
@@ -2222,8 +2465,8 @@ async silenciarChat() {
  this.showToast({
   type: 'success',
   title: data.silenciado ? 'Chat silenciado' : 'Chat dessilenciado',
-  message: data.silenciado 
-    ? 'Você não receberá mais notificações desta conversa.' 
+  message: data.silenciado
+    ? 'Você não receberá mais notificações desta conversa.'
     : 'Notificações desta conversa foram reativadas.',
   duration: 3000
 })
@@ -2240,7 +2483,7 @@ this.showToast({
 async bloquearUsuario() {
   if (!confirm('Bloquear este usuário? Você não receberá mais mensagens dele.')) return
   if (!this.activeChat) return
-  
+ 
   try {
     const { data } = await api.post(`/chats/${this.activeChat.id}/bloquear`)
     this.showChatMenu = false
@@ -2260,7 +2503,7 @@ async bloquearUsuario() {
   title: 'Erro',
   message: msg
 })
-    
+   
     // Se for erro de autorização, redireciona para login
     if (error.response?.status === 401 || error.response?.status === 403) {
       // Opcional: this.$router.push('/login')
@@ -2271,7 +2514,7 @@ async bloquearUsuario() {
 async denunciarChat() {
   const motivo = prompt('Descreva o motivo da denúncia:')
   if (!motivo || !this.activeChat) return
-  
+ 
   try {
     await api.post(`/chats/${this.activeChat.id}/denunciar`, { motivo })
 this.showToast({
@@ -2391,7 +2634,7 @@ this.showToast({
 
     // Só rola se estiver próximo do bottom (ou forçado)
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100
-    
+   
     if (force || isNearBottom || this.chatMessages.length <= 5) {
       container.scrollTo({
         top: container.scrollHeight,
@@ -2498,7 +2741,7 @@ this.showToast({
 
       // Abrir chat e garantir rolagem
       await this.openChat(chat)
-      
+     
     } catch (error) {
       console.error('Erro ao iniciar conversa:', error)
       // Fallback: tentar abrir o chat list
@@ -2623,7 +2866,7 @@ this.showToast({
 
   extractGenreIds(generos) {
     if (!generos) return []
-    
+   
     if (Array.isArray(generos)) {
       return generos.map(g => {
         if (typeof g === 'string') return g
@@ -2633,13 +2876,13 @@ this.showToast({
         return null
       }).filter(Boolean)
     }
-    
+   
     return []
   },
   mapApiUserToCurrentUser(apiUser) {
     // Extrair gêneros de qualquer formato que vier do backend
     let generos = []
-    
+   
     if (Array.isArray(apiUser?.generos)) {
       generos = apiUser.generos
     } else if (Array.isArray(apiUser?.favoriteGenres)) {
@@ -2802,7 +3045,7 @@ async buscarSugestoes() {
       let dbGenres = []
       try {
         const { data } = await api.get('/generos')
-        
+       
         let generos = []
         if (Array.isArray(data)) {
           generos = data
@@ -2835,9 +3078,9 @@ async buscarSugestoes() {
       let apiGenres = []
       try {
         const { data } = await api.get('/spotify/vibes') // ✅ sem header de auth
-        
+       
         const spotifyGenres = Array.isArray(data) ? data : (data.vibes || data.genres || [])
-        
+       
         apiGenres = spotifyGenres
           .filter(g => g && (g.name || g.nome))
           .map((g, index) => ({
@@ -2859,9 +3102,9 @@ async buscarSugestoes() {
         const { data } = await api.get('/deezer/genre', { // ✅ /genre não /genres
           timeout: 5000
         })
-        
+       
         const dzGenres = data.data || data.genres || data || []
-        
+       
         deezerGenres = dzGenres
           .filter(g => g && (g.name || g.nome))
           .map((g, index) => ({
@@ -2888,7 +3131,7 @@ async buscarSugestoes() {
         allGenres.push(genre)
       }
 
-      this.availableGenres = allGenres.sort((a, b) => 
+      this.availableGenres = allGenres.sort((a, b) =>
         (a.nome || '').localeCompare(b.nome || '')
       )
 
@@ -2948,34 +3191,34 @@ getGenreEmoji(name) {
 // PARA:
 getGenreEmoji(name) {
     const map = {
-      'pop': '<i class="fas fa-microphone"></i>', 
-      'rock': '<i class="fas fa-guitar"></i>', 
-      'hip hop': '<i class="fas fa-headphones"></i>', 
+      'pop': '<i class="fas fa-microphone"></i>',
+      'rock': '<i class="fas fa-guitar"></i>',
+      'hip hop': '<i class="fas fa-headphones"></i>',
       'rap': '<i class="fas fa-microphone"></i>',
-      'eletrônica': '<i class="fas fa-keyboard"></i>', 
-      'electronic': '<i class="fas fa-keyboard"></i>', 
+      'eletrônica': '<i class="fas fa-keyboard"></i>',
+      'electronic': '<i class="fas fa-keyboard"></i>',
       'edm': '<i class="fas fa-keyboard"></i>',
-      'sertanejo': '<i class="fas fa-hat-cowboy"></i>', 
+      'sertanejo': '<i class="fas fa-hat-cowboy"></i>',
       'country': '<i class="fas fa-hat-cowboy"></i>',
-      'mpb': '<i class="fas fa-saxophone"></i>', 
-      'jazz': '<i class="fas fa-saxophone"></i>', 
+      'mpb': '<i class="fas fa-saxophone"></i>',
+      'jazz': '<i class="fas fa-saxophone"></i>',
       'blues': '<i class="fas fa-saxophone"></i>',
-      'classical': '<i class="fas fa-violin"></i>', 
+      'classical': '<i class="fas fa-violin"></i>',
       'classica': '<i class="fas fa-violin"></i>',
-      'reggae': '<i class="fas fa-leaf"></i>', 
-      'funk': '<i class="fas fa-fire"></i>', 
+      'reggae': '<i class="fas fa-leaf"></i>',
+      'funk': '<i class="fas fa-fire"></i>',
       'samba': '<i class="fas fa-drum"></i>',
-      'gospel': '<i class="fas fa-cross"></i>', 
-      'r&b': '<i class="fas fa-heart"></i>', 
+      'gospel': '<i class="fas fa-cross"></i>',
+      'r&b': '<i class="fas fa-heart"></i>',
       'soul': '<i class="fas fa-heart"></i>',
-      'indie': '<i class="fas fa-seedling"></i>', 
-      'metal': '<i class="fas fa-hand-rock"></i>', 
+      'indie': '<i class="fas fa-seedling"></i>',
+      'metal': '<i class="fas fa-hand-rock"></i>',
       'punk': '<i class="fas fa-hand-rock"></i>',
-      'latina': '<i class="fas fa-dancing"></i>', 
-      'latin': '<i class="fas fa-dancing"></i>', 
+      'latina': '<i class="fas fa-dancing"></i>',
+      'latin': '<i class="fas fa-dancing"></i>',
       'k-pop': '<i class="fas fa-star"></i>',
-      'anime': '<i class="fas fa-torii-gate"></i>', 
-      'folk': '<i class="fas fa-guitar"></i>', 
+      'anime': '<i class="fas fa-torii-gate"></i>',
+      'folk': '<i class="fas fa-guitar"></i>',
       'disco': '<i class="fas fa-person-dancing"></i>'
     }
     return map[(name || '').toLowerCase()] || '<i class="fas fa-music"></i>'
@@ -3105,20 +3348,20 @@ getGenreEmoji(name) {
 
     } catch (error) {
       console.error('❌ Erro no finishOnboarding:', error)
-      
-      const apiError = error?.response?.data?.error || 
-                      error?.response?.data?.message || 
+     
+      const apiError = error?.response?.data?.error ||
+                      error?.response?.data?.message ||
                       error?.response?.data?.details ||
                       error.message
-      
+     
      this.showToast({
   type: 'error',
   title: 'Erro ao criar perfil',
   message: apiError || 'Erro ao criar perfil. Tente novamente.'
 })
-      
-      if (apiError?.includes('expirada') || 
-          apiError?.includes('Token') || 
+     
+      if (apiError?.includes('expirada') ||
+          apiError?.includes('Token') ||
           apiError?.includes('login') ||
           apiError?.includes('não autorizado')) {
         this.$router.push('/login')
@@ -3136,42 +3379,44 @@ getGenreEmoji(name) {
           this.showLogoutConfirm = false
         },
 
-        logout() {
-          localStorage.removeItem('musicalMatchProfile')
-          localStorage.removeItem('user')
-          localStorage.removeItem('token')
+       logout() {
+  // ✅ Remove APENAS os dados do Musical Match, NÃO o token de login
+  localStorage.removeItem('musicalMatchProfile')
+  // NÃO remove: localStorage.removeItem('user')
+  // NÃO remove: localStorage.removeItem('token')
 
-          this.hasProfile = false
-          this.onboardingStep = 1
-          this.onboardingData = {
-            name: '',
-            age: null,
-            location: '',
-            avatar: '',
-            bio: '',
-            favoriteGenres: []
-          }
+  // ... resto do método (reseta estado do componente)
+  this.hasProfile = false
+  this.onboardingStep = 1
+  this.onboardingData = {
+    name: '',
+    age: null,
+    location: '',
+    avatar: '',
+    bio: '',
+    favoriteGenres: []
+  }
 
-          this.currentUser = {
-            name: '',
-            age: null,
-            avatar: '',
-            bio: '',
-            location: '',
-            favoriteGenres: []
-          }
+  this.currentUser = {
+    name: '',
+    age: null,
+    avatar: '',
+    bio: '',
+    location: '',
+    favoriteGenres: []
+  }
 
-          this.likedSongs = []
-          this.favorites = []
-          this.matches = []
-          this.unreadMatches = 0
-          this.currentIndex = 0
-          this.songs = []
-          this.showProfile = false
-          this.showLogoutConfirm = false
+  this.likedSongs = []
+  this.favorites = []
+  this.matches = []
+  this.unreadMatches = 0
+  this.currentIndex = 0
+  this.songs = []
+  this.showProfile = false
+  this.showLogoutConfirm = false
 
-          this.stopAudio()
-        },
+  this.stopAudio()
+},
 
         confirmDeleteAccount() {
   this.showDeleteAccountConfirm = true
@@ -3194,8 +3439,9 @@ async deleteAccount() {
       headers: { Authorization: `Bearer ${token}` }
     })
 
-    // Limpa apenas os dados do Musical Match no frontend
+    // ✅ Limpa apenas os dados do Musical Match no frontend
     localStorage.removeItem('musicalMatchProfile')
+    // NÃO remove token nem user
 
     this.showDeleteAccountConfirm = false
     this.deletingAccount = false
@@ -3222,11 +3468,11 @@ async deleteAccount() {
   } catch (error) {
     console.error('Erro ao excluir dados do Musical Match:', error)
     this.deletingAccount = false
- this.showToast({
-  type: 'error',
-  title: 'Erro',
-  message: 'Erro ao excluir dados. Tente novamente.'
-})
+    this.showToast({
+      type: 'error',
+      title: 'Erro',
+      message: 'Erro ao excluir dados. Tente novamente.'
+    })
   }
 },
 
@@ -3962,7 +4208,22 @@ console.error('Erro ao remover match:', error)
   border: 1.5px solid;
   margin-bottom: 0.75rem;
 }
+.login-info-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(29, 185, 84, 0.1);
+  border: 1px solid rgba(29, 185, 84, 0.3);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  color: #1db954;
+  font-size: 0.875rem;
+}
 
+.login-info-alert svg {
+  flex-shrink: 0;
+}
 .source-badge span {
   font-size: 0.85rem;
 }
@@ -4575,7 +4836,167 @@ padding: 8px 20px 80px;
     gap: 0.75rem;
     margin-bottom: 0.5rem;
   }
+  /* Login Line */
+  .login-line {
+    width: 100%;
+    text-align: center;
+    margin: 1rem 0 0.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
 
+  .login-line span {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.875rem;
+  }
+
+  .btn-login-link {
+    background: transparent;
+    border: none;
+    color: #1db954;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.3s;
+  }
+
+  .btn-login-link:hover {
+    background: rgba(29, 185, 84, 0.1);
+    text-decoration: underline;
+  }
+
+  /* Login Modal */
+  .login-confirm-overlay {
+    align-items: center;
+    padding: 1.5rem;
+  }
+
+  .login-confirm-modal {
+    max-height: none;
+    border-radius: 24px;
+    padding: 2rem;
+    text-align: center;
+    max-width: 360px;
+  }
+
+  .login-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: rgba(29, 185, 84, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1db954;
+  }
+
+  .login-confirm-modal h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #fff;
+  }
+
+  .login-confirm-modal p {
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .login-form-group {
+    margin-bottom: 1rem;
+  }
+
+  .login-input {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    color: #fff;
+    font-size: 1rem;
+    transition: all 0.3s;
+    font-family: inherit;
+    text-align: center;
+  }
+
+  .login-input:focus {
+    outline: none;
+    border-color: #1db954;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .login-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .login-error {
+    color: #ff4757;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: rgba(255, 71, 87, 0.1);
+    border-radius: 8px;
+  }
+
+  .login-success {
+    color: #1db954;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: rgba(29, 185, 84, 0.1);
+    border-radius: 8px;
+  }
+
+  .login-actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .login-actions .btn-secondary,
+  .login-actions .btn-login-confirm {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+    font-size: 1rem;
+  }
+
+  .login-actions .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .login-actions .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-login-confirm {
+    background: #1db954;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-login-confirm:hover:not(:disabled) {
+    background: #1ed760;
+    transform: translateY(-2px);
+  }
+
+  .btn-login-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
   .song-title {
     font-size: 1.5rem;
     font-weight: 800;
@@ -4673,7 +5094,7 @@ padding: 8px 20px 80px;
     align-items: center;
     gap: 0.75rem;
     margin-top: 60px;      /* ← AUMENTAR para 60px ou mais */
-    padding-bottom: 40px; 
+    padding-bottom: 40px;
   }
 
   .action-buttons {
@@ -6560,7 +6981,38 @@ padding: 8px 20px 80px;
   font-weight: 700;
   margin: 0;
 }
+.delete-msg-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 2px;
+  margin-left: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  opacity: 0;
+}
 
+.message:hover .delete-msg-btn {
+  opacity: 1;
+}
+
+.delete-msg-btn:hover {
+  color: #ff4757;
+  background: rgba(255, 71, 87, 0.1);
+}
+
+.message-sent .delete-msg-btn {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.message-sent .delete-msg-btn:hover {
+  color: #000;
+  background: rgba(0, 0, 0, 0.15);
+}
 .unread-badge {
   background: #ff4757;
   color: #fff;
@@ -7104,7 +7556,7 @@ padding: 8px 20px 80px;
 .avatar-small-wrapper.avatar-gold {
   padding: 2px;
   background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
-  box-shadow: 
+  box-shadow:
     0 0 0 1px #B8860B,
     0 0 8px rgba(255, 215, 0, 0.4);
 }
@@ -7129,7 +7581,7 @@ padding: 8px 20px 80px;
   padding: 4px;
   border-radius: 50%;
   background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
-  box-shadow: 
+  box-shadow:
     0 0 0 2px #B8860B,
     0 0 20px rgba(255, 215, 0, 0.5),
     0 4px 16px rgba(0, 0, 0, 0.3);
@@ -7212,80 +7664,80 @@ padding: 8px 20px 80px;
     .onboarding-content {
       padding: 1.5rem;
     }
-    
+   
     .welcome-title {
       font-size: 2rem;
     }
-    
+   
     .features-preview {
       gap: 1rem;
     }
-    
+   
     .feature-icon {
       width: 56px;
       height: 56px;
       font-size: 1.75rem;
     }
-    
+   
     .form-row {
       grid-template-columns: 1fr;
     }
-    
+   
     .cards-wrapper {
       padding: 15px;
     }
-    
+   
     .cards-container {
       height: 480px;
     }
-    
+   
     .song-card {
       max-width: 100%;
       margin-left: 0;
       left: 0;
       right: 0;
     }
-    
+   
     .card-media {
       height: 280px;
     }
-    
+   
     .song-title {
       font-size: 1.25rem;
     }
-    
+   
     .action-buttons {
       gap: 1rem;
     }
-    
+   
     .action-btn {
       width: 64px;
       height: 64px;
     }
-    
+   
     .action-btn svg {
       width: 28px;
       height: 28px;
     }
-    
+   
     .instructions {
       font-size: 0.8125rem;
     }
-    
+   
     .match-toast {
       left: 15px;
       right: 15px;
       transform: none;
     }
-    
+   
     .match-toast-content {
       min-width: auto;
     }
-    
+   
     .genre-selector {
       gap: 0.5rem;
     }
-    
+   
     .genre-select-btn {
       padding: 0.5rem 1rem;
       font-size: 0.8125rem;

@@ -11,6 +11,8 @@ router.post('/login', userController.login)
 // 🔥 RECUPERAR SENHA (público — sem auth)
 router.put('/recuperar-senha', userController.recuperarSenha)
 router.get('/verificar-email', userController.verificarEmail)
+
+router.get('/buscar', userController.buscarPorNome)
 // SEARCH
 router.get('/search', requireAuth, userController.search)
 

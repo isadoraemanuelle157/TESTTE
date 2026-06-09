@@ -435,6 +435,30 @@ const verificarEmail = async (req, res) => {
   }
 }
 
+const buscarPorNome = async (req, res) => {
+  try {
+    const { nome } = req.query
+    if (!nome) {
+      return res.status(400).json({ error: 'Nome é obrigatório' })
+    }
+
+    const Usuario = require('../models/Usuario')
+    
+    // Busca case-insensitive parcial
+    const user = await Usuario.findOne({
+      nome: { $regex: new RegExp(`^${nome}$`, 'i') }
+    }).select('-senha -password')
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' })
+    }
+
+    res.json({ user })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
+
 const RECURSOS_VALIDOS = [
   'curtidas',
   'playlists',
@@ -466,5 +490,6 @@ module.exports = {
   getBlockStatus,
   blockUser,
   unblockUser,
-  reportUser
+  reportUser,
+    buscarPorNome
 }

@@ -126,11 +126,12 @@ const excluirConta = async (req, res) => {
   try {
     const userId = req.user.id
 
-    // Excluir todas as interações do usuário no Musical Match
+    // ✅ Excluir APENAS dados do Musical Match (interações e matches)
     await MatchInteracao.deleteMany({ usuario: userId })
-
-    // Excluir todos os matches onde o usuário participa
     await MatchMusical.deleteMany({ usuarios: userId })
+
+    // ❌ NÃO excluir o usuário da collection Usuario
+    // ❌ NÃO invalidar o token de autenticação
 
     res.json({ message: 'Dados do Musical Match excluídos com sucesso' })
   } catch (error) {
