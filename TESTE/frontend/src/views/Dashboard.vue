@@ -7,7 +7,7 @@
           <h1 class="welcome-title">
             <span class="greeting">{{ greeting }}</span>
             <span class="user-highlight">{{ currentUser.firstName }}</span>
-            <span class="wave-emoji">👋</span>
+       
           </h1>
           <p class="welcome-subtitle">{{ welcomeMessage }}</p>
 
@@ -2094,7 +2094,7 @@ loadMockMadeForYou() {
         this.welcomeMessage = "Comece seu dia com boa música! 🌅"
       } else if (hour >= 12 && hour < 18) {
         this.greeting = "Boa tarde"
-        this.welcomeMessage = "Hora de relaxar com suas favoritas! ☀️"
+        this.welcomeMessage = "Hora de relaxar com suas favoritas! "
       } else {
         this.greeting = "Boa noite"
         this.welcomeMessage = "Termine o dia no ritmo certo! 🌙"

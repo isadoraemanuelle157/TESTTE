@@ -16,9 +16,13 @@
               <span class="stat-item"><i class="fa fa-music"></i> {{ results.length }} músicas</span>
               <span class="stat-item"><i class="fa fa-clock-o"></i> {{ totalDuration }}</span>
              <!-- ✅ DEPOIS (correto): -->
-<span v-if="isLogged && spotifyConnected" class="stat-item source-badge"><i class="fa fa-spotify"></i> Spotify</span>
-<span v-else class="stat-item source-badge deezer"><i class="si si-deezer"></i> Deezer</span>
-            </div>
+<span v-if="isLogged" class="stat-item source-badge">
+  <i class="fa fa-spotify"></i> Spotify
+</span>
+<span v-else class="stat-item source-badge deezer">
+  <i class="si si-deezer"></i> Deezer
+</span>
+          </div>
           </div>
         </div>
         <div class="header-actions">
@@ -39,13 +43,19 @@
           <div class="spinner"></div>
           <span>Carregando sucessos dos anos {{ decadeName }}...</span>
 <!-- ✅ DEPOIS (correto): -->
-<span v-if="!isLogged || !spotifyConnected" class="loading-source"><i class="si si-deezer"></i> via Deezer</span>
-<span v-else class="loading-source"><i class="fa fa-spotify"></i> via Spotify</span>
+<span v-if="isLogged" class="loading-source">
+  <i class="fa fa-spotify"></i> via Spotify
+</span>
+<span v-else class="loading-source">
+  <i class="si si-deezer"></i> via Deezer
+</span>
+
         </div>
 
         <div v-else-if="results.length === 0" class="empty-state">
       <!-- ✅ DEPOIS (correto): -->
-<i :class="(isLogged && spotifyConnected) ? 'fa fa-spotify' : 'si si-deezer'"></i>
+<i :class="isLogged ? 'fa fa-spotify' : 'si si-deezer'"></i>
+
           <h3>Nenhuma música encontrada</h3>
           <p>Não conseguimos encontrar músicas para esta década no momento.</p>
           <button @click="$router.back()" class="btn-secondary">Voltar para Busca</button>
@@ -83,7 +93,7 @@
               </span>
               
               <!-- Curtir: só aparece se logado e Spotify conectado -->
-             <button
+<button
   v-if="!isLogged"
   class="btn-like"
   @click.stop="openLoginModal"
@@ -95,8 +105,8 @@
 <button
   v-else-if="track.source !== 'spotify'"
   class="btn-like disabled"
-  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
-  title="Deezer: login necessário"
+  @click.stop="showToast('Apenas músicas do Spotify podem ser curtidas', 'info')"
+  title="Apenas Spotify"
 >
   <i class="fa fa-heart-o"></i>
 </button>
@@ -109,6 +119,7 @@
 >
   <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
 </button>
+
               
               {{ formatDuration(track.duration) }}
             </div>
@@ -185,28 +196,26 @@ export default {
     }
   },
   computed: {
-    decadeInfo() {
-      return this.detailedCategories.decades.find(d => d.name === this.decadeName) || {}
-    },
-    totalDuration() {
-      const totalSeconds = this.results.reduce((acc, track) => acc + (track.duration || 0), 0)
-      const hours = Math.floor(totalSeconds / 3600)
-      const minutes = Math.floor((totalSeconds % 3600) / 60)
-      return hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`
-    }
+ decadeInfo() {
+    return this.detailedCategories.decades.find(d => d.name === this.decadeName) || {}
   },
+  totalDuration() {
+    const totalSeconds = this.results.reduce((acc, track) => acc + (track.duration || 0), 0)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    return hours > 0 ? `${hours}h ${minutes}min` : `${minutes} min`
+  },
+  canUseSpotify() {
+    return this.isLogged && this.spotifyConnected
+  }
+},
 
 async mounted() {
   const nomeParam = this.$route.params.nome
   this.decadeName = nomeParam ? decodeURIComponent(nomeParam) : ''
-  
-  await this.checkSpotifyStatus()
-  
-  if (this.isLogged) {
-    await this.loadLikedTracks()
-  }
   await this.loadDecadeTracks()
 },
+
 
 watch: {
   '$route.params.nome': {
@@ -214,12 +223,12 @@ watch: {
     async handler(newVal) {
       if (newVal) {
         this.decadeName = decodeURIComponent(newVal)
-        await this.checkSpotifyStatus()
         await this.loadDecadeTracks()
       }
     }
   }
 },
+
 
   methods: {
 async checkSpotifyStatus() {
@@ -264,27 +273,32 @@ async checkSpotifyStatus() {
  async loadDecadeTracks() {
   this.isLoading = true
   this.results = []
+
   try {
     const range = this.getDecadeRange(this.decadeName)
     if (!range) {
-      this.isLoading = false
+      this.results = []
       return
     }
 
-    // ← MUDANÇA PRINCIPAL: usa this.spotifyConnected em vez de só this.isLogged
-    if (this.isLogged && this.spotifyConnected) {
-      try {
-        await this.loadSpotifyDecadeTracks(range)
-      } catch (err) {
-        console.error('Spotify falhou, fallback Deezer:', err)
-        this.showToast('Spotify indisponível. Usando Deezer...', 'info')
-        await this.loadDeezerDecadeTracks(range)
-      }
+    // 1. PRIMEIRO verifica se está logado (atualiza isLogged e spotifyConnected)
+    await this.checkSpotifyStatus()
+
+    // 2. DEPOIS carrega curtidas se estiver logado
+    if (this.isLogged) {
+      await this.loadLikedTracks()
+    } else {
+      this.likedTracks = []
+    }
+
+    // 3. AGORA sim decide a fonte com isLogged já atualizado
+    if (this.isLogged) {
+      await this.loadSpotifyDecadeTracks(range)
     } else {
       await this.loadDeezerDecadeTracks(range)
     }
   } catch (err) {
-    console.error('Erro ao carregar décadas:', err)
+    console.error('[DecadePlaylist] Erro ao carregar década:', err)
     this.results = []
   } finally {
     this.isLoading = false
@@ -326,59 +340,62 @@ async checkSpotifyStatus() {
     },
 
     // ========== SPOTIFY (LOGADO) ==========
-    async loadSpotifyDecadeTracks(range) {
-      const token = localStorage.getItem('token')
-      const spotifyQuery = this.getSpotifyDecadeQuery(this.decadeName)
+  async loadSpotifyDecadeTracks(range) {
+  const token = localStorage.getItem('token')
+  const spotifyQuery = this.getSpotifyDecadeQuery(this.decadeName)
 
-      try {
-        // Busca tracks da década no Spotify
-        const searchRes = await fetch(
-          `http://localhost:3002/spotify/search?q=${encodeURIComponent(spotifyQuery)}&type=track&limit=50&market=BR`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        )
-
-        if (!searchRes.ok) {
-          // Se der erro no Spotify (token expirado, etc), cai no fallback Deezer
-          if (searchRes.status === 401 || searchRes.status === 403) {
-            this.showToast('Spotify desconectado. Usando Deezer...', 'info')
-            this.isSpotifyConnected = false
-            await this.loadDeezerDecadeTracks(range)
-            return
-          }
-          throw new Error(`Spotify search error: ${searchRes.status}`)
-        }
-
-        const searchData = await searchRes.json()
-
-        if (searchData.tracks?.items && Array.isArray(searchData.tracks.items)) {
-          this.results = searchData.tracks.items.map(t => ({
-            id: t.id,
-            title: t.name,
-            artist: {
-              name: t.artists?.map(a => a.name).join(', ') || 'Artista desconhecido'
-            },
-            album: {
-              title: t.album?.name || '',
-              cover: t.album?.images?.[0]?.url || ''
-            },
-            cover: t.album?.images?.[0]?.url,
-            preview: t.preview_url || '',
-            duration: Math.floor(t.duration_ms / 1000),
-            type: 'track',
-            source: 'spotify',
-            spotifyUri: t.uri,
-            explicit: t.explicit,
-            popularity: t.popularity
-          }))
-        }
-      } catch (err) {
-        console.error('Erro Spotify, fallback para Deezer:', err)
-        this.showToast('Erro no Spotify. Usando Deezer...', 'info')
-        await this.loadDeezerDecadeTracks(range)
+  try {
+    const searchRes = await fetch(
+      `http://localhost:3002/spotify/search?q=${encodeURIComponent(spotifyQuery)}&type=track&limit=50&market=BR`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
       }
-    },
+    )
+
+    if (!searchRes.ok) {
+      if (searchRes.status === 401 || searchRes.status === 403) {
+        this.showToast('Spotify desconectado. Usando Deezer...', 'info')
+        this.spotifyConnected = false
+        await this.loadDeezerDecadeTracks(range)
+        return
+      }
+
+      throw new Error(`Spotify search error: ${searchRes.status}`)
+    }
+
+    const searchData = await searchRes.json()
+
+    if (searchData.tracks?.items && Array.isArray(searchData.tracks.items)) {
+      this.results = searchData.tracks.items.map(t => ({
+        id: t.id,
+        title: t.name,
+        artist: {
+          name: t.artists?.map(a => a.name).join(', ') || 'Artista desconhecido'
+        },
+        album: {
+          title: t.album?.name || '',
+          cover: t.album?.images?.[0]?.url || ''
+        },
+        cover: t.album?.images?.[0]?.url,
+        preview: t.preview_url || '',
+        duration: Math.floor(t.duration_ms / 1000),
+        type: 'track',
+        source: 'spotify',
+        spotifyUri: t.uri,
+        explicit: t.explicit,
+        popularity: t.popularity
+      }))
+    } else {
+      this.results = []
+    }
+  } catch (err) {
+    console.error('Erro Spotify, fallback para Deezer:', err)
+    this.showToast('Erro no Spotify. Usando Deezer...', 'info')
+    this.spotifyConnected = false
+    await this.loadDeezerDecadeTracks(range)
+  }
+},
+
 
     getDeezerDecadeQuery(decade) {
       const queries = {
