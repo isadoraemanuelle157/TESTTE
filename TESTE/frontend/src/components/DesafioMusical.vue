@@ -29,6 +29,23 @@
             </svg>
           </button>
           <button 
+  v-if="hasEmojiPack"
+  class="btn-emoji-toggle"
+  :class="{ 'active': customIconsActive }"
+  @click="toggleCustomIcons"
+  title="Alternar ícones musicais customizados"
+>
+  <i :class="customIconsActive ? 'fa-solid fa-icons' : 'fa-solid fa-icons'"></i>
+</button>
+<button 
+  v-else
+  class="btn-emoji-locked"
+  title="Compre o Pack de Ícones na loja para desbloquear"
+  @click="showNotification('Compre o Pack de Ícones na loja para desbloquear!', 'info')"
+>
+  <i class="fa-solid fa-lock"></i>
+</button>
+          <button 
   v-if="hasThemeItem"
   class="btn-theme-toggle"
   :class="{ 'dark': themeDark }"
@@ -116,38 +133,39 @@
       </div>
 
       <!-- Hero Visual -->
-      <div class="hero-visual">
-     <div 
-  class="vinyl-record" 
-  :class="{ 
-    'playing': isPlaying, 
-    'rare-vinyl': hasRareVinyl,
-    'rare-vinyl-equipped': hasRareVinylEquipped 
-  }"
->
-  <div class="vinyl-grooves"></div>
-  <div class="vinyl-label">
-    <div class="label-center"></div>
+  <div class="hero-visual">
+  <div 
+    class="vinyl-record" 
+    :class="{ 
+      'playing': isPlaying, 
+      'rare-vinyl': hasRareVinyl,
+      'rare-vinyl-equipped': hasRareVinylEquipped || forceVinylEquipped  // ← ADICIONAR forceVinylEquipped
+    }"
+  >
+    <div class="vinyl-grooves"></div>
+    <div class="vinyl-label">
+      <div class="label-center"></div>
+    </div>
+    <div class="tonearm" :class="{ 'active': isPlaying }"></div>
   </div>
-  <div class="tonearm" :class="{ 'active': isPlaying }"></div>
-     </div>
-  <!-- Botão de equipar/desequipar do vinil raro -->
-<div v-if="hasRareVinyl" class="vinil-controls" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10;">
-  <button 
-    v-if="!hasRareVinylEquipped"
-    class="btn-equip-vinil"
-    @click="equipRareVinyl"
-  >
-    <i class="fa-solid fa-compact-disc"></i> Equipar Vinil
-  </button>
-  <button 
-    v-else
-    class="btn-unequip-vinil"
-    @click="unequipRareVinyl"
-  >
-    <i class="fa-solid fa-xmark"></i> Desequipar
-  </button>
-</div>
+  
+  <!-- Botão de equipar/desequipar -->
+  <div v-if="hasRareVinyl" class="vinil-controls">
+    <button 
+      v-if="!hasRareVinylEquipped && !forceVinylEquipped"  
+      class="btn-equip-vinil"
+      @click="equipRareVinyl"
+    >
+      <i class="fa-solid fa-compact-disc"></i> Equipar Vinil
+    </button>
+    <button 
+      v-else
+      class="btn-unequip-vinil"
+      @click="unequipRareVinyl"
+    >
+      <i class="fa-solid fa-xmark"></i> Desequipar
+    </button>
+  </div>
        
     <div class="floating-cards">
 
@@ -1012,6 +1030,7 @@ export default {
       serverAchievements: [],
       serverShopItems: [],
       serverStats: null,
+       forceVinylEquipped: false,
       sessionId: null,
       completionResult: null,
       lastPointsGained: 0,
@@ -1152,21 +1171,29 @@ hasRareVinylEquipped() {
   if (!token) {
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
     const item = offlineInventory.find(i => i.itemId === 'vinyl_rare');
-    return item?.ativo || false;
+    return item?.ativo || false;  // ← Verifique se 'ativo' está sendo salvo como true
   }
   const item = this.serverShopItems.find(i => i.id === 'vinyl_rare');
-  return item?.equipado || false;
+  return item?.equipado || false;  // ← Verifique se 'equipado' vem true da API
 },
 
-  hasThemeItem() {
-  // Verifica se comprou o tema na loja (online ou offline)
-  const token = localStorage.getItem('token');
-  if (!token) {
-    const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
-    return offlineInventory.some(i => i.itemId === 'theme_dark' && i.comprado);
-  }
-  return this.serverShopItems.some(i => i.id === 'theme_dark' && i.possuido);
-},
+ hasThemeItem() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      return offlineInventory.some(i => i.itemId === 'theme_dark' && i.comprado);
+    }
+    return this.serverShopItems.some(i => i.id === 'theme_dark' && i.possuido);
+  },
+
+  hasEmojiPack() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      return offlineInventory.some(i => i.itemId === 'emoji_set' && i.comprado);
+    }
+    return this.serverShopItems.some(i => i.id === 'emoji_set' && i.possuido);
+  },
 
   sessionAccuracy() {
     const answered = Math.max(this.currentQuestionNum - 1, 0)
@@ -1312,7 +1339,7 @@ beforeUnmount() {
     console.error('Erro ao ativar ícones:', error);
   }
 },
-    async equipRareVinyl() {
+   async equipRareVinyl() {
   const token = localStorage.getItem('token');
   if (!token) {
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
@@ -1321,6 +1348,8 @@ beforeUnmount() {
       invItem.ativo = true;
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
       this.loadOfflineInventory();
+      this.forceVinylEquipped = true;   // ← ADICIONAR AQUI
+      this.showNotification('Vinil Raro equipado!', 'success');
     }
     return;
   }
@@ -1331,8 +1360,11 @@ beforeUnmount() {
       ...i,
       equipado: i.ativo || false
     }));
+    this.forceVinylEquipped = true;   // ← ADICIONAR AQUI
+    this.showNotification('Vinil Raro equipado!', 'success');
   } catch (error) {
     console.error('Erro ao equipar vinil:', error);
+    this.showNotification('Erro ao equipar vinil', 'error');
   }
 },
 
@@ -1345,6 +1377,8 @@ async unequipRareVinyl() {
       invItem.ativo = false;
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
       this.loadOfflineInventory();
+      this.forceVinylEquipped = false;   // ← ADICIONAR AQUI
+      this.showNotification('Vinil Raro desequipado!', 'success');
     }
     return;
   }
@@ -1355,8 +1389,11 @@ async unequipRareVinyl() {
       ...i,
       equipado: i.ativo || false
     }));
+    this.forceVinylEquipped = false;   // ← ADICIONAR AQUI
+    this.showNotification('Vinil Raro desequipado!', 'success');
   } catch (error) {
     console.error('Erro ao desequipar vinil:', error);
+    this.showNotification('Erro ao desequipar vinil', 'error');
   }
 },
 
@@ -1365,6 +1402,55 @@ async unequipRareVinyl() {
   document.body.classList.toggle('theme-dark', this.themeDark);
   localStorage.setItem('soundup_theme', this.themeDark ? 'dark' : 'light');
 },
+
+    async toggleCustomIcons() {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        // Modo offline
+        const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+        const invItem = offlineInventory.find(i => i.itemId === 'emoji_set');
+        if (invItem) {
+          invItem.ativo = !invItem.ativo;
+          localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
+          this.customIconsActive = invItem.ativo;
+          localStorage.setItem('soundup_custom_icons', String(invItem.ativo));
+          this.loadOfflineInventory();
+          this.showNotification(
+            invItem.ativo ? 'Ícones customizados ativados!' : 'Ícones customizados desativados!', 
+            'success'
+          );
+        }
+        return;
+      }
+      
+      // Modo online
+      try {
+        const newState = !this.customIconsActive;
+        if (newState) {
+          await gameApi.equipItem('emoji_set');
+        } else {
+          await gameApi.unequipItem('emoji_set');
+        }
+        this.customIconsActive = newState;
+        localStorage.setItem('soundup_custom_icons', String(newState));
+        
+        const shopRes = await gameApi.getShop();
+        this.serverShopItems = shopRes.data.items.map(i => ({
+          ...i,
+          equipado: i.ativo || false,
+          ativo: i.ativo || false
+        }));
+        
+        this.showNotification(
+          newState ? 'Ícones customizados ativados!' : 'Ícones customizados desativados!',
+          'success'
+        );
+      } catch (error) {
+        console.error('Erro ao alternar ícones:', error);
+        this.showNotification('Erro ao alternar ícones', 'error');
+      }
+    },
 
     showNotification(message, type = 'info') {
   console.log(`[${type}] ${message}`)
@@ -1501,10 +1587,13 @@ async toggleEquipItem(item) {
     console.error('Erro ao equipar:', error);
   }
 },
-
-   loadOfflineInventory() {
+loadOfflineInventory() {
   const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
   const offlineCoins = parseInt(localStorage.getItem('soundup_coins') || '0');
+  
+  // ← ADICIONAR: sincroniza estado do vinil
+  const vinylItem = offlineInventory.find(i => i.itemId === 'vinyl_rare');
+  this.forceVinylEquipped = vinylItem?.ativo || false;
   
   if (offlineInventory.length > 0 && this.serverShopItems.length > 0) {
     this.serverShopItems = this.serverShopItems.map(item => {
@@ -5199,6 +5288,43 @@ body.custom-icons-active .card-icon i.fa-headphones::before { content: '\f1de'; 
 /* Ou de forma mais específica para o container principal */
 .rhythm-quest {
   padding-bottom: 100px; /* garante que último conteúdo não fique escondido */
+}
+/* Botão Pack de Ícones */
+.btn-emoji-toggle, .btn-emoji-locked {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.btn-emoji-toggle:hover {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-color: #ec4899;
+  transform: scale(1.1);
+}
+
+.btn-emoji-toggle.active {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  border-color: #ec4899;
+  box-shadow: 0 0 15px rgba(236, 72, 153, 0.4);
+}
+
+.btn-emoji-locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-emoji-locked:hover {
+  opacity: 0.7;
 }
 /* Responsive */
 @media (max-width: 1024px) {

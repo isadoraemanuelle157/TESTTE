@@ -9,7 +9,7 @@
             <span class="user-highlight">{{ currentUser.firstName }}</span>
        
           </h1>
-          <p class="welcome-subtitle">{{ welcomeMessage }}</p>
+          <p class="welcome-subtitle" v-html="welcomeMessage"></p>
 
           <div class="quick-stats">
             <div class="stat-card">
@@ -310,7 +310,10 @@
         <div class="categories-grid">
           <div v-for="(genre, index) in selectedGenres.slice(0, 8)" :key="'selected-genre-'+genre.id" class="category-tile genre-tile-selected" @click="navigateToGenre(genre)" :style="{ background: genre.gradient || genreGradients[index % genreGradients.length] }">
             <div class="category-content">
-              <span class="genre-emoji-large">{{ genre.emoji || genre.icon || '🎵' }}</span>
+            <span class="genre-emoji-large">
+  <i v-if="genre.icon" :class="genre.icon"></i>
+  <i v-else class="fa-solid fa-music"></i>
+</span>
               <h3>{{ genre.name }}</h3>
               <span class="category-explore">Explorar <i class="fa fa-arrow-right"></i></span>
             </div>
@@ -349,7 +352,7 @@
         <div class="vibes-showcase">
           <div v-for="(vibe, index) in selectedVibes" :key="'selected-vibe-'+vibe.id" class="vibe-showcase-card" :style="{ '--vibe-gradient': vibe.gradient || genreGradients[index % genreGradients.length] }" @click="navigateToVibe(vibe)">
             <div class="vibe-bg" :style="{ background: vibe.gradient || genreGradients[index % genreGradients.length] }"></div>
-            <div class="vibe-illustration"><span class="vibe-emoji-large">{{ vibe.emoji || '✨' }}</span></div>
+            <div class="vibe-illustration"><span class="vibe-emoji-large"><i class="fa-solid fa-wand-magic-sparkles"></i></span></div>
             <div class="vibe-content">
               <h3>{{ vibe.name }}</h3>
               <p>{{ vibe.description || 'Vibe musical' }}</p>
@@ -1057,7 +1060,7 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
   this.selectedVibes.forEach((v, i) => {
     playlistsFinais.push({
       id: `pl_vibe_${v.id}_${i}`,
-      title: `${v.name} ${v.emoji || '✨'}`,
+    title: v.name,
       description: v.description || `Playlist para o momento ${v.name}`,
       cover: v.gradient || `https://picsum.photos/seed/${encodeURIComponent(v.name)}/300/300`,
       owner: 'SoundUp',
@@ -2091,13 +2094,13 @@ loadMockMadeForYou() {
       const hour = new Date().getHours()
       if (hour >= 5 && hour < 12) {
         this.greeting = "Bom dia"
-        this.welcomeMessage = "Comece seu dia com boa música! 🌅"
+       this.welcomeMessage = "Comece seu dia com boa música! <i class='fa-solid fa-sun'></i>"
       } else if (hour >= 12 && hour < 18) {
         this.greeting = "Boa tarde"
         this.welcomeMessage = "Hora de relaxar com suas favoritas! "
       } else {
         this.greeting = "Boa noite"
-        this.welcomeMessage = "Termine o dia no ritmo certo! 🌙"
+      this.welcomeMessage = "Termine o dia no ritmo certo! <i class='fa-solid fa-moon'></i>"
       }
     },
 

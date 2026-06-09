@@ -1634,7 +1634,8 @@ const equiparItem = async (userId, itemId) => {
   if (!item.comprado) throw new Error('Item não foi comprado');
   
   // Se for avatar ou tema, desativa outros do mesmo tipo
-  if (['avatar', 'tema'].includes(item.tipo)) {
+   // Se for avatar, tema OU emoji, desativa outros do mesmo tipo
+  if (['avatar', 'tema', 'emoji'].includes(item.tipo)) {
     stats.inventario.forEach(i => {
       if (i.tipo === item.tipo && i.itemId !== itemId) {
         i.ativo = false;

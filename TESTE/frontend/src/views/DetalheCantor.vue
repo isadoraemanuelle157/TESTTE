@@ -152,7 +152,7 @@
             class="tab-btn"
             :class="{ 'active': activeTab === tab.id }"
           >
-            <span class="tab-icon">{{ tab.icon }}</span>
+            <i :class="`fas fa-${tab.icon} tab-icon`"></i>
             {{ tab.label }}
             <span v-if="tab.count !== undefined && tab.count !== null" class="tab-count">{{ tab.count }}</span>
           </button>
@@ -367,7 +367,7 @@
         </div>
       </section>
 
-    
+   
     </div>
 
     <!-- ============================================ -->
@@ -485,6 +485,7 @@ export default {
       loading: true,
       cantor: null,
       showsLoading: false,
+      shows: [],
       isFollowing: false,
       followLoading: false,
       isPlaying: false,
@@ -559,9 +560,9 @@ export default {
 
     tabs() {
       return [
-        { id: 'musicas', label: 'Músicas', icon: '🎵', count: this.artistTracks.length },
-        { id: 'albuns', label: 'Discografia', icon: '💿', count: this.artistAlbums.length },
-        { id: 'sobre', label: 'Sobre', icon: '👤' }
+        { id: 'musicas', label: 'Músicas', icon: 'music', count: this.artistTracks.length },
+        { id: 'albuns', label: 'Discografia', icon: 'compact-disc', count: this.artistAlbums.length },
+        { id: 'sobre', label: 'Sobre', icon: 'user' }
       ]
     },
 
@@ -2418,7 +2419,7 @@ export default {
   height: 3px;
   background: var(--primary);
   border-radius: 3px 3px 0 0;
-  width: 25%;
+  width: 33.33%;
   transition: transform 0.3s ease;
 }
 

@@ -9,6 +9,41 @@
       <div class="noise-overlay"></div>
     </div>
 
+    <!-- Toast Notification -->
+    <Transition name="toast">
+      <div v-if="toast.show" class="toast-notification" :class="toast.type">
+        <div class="toast-icon">
+          <svg v-if="toast.type === 'success'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <svg v-else-if="toast.type === 'error'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          <svg v-else-if="toast.type === 'info'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </div>
+        <div class="toast-content">
+          <span class="toast-title">{{ toast.title }}</span>
+          <span class="toast-message">{{ toast.message }}</span>
+        </div>
+        <button class="toast-close" @click="hideToast">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </Transition>
+
     <!-- Header -->
     <header class="room-header">
       <div class="header-left">
@@ -25,40 +60,48 @@
               AO VIVO
             </span>
             <span class="separator">•</span>
-            <span>{{ roomListeners.length + 1 }} ouvindo</span>
+            <span class="listeners-count-header" @click="scrollToListeners">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              {{ activeListeners.length }} ouvindo
+            </span>
             <span class="separator">•</span>
             <span class="room-id">ID: {{ room.id }}</span>
           </div>
         </div>
       </div>
-      
+     
       <div class="header-actions">
-       <button class="action-btn" @click="showShareModal = true">
+        <button class="action-btn" @click="showShareModal = true">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="8.5" cy="7" r="4"/>
-            <line x1="20" y1="8" x2="20" y2="14"/>
-            <line x1="23" y1="11" x2="17" y2="11"/>
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
           </svg>
           Convidar
         </button>
-      
       </div>
     </header>
 
     <!-- Guest Limitation Banner -->
-<div v-if="!isLoggedIn" class="guest-banner">
-  <div class="guest-banner-content">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="8" x2="12" y2="12"/>
-      <line x1="12" y1="16" x2="12.01" y2="16"/>
-    </svg>
-    <span>Você está ouvindo apenas previews do Deezer. 
-      <a @click="redirectToLogin">Faça login</a> para músicas completas do Spotify.
-    </span>
-  </div>
-</div>
+    <div v-if="!isLoggedIn" class="guest-banner">
+      <div class="guest-banner-content">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>Você está ouvindo apenas previews do Deezer.
+          <a @click="redirectToLogin">Faça login</a> para músicas completas do Spotify.
+        </span>
+      </div>
+    </div>
 
     <div class="room-layout">
       <!-- Main Stage -->
@@ -71,7 +114,7 @@
               <img :src="currentTrack.cover || 'https://via.placeholder.com/300'" :alt="currentTrack.title" />
             </div>
           </div>
-          
+         
           <div class="tonearm" :class="{ 'playing': isPlaying }">
             <div class="tonearm-pivot"></div>
             <div class="tonearm-stick"></div>
@@ -107,13 +150,13 @@
         </div>
 
         <!-- Audio Player -->
-        <audio 
-          ref="audioPlayer" 
-          :src="currentTrack.preview" 
+        <audio
+          ref="audioPlayer"
+          :src="currentTrack.preview"
           @timeupdate="updateTime"
           @ended="nextTrack"
           @loadedmetadata="onLoadedMetadata"
-           @canplay="onCanPlay"
+          @canplay="onCanPlay"
         ></audio>
 
         <!-- Progress Bar -->
@@ -141,7 +184,7 @@
               <line x1="4" y1="4" x2="9" y2="9"/>
             </svg>
           </button>
-          
+         
           <button class="control-btn previous" @click="previousTrack">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
@@ -193,94 +236,116 @@
 
       <!-- Sidebar -->
       <aside class="room-sidebar">
-        <!-- Listeners -->
-  <!-- Listeners -->
-<div class="listeners-section">
-  <div class="section-header">
-    <h3>Ouvindo agora</h3>
-    <span class="listener-count">{{ activeListeners.length }}</span>
-  </div>
-  
-  <div class="listeners-list">
-    <!-- Dono da Sala -->
-    <div v-for="listener in activeListeners.filter(l => l.role === 'owner')" 
-         :key="listener.id" 
-         class="listener-item host">
-      <div class="listener-avatar">
-        <img :src="listener.avatar" :alt="listener.name" />
-        <div class="host-badge">HOST</div>
-      </div>
-      <div class="listener-info">
-        <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.value.id ? '(Você)' : '' }}</span>
-        <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
-      </div>
-      <div class="listener-wave" v-if="isPlaying">
-        <span v-for="n in 4" :key="n"></span>
-      </div>
-    </div>
+        <!-- Active Listeners Section -->
+        <div class="listeners-section" ref="listenersSectionRef">
+          <div class="section-header">
+            <h3>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Ouvindo agora
+            </h3>
+            <span class="listener-count-badge">{{ activeListeners.length }}</span>
+          </div>
+         
+          <div class="listeners-list" v-if="activeListeners.length > 0">
+            <!-- Dono da Sala -->
+            <div v-for="listener in activeListeners.filter(l => l.role === 'owner')"
+                 :key="listener.id"
+                 class="listener-item host"
+                 :class="{ 'is-me': listener.id === currentUser.id }">
+              <div class="listener-avatar">
+                <img :src="listener.avatar || 'https://via.placeholder.com/150'" :alt="listener.name" />
+                <div class="host-badge">HOST</div>
+                <div class="online-indicator"></div>
+              </div>
+              <div class="listener-info">
+                <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.id ? '(Você)' : '' }}</span>
+                <span class="listener-status">{{ isPlaying ? '▶ Tocando agora' : '⏸ Pausado' }}</span>
+              </div>
+              <div class="listener-wave" v-if="isPlaying && listener.id !== currentUser.id">
+                <span v-for="n in 4" :key="n"></span>
+              </div>
+            </div>
 
-    <!-- Moderadores -->
-    <div v-for="listener in activeListeners.filter(l => l.role === 'moderator')" 
-         :key="listener.id" 
-         class="listener-item moderator">
-      <div class="listener-avatar">
-        <img :src="listener.avatar" :alt="listener.name" />
-        <div class="mod-badge">MOD</div>
-      </div>
-      <div class="listener-info">
-        <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.value.id ? '(Você)' : '' }}</span>
-        <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
-      </div>
-      <!-- Botão de expulsar (só dono pode expulsar moderadores) -->
-      <button 
-        v-if="currentUserRole === 'owner' && listener.id !== currentUser.value.id"
-        class="kick-btn"
-        @click="kickUser(listener.id, listener.name)"
-        title="Expulsar usuário"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-      </button>
-      <div class="listener-wave" v-if="isPlaying">
-        <span v-for="n in 4" :key="n"></span>
-      </div>
-    </div>
+            <!-- Moderadores -->
+            <div v-for="listener in activeListeners.filter(l => l.role === 'moderator')"
+                 :key="listener.id"
+                 class="listener-item moderator"
+                 :class="{ 'is-me': listener.id === currentUser.id }">
+              <div class="listener-avatar">
+                <img :src="listener.avatar || 'https://via.placeholder.com/150'" :alt="listener.name" />
+                <div class="mod-badge">MOD</div>
+                <div class="online-indicator"></div>
+              </div>
+              <div class="listener-info">
+                <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.id ? '(Você)' : '' }}</span>
+                <span class="listener-status">{{ isPlaying ? '▶ Tocando agora' : '⏸ Pausado' }}</span>
+              </div>
+              <button
+                v-if="currentUserRole === 'owner' && listener.id !== currentUser.id"
+                class="kick-btn"
+                @click="kickUser(listener.id, listener.name)"
+                title="Expulsar usuário"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+              </button>
+              <div class="listener-wave" v-if="isPlaying && listener.id !== currentUser.id">
+                <span v-for="n in 4" :key="n"></span>
+              </div>
+            </div>
 
-    <!-- Participantes -->
-    <div v-for="listener in activeListeners.filter(l => l.role === 'participant')" 
-         :key="listener.id" 
-         class="listener-item">
-      <div class="listener-avatar">
-        <img :src="listener.avatar" :alt="listener.name" />
-      </div>
-      <div class="listener-info">
-        <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.value.id ? '(Você)' : '' }}</span>
-        <span class="listener-status">{{ isPlaying ? 'Tocando' : 'Pausado' }}</span>
-      </div>
-      <!-- Botão de expulsar (dono e moderadores podem expulsar participantes) -->
-      <button 
-        v-if="canKickUsers && listener.id !== currentUser.value.id && listener.role !== 'owner'"
-        class="kick-btn"
-        @click="kickUser(listener.id, listener.name)"
-        title="Expulsar usuário"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-      </button>
-      <div class="listener-wave" v-if="isPlaying">
-        <span v-for="n in 4" :key="n"></span>
-      </div>
-    </div>
-  </div>
-</div>
+            <!-- Participantes -->
+            <div v-for="listener in activeListeners.filter(l => l.role === 'participant')"
+                 :key="listener.id"
+                 class="listener-item"
+                 :class="{ 'is-me': listener.id === currentUser.id }">
+              <div class="listener-avatar">
+                <img :src="listener.avatar || 'https://via.placeholder.com/150'" :alt="listener.name" />
+                <div class="online-indicator"></div>
+              </div>
+              <div class="listener-info">
+                <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.id ? '(Você)' : '' }}</span>
+                <span class="listener-status">{{ isPlaying ? '▶ Tocando agora' : '⏸ Pausado' }}</span>
+              </div>
+              <button
+                v-if="canKickUsers && listener.id !== currentUser.id && listener.role !== 'owner'"
+                class="kick-btn"
+                @click="kickUser(listener.id, listener.name)"
+                title="Expulsar usuário"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  <line x1="10" y1="11" x2="10" y2="17"/>
+                  <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+              </button>
+              <div class="listener-wave" v-if="isPlaying && listener.id !== currentUser.id">
+                <span v-for="n in 4" :key="n"></span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="empty-listeners">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            <p>Ninguém ouvindo ainda</p>
+            <span>Convide amigos para a sala!</span>
+          </div>
+        </div>
 
         <!-- Queue -->
         <div class="queue-section">
@@ -288,10 +353,10 @@
             <h3>Fila de reprodução</h3>
             <button class="clear-btn" @click="clearQueue" v-if="queue.length > 0">Limpar</button>
           </div>
-          
+         
           <div class="queue-list" ref="queueList" v-if="queue.length > 0">
-            <div 
-              v-for="(track, index) in queue" 
+            <div
+              v-for="(track, index) in queue"
               :key="track.id"
               class="queue-item"
               :class="{ 'active': index === 0, 'next': index === 1 }"
@@ -337,27 +402,27 @@
             <h3>Chat da sala</h3>
             <span class="unread-badge" v-if="unreadMessages > 0">{{ unreadMessages }}</span>
           </div>
-       <div class="chat-messages" ref="chatContainer">
-  <div 
-    v-for="msg in recentMessages" 
-    :key="msg.id" 
-    class="chat-message"
-    :class="{ 
-      'self': msg.userId === currentUser.id,
-      'system': msg.userId === 'system'
-    }"
-  >
-              <img :src="msg.avatar" class="msg-avatar" />
+          <div class="chat-messages" ref="chatContainer">
+            <div
+              v-for="msg in recentMessages"
+              :key="msg.id"
+              class="chat-message"
+              :class="{
+                'self': msg.userId === currentUser.id,
+                'system': msg.userId === 'system'
+              }"
+            >
+              <img v-if="msg.userId !== 'system'" :src="msg.avatar" class="msg-avatar" />
               <div class="msg-content">
-                <span class="msg-author">{{ msg.userName }}</span>
+                <span v-if="msg.userId !== 'system'" class="msg-author">{{ msg.userName }}</span>
                 <p class="msg-text">{{ msg.text }}</p>
                 <span class="msg-time">{{ formatTimeAgo(msg.timestamp) }}</span>
               </div>
             </div>
           </div>
           <div class="chat-input">
-            <input 
-              v-model="newMessage" 
+            <input
+              v-model="newMessage"
               @keyup.enter="sendMessage"
               placeholder="Enviar mensagem..."
               type="text"
@@ -372,70 +437,65 @@
         </div>
       </aside>
     </div>
-<Teleport to="body">
-  <Transition name="modal">
-    <div v-if="showShareModal" class="modal-overlay" @click.self="showShareModal = false">
-      <div class="modal-content share-modal">
-        <div class="modal-header">
-          <h3>Convidar para Sala</h3>
-          <button class="close-btn" @click="showShareModal = false">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-        <div class="share-content">
-          <div class="invite-link">
-            <label>Link da Sala</label>
-            <div class="link-input-group">
-              <input :value="roomUrl" readonly />
-              <button class="copy-btn" @click="copyLink" :class="{ 'copied': copied }">
-                <span v-if="copied">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Copiado!
-                </span>
-                <span v-else>Copiar</span>
-              </button>
-            </div>
-            <p class="invite-hint">Compartilhe este link para convidar amigos para sua sala.</p>
-          </div>
-          <div class="share-options">
-            <h4>Compartilhar</h4>
-            <div class="share-buttons">
-              <button class="share-btn whatsapp" @click="shareVia('whatsapp')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                </svg>
-                WhatsApp
-              </button>
-              <button class="share-btn telegram" @click="shareVia('telegram')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                </svg>
-                Telegram
-              </button>
-              <button class="share-btn email" @click="shareVia('email')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                  <polyline points="22,6 12,13 2,6"/>
-                </svg>
-                Email
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Transition>
-</Teleport>
 
-    <!-- Invite Modal -->
+    <!-- Share Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <RoomJoinModal v-if="showJoinModal" v-model="showJoinModal" :room-id="roomId" @joined="onGuestJoined" />
+        <div v-if="showShareModal" class="modal-overlay" @click.self="showShareModal = false">
+          <div class="modal-content share-modal">
+            <div class="modal-header">
+              <h3>Convidar para Sala</h3>
+              <button class="close-btn" @click="showShareModal = false">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div class="share-content">
+              <div class="invite-link">
+                <label>Link da Sala</label>
+                <div class="link-input-group">
+                  <input :value="roomUrl" readonly />
+                  <button class="copy-btn" @click="copyLink" :class="{ 'copied': copied }">
+                    <span v-if="copied">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                      Copiado!
+                    </span>
+                    <span v-else>Copiar</span>
+                  </button>
+                </div>
+                <p class="invite-hint">Compartilhe este link para convidar amigos para sua sala.</p>
+              </div>
+              <div class="share-options">
+                <h4>Compartilhar</h4>
+                <div class="share-buttons">
+                  <button class="share-btn whatsapp" @click="shareVia('whatsapp')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                    </svg>
+                    WhatsApp
+                  </button>
+                  <button class="share-btn telegram" @click="shareVia('telegram')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                    Telegram
+                  </button>
+                  <button class="share-btn email" @click="shareVia('email')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    Email
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </Transition>
     </Teleport>
 
@@ -453,14 +513,14 @@
                 </svg>
               </button>
             </div>
-            
+           
             <div class="search-box">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <input 
-                v-model="searchQuery" 
+              <input
+                v-model="searchQuery"
                 @input="debouncedSearch"
                 placeholder="Buscar músicas, artistas ou álbuns na Deezer..."
                 type="text"
@@ -473,7 +533,7 @@
               <div v-if="searchResults.length === 0 && searchQuery && !isSearching" class="no-results">
                 Nenhum resultado encontrado na Deezer
               </div>
-              
+             
               <div v-for="track in searchResults" :key="track.id" class="search-result-item">
                 <img :src="track.album.cover_medium || track.album.cover" class="result-cover" />
                 <div class="result-info">
@@ -528,42 +588,40 @@
                   </svg>
                 </div>
                 <h2>{{ room.name }}</h2>
-                <p>{{ roomListeners.length + 1 }} pessoas ouvindo</p>
+                <p>{{ activeListeners.length }} pessoas ouvindo</p>
                 <div class="current-track-preview" v-if="currentTrack.id">
                   <small>Tocando agora:</small>
                   <strong>{{ currentTrack.title }}</strong>
                   <span>{{ currentTrack.artist }}</span>
                 </div>
               </div>
-              
- <div class="join-form">
-  <input 
-    v-model="joinUserName" 
-    placeholder="Seu nome"
-    type="text"
-    maxlength="20"
-  />
+             
+              <div class="join-form">
+                <input
+                  v-model="joinUserName"
+                  placeholder="Seu nome"
+                  type="text"
+                  maxlength="20"
+                />
 
-  <!-- Só mostra campo de senha se NÃO for dono e sala for privada -->
-  <input
-    v-if="!isRoomOwner && !room.isPublic"
-    v-model="joinPassword"
-    placeholder="Senha da sala"
-    type="password"
-    maxlength="30"
-  />
+                <input
+                  v-if="!isRoomOwner && !room.isPublic"
+                  v-model="joinPassword"
+                  placeholder="Senha da sala"
+                  type="password"
+                  maxlength="30"
+                />
 
-  <p v-if="accessError" class="join-error">{{ accessError }}</p>
+                <p v-if="accessError" class="join-error">{{ accessError }}</p>
 
-  <button
-    @click="joinRoom"
-    :disabled="!joinUserName.trim() || (!room.isPublic && !isRoomOwner && !joinPassword.trim())"
-    class="join-btn"
-  >
-    {{ isRoomOwner ? 'Entrar como Dono' : 'Entrar na Sala' }}
-  </button>
-</div>
-
+                <button
+                  @click="joinRoom"
+                  :disabled="!joinUserName.trim() || (!room.isPublic && !isRoomOwner && !joinPassword.trim())"
+                  class="join-btn"
+                >
+                  {{ isRoomOwner ? 'Entrar como Dono' : 'Entrar na Sala' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -579,19 +637,52 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
-// Adicione estas refs
-const isLoggedIn = ref(false)
-const roomSource = ref('deezer') // 'deezer' ou 'spotify'
+// ========== TOAST NOTIFICATION SYSTEM ==========
+const toast = ref({
+  show: false,
+  type: 'info',
+  title: '',
+  message: '',
+  duration: 4000
+})
+
+let toastTimeout = null
+
+const showToast = (type, title, message, duration = 4000) => {
+  if (toastTimeout) clearTimeout(toastTimeout)
+ 
+  toast.value = { show: true, type, title, message, duration }
+ 
+  toastTimeout = setTimeout(() => {
+    hideToast()
+  }, duration)
+}
+
+const hideToast = () => {
+  toast.value.show = false
+  if (toastTimeout) {
+    clearTimeout(toastTimeout)
+    toastTimeout = null
+  }
+}
+
 // ========== LISTENERS & PERMISSÕES ==========
-const activeListeners = ref([])  // Lista de quem está na sala agora
-const currentUserRole = ref('participant') // 'owner' | 'moderator' | 'participant'
-const canKickUsers = computed(() => 
+const activeListeners = ref([])
+const currentUserRole = ref('participant')
+const canKickUsers = computed(() =>
   currentUserRole.value === 'owner' || currentUserRole.value === 'moderator'
 )
 const isRoomOwner = ref(false)
-// ==========================================
+const listenersSectionRef = ref(null)
 
-// Adicione estas computed
+const scrollToListeners = () => {
+  listenersSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+// ========== AUTH STATE ==========
+const isLoggedIn = ref(false)
+const roomSource = ref('deezer')
+
 const canAddFullTracks = computed(() => isLoggedIn.value && roomSource.value === 'spotify')
 const showLoginPrompt = computed(() => !isLoggedIn.value && roomSource.value === 'deezer')
 
@@ -624,8 +715,7 @@ const normalizeRoom = (data = {}) => ({
 const joinPassword = ref('')
 const accessError = ref('')
 
-
-// Room State - agora com ID da URL
+// Room State
 const room = ref({
   name: 'Sessão Chill Vibes 🎵',
   id: '',
@@ -642,7 +732,7 @@ const currentUser = ref({
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const shuffle = ref(false)
-const repeatMode = ref('off') // 'off', 'all', 'one'
+const repeatMode = ref('off')
 const syncStatus = ref('synced')
 const audioPlayer = ref(null)
 
@@ -660,18 +750,15 @@ const currentTrack = ref({
 // Queue
 const queue = ref([])
 
-// Listeners
-const roomListeners = ref([])
-
 // Chat
 const messages = ref([])
-
 const newMessage = ref('')
 const unreadMessages = ref(0)
 
 // Modals
 const showShareModal = ref(false)
 const showAddMusic = ref(false)
+const showJoinModal = ref(false)
 
 // Search Deezer
 const searchQuery = ref('')
@@ -686,9 +773,6 @@ const joinUserName = ref('')
 // Invite
 const copied = ref(false)
 
-// Friends
-const onlineFriends = ref([])
-
 // URL da sala
 const roomUrl = computed(() => {
   const baseUrl = window.location.origin + window.location.pathname
@@ -699,9 +783,9 @@ const progressPercent = computed(() => {
   if (!currentTrack.value.duration) return 0
   return (currentTime.value / currentTrack.value.duration) * 100
 })
+
 const DEEZER_API = 'https://api.deezer.com'
 
-// Proxies comuns (um pode cair; ter fallback ajuda muito)
 const PROXIES = [
   (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
   (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
@@ -725,27 +809,23 @@ async function fetchJsonDeezer(pathAndQuery) {
   return { data: [] }
 }
 
-
 // Computed
-const recentMessages = computed(() => messages.value.slice(-10))
-const roomId = computed(() => room.value.id)
+const recentMessages = computed(() => messages.value.slice(-50))
 
 // Methods
 const togglePlay = () => {
   if (!audioPlayer.value || !currentTrack.value.id) return
-  
+ 
   if (isPlaying.value) {
     audioPlayer.value.pause()
     isPlaying.value = false
   } else {
-    // ✅ Tenta tocar, se falhar (ex: autoplay policy), mostra erro
     audioPlayer.value.play()
       .then(() => {
         isPlaying.value = true
       })
       .catch(err => {
         console.warn('Erro ao tocar:', err)
-        // Navegador bloqueou autoplay - usuário precisa clicar de novo
         isPlaying.value = false
       })
   }
@@ -773,18 +853,14 @@ const nextTrack = () => {
   }
 }
 
-// ✅ ADICIONAR método onCanPlay
 const onCanPlay = () => {
-  // Quando o áudio está pronto para tocar
   if (isPlaying.value && audioPlayer.value) {
     audioPlayer.value.play().catch(err => {
       console.warn('Erro ao tocar áudio:', err)
-      // Pode ser necessário interação do usuário primeiro
     })
   }
 }
 
-// ✅ MODIFICAR loadTrack para garantir que toca
 const loadTrack = (track) => {
   currentTrack.value = {
     id: track.id,
@@ -794,25 +870,23 @@ const loadTrack = (track) => {
     duration: track.duration,
     explicit: track.explicit_lyrics || false,
     deezerId: track.id,
-    preview: track.preview  // ✅ URL do preview do Deezer
+    preview: track.preview
   }
   currentTime.value = 0
-  
+ 
   nextTick(() => {
     if (audioPlayer.value) {
-      audioPlayer.value.load()  // ✅ Força recarregar o src
-      
-      // ✅ Se estava tocando, continua tocando
+      audioPlayer.value.load()
       if (isPlaying.value) {
         audioPlayer.value.play().catch(err => {
           console.warn('Autoplay bloqueado:', err)
-          // Em alguns navegadores, precisa de interação do usuário
           isPlaying.value = false
         })
       }
     }
   })
 }
+
 const seekTo = (event) => {
   if (!audioPlayer.value || !currentTrack.value.duration) return
   const bar = event.currentTarget
@@ -875,24 +949,6 @@ const searchDeezer = async () => {
 
   isSearching.value = true
   try {
-    // If logged in with Spotify, search both
-    if (isLoggedIn.value && roomSource.value === 'spotify') {
-      // Try Spotify first for full tracks
-      try {
-        const token = localStorage.getItem('token')
-        const spotifyRes = await fetch(`/spotify/search?q=${encodeURIComponent(searchQuery.value)}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        if (spotifyRes.ok) {
-          const spotifyData = await spotifyRes.json()
-          // Process Spotify results...
-        }
-      } catch (e) {
-        console.log('Spotify search failed, falling back to Deezer')
-      }
-    }
-    
-    // Always search Deezer as fallback (or primary for guests)
     const data = await fetchJsonDeezer(`/search?q=${encodeURIComponent(searchQuery.value)}&limit=10`)
     searchResults.value = data.data || []
   } catch (error) {
@@ -918,7 +974,6 @@ const fetchDeezerChart = async () => {
   }
 }
 
-
 const addToQueue = (track) => {
   const trackData = {
     id: track.id,
@@ -930,16 +985,17 @@ const addToQueue = (track) => {
     deezerId: track.id,
     preview: track.preview
   }
-  
+ 
   queue.value.push(trackData)
   showAddMusic.value = false
   searchQuery.value = ''
   searchResults.value = []
-  
-  // Se não estiver tocando nada, começa a tocar
+ 
   if (!currentTrack.value.id) {
     nextTrack()
   }
+ 
+  showToast('success', 'Adicionado!', `${trackData.title} foi adicionado à fila`)
 }
 
 const removeFromQueue = (index) => {
@@ -949,38 +1005,20 @@ const removeFromQueue = (index) => {
 const clearQueue = () => {
   if (confirm('Limpar toda a fila?')) {
     queue.value = []
+    showToast('info', 'Fila limpa', 'Todas as músicas foram removidas da fila')
   }
-}
-
-// Invite System
-const openInviteModal = () => {
-  showInviteModal.value = true
-  // Gerar ID único se não tiver
-  if (!room.value.id) {
-    room.value.id = generateRoomId()
-    updateUrlWithRoomId()
-  }
-}
-
-const generateRoomId = () => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
-const updateUrlWithRoomId = () => {
-  const url = new URL(window.location.href)
-  url.searchParams.set('room', room.value.id)
-  window.history.replaceState({}, '', url)
 }
 
 const copyLink = () => {
   navigator.clipboard.writeText(roomUrl.value)
   copied.value = true
+  showToast('success', 'Link copiado!', 'O link da sala foi copiado para a área de transferência')
   setTimeout(() => copied.value = false, 2000)
 }
 
 const shareVia = (platform) => {
   const text = `🎵 Entre na minha sala do Music Room! Estamos ouvindo: ${currentTrack.value.title || 'músicas incríveis'}\n\n${roomUrl.value}`
-  
+ 
   switch(platform) {
     case 'whatsapp':
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
@@ -994,69 +1032,75 @@ const shareVia = (platform) => {
   }
 }
 
-const inviteFriend = (friend) => {
-  friend.invited = true
-  // Aqui você poderia enviar notificação real para o amigo
-  setTimeout(() => friend.invited = false, 3000)
-}
-
-const leaveRoom = () => {
-  if (confirm('Sair da sala?')) {
-    router.push('/rooms')
+// ========== LEAVE ROOM WITH TOAST ==========
+const leaveRoom = async () => {
+  // Remove self from listeners before leaving
+  if (room.value.id && currentUser.value.id) {
+    try {
+      await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+        method: 'DELETE',
+        body: JSON.stringify({ userIdToRemove: currentUser.value.id })
+      })
+    } catch (e) {
+      console.warn('Erro ao remover listener:', e)
+    }
   }
+ 
+  stopListenersPolling()
+ 
+  // Show toast notification
+  showToast('info', 'Você saiu da sala', `Até logo, ${currentUser.value.name}!`, 3000)
+ 
+  // Small delay to show the toast before navigating
+  setTimeout(() => {
+    router.push('/rooms')
+  }, 800)
 }
 
 // Join Room Logic
-// SUBSTITUA O MÉTODO checkRoomAccess() EXISTENTE POR ESTE:
-
 const checkRoomAccess = async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const roomIdFromUrl = urlParams.get('room')
-  
-  // Check auth status
+ 
   const token = localStorage.getItem('token')
   isLoggedIn.value = !!token
-  
+ 
   if (!roomIdFromUrl) {
-    // No room ID - redirect to creation page
     router.push('/rooms/create')
     return
   }
 
   room.value.id = roomIdFromUrl
 
-  // ✅ VERIFICA SE É DONO PRIMEIRO (tanto logado quanto visitante)
   const isOwner = localStorage.getItem(`room_${roomIdFromUrl}_owner`) === 'true'
   isRoomOwner.value = isOwner
 
-  // Load room data (API ou localStorage)
   try {
     await loadRoomData(roomIdFromUrl)
   } catch (error) {
     console.error('Erro ao carregar dados da sala:', error)
   }
 
-  // Se é dono, já entra direto (não mostra join modal)
   if (isOwner) {
     showJoinModal.value = false
+    currentUserRole.value = 'owner'
     await addSelfToListeners()
     await determineUserRole()
     startListenersPolling()
 
     messages.value.push({
-  id: Date.now(),
-  userId: 'system',
-  userName: 'Sistema',
-  avatar: 'https://via.placeholder.com/150',
-  text: `${currentUser.value.name} entrou na sala!`,
-  timestamp: Date.now()
-})
+      id: Date.now(),
+      userId: 'system',
+      userName: 'Sistema',
+      avatar: 'https://via.placeholder.com/150',
+      text: `${currentUser.value.name} entrou na sala!`,
+      timestamp: Date.now()
+    })
     return
   }
 
-  // NÃO é dono — verifica se precisa de senha
   const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
-  
+ 
   if (savedRoom) {
     try {
       const data = JSON.parse(savedRoom)
@@ -1067,26 +1111,21 @@ const checkRoomAccess = async () => {
     }
   }
 
-  // Sala privada E não é dono → mostra modal de senha
   if (!room.value.isPublic) {
     showJoinModal.value = true
     return
   }
 
-  // Sala pública E não é dono → mostra modal para colocar nome (guest)
   if (!isLoggedIn.value) {
     showJoinModal.value = true
     return
   }
 
-  // Logado, sala pública, não é dono → entra direto
   showJoinModal.value = false
-  await addSelfToListeners()
   await determineUserRole()
+  await addSelfToListeners()
   startListenersPolling()
 }
-
-// SUBSTITUA O MÉTODO joinRoom() EXISTENTE POR ESTE:
 
 const joinRoom = async () => {
   accessError.value = ''
@@ -1096,17 +1135,17 @@ const joinRoom = async () => {
     return
   }
 
-  // ✅ DONO entra sem senha (verifica localStorage ou API)
   if (isRoomOwner.value) {
     currentUser.value.name = joinUserName.value.trim()
     showJoinModal.value = false
+    currentUserRole.value = 'owner'
     await addSelfToListeners()
     await determineUserRole()
     startListenersPolling()
+    showToast('success', 'Bem-vindo!', `Você entrou como dono da sala`)
     return
   }
 
-  // Sala privada → precisa verificar senha
   if (!room.value.isPublic) {
     const senha = joinPassword.value.trim()
     if (!senha) {
@@ -1114,15 +1153,12 @@ const joinRoom = async () => {
       return
     }
 
-    // ✅ Verifica se é sala de visitante (localStorage)
     const isGuestRoom = !String(room.value.id).match(/^[0-9a-fA-F]{24}$/)
-    
+   
     if (isGuestRoom) {
-      // ... (código existente de verificação localStorage) ...
-      // Verificação localStorage para salas de visitante
       const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
       const guestRoom = guestRooms.find(r => (r.id || r._id) === room.value.id)
-      
+     
       if (!guestRoom) {
         accessError.value = 'Sala não encontrada.'
         return
@@ -1134,16 +1170,16 @@ const joinRoom = async () => {
         return
       }
 
-      // ✅ Senha correta para sala de visitante
       currentUser.value.name = joinUserName.value.trim()
       showJoinModal.value = false
+      await determineUserRole()
       await addSelfToListeners()
       await determineUserRole()
       startListenersPolling()
+      showToast('success', 'Bem-vindo!', `Você entrou na sala ${room.value.name}`)
       return
     }
 
-    // ✅ Sala da API (MongoDB) — verifica no backend
     try {
       const response = await apiFetch(`/api/rooms/${room.value.id}/join`, {
         method: 'POST',
@@ -1158,20 +1194,17 @@ const joinRoom = async () => {
         return
       }
 
-      // ✅ Backend validou a senha
       currentUser.value.name = joinUserName.value.trim()
       showJoinModal.value = false
 
-      // ✅ Aplica dados da sala se vierem
       if (data._id || data.id) {
         applyRoomData(data)
       }
 
-      await addSelfToListeners()
       await determineUserRole()
+      await addSelfToListeners()
       startListenersPolling()
 
-      // ✅ Adiciona mensagem de sistema
       messages.value.push({
         id: Date.now(),
         userId: 'system',
@@ -1180,6 +1213,8 @@ const joinRoom = async () => {
         text: `${joinUserName.value.trim()} entrou na sala!`,
         timestamp: Date.now()
       })
+     
+      showToast('success', 'Bem-vindo!', `Você entrou na sala ${room.value.name}`)
 
     } catch (error) {
       console.error('Erro ao verificar senha:', error)
@@ -1188,13 +1223,11 @@ const joinRoom = async () => {
     return
   }
 
-  // Sala pública → entra direto (só precisa do nome)
   currentUser.value.name = joinUserName.value.trim()
   showJoinModal.value = false
-  
-  // ✅ Adiciona à lista de listeners e busca permissões
-  await addSelfToListeners()
+ 
   await determineUserRole()
+  await addSelfToListeners()
   startListenersPolling()
 
   messages.value.push({
@@ -1205,20 +1238,20 @@ const joinRoom = async () => {
     text: `${joinUserName.value.trim()} entrou na sala!`,
     timestamp: Date.now()
   })
+ 
+  showToast('success', 'Bem-vindo!', `Você entrou na sala ${room.value.name}`)
 }
+
 // ========== GERENCIAR LISTENERS ==========
 
 const fetchActiveListeners = async () => {
   if (!room.value.id) return
-  
+ 
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`)
     if (response.ok) {
       const listeners = await response.json()
       activeListeners.value = listeners
-      
-      // Atualiza a contagem na UI
-      roomListeners.value = listeners.filter(l => l.id !== currentUser.value.id)
     }
   } catch (error) {
     console.error('Erro ao buscar listeners:', error)
@@ -1227,20 +1260,33 @@ const fetchActiveListeners = async () => {
 
 const addSelfToListeners = async () => {
   if (!room.value.id) return
-  
+
+  // Add current user locally first so they appear immediately in the list
+  const selfListener = {
+    id: currentUser.value.id,
+    name: currentUser.value.name,
+    avatar: currentUser.value.avatar,
+    role: isRoomOwner.value ? 'owner' : currentUserRole.value
+  }
+
+  // Only add if not already present
+  const alreadyPresent = activeListeners.value.some(l => l.id === currentUser.value.id)
+  if (!alreadyPresent) {
+    activeListeners.value.push(selfListener)
+  }
+
   try {
     const userData = {
       name: currentUser.value.name,
       avatar: currentUser.value.avatar,
       guestId: isLoggedIn.value ? undefined : currentUser.value.id
     }
-    
+   
     await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'POST',
       body: JSON.stringify(userData)
     })
-    
-    // Busca lista atualizada
+   
     await fetchActiveListeners()
   } catch (error) {
     console.error('Erro ao adicionar listener:', error)
@@ -1249,18 +1295,16 @@ const addSelfToListeners = async () => {
 
 const kickUser = async (userId, userName) => {
   if (!confirm(`Expulsar ${userName} da sala?`)) return
-  
+ 
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'DELETE',
       body: JSON.stringify({ userIdToRemove: userId })
     })
-    
+   
     if (response.ok) {
-      // Remove da lista local
       activeListeners.value = activeListeners.value.filter(l => l.id !== userId)
-      
-      // Adiciona mensagem de sistema localmente
+     
       messages.value.push({
         id: Date.now(),
         userId: 'system',
@@ -1269,13 +1313,15 @@ const kickUser = async (userId, userName) => {
         text: `${userName} foi removido da sala.`,
         timestamp: Date.now()
       })
+     
+      showToast('success', 'Usuário expulso', `${userName} foi removido da sala`)
     } else {
       const error = await response.json()
-      alert(error.error || 'Erro ao expulsar usuário')
+      showToast('error', 'Erro', error.error || 'Erro ao expulsar usuário')
     }
   } catch (error) {
     console.error('Erro ao expulsar:', error)
-    alert('Erro ao expulsar usuário')
+    showToast('error', 'Erro', 'Erro ao expulsar usuário')
   }
 }
 
@@ -1284,7 +1330,7 @@ const determineUserRole = async () => {
     currentUserRole.value = 'participant'
     return
   }
-  
+ 
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/role`)
     if (response.ok) {
@@ -1298,7 +1344,6 @@ const determineUserRole = async () => {
 }
 
 const saveRoomState = () => {
-  // Salvar estado da sala para quem entrar pelo link
   if (room.value.id) {
     const roomData = {
       name: room.value.name,
@@ -1321,7 +1366,7 @@ const dragStart = (event, index) => {
 const drop = (event, dropIndex) => {
   const dragIndex = dragStartIndex.value
   if (dragIndex === null || dragIndex === dropIndex) return
-  
+ 
   const item = queue.value.splice(dragIndex, 1)[0]
   queue.value.splice(dropIndex, 0, item)
   dragStartIndex.value = null
@@ -1332,8 +1377,7 @@ onMounted(() => {
   checkAuth()
   checkRoomAccess()
   fetchDeezerChart()
-  
-  // Periodic save
+ 
   setInterval(saveRoomState, 5000)
 })
 
@@ -1358,15 +1402,13 @@ const checkAuth = () => {
 }
 
 const redirectToLogin = () => {
-  // Save current room to return after login
   localStorage.setItem('redirect_after_login', window.location.href)
   window.location.href = '/login'
 }
 
-
 const applyRoomData = (data) => {
-  if (!data) return  // ← ADICIONE ESTA LINHA
-  
+  if (!data) return
+ 
   const normalized = normalizeRoom(data)
 
   room.value = {
@@ -1408,7 +1450,6 @@ const loadRoomData = async (roomId) => {
     console.error('Erro ao carregar sala da API:', error)
   }
 
-  // fallback convidado/localStorage
   const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
   const guestRoom = guestRooms.find(r => String(r.id || r._id) === String(roomId))
 
@@ -1420,14 +1461,10 @@ const loadRoomData = async (roomId) => {
   return false
 }
 
-
 let listenersInterval = null
 
 const startListenersPolling = () => {
-  // Busca imediatamente
   fetchActiveListeners()
-  
-  // Poll a cada 5 segundos
   listenersInterval = setInterval(fetchActiveListeners, 5000)
 }
 
@@ -1438,18 +1475,18 @@ const stopListenersPolling = () => {
   }
 }
 
-// Modificar onUnmounted para limpar
 onUnmounted(() => {
   clearTimeout(searchTimeout)
   stopListenersPolling()
-  
-  // Remove self da lista de listeners ao sair
+ 
   if (room.value.id && currentUser.value.id) {
     apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'DELETE',
       body: JSON.stringify({ userIdToRemove: currentUser.value.id })
     }).catch(() => {})
   }
+ 
+  if (toastTimeout) clearTimeout(toastTimeout)
 })
 </script>
 
@@ -1731,7 +1768,7 @@ onUnmounted(() => {
   inset: 0;
   border-radius: 50%;
   background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
-  box-shadow: 
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.5),
     inset 0 0 0 2px rgba(255, 255, 255, 0.1);
   animation: spin 3s linear infinite;
@@ -2142,6 +2179,15 @@ onUnmounted(() => {
 }
 
 /* Listeners List */
+.listener-count-badge {
+  background: var(--primary);
+  color: black;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
 .listeners-list {
   display: flex;
   flex-direction: column;
@@ -2169,6 +2215,11 @@ onUnmounted(() => {
   padding: 0.5rem;
   border-radius: 12px;
   transition: background 0.3s;
+}
+
+.listener-item.is-me {
+  background: rgba(29, 185, 84, 0.1);
+  border: 1px solid rgba(29, 185, 84, 0.2);
 }
 
 .listener-item:hover {
@@ -2231,6 +2282,17 @@ onUnmounted(() => {
 .listener-status {
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  background: #1db954;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
 }
 
 .listener-wave {
@@ -3099,21 +3161,21 @@ onUnmounted(() => {
   .room-layout {
     grid-template-columns: 1fr;
   }
-  
+ 
   .room-sidebar {
     order: 2;
   }
-  
+ 
   .stage-area {
     min-height: auto;
     padding: 1rem;
   }
-  
+ 
   .player-container {
     width: 300px;
     height: 300px;
   }
-  
+ 
   .track-title {
     font-size: 1.75rem;
   }
@@ -3123,25 +3185,25 @@ onUnmounted(() => {
   .room-header {
     padding: 1rem;
   }
-  
+ 
   .room-info h1 {
     font-size: 1.125rem;
   }
-  
+ 
   .action-btn span {
     display: none;
   }
-  
+ 
   .player-container {
     width: 250px;
     height: 250px;
   }
-  
+ 
   .control-btn.main {
     width: 60px;
     height: 60px;
   }
-  
+ 
   .share-buttons {
     flex-direction: column;
   }
