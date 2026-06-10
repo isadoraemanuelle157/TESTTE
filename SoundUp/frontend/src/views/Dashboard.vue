@@ -57,7 +57,7 @@
           <p class="hero-description" v-if="!isPlaying && continueListening[0].progress < 95">
             De onde você parou <span class="highlight">{{ Math.round(continueListening[0].progress || 0) }}% completo</span>
           </p>
-          <p class="hero-description" v-else-if="isPlaying"><span class="highlight">▶ Reproduzindo agora</span></p>
+        <p class="hero-description" v-else-if="isPlaying"><span class="highlight"><i class="fa fa-play"></i> Reproduzindo agora</span></p>
           <div class="hero-progress" v-if="continueListening[0]">
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: (isPlaying ? progressPercent : (continueListening[0].progress || 0)) + '%' }"></div>
@@ -381,7 +381,7 @@
               <img :src="track.cover" @error="handleImageError" alt="Cover" />
               <div class="play-button-overlay"><i class="fa" :class="isCurrentTrack(track) && isPlaying ? 'fa-pause-circle' : 'fa-play-circle'"></i></div>
               <div class="equalizer" v-if="isCurrentTrack(track) && isPlaying"><span v-for="n in 4" :key="n"></span></div>
-              <div class="time-badge" :class="{ 'now-playing': isCurrentTrack(track) && isPlaying }">{{ isCurrentTrack(track) && isPlaying ? '▶ AGORA' : formatTimeAgo(track.playedAt) }}</div>
+            <div class="time-badge" :class="{ 'now-playing': isCurrentTrack(track) && isPlaying }">{{ isCurrentTrack(track) && isPlaying ? '<i class="fa fa-play"></i> AGORA' : formatTimeAgo(track.playedAt) }}</div>
             </div>
             <div class="card-info">
               <h3 class="card-title">{{ track.title }}</h3>
@@ -2094,13 +2094,13 @@ loadMockMadeForYou() {
       const hour = new Date().getHours()
       if (hour >= 5 && hour < 12) {
         this.greeting = "Bom dia"
-       this.welcomeMessage = "Comece seu dia com boa música! <i class='fa-solid fa-sun'></i>"
+       this.welcomeMessage = "Comece seu dia com boa música!"
       } else if (hour >= 12 && hour < 18) {
         this.greeting = "Boa tarde"
-        this.welcomeMessage = "Hora de relaxar com suas favoritas! "
+        this.welcomeMessage = "Hora de relaxar com suas favoritas!"
       } else {
         this.greeting = "Boa noite"
-      this.welcomeMessage = "Termine o dia no ritmo certo! <i class='fa-solid fa-moon'></i>"
+      this.welcomeMessage = "Termine o dia no ritmo certo!"
       }
     },
 
@@ -3566,11 +3566,13 @@ this.followedArtists = cantores
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 24px;
+  align-items: stretch; /* Cards se esticam para mesma altura */
 }
 .cards-row.expanded {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 24px;
+  align-items: stretch;
 }
 
 .music-card {
@@ -3582,6 +3584,19 @@ this.followedArtists = cantores
   position: relative;
   border: 1px solid rgba(255,255,255,0.05);
   backdrop-filter: blur(10px);
+  /* Adicionar: */
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Cards com mesma altura */
+}
+
+.music-card .card-info {
+  /* Adicionar: */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 60px; /* Altura mínima fixa para info */
 }
 
 .music-card:hover {
@@ -3608,13 +3623,18 @@ this.followedArtists = cantores
 
 .album-card .card-image {
   aspect-ratio: 1;
-  height: auto;
+  height: 0;
+  padding-bottom: 100%; /* Mantém proporção quadrada */
+  position: relative;
+  overflow: hidden;
 }
 .album-card .card-image img {
-  aspect-ratio: 1;
-  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
 
 .card-image img {
@@ -3876,12 +3896,13 @@ this.followedArtists = cantores
   font-weight: 700;
   margin: 0 0 6px 0;
   color: #fff;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
   line-height: 1.4;
+  min-height: 2.8em; /* 2 linhas */
 }
-
 .card-artist {
   font-size: 13px;
   color: #b3b3b3;

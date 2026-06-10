@@ -2,6 +2,7 @@
   <div class="home">
     <div class="home-content">
 <!-- ===== BANNER INFORMATIVO ===== -->
+ <div class="info-banner-top" v-if="!isLoggedIn">
 <div class="info-banner-top">
   <div class="banner-inner">
     <div class="banner-left">
@@ -27,6 +28,7 @@
       </button>
     </div>
   </div>
+</div>
 </div>
 
       <!-- HEADER COM BRAND SOUNDUP -->
@@ -528,6 +530,8 @@ export default {
       isPlaying: false,
       isLiked: false,
       currentTrack: null,
+       isLoggedIn: false,
+    currentUser: null,
       currentPlaylist: null,
       currentAlbum: null,
       currentArtist: null,
@@ -651,19 +655,15 @@ categories: [
     }
   },
 mounted() {
-    window.addEventListener('player-update', this.handlePlayerUpdate)
-    window.addEventListener('player-state-changed', this.handlePlayerStateChange)
-  
-  // Carregar histórico do localStorage
-  const savedRecent = localStorage.getItem('recentlyPlayed')
-  if (savedRecent) {
-    try {
-      this.recentlyPlayed = JSON.parse(savedRecent)
-    } catch (e) {
-      this.recentlyPlayed = []
-    }
-  }
-  
+  window.addEventListener('player-update', this.handlePlayerUpdate)
+  window.addEventListener('player-state-changed', this.handlePlayerStateChange)
+
+  // ✅ VERIFICA SE USUÁRIO ESTÁ LOGADO
+  this.checkAuthStatus()
+
+  // ✅ CARREGA HISTÓRICO DO USUÁRIO LOGADO (ou vazio se não logado)
+  this.loadRecentlyPlayed()
+
   this.loadAllApiData()
 },
 
@@ -678,6 +678,54 @@ beforeDestroy() {
   },
 
   methods: {
+    // ============ AUTH & RECENTLY PLAYED ============
+
+checkAuthStatus() {
+  const token = localStorage.getItem('token') || localStorage.getItem('authToken')
+  const userStr = localStorage.getItem('user') || localStorage.getItem('currentUser')
+  
+  if (token && userStr) {
+    try {
+      this.currentUser = JSON.parse(userStr)
+      this.isLoggedIn = true
+    } catch (e) {
+      this.isLoggedIn = false
+      this.currentUser = null
+    }
+  } else {
+    this.isLoggedIn = false
+    this.currentUser = null
+  }
+},
+
+getRecentlyPlayedKey() {
+  // Chave única por usuário, ou genérica se não logado
+  if (this.currentUser?.id || this.currentUser?._id) {
+    return `recentlyPlayed_${this.currentUser.id || this.currentUser._id}`
+  }
+  return 'recentlyPlayed_guest'
+},
+
+loadRecentlyPlayed() {
+  const key = this.getRecentlyPlayedKey()
+  const savedRecent = localStorage.getItem(key)
+  
+  if (savedRecent) {
+    try {
+      this.recentlyPlayed = JSON.parse(savedRecent)
+    } catch (e) {
+      this.recentlyPlayed = []
+    }
+  } else {
+    this.recentlyPlayed = []
+  }
+},
+
+saveRecentlyPlayed() {
+  const key = this.getRecentlyPlayedKey()
+  localStorage.setItem(key, JSON.stringify(this.recentlyPlayed))
+},
+
    handlePlayerStateChange(e) {
       const { track, isPlaying, currentTime, duration, progress } = e.detail || {}
       if (!track) return
@@ -1142,14 +1190,16 @@ async playTrack(track, context, index) {
 
 addToRecentlyPlayed(track) {
   if (!track || !track.id) return
+  
   // Remove se já existe
   this.recentlyPlayed = this.recentlyPlayed.filter(t => t.id !== track.id)
   // Adiciona no topo
   this.recentlyPlayed.unshift(track)
   // Limita a 10
   this.recentlyPlayed = this.recentlyPlayed.slice(0, 10)
-  // Salva no localStorage para persistência
-  localStorage.setItem('recentlyPlayed', JSON.stringify(this.recentlyPlayed))
+  
+  // ✅ SALVA COM CHAVE DO USUÁRIO
+  this.saveRecentlyPlayed()
 },
 
     handlePlayerUpdate(e) {

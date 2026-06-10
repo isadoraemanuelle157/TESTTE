@@ -363,11 +363,22 @@
                           :class="openedPlaylist === playlist._id ? 'fa-chevron-down' : 'fa-chevron-right'"
                         ></i>
                       </div>
-   <div class="playlist-thumb-wrapper">
+<!-- DEPOIS -->
+<div 
+  class="playlist-thumb-wrapper"
+  :class="{ 'no-cover': !hasPlaylistCover(playlist) }"
+  :style="{ background: '#000' }"
+>
   <img 
-    :src="playlist.cover || playlist.capa || blackPlaceholder" 
-    class="playlist-thumb" 
+    v-if="hasPlaylistCover(playlist)"
+    :src="getPlaylistCover(playlist)" 
+    class="playlist-thumb"
+    @error="$event.target.style.display='none'"
   />
+  <div v-else class="playlist-thumb-fallback">
+    <i class="fa fa-music"></i>
+  </div>
+
   <div class="playlist-thumb-overlay">
     <i class="fa fa-list-ul"></i>
   </div>
@@ -591,8 +602,20 @@
               class="playlist-card-large"
               @click="openPlaylist(playlist)"
             >
-              <div class="playlist-cover-large">
-                <img :src="playlist.cover || playlist.capa || blackPlaceholder" :alt="playlist.nome" />
+<div 
+  class="playlist-cover-large"
+  :class="{ 'no-cover': !hasPlaylistCover(playlist) }"
+  :style="{ background: '#000' }"
+>
+  <img 
+    v-if="hasPlaylistCover(playlist)"
+    :src="getPlaylistCover(playlist)" 
+    :alt="playlist.nome"
+    @error="$event.target.style.display='none'"
+  />
+  <div v-else class="playlist-cover-fallback">
+    <i class="fa fa-music"></i>
+  </div>
                 <div class="playlist-overlay">
                   <button class="btn-play-playlist-large" @click.stop="playPlaylist(playlist)">
                     <i class="fa fa-play"></i>
@@ -1274,7 +1297,21 @@
                   @click="addMusicToPlaylist(playlist)"
                   :class="{ 'selected': selectedPlaylist === playlist._id }"
                 >
-                  <img :src="playlist.cover || playlist.capa || blackPlaceholder" :alt="playlist.nome" />
+<div 
+  class="playlist-option-thumb"
+  :class="{ 'no-cover': !hasPlaylistCover(playlist) }"
+  :style="{ background: '#000' }"
+>
+  <img 
+    v-if="hasPlaylistCover(playlist)"
+    :src="getPlaylistCover(playlist)" 
+    :alt="playlist.nome"
+    @error="$event.target.style.display='none'"
+  />
+  <div v-else class="playlist-option-fallback">
+    <i class="fa fa-music"></i>
+  </div>
+</div>
                   <div class="playlist-option-info">
                     <h4>{{ playlist.nome }}</h4>
                     <p>{{ playlist.musicas.length }} músicas</p>
@@ -2038,6 +2075,19 @@ mounted() {
   },
 
   methods: {
+    getPlaylistCover(playlist) {
+    const cover = playlist?.cover || playlist?.capa
+    if (!cover || typeof cover !== 'string') return null
+    const trimmed = cover.trim()
+    const invalid = ['null', 'undefined', 'sem capa', 'capa', '', '📸capa']
+    if (invalid.includes(trimmed.toLowerCase())) return null
+    return trimmed
+  },
+
+  hasPlaylistCover(playlist) {
+    return !!this.getPlaylistCover(playlist)
+  },
+
    async checkGoldenAvatarStatus() {
     const token = localStorage.getItem('token');
     
@@ -3052,17 +3102,18 @@ handleGeneratedOptionError(event) {
             isFollowing: true
           }))
 
-        const seguindoCantores = (resSeguindoCantores.data || [])
-          .filter(f => f.seguindo_id)
-          .map(f => ({
-            _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
-            nome: f.seguindo_id?.nome || 'Artista',
-            username: null,
-            avatar: f.seguindo_id?.foto || f.seguindo_id?.avatar || this.blackPlaceholder,
-            tipo: 'cantor',
-            isFollowing: true,
-            generos: f.seguindo_id?.generos || []
-          }))
+const seguindoCantores = (resSeguindoCantores.data || [])
+  .filter(f => f.seguindo_id)
+  .map(f => ({
+    _id: String(f.seguindo_id?._id || f.seguindo_id?.id || f.seguindo_id),
+    nome: f.seguindo_id?.nome || 'Artista',
+    username: null,
+    avatar: f.seguindo_id?.foto || f.seguindo_id?.avatar || this.blackPlaceholder,
+    tipo: 'cantor',
+    isFollowing: true,
+    generos: f.seguindo_id?.generos || [],
+    source: f.seguindo_id?.source || 'db'  // ← ADICIONAR ESTA LINHA
+  }))
 
         const seguindoUsuariosIds = new Set(seguindoUsuarios.map(u => String(u._id)))
 
@@ -3440,9 +3491,10 @@ abrirFavorito(item) {
       })
     },
 
-   persistUsuario(user) {
+persistUsuario(user) {
   localStorage.setItem('usuario', JSON.stringify(user))
   localStorage.setItem('usuario_perfil', JSON.stringify(user))
+  localStorage.setItem('user', JSON.stringify(user)) // compatibilidade com componentes antigos
 
   window.dispatchEvent(new CustomEvent('perfil-updated', {
     detail: user
@@ -3657,15 +3709,16 @@ this.playlistsRecentes = this.todasPlaylists.slice(0, 4)
     }).filter(Boolean)
 
     // 🔥 CORREÇÃO: Popular artistasFavoritos com CANTORES (type === 'cantor')
-    this.artistasFavoritos = this.favoritos
-      .filter(f => f.type === 'cantor')
-      .map(a => ({
-        id: a.id,
-        name: a.nome,
-        image: a.cover,
-        plays: 0,  // ou buscar de estatísticas se disponível
-        addedAt: a.dataFavoritado
-      }))
+this.artistasFavoritos = this.favoritos
+  .filter(f => f.type === 'cantor')
+  .map(a => ({
+    id: a.id,
+    name: a.nome,
+    image: a.cover,
+    plays: 0,
+    addedAt: a.dataFavoritado,
+    source: a.source || 'db'  // ← ADICIONAR ESTA LINHA
+  }))
 
     // Favoritos recentes (todos os tipos exceto cantor para o overview)
     this.favoritosRecentes = this.favoritos
@@ -4444,9 +4497,21 @@ goToArtist(artista) {
   }
 },
 
-   goToProfile(user) {
+ goToProfile(user) {
   if (user.tipo === 'cantor') {
-    this.$router.push(`/cantor/${user._id}`)
+    // 🔥 CORREÇÃO: Verificar se é artista externo (Deezer/Spotify) ou local
+    const artistId = user._id || user.id
+    
+    if (user.source && user.source !== 'db' && user.source !== 'local') {
+      // Artista externo - usar rota com query param source
+      this.$router.push({
+        path: '/cantor',
+        query: { id: artistId, source: user.source }
+      })
+    } else {
+      // Artista do banco local
+      this.$router.push(`/cantor/${artistId}`)
+    }
     return
   }
 
@@ -7526,19 +7591,38 @@ html, body {
   gap: 10px;
   align-items: center;
 }
+
 .playlist-thumb-fallback {
   width: 100%;
   height: 100%;
-  background: #0a0a0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
-.playlist-thumb-wrapper.no-cover {
-  background: #0a0a0a;
+.playlist-cover-fallback,
+.playlist-option-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
 }
 
-.playlist-thumb-wrapper.no-cover {
-  background: #0a0a0a;
+.playlist-cover-fallback i,
+.playlist-option-fallback i {
+  font-size: 64px;
+  color: #333;
 }
+
+
+.playlist-thumb-wrapper.no-cover .playlist-thumb-fallback,
+.playlist-cover-large.no-cover .playlist-cover-fallback {
+  background: #000;
+}
+
 .btn-remove-cover {
   padding: 10px 20px;
   background: rgba(239, 68, 68, 0.75);
@@ -8260,6 +8344,94 @@ html, body {
 .expand-leave-to {
   opacity: 0;
   max-height: 0;
+}
+
+/* ===== PLAYLIST SEM CAPA = PRETA ===== */
+
+/* Visão Geral - miniatura */
+.playlist-thumb-wrapper.no-cover {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-thumb-wrapper.no-cover .playlist-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.playlist-thumb-wrapper.no-cover .playlist-thumb-fallback i {
+  font-size: 24px;
+  color: #333;
+}
+
+/* Tab Playlists - card grande */
+.playlist-cover-large.no-cover {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-cover-large.no-cover .playlist-cover-fallback {
+  position: absolute;      
+  inset: 0; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.playlist-cover-large.no-cover .playlist-cover-fallback i {
+  font-size: 64px;
+  color: #111;
+}
+
+/* Garantir que overlay funcione em cima do fallback */
+.playlist-thumb-wrapper.no-cover .playlist-thumb-overlay,
+.playlist-cover-large.no-cover .playlist-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* ===== PLAYLIST OPTION THUMB (modal adicionar à playlist) ===== */
+.playlist-option-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.playlist-option-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playlist-option-thumb.no-cover {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playlist-option-thumb.no-cover .playlist-option-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.playlist-option-thumb.no-cover .playlist-option-fallback i {
+  font-size: 24px;
+  color: #111;
 }
 
 @keyframes toastSlideIn {

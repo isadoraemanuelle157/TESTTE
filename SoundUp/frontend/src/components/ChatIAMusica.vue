@@ -291,7 +291,8 @@
     <span><i class="fa-solid fa-music" style="font-size: 20px;"></i></span>
   </div>
                 <div v-else class="message-avatar user-avatar">
-                  <span>{{ userInitials }}</span>
+                  <img v-if="userAvatar" :src="userAvatar" class="user-avatar-img" @error="handleUserAvatarError" />
+                  <span v-else>{{ userInitials }}</span>
                 </div>
                
                 <div class="message-content">
@@ -651,69 +652,59 @@
     </div>
   </template>
 
-  <!-- VIEW DE BIBLIOTECA -->
-  <template v-else-if="activeNav === 'library'">
+  <!-- VIEW DE HISTÓRICO -->
+  <template v-else-if="activeNav === 'history'">
     <div class="view-content">
       <header class="chat-header">
         <div class="header-info">
-          <div class="ai-avatar" style="background: linear-gradient(135deg, #f59e0b, #f97316);">
-            <i class="fa-solid fa-book" style="font-size: 24px; color: white;"></i>
+          <div class="ai-avatar" style="background: linear-gradient(135deg, #06b6d4, #14b8a6);">
+            <i class="fa-solid fa-clock-rotate-left" style="font-size: 24px; color: white;"></i>
           </div>
           <div class="header-text">
-            <h2>Biblioteca</h2>
-            <p>{{ libraryTracks.length }} músicas</p>
+            <h2>Histórico</h2>
+            <p>{{ playHistory.length }} reproduções</p>
           </div>
+      </div>
+        <!-- ⬇️ ADICIONAR AQUI -->
+        <div class="header-actions">
+          <button class="icon-btn" @click="openClearHistoryModal" title="Limpar histórico">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
         </div>
       </header>
       <div class="chat-container">
-        <div v-if="libraryTracks.length === 0" class="empty-state">
-          <i class="fa-solid fa-book" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
-          <h3>Carregando biblioteca...</h3>
+        <div v-if="playHistory.length === 0" class="empty-state">
+          <i class="fa-solid fa-clock-rotate-left" style="font-size: 48px; color: var(--text-muted); margin-bottom: 16px;"></i>
+          <h3>Nenhum histórico ainda</h3>
+          <p>As músicas que você ouvir aparecerão aqui</p>
         </div>
         <div v-else class="tracks-list">
           <div
-            v-for="(track, index) in libraryTracks"
-            :key="track.id"
+            v-for="(track, index) in playHistory"
+            :key="`${track.id}-${index}`"
             class="track-item"
-            :class="{ playing: currentTrack?.id === track.id && isPlaying }"
             @click="playTrack(track)"
           >
-            <div class="track-number">
-              <span v-if="currentTrack?.id === track.id && isPlaying">
-                <i class="fa-solid fa-music" style="color: var(--primary-light);"></i>
-              </span>
-              <span v-else>{{ index + 1 }}</span>
-            </div>
+            <div class="track-number">{{ index + 1 }}</div>
             <div class="track-cover">
               <img v-if="track.cover" :src="track.cover" class="cover-art-img" @error="handleImgError">
               <div v-else class="cover-art" :style="{ background: track.color }">
                 <span><i class="fa-solid fa-music"></i></span>
               </div>
-              <div class="play-overlay">
-                <span><i :class="currentTrack?.id === track.id && isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i></span>
-              </div>
             </div>
             <div class="track-meta">
               <h4>{{ track.title }}</h4>
               <p>{{ track.artist }}</p>
-            </div>
-            <div class="track-actions">
-              <span class="duration">{{ track.duration }}</span>
-              <button class="action-btn" @click.stop="toggleFavorite(track)">
-                <i :class="isFavorite(track) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"></i>
-              </button>
-             <button class="action-btn" @click.stop="openAddToPlaylistModal(track)">
-                <i class="fa-solid fa-plus"></i>
-              </button>
+              <span class="history-date">{{ formatDate(track.playedAt) }}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
   </template>
-</main>
-    </div>
 
+  </main>
+    </div>
 
     <!-- Toast Notification -->
     <Transition name="toast">
@@ -1089,11 +1080,11 @@ const currentTime = ref(0)
 const duration = ref(0)
 // User
 const userName = ref('')
+const userAvatar = ref('')
 
 // ============ DADOS ============
 const navItems = [
  { id: 'chat', icon: 'fa-solid fa-comments', label: 'Chat' },
-  { id: 'library', icon: 'fa-solid fa-book', label: 'Biblioteca' },
   { id: 'favorites', icon: 'fa-solid fa-heart', label: 'Favoritos' },
   { id: 'playlists', icon: 'fa-solid fa-headphones', label: 'Playlists' },
   { id: 'history', icon: 'fa-solid fa-clock-rotate-left', label: 'Histórico' }
@@ -1206,7 +1197,6 @@ const sortedPlaylistsForModal = computed(() => {
 
 const showAddToPlaylistModal = ref(false)
 const trackToAdd = ref(null)
-const libraryTracks = ref([])
 const playHistory = ref([])
 const userPlaylists = ref([])
 // ============ CHAT HISTORY ============
@@ -1365,7 +1355,6 @@ function saveCurrentChat() {
   saveChats()
 }
 
-
 function loadChat(chatId) {
   const chat = savedChats.value.find(c => c.id === chatId)
   if (!chat) {
@@ -1413,7 +1402,6 @@ function loadChat(chatId) {
     })
   })
 }
-
 
 const openDeleteModal = (chatId) => {
   const chat = savedChats.value.find(c => c.id === chatId)
@@ -1969,20 +1957,77 @@ const showToastFn = (message, type = 'info') => {
   }, 3000)
 }
 
-const checkAuth = () => {
-  const token = localStorage.getItem('token')
-  const user = localStorage.getItem('user')
-  isAuthenticated.value = !!token
-  if (user) {
+const getStoredUserProfile = () => {
+  const keys = ['usuario_perfil', 'usuario', 'user']
+
+  for (const key of keys) {
+    const raw = localStorage.getItem(key)
+    if (!raw) continue
+
     try {
-      const userData = JSON.parse(user)
-      userName.value = userData.name || userData.email?.split('@')[0] || ''
+      const data = JSON.parse(raw)
+      if (data) return data
     } catch (e) {
-      userName.value = ''
+      console.warn(`Erro ao ler ${key}:`, e)
     }
   }
+
+  return null
+}
+
+const syncUserProfile = () => {
+  const userData = getStoredUserProfile()
+
+  if (!userData) {
+    userName.value = ''
+    userAvatar.value = ''
+    return
+  }
+
+  userName.value =
+    userData.nome ||
+    userData.name ||
+    userData.username ||
+    userData.email?.split('@')[0] ||
+    ''
+
+  userAvatar.value =
+    userData.avatar ||
+    userData.foto ||
+    userData.photoURL ||
+    ''
+}
+
+const handleProfileUpdated = (event) => {
+  const updatedUser = event?.detail || {}
+  userName.value =
+    updatedUser.nome ||
+    updatedUser.name ||
+    updatedUser.username ||
+    updatedUser.email?.split('@')[0] ||
+    userName.value
+
+  userAvatar.value =
+    updatedUser.avatar ||
+    updatedUser.foto ||
+    updatedUser.photoURL ||
+    ''
+}
+
+const handleStorageUpdate = (event) => {
+  if (['usuario', 'usuario_perfil', 'user'].includes(event.key)) {
+    syncUserProfile()
+  }
+}
+
+const checkAuth = () => {
+  const token = localStorage.getItem('token')
+  isAuthenticated.value = !!token
+
+  syncUserProfile()
   loadSavedChats()
 }
+
 
 const fetchChatLimit = async () => {
   try {
@@ -2379,7 +2424,6 @@ const openAddToPlaylistModal = (track) => {
   showAddToPlaylistModal.value = true
 }
 
-
 const closeAddToPlaylistModal = () => {
   showAddToPlaylistModal.value = false
   trackToAdd.value = null
@@ -2479,12 +2523,9 @@ const confirmClearHistory = () => {
     showToastFn('Chat limpo com sucesso', 'success')
   }
 
-const currentView = ref('chat')  // 'chat' | 'favorites' | 'library' | 'history' | 'playlists'
+const currentView = ref('chat')  // 'chat' | 'favorites' | 'history' | 'playlists'
 
 watch(currentView, async (newView) => {
-  if (newView === 'library') {
-    libraryTracks.value = await searchRealMusic('popular', 'track', 20)
-  }
   if (newView === 'history') {
     const stored = localStorage.getItem('play_history')
     playHistory.value = stored ? JSON.parse(stored) : []
@@ -2532,6 +2573,10 @@ const handleImgError = (e) => {
   if (e.target.parentElement) {
     e.target.parentElement.classList.add('img-error')
   }
+}
+
+const handleUserAvatarError = () => {
+  userAvatar.value = ''
 }
 
 const redirectToLogin = () => {
@@ -2599,6 +2644,8 @@ onMounted(() => {
   }
 })
   window.addEventListener('offline', () => { isOnline.value = false })
+  window.addEventListener('perfil-updated', handleProfileUpdated)
+window.addEventListener('storage', handleStorageUpdate)
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
       e.preventDefault()
@@ -2620,11 +2667,14 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  // Save chat before unmount
   if (isAuthenticated.value && messages.value.length > 1) {
     saveCurrentChat()
   }
+
+  window.removeEventListener('perfil-updated', handleProfileUpdated)
+  window.removeEventListener('storage', handleStorageUpdate)
 })
+
 
 watch(messages, () => {
   scrollToBottom()
@@ -4049,6 +4099,15 @@ body {
   color: white;
   font-weight: 700;
   font-size: 16px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .message-content {

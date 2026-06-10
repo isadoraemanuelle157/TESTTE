@@ -758,7 +758,27 @@
               </div>
             </div>
           </div>
-
+      <!-- GÊNEROS -->
+      <div v-if="getFilteredByType('genre').length > 0" class="results-section">
+        <div class="section-header-row">
+          <h3 class="section-title">Gêneros</h3>
+        </div>
+        <div class="genres-grid">
+          <div
+            v-for="genre in getFilteredByType('genre')"
+            :key="genre.id"
+            class="genre-card"
+            @click="searchAndGo(genre.name)"
+            :style="genre.color ? { background: genre.color } : getGenreGradient(genre.name)"
+          >
+            <span class="genre-card-name">{{ genre.name }}</span>
+            <span class="genre-card-desc">{{ genre.description || 'Gênero musical' }}</span>
+            <span v-if="genre.musicasCount" class="genre-card-count">
+              <i class="fa fa-headphones"></i> {{ genre.musicasCount }} músicas
+            </span>
+          </div>
+        </div>
+      </div>
           <!-- 🔥 USUÁRIOS - NOVA SEÇÃO -->
           <div v-if="getFilteredByType('user').length > 0" class="results-section">
             <div class="section-header-row">
@@ -976,7 +996,7 @@ export default {
         ]
       },
 
-      searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Usuários', 'Locais', 'Décadas'],
+    searchFilters: ['Todos', 'Músicas', 'Artistas', 'Álbuns', 'Gêneros', 'Usuários', 'Locais', 'Décadas'],
 
       trending: [
         'Funk 150 BPM', 'Sertanejo Raiz', 'Pop Internacional',
@@ -1119,14 +1139,14 @@ export default {
 
       if (this.activeFilter === 'Todos') return this.searchResults
 
-      const typeMap = {
-        'Músicas': 'track',
-        'Artistas': 'artist',
-        'Álbuns': 'album',
-        'Usuários': 'user',
-        'Gêneros': 'genre',
-        'Locais': 'local'
-      }
+const typeMap = {
+  'Músicas': 'track',
+  'Artistas': 'artist',
+  'Álbuns': 'album',
+  'Gêneros': 'genre',
+  'Usuários': 'user',
+  'Locais': 'local'
+}
 
       const filterType = typeMap[this.activeFilter]
       return this.searchResults.filter(r => r.type === filterType)
@@ -2556,6 +2576,49 @@ window.dispatchEvent(new CustomEvent('play-song', {
             source: 'deezer'
           })))
         }
+        // ✅ GÊNEROS DO BANCO LOCAL
+const matchedLocalGenres = (this.generosDB || []).filter(g =>
+  g.nome?.toLowerCase().includes(query.toLowerCase())
+)
+
+if (matchedLocalGenres.length > 0) {
+  results.push(...matchedLocalGenres.map(g => ({
+    id: g._id,
+    name: g.nome,
+    description: g.descricao || 'Gênero musical',
+    picture: g.foto || '',
+    picture_medium: g.foto || '',
+    type: 'genre',
+    source: 'local',
+    musicasCount: g.musicas?.length || 0,
+    albunsCount: g.albuns?.length || 0,
+    cantoresCount: g.cantores?.length || 0
+  })))
+}
+
+// ✅ GÊNEROS DO EXPLORAR (detailedCategories)
+const allExploreGenres = [
+  ...(this.detailedCategories.genres?.popular || []),
+  ...(this.detailedCategories.genres?.regional || []),
+  ...(this.detailedCategories.genres?.electronic || [])
+]
+
+const matchedExploreGenres = allExploreGenres.filter(g =>
+  g.name?.toLowerCase().includes(query.toLowerCase())
+)
+
+if (matchedExploreGenres.length > 0) {
+  results.push(...matchedExploreGenres.map(g => ({
+    id: `explore-${g.name.toLowerCase().replace(/\s+/g, '-')}`,
+    name: g.name,
+    description: `Gênero ${g.name}`,
+    picture: '',
+    picture_medium: '',
+    type: 'genre',
+    source: 'explore',
+    color: g.color
+  })))
+}
 
         // LOCAIS
         const matchedLocais = this.localizacoes.filter(loc =>
@@ -2786,6 +2849,49 @@ window.dispatchEvent(new CustomEvent('play-song', {
             source: 'deezer'
           })))
         }
+        // ✅ GÊNEROS DO BANCO LOCAL
+const matchedLocalGenres = (this.generosDB || []).filter(g =>
+  g.nome?.toLowerCase().includes(query.toLowerCase())
+)
+
+if (matchedLocalGenres.length > 0) {
+  results.push(...matchedLocalGenres.map(g => ({
+    id: g._id,
+    name: g.nome,
+    description: g.descricao || 'Gênero musical',
+    picture: g.foto || '',
+    picture_medium: g.foto || '',
+    type: 'genre',
+    source: 'local',
+    musicasCount: g.musicas?.length || 0,
+    albunsCount: g.albuns?.length || 0,
+    cantoresCount: g.cantores?.length || 0
+  })))
+}
+
+// ✅ GÊNEROS DO EXPLORAR (detailedCategories)
+const allExploreGenres = [
+  ...(this.detailedCategories.genres?.popular || []),
+  ...(this.detailedCategories.genres?.regional || []),
+  ...(this.detailedCategories.genres?.electronic || [])
+]
+
+const matchedExploreGenres = allExploreGenres.filter(g =>
+  g.name?.toLowerCase().includes(query.toLowerCase())
+)
+
+if (matchedExploreGenres.length > 0) {
+  results.push(...matchedExploreGenres.map(g => ({
+    id: `explore-${g.name.toLowerCase().replace(/\s+/g, '-')}`,
+    name: g.name,
+    description: `Gênero ${g.name}`,
+    picture: '',
+    picture_medium: '',
+    type: 'genre',
+    source: 'explore',
+    color: g.color
+  })))
+}
 
         // LOCAIS — matches parciais (mostra cards)
         const partialMatchedLocais = this.localizacoes
@@ -3225,7 +3331,7 @@ window.dispatchEvent(new CustomEvent('play-song', {
       }
     },
 
-    handleInput() {
+      handleInput() {
       this.showSuggestions = true
 
       if (this.searchTimeout) {
@@ -3244,6 +3350,8 @@ window.dispatchEvent(new CustomEvent('play-song', {
         }
        
         if (query.length > 2) {
+          this.lastSearch = query        // ← ADICIONAR
+          this.hasSearched = true        // ← ADICIONAR
           this.searchAll(query)
         } else {
           this.searchResults = []
@@ -3389,6 +3497,7 @@ window.dispatchEvent(new CustomEvent('play-song', {
 
         this.currentTopCategory = term || 'Brasil'
         this.searchQuery = term
+        this.lastSearch = term        // ← ADICIONAR ESTA LINHA
         this.hasSearched = true
         this.showSuggestions = false
         this.isLoading = true
@@ -6365,5 +6474,92 @@ html, body, #app {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+/* ===== GÊNEROS GRID (RESULTADOS) ===== */
+.genres-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.genre-card {
+  padding: 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.genre-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+  border-radius: 12px;
+}
+
+.genre-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.1);
+}
+
+.genre-card-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.genre-card-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  position: relative;
+  z-index: 1;
+}
+
+.genre-card-count {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.genre-card-count i {
+  font-size: 10px;
+}
+
+/* Responsivo para gêneros */
+@media (max-width: 768px) {
+  .genres-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .genre-card {
+    min-height: 100px;
+    padding: 16px;
+  }
+  
+  .genre-card-name {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .genres-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>    

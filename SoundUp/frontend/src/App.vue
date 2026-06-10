@@ -1,6 +1,6 @@
 <template>
   <div class="app" :class="{ 'sidebar-open': sidebarOpen }">
-    
+
     <!-- Botão de Menu -->
     <button 
       class="menu-toggle"
@@ -31,9 +31,11 @@
     <div class="main" :class="{ 'full-width': !sidebarOpen }">
       <!-- NAVBAR - SEMPRE VISÍVEL -->
       <Navbar :sidebarOpen="sidebarOpen" />
-      
+
       <div class="content" ref="contentRef">
-        <router-view />
+        <!-- 🔁 KEY FORÇA RECRIAÇÃO DO ROUTER-VIEW EM TODA NAVEGAÇÃO -->
+        <router-view :key="routerKey" />
+
         <!-- FOOTER - SÓ SOME NAS PÁGINAS DE AUTH E KARAOKE -->
         <Footer v-show="showFooter" />
       </div>
@@ -52,18 +54,19 @@ import Footer from "@/components/Footer.vue"
 
 export default {
   name: 'App',
-  
+
   components: {
     Sidebar,
     Navbar,
     MusicPlayer,
     Footer
   },
-  
+
   data() {
     return {
       sidebarOpen: false,
-      showFooter: true
+      showFooter: true,
+      routerKey: 0  // 🔑 CONTROLE DO KEY DO ROUTER-VIEW
     }
   },
 
@@ -71,11 +74,17 @@ export default {
     // Observa mudanças de rota
     '$route.path': {
       immediate: true,
-      handler(newPath) {
-        const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical', '/matchmusical', 'chatiamusica']
+      handler(newPath, oldPath) {
+        // 🔄 FORÇA RECRIAÇÃO DO COMPONENTE (COMO F5)
+        if (oldPath !== undefined) {
+          this.routerKey++
+          console.log('[App] 🔄 Recarregando componente | Key:', this.routerKey)
+        }
+
+        const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical', '/matchmusical', '/chatiamusica','/rooms','/rooms/create','/room']
         this.showFooter = !noFooterPages.includes(newPath)
         console.log('[App] Rota:', newPath, '| Footer visível:', this.showFooter)
-        
+
         // ⬇️ SEMPRE VOLTA PRO TOPO AO MUDAR DE PÁGINA
         this.scrollToTop()
       }
@@ -91,14 +100,14 @@ export default {
     toggleSidebar() {
       this.sidebarOpen = !this.sidebarOpen
     },
-    
+
     scrollToTop() {
       // Scrolla o container .content pro topo
       const content = this.$refs.contentRef
       if (content) {
         content.scrollTop = 0
       }
-      
+
       // Também garante que o window/document esteja no topo
       window.scrollTo(0, 0)
       document.documentElement.scrollTop = 0
