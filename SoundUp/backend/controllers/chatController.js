@@ -127,7 +127,9 @@ const enviarMidia = async (req, res) => {
     if (req.file.mimetype.startsWith('image/')) tipo = 'imagem'
     else if (req.file.mimetype.startsWith('audio/')) tipo = 'audio'
 
-    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/chat/${req.file.filename}`
+   const host = req.get('host') || 'localhost:3002'
+const protocol = req.protocol === 'https' ? 'https' : 'http'
+const fileUrl = `${protocol}://${host}/uploads/chat/${req.file.filename}`
 
     const arquivo = {
       nome: req.file.originalname,

@@ -1,3 +1,6 @@
+const mongoose = require('mongoose')   // ← ADICIONAR SE NÃO EXISTIR
+const MatchInteracao = require('../models/MatchInteracao')   // ← ADICIONAR
+const MatchMusical = require('../models/MatchMusical') 
 const matchService = require('../services/matchMusicalService')
 
 const sugestoes = async (req, res) => {

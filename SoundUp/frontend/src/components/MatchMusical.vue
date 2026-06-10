@@ -1567,6 +1567,43 @@
         </div>
       </div>
     </Transition>
+    <!-- ============================================ -->
+<!-- REPORT USER MODAL                              -->
+<!-- ============================================ -->
+<Transition name="modal">
+  <div v-if="showReportModal" class="modal-overlay logout-confirm-overlay" @click.self="showReportModal = false">
+    <div class="modal-content logout-confirm-modal">
+      <div class="logout-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+          <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
+        </svg>
+      </div>
+      <h3>Denunciar usuário</h3>
+      <p>Descreva o motivo da denúncia. Sua identidade será mantida em sigilo.</p>
+      
+      <div class="login-form-group" style="margin: 1rem 0;">
+        <textarea
+          v-model="reportMotivo"
+          class="login-input"
+          placeholder="Ex: Spam, comportamento inadequado, conteúdo ofensivo..."
+          rows="3"
+          style="resize: none; text-align: left; padding: 1rem;"
+        ></textarea>
+      </div>
+      
+      <div class="logout-actions">
+        <button @click="showReportModal = false" class="btn-secondary">Cancelar</button>
+        <button 
+          @click="confirmarDenuncia" 
+          class="btn-logout-confirm" 
+          style="background: #f59e0b;"
+        >
+          Enviar denúncia
+        </button>
+      </div>
+    </div>
+  </div>
+</Transition>
 
   </div>   <!-- ← fecha a div raiz .musical-match -->
 </template>
@@ -1598,6 +1635,8 @@ const EMOJI_DATA = {
           creatingProfile: false,
           showEmojiPicker: false,
                     showLoginModal: false,
+                    showReportModal: false,
+reportMotivo: '',
           loginUsername: '',
           loginError: '',
           loginSuccess: false,
@@ -2326,7 +2365,7 @@ cancelarPreview() {
 },
 
 async confirmarEnvioMidia() {
-if (!this.previewMidia || !this.activeChat || this.chatBloqueado) return
+  if (!this.previewMidia || !this.activeChat || this.chatBloqueado) return
 
   const { tipo, file } = this.previewMidia
 
@@ -2335,16 +2374,19 @@ if (!this.previewMidia || !this.activeChat || this.chatBloqueado) return
     const formData = new FormData()
     formData.append('midia', file, file.name)
 
-    const { data } = await axios.post(
-      `http://localhost:3002/chats/${this.activeChat.id}/midia`,
+    // ✅ CORRETO - Envia para a rota do backend que faz o upload
+    const { data } = await api.post(
+      `/chats/${this.activeChat.id}/midia`,
       formData,
       {
         headers: {
+          'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`
         }
       }
     )
 
+    // Adiciona a mensagem recebida do backend na lista local
     if (data) {
       this.chatMessages.push({
         id: data.id || Date.now(),
@@ -2359,16 +2401,19 @@ if (!this.previewMidia || !this.activeChat || this.chatBloqueado) return
       this.$nextTick(() => this.scrollToBottom(true))
     }
 
+    // Recarrega mensagens do servidor para sincronizar
     const { data: refreshData } = await api.get(`/chats/${this.activeChat.id}/mensagens`)
     this.chatMessages = refreshData.mensagens || []
+    
     this.cancelarPreview()
+
   } catch (error) {
     console.error('Erro ao enviar mídia:', error)
-this.showToast({
-  type: 'error',
-  title: 'Erro ao enviar',
-  message: error.response?.data?.error || error.message
-})
+    this.showToast({
+      type: 'error',
+      title: 'Erro ao enviar',
+      message: error.response?.data?.error || error.message
+    })
   }
 },
 
@@ -2512,24 +2557,42 @@ async bloquearUsuario() {
 },
 
 async denunciarChat() {
-  const motivo = prompt('Descreva o motivo da denúncia:')
-  if (!motivo || !this.activeChat) return
- 
+  // Modal customizado em vez de prompt()
+  this.showReportModal = true
+  this.reportMotivo = ''
+  this.showChatMenu = false
+},
+
+async confirmarDenuncia() {
+  if (!this.reportMotivo.trim() || !this.activeChat) {
+    this.showToast({
+      type: 'warning',
+      title: 'Atenção',
+      message: 'Descreva o motivo da denúncia.'
+    })
+    return
+  }
+
   try {
-    await api.post(`/chats/${this.activeChat.id}/denunciar`, { motivo })
-this.showToast({
-  type: 'success',
-  title: 'Denúncia enviada',
-  message: 'Obrigado por nos ajudar a manter a comunidade segura.'
-})
-    this.showChatMenu = false
+    await api.post(`/chats/${this.activeChat.id}/denunciar`, { 
+      motivo: this.reportMotivo.trim() 
+    })
+    
+    this.showReportModal = false
+    this.reportMotivo = ''
+    
+    this.showToast({
+      type: 'success',
+      title: 'Denúncia enviada!',
+      message: 'Agradecemos sua colaboração. Analisaremos em até 24h.'
+    })
   } catch (error) {
     console.error('Erro ao denunciar:', error)
-this.showToast({
-  type: 'error',
-  title: 'Erro',
-  message: 'Erro ao enviar denúncia'
-})
+    this.showToast({
+      type: 'error',
+      title: 'Erro ao enviar',
+      message: error.response?.data?.error || 'Tente novamente mais tarde.'
+    })
   }
 },
 
@@ -2655,6 +2718,10 @@ this.showToast({
       this.chatBloqueado = !!data.bloqueado
       this.bloqueadoPorMim = !!data.bloqueadoPorMim
       this.bloqueadoPorOutro = !!data.bloqueadoPorOutro
+
+      const hasNewMedia = newMessages.some(nm => 
+  nm.tipo === 'imagem' && !this.chatMessages.some(om => om.id === nm.id)
+)
 
       const hasNewMessages = newMessages.length > this.chatMessages.length
 
@@ -3379,13 +3446,17 @@ getGenreEmoji(name) {
           this.showLogoutConfirm = false
         },
 
-       logout() {
-  // ✅ Remove APENAS os dados do Musical Match, NÃO o token de login
-  localStorage.removeItem('musicalMatchProfile')
-  // NÃO remove: localStorage.removeItem('user')
-  // NÃO remove: localStorage.removeItem('token')
+logout() {
+  // Limpa TODOS os dados de sessão do Musical Match
+  const keysToRemove = [
+    'musicalMatchProfile',
+    'musicalMatchOnboarding',
+    'matchLikedSongs',
+    'matchFavorites'
+  ]
+  keysToRemove.forEach(key => localStorage.removeItem(key))
 
-  // ... resto do método (reseta estado do componente)
+  // Reseta estado completo
   this.hasProfile = false
   this.onboardingStep = 1
   this.onboardingData = {
@@ -3396,7 +3467,6 @@ getGenreEmoji(name) {
     bio: '',
     favoriteGenres: []
   }
-
   this.currentUser = {
     name: '',
     age: null,
@@ -3405,7 +3475,6 @@ getGenreEmoji(name) {
     location: '',
     favoriteGenres: []
   }
-
   this.likedSongs = []
   this.favorites = []
   this.matches = []
@@ -3414,8 +3483,20 @@ getGenreEmoji(name) {
   this.songs = []
   this.showProfile = false
   this.showLogoutConfirm = false
+  this.showChatList = false
+  this.showChat = false
+  this.activeChat = null
+  this.chatMessages = []
 
   this.stopAudio()
+  this.stopChatPolling()
+
+  // Mostra toast de confirmação
+  this.showToast({
+    type: 'success',
+    title: 'Até logo!',
+    message: 'Você saiu da sua conta do Musical Match.'
+  })
 },
 
         confirmDeleteAccount() {
@@ -3432,21 +3513,28 @@ async deleteAccount() {
     this.deletingAccount = true
 
     const token = localStorage.getItem('token')
-    if (!token) throw new Error('Usuário não autenticado')
+    if (!token) {
+      throw new Error('Sessão expirada. Faça login novamente.')
+    }
 
-    // Chama a API do Musical Match para limpar dados
+    // Chama API para excluir dados do Musical Match
     await api.delete('/matches/conta', {
       headers: { Authorization: `Bearer ${token}` }
     })
 
-    // ✅ Limpa apenas os dados do Musical Match no frontend
-    localStorage.removeItem('musicalMatchProfile')
-    // NÃO remove token nem user
+    // Limpa dados locais
+    const keysToRemove = [
+      'musicalMatchProfile',
+      'musicalMatchOnboarding',
+      'matchLikedSongs',
+      'matchFavorites'
+    ]
+    keysToRemove.forEach(key => localStorage.removeItem(key))
 
     this.showDeleteAccountConfirm = false
     this.deletingAccount = false
 
-    // Reseta o estado do componente (volta para onboarding)
+    // Reseta estado completo
     this.hasProfile = false
     this.onboardingStep = 1
     this.onboardingData = {
@@ -3457,21 +3545,39 @@ async deleteAccount() {
       bio: '',
       favoriteGenres: []
     }
-
+    this.currentUser = {
+      name: '',
+      age: null,
+      avatar: '',
+      bio: '',
+      location: '',
+      favoriteGenres: []
+    }
     this.likedSongs = []
     this.favorites = []
     this.matches = []
     this.unreadMatches = 0
     this.currentIndex = 0
     this.songs = []
+    this.showProfile = false
+
+    this.stopAudio()
+    this.stopChatPolling()
+
+    this.showToast({
+      type: 'success',
+      title: 'Conta excluída',
+      message: 'Seus dados do Musical Match foram removidos permanentemente.'
+    })
 
   } catch (error) {
-    console.error('Erro ao excluir dados do Musical Match:', error)
+    console.error('Erro ao excluir conta:', error)
     this.deletingAccount = false
+    
     this.showToast({
       type: 'error',
-      title: 'Erro',
-      message: 'Erro ao excluir dados. Tente novamente.'
+      title: 'Erro ao excluir',
+      message: error.response?.data?.error || error.message || 'Tente novamente mais tarde.'
     })
   }
 },
@@ -3574,36 +3680,57 @@ async deleteAccount() {
           }
         },
 
-        startDrag(e) {
-          if (this.currentPlaying) this.stopAudio()
-          this.isDragging = true
-          this.dragStartX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
-        },
+startDrag(e) {
+  // Só permite drag no card do topo
+  const card = e.currentTarget
+  if (!card.classList.contains('top-card')) return
+  
+  if (this.currentPlaying) this.stopAudio()
+  
+  this.isDragging = true
+  this.dragStartX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
+  
+  // Previne scroll do body durante o drag
+  document.body.style.overflow = 'hidden'
+  document.body.style.touchAction = 'none'
+},
 
-        onDrag(e) {
-          if (!this.isDragging) return
-          e.preventDefault()
+onDrag(e) {
+  if (!this.isDragging) return
+  
+  // Usa passive: false no listener, mas aqui precisamos do preventDefault
+  if (e.cancelable) e.preventDefault()
 
-          const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX
-          this.dragOffset = x - this.dragStartX
-          this.swipingRight = this.dragOffset > 50
-          this.swipingLeft = this.dragOffset < -50
-        },
+  const x = e.type.includes('touch') 
+    ? (e.touches[0] ? e.touches[0].clientX : this.dragStartX + this.dragOffset)
+    : e.clientX
+    
+  this.dragOffset = x - this.dragStartX
+  this.swipingRight = this.dragOffset > 50
+  this.swipingLeft = this.dragOffset < -50
+},
 
-        endDrag() {
-          if (!this.isDragging) return
+       endDrag() {
+  if (!this.isDragging) return
 
-          if (this.dragOffset > 120) {
-            this.swipeRight()
-          } else if (this.dragOffset < -120) {
-            this.swipeLeft()
-          }
+  // Threshold menor para mobile
+  const threshold = window.innerWidth < 480 ? 80 : 120
 
-          this.isDragging = false
-          this.dragOffset = 0
-          this.swipingLeft = false
-          this.swipingRight = false
-        },
+  if (this.dragOffset > threshold) {
+    this.swipeRight()
+  } else if (this.dragOffset < -threshold) {
+    this.swipeLeft()
+  }
+
+  this.isDragging = false
+  this.dragOffset = 0
+  this.swipingLeft = false
+  this.swipingRight = false
+  
+  // Libera scroll do body
+  document.body.style.overflow = ''
+  document.body.style.touchAction = ''
+},
 
         swipeLeft() {
           this.currentIndex++
@@ -7658,7 +7785,16 @@ padding: 8px 20px 80px;
     opacity: 0;
     transform: translateX(-50%) translateY(-100px);
   }
+/* Adicione no <style scoped> */
+.song-card {
+  touch-action: pan-y; /* Permite scroll vertical, captura horizontal */
+  -webkit-user-select: none;
+  user-select: none;
+}
 
+.song-card.top-card {
+  touch-action: none; /* Bloqueia tudo no card ativo */
+}
   /* Responsive */
   @media (max-width: 480px) {
     .onboarding-content {
