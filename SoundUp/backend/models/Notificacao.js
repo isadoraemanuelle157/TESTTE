@@ -16,6 +16,7 @@ const notificacaoSchema = new mongoose.Schema({
       'follow_request',
       'follow_accept',
       'follow_reject',
+      'new_follower',  
       'support_message',
       'support_reply',
        'contact_message',   // ← NOVO

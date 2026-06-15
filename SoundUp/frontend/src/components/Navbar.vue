@@ -508,6 +508,7 @@ const handleAvatarGoldChanged = (e) => {
     follow_request: { icon: 'fa fa-user-plus', color: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
     follow_accept: { icon: 'fa fa-check', color: 'linear-gradient(135deg, #10b981, #34d399)' },
     follow_reject: { icon: 'fa fa-times', color: 'linear-gradient(135deg, #ef4444, #f97316)' },
+    new_follower: { icon: 'fa fa-user-plus', color: 'linear-gradient(135deg, #10b981, #34d399)' },
     // ✅ NOVO: Notificações de Match Musical
     matchmusical: { 
       icon: 'fa fa-music', 
@@ -577,9 +578,12 @@ const handleAvatarGoldChanged = (e) => {
       if (n.tipo === 'follow_request') {
         mensagemFormatada = `${nome} quer te seguir`
       }
-      if (n.tipo === 'follow_accept') {
-        mensagemFormatada = `${nome} aceitou sua solicitação`
-      }
+  if (n.tipo === 'follow_accept') {
+  mensagemFormatada = `${nome} começou a seguir você`
+}
+if (n.tipo === 'new_follower') {
+  mensagemFormatada = `${nome} começou a seguir você`
+}
       if (n.tipo === 'follow_reject') {
         mensagemFormatada = `${nome} recusou sua solicitação`
       }

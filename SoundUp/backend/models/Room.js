@@ -39,14 +39,13 @@ const roomSchema = new mongoose.Schema({
     ref: 'Usuario',
     required: true
   },
-  // EM: models/Room.js (linha ~80), adicionar ao schema:
-
-syncState: {
-  isPlaying: { type: Boolean, default: false },
-  currentTime: { type: Number, default: 0 },
-  trackId: { type: String, default: null },
-  lastUpdated: { type: Date, default: Date.now }
-},
+  // ========== SINCRONIZAÇÃO DE REPRODUÇÃO ==========
+  syncState: {
+    isPlaying: { type: Boolean, default: false },
+    currentTime: { type: Number, default: 0 },
+    trackId: { type: String, default: null },
+    lastUpdated: { type: Date, default: Date.now }
+  },
   // ========== PERMISSÕES ==========
   moderators: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -63,11 +62,11 @@ syncState: {
       enum: ['owner', 'moderators', 'everyone'],
       default: 'moderators'
     },
-     promoteModerators: {
-    type: String,
-    enum: ['owner', 'moderators', 'everyone'],
-    default: 'owner'
-  }
+    promoteModerators: {
+      type: String,
+      enum: ['owner', 'moderators', 'everyone'],
+      default: 'owner'
+    }
   },
   // ================================
   invitedUsers: [{
@@ -97,25 +96,25 @@ syncState: {
     deezerId: String
   }],
   // ========== LISTENERS ATIVOS ==========
-activeListeners: [{
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
-    required: true
-  },
-  name: String,
-  avatar: String,
-  role: {
-    type: String,
-    enum: ['owner', 'moderator', 'participant'],
-    default: 'participant'
-  },
-  joinedAt: {
-    type: Date,
-    default: Date.now
-  }
-}],
-// ======================================
+  activeListeners: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Usuario',
+      required: true
+    },
+    name: String,
+    avatar: String,
+    role: {
+      type: String,
+      enum: ['owner', 'moderator', 'participant'],
+      default: 'participant'
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  // ======================================
   messages: [{
     userId: String,
     userName: String,
@@ -139,19 +138,16 @@ roomSchema.pre('save', function(next) {
     this.passwordHash = null
     this.hasPassword = false
   } else {
-    // Garante que hasPassword esteja sincronizado com passwordHash
     this.hasPassword = !!this.passwordHash
   }
   next()
 })
 
-// Adicionar APÓS o pre('save')
 roomSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate()
   if (update.isPublic === true || update.$set?.isPublic === true) {
     this.set({ passwordHash: null, hasPassword: false })
   } else if ((update.isPublic === false || update.$set?.isPublic === false) && !update.passwordHash && !update.$set?.passwordHash) {
-    // Se está tornando privada sem senha, mantém hasPassword false
     this.set({ hasPassword: false })
   }
   next()

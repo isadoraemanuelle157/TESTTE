@@ -1,4 +1,5 @@
 const roomService = require('../services/roomService')
+const Room = require('../models/Room')
 
 const criar = async (req, res) => {
   try {
@@ -6,17 +7,14 @@ const criar = async (req, res) => {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
 
-    // ✅ ADICIONAR moderators NA DESESTRUTURAÇÃO
     const { name, description, isPublic, invitedUsers, moderators, password, permissions } = req.body
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Nome da sala é obrigatório' })
     }
 
-    // Normaliza isPublic para booleano
     const isPublicBool = isPublic === false || isPublic === 'false' ? false : true
 
-    // ✅ Validação de senha mais rígida
     if (isPublicBool === false) {
       const senhaLimpa = String(password || '').trim()
       if (senhaLimpa.length < 4) {
@@ -39,22 +37,18 @@ const criar = async (req, res) => {
     res.status(201).json(room)
   } catch (error) {
     console.error('ERRO CRIAR SALA:', error)
-
     if (error.message.includes('Já existe uma sala')) {
       return res.status(409).json({ error: error.message })
     }
-
     res.status(400).json({ error: error.message })
   }
 }
-
 
 const listarMinhas = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const rooms = await roomService.listarMinhas(req.user.id)
     res.json(rooms)
   } catch (error) {
@@ -82,15 +76,11 @@ const buscarPorId = async (req, res) => {
   }
 }
 
-// Arquivo: controllers/roomController.js
-// Local: método entrar()
-
 const entrar = async (req, res) => {
   try {
-    // ✅ Aceita userId do token (usuário logado do banco) ou null (visitante)
     const room = await roomService.entrar(
       req.params.id,
-      req.user?.id || null,        // ← userId do JWT (usuário do banco)
+      req.user?.id || null,
       req.body?.password || ''
     )
     res.json(room)
@@ -104,7 +94,6 @@ const atualizar = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const room = await roomService.atualizar(req.params.id, req.user.id, req.body)
     res.json(room)
   } catch (error) {
@@ -120,7 +109,6 @@ const deletar = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     await roomService.deletar(req.params.id, req.user.id)
     res.json({ message: 'Sala deletada com sucesso' })
   } catch (error) {
@@ -133,12 +121,10 @@ const convidar = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const { roomId, userId } = req.body
     if (!roomId || !userId) {
       return res.status(400).json({ error: 'roomId e userId são obrigatórios' })
     }
-
     const room = await roomService.convidar(roomId, req.user.id, userId)
     res.json({ message: 'Convite enviado', room })
   } catch (error) {
@@ -158,14 +144,12 @@ const verificarAcesso = async (req, res) => {
   }
 }
 
-// ========== NOVAS ROTAS DE PERMISSÕES ==========
-
+// ========== PERMISSÕES ==========
 const verificarPermissao = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const { acao } = req.params
     const temPermissao = await roomService.verificarPermissao(req.params.id, req.user.id, acao)
     res.json({ permissao: temPermissao })
@@ -188,12 +172,10 @@ const adicionarModerador = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const { moderadorId } = req.body
     if (!moderadorId) {
       return res.status(400).json({ error: 'moderadorId é obrigatório' })
     }
-
     const room = await roomService.adicionarModerador(req.params.id, req.user.id, moderadorId)
     res.json({ message: 'Moderador adicionado', room })
   } catch (error) {
@@ -206,12 +188,10 @@ const removerModerador = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const { moderadorId } = req.body
     if (!moderadorId) {
       return res.status(400).json({ error: 'moderadorId é obrigatório' })
     }
-
     const room = await roomService.removerModerador(req.params.id, req.user.id, moderadorId)
     res.json({ message: 'Moderador removido', room })
   } catch (error) {
@@ -224,12 +204,10 @@ const atualizarPermissoes = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-
     const { permissions } = req.body
     if (!permissions) {
       return res.status(400).json({ error: 'permissions é obrigatório' })
     }
-
     const room = await roomService.atualizarPermissoes(req.params.id, req.user.id, permissions)
     res.json({ message: 'Permissões atualizadas', room })
   } catch (error) {
@@ -237,40 +215,121 @@ const atualizarPermissoes = async (req, res) => {
   }
 }
 
-// ================================================
+// ========== SINCRONIZAÇÃO DE REPRODUÇÃO ==========
+const sincronizarReproducao = async (req, res) => {
+  try {
+    const { isPlaying, currentTime, trackId } = req.body
 
+    const syncState = await roomService.sincronizarReproducao(req.params.id, {
+      isPlaying,
+      currentTime,
+      trackId
+    })
+
+    res.json({ success: true, syncState })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const obterSyncState = async (req, res) => {
+  try {
+    const data = await roomService.obterSyncState(req.params.id)
+    res.json(data)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+// ========== MÚSICA ATUAL ==========
 const atualizarTrack = async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: 'Usuário não autenticado' })
-    }
-
-    const room = await roomService.atualizarTrack(req.params.id, req.user.id, req.body)
-    res.json(room)
+    const room = await roomService.atualizarTrack(req.params.id, req.body)
+    res.json({ success: true, currentTrack: room.currentTrack })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 }
 
+const obterTrackAtual = async (req, res) => {
+  try {
+    const data = await roomService.obterTrackAtual(req.params.id)
+    res.json(data)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+// ========== FILA DE REPRODUÇÃO ==========
 const adicionarNaFila = async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: 'Usuário não autenticado' })
-    }
-
-    const room = await roomService.adicionarNaFila(req.params.id, req.user.id, req.body)
-    res.json(room)
+    const room = await roomService.adicionarNaFila(req.params.id, req.body)
+    res.json({ success: true, queue: room.queue })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 }
 
+const listarFila = async (req, res) => {
+  try {
+    const queue = await roomService.listarFila(req.params.id)
+    res.json({ queue })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const removerDaFila = async (req, res) => {
+  try {
+    const { index } = req.body
+    const queue = await roomService.removerDaFila(req.params.id, index)
+    res.json({ success: true, queue })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const proximaMusica = async (req, res) => {
+  try {
+    const result = await roomService.proximaMusica(req.params.id)
+    res.json({
+      success: true,
+      currentTrack: result.currentTrack,
+      queue: result.queue,
+      syncState: result.syncState
+    })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+// ========== MENSAGENS ==========
 const enviarMensagem = async (req, res) => {
   try {
     const room = await roomService.enviarMensagem(req.params.id, req.body)
-    res.json(room)
+    res.json({ success: true, messages: room.messages })
   } catch (error) {
     res.status(400).json({ error: error.message })
+  }
+}
+
+const listarMensagens = async (req, res) => {
+  try {
+    const room = await roomService.buscarPorId(req.params.id)
+    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
+
+    const mensagens = (room.messages || []).slice(-100).map((msg, i) => ({
+      id: msg._id || `msg_${i}_${Date.now()}`,
+      userId: msg.userId,
+      userName: msg.userName,
+      avatar: msg.avatar,
+      text: msg.text,
+      timestamp: msg.timestamp
+    }))
+
+    res.json({ messages: mensagens })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
   }
 }
 
@@ -284,7 +343,6 @@ const listarTodas = async (req, res) => {
 }
 
 // ========== LISTENERS ==========
-
 const adicionarListener = async (req, res) => {
   try {
     const roomId = req.params.id
@@ -296,8 +354,7 @@ const adicionarListener = async (req, res) => {
     }
 
     const room = await roomService.adicionarListener(roomId, userData)
-    
-    // Adiciona mensagem de sistema
+
     await roomService.enviarMensagem(roomId, {
       userId: 'system',
       userName: 'Sistema',
@@ -329,7 +386,6 @@ const removerListener = async (req, res) => {
       req.user.id
     )
 
-    // Adiciona mensagem de sistema
     await roomService.enviarMensagem(req.params.id, {
       userId: 'system',
       userName: 'Sistema',
@@ -353,52 +409,6 @@ const listarListeners = async (req, res) => {
   }
 }
 
-// EM: controllers/roomController.js (adicionar ao exports):
-
-const sincronizarReproducao = async (req, res) => {
-  try {
-    const { isPlaying, currentTime, trackId } = req.body
-    
-    const room = await Room.findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: {
-          'syncState.isPlaying': isPlaying,
-          'syncState.currentTime': currentTime,
-          'syncState.trackId': trackId,
-          'syncState.lastUpdated': new Date()
-        }
-      },
-      { new: true }
-    )
-    
-    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
-    res.json({ success: true, syncState: room.syncState })
-  } catch (error) {
-    res.status(400).json({ error: error.message })
-  }
-}
-
-const listarMensagens = async (req, res) => {
-  try {
-    const room = await roomService.buscarPorId(req.params.id)
-    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
-    
-    // Retorna as últimas 100 mensagens
-    const mensagens = (room.messages || []).slice(-100).map((msg, i) => ({
-      id: msg._id || `msg_${i}_${Date.now()}`,
-      userId: msg.userId,
-      userName: msg.userName,
-      avatar: msg.avatar,
-      text: msg.text,
-      timestamp: msg.timestamp
-    }))
-    
-    res.json({ messages: mensagens })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
 module.exports = {
   criar,
   listarMinhas,
@@ -415,12 +425,21 @@ module.exports = {
   adicionarModerador,
   removerModerador,
   atualizarPermissoes,
-  adicionarListener,   // ← NOVO
-  removerListener,       // ← NOVO
-  listarListeners,     // ← NOVO
+  adicionarListener,
+  removerListener,
+  listarListeners,
+  // Sincronização
+  sincronizarReproducao,
+  obterSyncState,
+  // Track
   atualizarTrack,
+  obterTrackAtual,
+  // Fila
   adicionarNaFila,
+  listarFila,
+  removerDaFila,
+  proximaMusica,
+  // Mensagens
   enviarMensagem,
-   listarMensagens,
-  sincronizarReproducao 
+  listarMensagens
 }

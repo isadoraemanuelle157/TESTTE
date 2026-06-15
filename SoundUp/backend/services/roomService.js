@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt')
 const Room = require('../models/Room')
 
-const normalizeName = (name = '') => name.trim().replace(/\s+/g, ' ')
+const normalizeName = (name = '') => name.trim().replace(/\\s+/g, ' ')
 
 const criar = async (dados, userId) => {
   const normalizedName = normalizeName(dados.name)
@@ -19,7 +19,6 @@ const criar = async (dados, userId) => {
     ...dados,
     name: normalizedName,
     createdBy: userId,
-    // Permissões padrão
     permissions: {
       addMusic: dados.permissions?.addMusic || 'everyone',
       invitePeople: dados.permissions?.invitePeople || 'moderators',
@@ -31,7 +30,6 @@ const criar = async (dados, userId) => {
     if (!dados.password || String(dados.password).trim().length < 4) {
       throw new Error('Sala privada precisa de senha com pelo menos 4 caracteres')
     }
-
     payload.passwordHash = await bcrypt.hash(String(dados.password).trim(), 10)
     payload.hasPassword = true
   } else {
@@ -80,81 +78,46 @@ const entrar = async (roomId, userId, password) => {
 
   if (!room) throw new Error('Sala não encontrada')
 
-  // Sala pública: qualquer um entra (logado ou não)
   if (room.isPublic) return room
 
-  // Dono da sala entra sem senha
   if (userId && String(room.createdBy._id || room.createdBy) === String(userId)) {
     return room
   }
 
-  // Moderador entra sem senha
   const isModerator = room.moderators.some(m => {
     const id = m?._id || m
     return userId && String(id) === String(userId)
   })
   if (isModerator) return room
 
-  // Convidado entra sem senha
   const convidado = room.invitedUsers.some(user => {
     const id = user?._id || user
     return userId && String(id) === String(userId)
   })
   if (convidado) return room
 
-  // ✅ USUÁRIO DO BANCO (logado) que NÃO é dono/mod/convidado
-  // Sala privada SÓ pode ser acessada com senha correta
   if (!room.passwordHash) {
     throw new Error('Acesso não autorizado. Esta sala é restrita a convidados.')
   }
 
   const senhaFornecida = String(password || '').trim()
-
   if (!senhaFornecida) {
     throw new Error('Senha obrigatória para esta sala')
   }
 
   const senhaOk = await bcrypt.compare(senhaFornecida, room.passwordHash)
-  
   if (!senhaOk) {
     throw new Error('Senha inválida')
   }
-  // Adiciona usuário à lista de listeners ativos
-  const userName = req.user?.nome || req.body?.name || 'Visitante'
-  const userAvatar = req.user?.avatar || req.body?.avatar || 'https://via.placeholder.com/150'
-  
-  // Remove duplicado se existir
-  room.activeListeners = room.activeListeners.filter(l => 
-    String(l.userId?._id || l.userId) !== String(userId)
-  )
-  
-  // Determina role
-  let role = 'participant'
-  if (isOwner) role = 'owner'
-  else if (isModerator) role = 'moderator'
-  
-  room.activeListeners.push({
-    userId: userId || new mongoose.Types.ObjectId(),
-    name: userName,
-    avatar: userAvatar,
-    role,
-    joinedAt: new Date()
-  })
-  
-  room.listeners = room.activeListeners.length
-  await room.save()
-  // ✅ Usuário do banco entrou com senha - adiciona à lista de ouvintes
-  // (Aqui você pode emitir um evento WebSocket ou salvar no banco)
+
   return room
 }
-
 
 const atualizar = async (id, userId, dados) => {
   const updateData = { ...dados }
 
   if (updateData.name) {
     const normalizedName = normalizeName(updateData.name)
-
     const roomComMesmoNome = await Room.findOne({
       _id: { $ne: id },
       name: normalizedName,
@@ -164,7 +127,6 @@ const atualizar = async (id, userId, dados) => {
     if (roomComMesmoNome) {
       throw new Error('Já existe uma sala com esse nome')
     }
-
     updateData.name = normalizedName
   }
 
@@ -213,11 +175,9 @@ const convidar = async (roomId, userId, convidadoId) => {
   return room
 }
 
-// ========== NOVAS FUNÇÕES DE PERMISSÕES ==========
-
+// ========== PERMISSÕES ==========
 const verificarAcesso = async (roomId, userId) => {
-  const room = await Room.findById(roomId)
-    .populate('moderators', '_id')
+  const room = await Room.findById(roomId).populate('moderators', '_id')
   if (!room) throw new Error('Sala não encontrada')
 
   if (room.isPublic) return true
@@ -230,8 +190,7 @@ const verificarAcesso = async (roomId, userId) => {
 }
 
 const verificarPermissao = async (roomId, userId, acao) => {
-  const room = await Room.findById(roomId)
-    .populate('moderators', '_id')
+  const room = await Room.findById(roomId).populate('moderators', '_id')
   if (!room) throw new Error('Sala não encontrada')
 
   const isOwner = String(room.createdBy) === String(userId)
@@ -247,8 +206,7 @@ const verificarPermissao = async (roomId, userId, acao) => {
 }
 
 const getUserRole = async (roomId, userId) => {
-  const room = await Room.findById(roomId)
-    .populate('moderators', '_id')
+  const room = await Room.findById(roomId).populate('moderators', '_id')
   if (!room) throw new Error('Sala não encontrada')
 
   if (String(room.createdBy) === String(userId)) return 'owner'
@@ -257,19 +215,13 @@ const getUserRole = async (roomId, userId) => {
 }
 
 const adicionarModerador = async (roomId, userId, novoModeradorId) => {
-  const room = await Room.findById(roomId)
-    .populate('moderators', '_id')
-  
+  const room = await Room.findById(roomId).populate('moderators', '_id')
   if (!room) throw new Error('Sala não encontrada')
 
   const isOwner = String(room.createdBy) === String(userId)
-  const isModerator = room.moderators.some(m => 
-    String(m._id || m) === String(userId)
-  )
+  const isModerator = room.moderators.some(m => String(m._id || m) === String(userId))
 
-  // Verifica permissão promoteModerators
   const perm = room.permissions?.promoteModerators || 'owner'
-  
   let canPromote = false
   if (perm === 'owner' && isOwner) canPromote = true
   if (perm === 'moderators' && (isOwner || isModerator)) canPromote = true
@@ -311,28 +263,122 @@ const atualizarPermissoes = async (roomId, userId, permissoes) => {
   return room
 }
 
-// ================================================
+// ========== SINCRONIZAÇÃO DE REPRODUÇÃO ==========
+const sincronizarReproducao = async (roomId, syncData) => {
+  const room = await Room.findByIdAndUpdate(
+    roomId,
+    {
+      $set: {
+        syncState: {
+          isPlaying: syncData.isPlaying,
+          currentTime: syncData.currentTime,
+          trackId: syncData.trackId,
+          lastUpdated: new Date()
+        }
+      }
+    },
+    { new: true }
+  )
 
-const atualizarTrack = async (roomId, userId, track) => {
-  const room = await Room.findOneAndUpdate(
-    { _id: roomId, createdBy: userId },
+  if (!room) throw new Error('Sala não encontrada')
+  return room.syncState
+}
+
+const obterSyncState = async (roomId) => {
+  const room = await Room.findById(roomId).select('syncState currentTrack')
+  if (!room) throw new Error('Sala não encontrada')
+  return {
+    syncState: room.syncState,
+    currentTrack: room.currentTrack
+  }
+}
+
+// ========== MÚSICA ATUAL ==========
+const atualizarTrack = async (roomId, track) => {
+  const room = await Room.findByIdAndUpdate(
+    roomId,
     { $set: { currentTrack: track } },
     { new: true }
   )
-  if (!room) throw new Error('Sala não encontrada ou sem permissão')
+  if (!room) throw new Error('Sala não encontrada')
   return room
 }
 
-const adicionarNaFila = async (roomId, userId, track) => {
-  const room = await Room.findOneAndUpdate(
-    { _id: roomId, createdBy: userId },
+const obterTrackAtual = async (roomId) => {
+  const room = await Room.findById(roomId).select('currentTrack syncState')
+  if (!room) throw new Error('Sala não encontrada')
+  return {
+    currentTrack: room.currentTrack,
+    syncState: room.syncState
+  }
+}
+
+// ========== FILA DE REPRODUÇÃO ==========
+const adicionarNaFila = async (roomId, track) => {
+  const room = await Room.findByIdAndUpdate(
+    roomId,
     { $push: { queue: track } },
     { new: true }
   )
-  if (!room) throw new Error('Sala não encontrada ou sem permissão')
+  if (!room) throw new Error('Sala não encontrada')
   return room
 }
 
+const listarFila = async (roomId) => {
+  const room = await Room.findById(roomId).select('queue')
+  if (!room) throw new Error('Sala não encontrada')
+  return room.queue || []
+}
+
+const removerDaFila = async (roomId, trackIndex) => {
+  const room = await Room.findById(roomId)
+  if (!room) throw new Error('Sala não encontrada')
+
+  if (trackIndex >= 0 && trackIndex < room.queue.length) {
+    room.queue.splice(trackIndex, 1)
+    await room.save()
+  }
+  return room.queue
+}
+
+const proximaMusica = async (roomId) => {
+  const room = await Room.findById(roomId)
+  if (!room) throw new Error('Sala não encontrada')
+
+  // Se tem música na fila, pega a primeira
+  if (room.queue && room.queue.length > 0) {
+    const nextTrack = room.queue.shift()
+    room.currentTrack = nextTrack
+    room.syncState = {
+      isPlaying: true,
+      currentTime: 0,
+      trackId: nextTrack.id,
+      lastUpdated: new Date()
+    }
+    await room.save()
+    return {
+      currentTrack: room.currentTrack,
+      queue: room.queue,
+      syncState: room.syncState
+    }
+  }
+
+  // Se não tem mais músicas, para
+  room.syncState = {
+    isPlaying: false,
+    currentTime: 0,
+    trackId: null,
+    lastUpdated: new Date()
+  }
+  await room.save()
+  return {
+    currentTrack: null,
+    queue: room.queue,
+    syncState: room.syncState
+  }
+}
+
+// ========== MENSAGENS ==========
 const enviarMensagem = async (roomId, mensagem) => {
   const room = await Room.findByIdAndUpdate(
     roomId,
@@ -343,22 +389,19 @@ const enviarMensagem = async (roomId, mensagem) => {
   return room
 }
 
-// ========== LISTAR TODAS AS SALAS PARA DESCoberta ==========
+// ========== LISTAR TODAS ==========
 const listarTodas = async (userId) => {
-  // Busca todas as salas ativas (públicas e privadas)
   const rooms = await Room.find({ active: true })
     .sort({ createdAt: -1 })
     .populate('createdBy', 'nome username avatar')
     .populate('moderators', 'nome username avatar')
     .select('name description isPublic hasPassword source gradient listeners createdBy moderators createdAt')
 
-  // Para cada sala, adiciona flag se o usuário atual tem acesso direto
   return rooms.map(room => {
     const isOwner = userId && String(room.createdBy?._id || room.createdBy) === String(userId)
-    const isModerator = room.moderators?.some(m => 
+    const isModerator = room.moderators?.some(m =>
       userId && String(m?._id || m) === String(userId)
     )
-    
     return {
       ...room.toObject(),
       userHasAccess: isOwner || isModerator || room.isPublic
@@ -366,17 +409,14 @@ const listarTodas = async (userId) => {
   })
 }
 
-// ========== GERENCIAR LISTENERS ==========
-
+// ========== LISTENERS ==========
 const adicionarListener = async (roomId, userData) => {
   const { userId, name, avatar, role = 'participant' } = userData
 
-  // Remove se já existir (evita duplicados)
   await Room.findByIdAndUpdate(roomId, {
     $pull: { activeListeners: { userId } }
   })
 
-  // Adiciona novo listener
   const room = await Room.findByIdAndUpdate(roomId, {
     $push: {
       activeListeners: {
@@ -404,9 +444,8 @@ const removerListener = async (roomId, userIdToRemove, requesterId) => {
 
   if (!room) throw new Error('Sala não encontrada')
 
-  // Verifica permissão: só dono ou moderador pode expulsar
   const isOwner = String(room.createdBy._id || room.createdBy) === String(requesterId)
-  const isModerator = room.moderators.some(m => 
+  const isModerator = room.moderators.some(m =>
     String(m._id || m) === String(requesterId)
   )
 
@@ -414,22 +453,19 @@ const removerListener = async (roomId, userIdToRemove, requesterId) => {
     throw new Error('Sem permissão para expulsar usuários')
   }
 
-  // Não pode expulsar o dono
-  const targetListener = room.activeListeners.find(l => 
+  const targetListener = room.activeListeners.find(l =>
     String(l.userId?._id || l.userId) === String(userIdToRemove)
   )
 
   if (!targetListener) throw new Error('Usuário não está na sala')
 
-  // Verifica se está tentando expulsar o dono
   const targetIsOwner = String(room.createdBy._id || room.createdBy) === String(userIdToRemove)
   if (targetIsOwner) {
     throw new Error('Não é possível expulsar o dono da sala')
   }
 
-  // Se é moderador tentando expulsar outro moderador, só dono pode
   if (isModerator && !isOwner) {
-    const targetIsModerator = room.moderators.some(m => 
+    const targetIsModerator = room.moderators.some(m =>
       String(m._id || m) === String(userIdToRemove)
     )
     if (targetIsModerator) {
@@ -455,11 +491,10 @@ const listarListeners = async (roomId) => {
 
   if (!room) throw new Error('Sala não encontrada')
 
-  // Retorna listeners com flag de podeExpulsar
   return room.activeListeners.map(listener => {
     const userId = String(listener.userId?._id || listener.userId)
     const isOwner = String(room.createdBy._id || room.createdBy) === userId
-    const isModerator = room.moderators.some(m => 
+    const isModerator = room.moderators.some(m =>
       String(m._id || m) === userId
     )
 
@@ -489,10 +524,19 @@ module.exports = {
   adicionarModerador,
   removerModerador,
   atualizarPermissoes,
-  adicionarListener,      // ← NOVO
-  removerListener,        // ← NOVO
-  listarListeners,        // ← NOVO
+  adicionarListener,
+  removerListener,
+  listarListeners,
+  // Sincronização
+  sincronizarReproducao,
+  obterSyncState,
+  // Track
   atualizarTrack,
+  obterTrackAtual,
+  // Fila
   adicionarNaFila,
+  listarFila,
+  removerDaFila,
+  proximaMusica,
   enviarMensagem
 }

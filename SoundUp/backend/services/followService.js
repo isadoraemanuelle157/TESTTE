@@ -8,7 +8,6 @@ const seguir = async (seguidor_id, seguindo_id, tipo) => {
   const tipoFormatado = tipo.toLowerCase()
   const tipoRef = tipoFormatado === 'cantor' ? 'Cantor' : 'Usuario'
 
-  // ✅ Garante que IDs são strings para comparação
   const seguidorIdStr = String(seguidor_id)
   const seguindoIdStr = String(seguindo_id)
 
@@ -68,12 +67,13 @@ const seguir = async (seguidor_id, seguindo_id, tipo) => {
 
     await usuario.save()
 
-    await notificacaoService.criar({
-      usuarioDestino: seguindo_id,
-      usuarioOrigem: seguidor_id,
-      tipo: 'follow_request',
-      mensagem: 'quer seguir você e pediu acesso ao seu perfil privado'
-    })
+// Para perfil PRIVADO (solicitação):
+await notificacaoService.criar({
+  usuarioDestino: seguindo_id,
+  usuarioOrigem: seguidor_id,
+  tipo: 'follow_request',      // ← mantém
+  mensagem: 'quer seguir você e pediu acesso ao seu perfil privado'
+})
 
     return {
       solicitado: true,
@@ -81,12 +81,20 @@ const seguir = async (seguidor_id, seguindo_id, tipo) => {
     }
   }
 
+  // ✅ PERFIL PÚBLICO => Cria follow + NOTIFICAÇÃO
   const follow = await Follow.create({
     seguidor_id,
     seguindo_id,
     tipo: 'usuario',
     tipoRef
   })
+
+await notificacaoService.criar({
+  usuarioDestino: seguindo_id,
+  usuarioOrigem: seguidor_id,
+  tipo: 'new_follower',        // ← NOVO TIPO para seguir direto
+  mensagem: 'começou a seguir você'
+})
 
   return { follow, direto: true, solicitado: false }
 }
