@@ -3,6 +3,7 @@ const axios = require('axios')
 const Usuario = require('../models/Usuario')
 const Musica = require('../models/Musicas')
 const MatchInteracao = require('../models/MatchInteracao')
+const notificacaoService = require('./notificacaoService')
 const MatchMusical = require('../models/MatchMusical')
 
 // ============================================
@@ -455,10 +456,22 @@ const updateMatchesForLike = async (userId, trackId) => {
     trackId: String(trackId)
   }).distinct('usuario')
 
+  const novosMatches = []
+
   for (const otherUserId of relatedUsers) {
-    await recalculateMatchBetweenUsers(userId, otherUserId)
+    const pairKey = pairKeyFromUsers(userId, otherUserId)
+    const existedBefore = await MatchMusical.exists({ pairKey })
+
+    const match = await recalculateMatchBetweenUsers(userId, otherUserId)
+
+    if (!existedBefore && match) {
+      novosMatches.push({ match, otherUserId })
+    }
   }
+
+  return novosMatches
 }
+
 
 // ============================================
 // GET SUGGESTIONS - MULTI-FONTE
@@ -608,9 +621,42 @@ const createCurtida = async (userId, track, tipo) => {
     { usuario: userId, trackId: musica.trackId, musicaRef: musica.musicaRef, tipo, musica },
     { new: true, upsert: true, setDefaultsOnInsert: true }
   )
+if (tipo === 'like') {
+  const novosMatches = await updateMatchesForLike(userId, musica.trackId)
 
-  if (tipo === 'like') await updateMatchesForLike(userId, musica.trackId)
-  return saved
+  if (novosMatches.length > 0) {
+    const usuarioAtual = await Usuario.findById(userId).select('nome').lean()
+
+    for (const { match, otherUserId } of novosMatches) {
+      const outroUsuario = await Usuario.findById(otherUserId).select('nome').lean()
+
+      await notificacaoService.criarMuitas([
+        {
+          usuarioDestino: userId,
+          usuarioOrigem: otherUserId,
+          tipo: 'matchmusical',
+          mensagem: `🎵 Você deu match musical com ${outroUsuario?.nome || 'alguém'}!`,
+          meta: {
+            matchId: match._id.toString(),
+            usuarioOrigemId: String(otherUserId)
+          }
+        },
+        {
+          usuarioDestino: otherUserId,
+          usuarioOrigem: userId,
+          tipo: 'matchmusical',
+          mensagem: `🎵 Você deu match musical com ${usuarioAtual?.nome || 'alguém'}!`,
+          meta: {
+            matchId: match._id.toString(),
+            usuarioOrigemId: String(userId)
+          }
+        }
+      ])
+    }
+  }
+}
+
+return saved
 }
 
 const deleteCurtida = async (userId, trackId, tipo) => {

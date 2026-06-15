@@ -2,6 +2,8 @@ const Chat = require('../models/Chat')
 const MatchMusical = require('../models/MatchMusical')
 const Bloqueio = require('../models/Bloqueio')
 const ChatSilenciado = require('../models/ChatSilenciado')
+const Usuario = require('../models/Usuario')
+const notificacaoService = require('./notificacaoService')
 const mongoose = require('mongoose')
 
 // ============================================
@@ -137,6 +139,30 @@ const enviarMensagem = async (chatId, userId, conteudo, tipo = 'texto', musica =
 
   chat.updatedAt = new Date()
   await chat.save()
+
+  const destinatarioId = getOtherParticipantId(chat, userId)
+
+  if (destinatarioId) {
+    const destinatarioSilenciou = await ChatSilenciado.findOne({
+      chat: chat._id,
+      usuario: destinatarioId
+    }).lean()
+
+    if (!destinatarioSilenciou) {
+      const remetenteUser = await Usuario.findById(userId).select('nome').lean()
+
+      await notificacaoService.criar({
+        usuarioDestino: destinatarioId,
+        usuarioOrigem: userId,
+        tipo: 'matchmusical_mensagem',
+        mensagem: `${remetenteUser?.nome || 'Alguém'} enviou uma mensagem no Match Musical`,
+        meta: {
+          chatId: chat._id.toString(),
+          matchId: chat.matchId?.toString()
+        }
+      })
+    }
+  }
 
   const msgSalva = chat.mensagens[chat.mensagens.length - 1]
 

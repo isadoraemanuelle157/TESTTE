@@ -157,9 +157,17 @@ const aceitarSolicitacao = async (req, res) => {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
 
+    // ✅ CORREÇÃO: Aceita notifId opcional para marcar a notificação correta
+    const { solicitanteId, notifId } = req.body
+
+    if (!solicitanteId) {
+      return res.status(400).json({ error: 'solicitanteId é obrigatório' })
+    }
+
     const follow = await followService.aceitarSolicitacao(
       req.user.id,
-      req.body.solicitanteId
+      solicitanteId,
+      notifId  // ← PASSAR PARA O SERVICE
     )
 
     res.json({ message: 'Solicitação aceita', follow })

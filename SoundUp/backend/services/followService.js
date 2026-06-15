@@ -1,6 +1,7 @@
 const Follow = require('../models/Follow')
 const Usuario = require('../models/Usuario')
 const Cantor = require('../models/Cantor')
+const Notificacao = require('../models/Notificacao') 
 const notificacaoService = require('./notificacaoService')
 
 // SEGUIR
@@ -146,7 +147,7 @@ const verificar = async (seguidor_id, seguindo_id, tipo) => {
   return !!existe
 }
 
-const aceitarSolicitacao = async (usuarioLogadoId, solicitanteId) => {
+const aceitarSolicitacao = async (usuarioLogadoId, solicitanteId, notifId = null) => {
   const user = await Usuario.findById(usuarioLogadoId)
   if (!user) throw new Error('Usuário não encontrado')
 
@@ -174,6 +175,26 @@ const aceitarSolicitacao = async (usuarioLogadoId, solicitanteId) => {
   }
 
   await user.save()
+
+  // ✅ CORREÇÃO: Se tiver notifId, usa ele. Senão, tenta pelo par usuarios.
+  if (notifId) {
+    await Notificacao.findByIdAndUpdate(
+      notifId,
+      { aceita: true, lida: true }
+    )
+  } else {
+    // Fallback: tenta encontrar pela combinação de usuários
+    await Notificacao.findOneAndUpdate(
+      {
+        usuarioDestino: usuarioLogadoId,
+        usuarioOrigem: solicitanteId,
+        tipo: 'follow_request'
+        // Removido aceita: false da query — pode não existir no documento
+      },
+      { aceita: true, lida: true },
+      { sort: { createdAt: -1 } }
+    )
+  }
 
   await notificacaoService.criar({
     usuarioDestino: solicitanteId,

@@ -16,17 +16,24 @@ const notificacaoSchema = new mongoose.Schema({
       'follow_request',
       'follow_accept',
       'follow_reject',
-      'new_follower',  
+      'new_follower',
       'support_message',
       'support_reply',
-       'contact_message',   // ← NOVO
-    'contact_reply'
+      'contact_message',
+      'contact_reply',
+      'matchmusical',
+      'matchmusical_mensagem'
     ],
     required: true
   },
   mensagem: {
     type: String,
     default: ''
+  },
+  // ✅ ADICIONAR ESTE CAMPO:
+  aceita: {
+    type: Boolean,
+    default: false
   },
   meta: {
     type: mongoose.Schema.Types.Mixed,

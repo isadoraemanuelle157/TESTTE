@@ -114,25 +114,25 @@
                       <p class="notif-title">{{ notif.title }}</p>
                       <p class="notif-time">{{ notif.time }}</p>
 
-                      <!-- BOTÃO ACEITAR - só aparece se for follow_request E ainda não foi aceita -->
-                      <div
-                        v-if="notif.tipo === 'follow_request' && !notif.aceita"
-                        class="notif-actions"
-                        @click.stop
-                      >
-                        <button class="notif-action accept" @click="aceitar(notif)">
-                          <i class="fa fa-check"></i> Aceitar
-                        </button>
-                      </div>
-                      <!-- ESTADO JÁ ACEITO - aparece quando foi aceita -->
-                      <div
-                        v-else-if="notif.tipo === 'follow_request' && notif.aceita"
-                        class="notif-actions"
-                      >
-                        <span class="notif-action accepted">
-                          <i class="fa fa-check-circle"></i> Aceito
-                        </span>
-                      </div>
+<!-- BOTÃO ACEITAR -->
+<div
+  v-if="notif.tipo === 'follow_request' && notif.aceita !== true"
+  class="notif-actions"
+  @click.stop
+>
+  <button class="notif-action accept" @click="aceitar(notif)">
+    <i class="fa fa-check"></i> Aceitar
+  </button>
+</div>
+<!-- ESTADO JÁ ACEITO -->
+<div
+  v-else-if="notif.tipo === 'follow_request' && notif.aceita === true"
+  class="notif-actions"
+>
+  <span class="notif-action accepted">
+    <i class="fa fa-check-circle"></i> Aceito
+  </span>
+</div>
                     </div>
 
                     <div v-if="!notif.read" class="unread-dot"></div>
@@ -304,25 +304,25 @@
                 <p class="notif-title">{{ notif.title }}</p>
                 <p class="notif-time">{{ notif.time }}</p>
 
-                <!-- BOTÃO ACEITAR NO MODAL - só aparece se for follow_request E ainda não foi aceita -->
-                <div
-                  v-if="notif.tipo === 'follow_request' && !notif.aceita"
-                  class="notif-actions"
-                  @click.stop
-                >
-                  <button class="notif-action accept" @click="aceitar(notif)">
-                    <i class="fa fa-check"></i> Aceitar
-                  </button>
-                </div>
-                <!-- ESTADO JÁ ACEITO NO MODAL -->
-                <div
-                  v-else-if="notif.tipo === 'follow_request' && notif.aceita"
-                  class="notif-actions"
-                >
-                  <span class="notif-action accepted">
-                    <i class="fa fa-check-circle"></i> Aceito
-                  </span>
-                </div>
+<!-- BOTÃO ACEITAR - só aparece se for follow_request E ainda não foi aceita -->
+<div
+  v-if="notif.tipo === 'follow_request' && notif.aceita !== true"
+  class="notif-actions"
+  @click.stop
+>
+  <button class="notif-action accept" @click="aceitar(notif)">
+    <i class="fa fa-check"></i> Aceitar
+  </button>
+</div>
+<!-- ESTADO JÁ ACEITO - aparece quando foi aceita -->
+<div
+  v-else-if="notif.tipo === 'follow_request' && notif.aceita === true"
+  class="notif-actions"
+>
+  <span class="notif-action accepted">
+    <i class="fa fa-check-circle"></i> Aceito
+  </span>
+</div>
               </div>
 
               <div v-if="!notif.read" class="unread-dot"></div>
@@ -615,7 +615,7 @@ if (n.tipo === 'matchmusical') {
         icon: visual.icon,
         color: visual.color,
         read: n.lida,
-        aceita: n.aceita || false,
+       aceita: n.aceita === true,
         user: n.usuarioOrigem,
         userAvatar: n.usuarioOrigem?.avatar || null,
         // ✅ NOVO: Guardar meta para redirecionamento
@@ -726,10 +726,8 @@ const redirectByNotificationType = (notif) => {
   if (tipo === 'matchmusical' || tipo === 'matchmusical_mensagem') {
     // Vai para a página do Musical Match (ou chat do match)
     if (notif.meta?.matchId || notif.meta?.chatId) {
-      router.push(`/musical-match?chat=${notif.meta.chatId || notif.meta.matchId}`)
-    } else {
-      router.push('/musical-match')
-    }
+     router.push('/matchmusical')
+    } 
     return
   }
   
@@ -806,59 +804,46 @@ const redirectByNotificationType = (notif) => {
     }
 
     // ===== ACEITAR CORRIGIDO (COMPLETO) =====
-    const aceitar = async (notif) => {
-      try {
-        const token = localStorage.getItem('token')
+// ===== ACEITAR CORRIGIDO =====
+const aceitar = async (notif) => {
+  try {
+    if (notif.aceita === true) return
 
-        // 1. Chama API para aceitar solicitação
-        await axios.post(
-          'http://localhost:3002/follows/aceitar',
-          { solicitanteId: notif.user?._id || notif.user?.id },
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
+    const token = localStorage.getItem('token')
+    
+    // ✅ CORREÇÃO: Envia também o notifId para o backend localizar certo
+    await axios.post(
+      'http://localhost:3002/follows/aceitar',
+      { 
+        solicitanteId: notif.user?._id || notif.user?.id,
+        notifId: notif.id  // ← ADICIONAR ISSO
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
 
-        // 2. Encontra o índice da notificação no array para reatividade
-        const index = notifications.value.findIndex(n => n.id === notif.id)
-        
-        if (index !== -1) {
-          // 3. Atualiza reativamente: marca como aceita E lida
-          notifications.value[index].aceita = true
-          notifications.value[index].read = true
-          
-          // 4. Decrementa contador se ainda não estava lida
-          if (!notif.read) {
-            notificationCount.value = Math.max(0, notificationCount.value - 1)
-          }
-        }
+    // Atualiza localmente
+    const index = notifications.value.findIndex(n => n.id === notif.id)
+    if (index !== -1) {
+      notifications.value[index].aceita = true
+      notifications.value[index].read = true
 
-        // 5. Também marca como lida no backend (garantia)
-        try {
-          await axios.patch(
-            `http://localhost:3002/notificacoes/${notif.id}/lida`,
-            {},
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
-        } catch (e) {
-          // Silencia erro se já estiver lida no backend
-        }
-
-        const nome = notif.user?.nome || 'Usuário'
-        mostrarToast(
-          'Solicitação aceita!',
-          `Você agora segue ${nome}`,
-          'success'
-        )
-
-        // 6. Dispara evento para atualizar outros componentes
-        window.dispatchEvent(new CustomEvent('follow-request-accepted', {
-          detail: { userId: notif.user?._id || notif.user?.id }
-        }))
-        
-      } catch (error) {
-        console.error('Erro ao aceitar solicitação:', error)
-        mostrarToast('Erro ao aceitar solicitação', error.message, 'error')
+      if (!notif.read) {
+        notificationCount.value = Math.max(0, notificationCount.value - 1)
       }
     }
+
+    const nome = notif.user?.nome || 'Usuário'
+    mostrarToast('Solicitação aceita!', `Você agora segue ${nome}`, 'success')
+
+  } catch (error) {
+    console.error('Erro ao aceitar solicitação:', error)
+    mostrarToast(
+      'Erro ao aceitar solicitação',
+      error.response?.data?.error || error.message,
+      'error'
+    )
+  }
+}
 
     // ===== NOVO: Redireciona para dashboard se logado, senão para home =====
     const goToHomeOrDashboard = () => {
