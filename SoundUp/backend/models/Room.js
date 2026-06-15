@@ -39,6 +39,14 @@ const roomSchema = new mongoose.Schema({
     ref: 'Usuario',
     required: true
   },
+  // EM: models/Room.js (linha ~80), adicionar ao schema:
+
+syncState: {
+  isPlaying: { type: Boolean, default: false },
+  currentTime: { type: Number, default: 0 },
+  trackId: { type: String, default: null },
+  lastUpdated: { type: Date, default: Date.now }
+},
   // ========== PERMISSÕES ==========
   moderators: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -54,7 +62,12 @@ const roomSchema = new mongoose.Schema({
       type: String,
       enum: ['owner', 'moderators', 'everyone'],
       default: 'moderators'
-    }
+    },
+     promoteModerators: {
+    type: String,
+    enum: ['owner', 'moderators', 'everyone'],
+    default: 'owner'
+  }
   },
   // ================================
   invitedUsers: [{

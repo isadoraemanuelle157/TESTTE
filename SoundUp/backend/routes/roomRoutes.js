@@ -19,7 +19,7 @@ router.put('/:id/permissoes', requireAuth, roomController.atualizarPermissoes)
 // ========== ROTAS DE LISTENERS ==========
 router.post('/:id/listeners', optionalAuth, roomController.adicionarListener)
 router.get('/:id/listeners', roomController.listarListeners)
-router.delete('/:id/listeners', requireAuth, roomController.removerListener)
+router.delete('/:id/listeners', optionalAuth, roomController.removerListener)
 // ======================================
 // ================================================
 
@@ -27,10 +27,13 @@ router.get('/:id', roomController.buscarPorId)
 router.post('/:id/join', optionalAuth, roomController.entrar)
 router.get('/:id/acesso', optionalAuth, roomController.verificarAcesso)
 
+router.post('/:id/sync', optionalAuth, roomController.sincronizarReproducao)
 router.put('/:id', requireAuth, roomController.atualizar)
 router.delete('/:id', requireAuth, roomController.deletar)
 router.post('/:id/track', requireAuth, roomController.atualizarTrack)
 router.post('/:id/queue', requireAuth, roomController.adicionarNaFila)
 router.post('/:id/messages', roomController.enviarMensagem)
+router.get('/:id/messages', roomController.listarMensagens)
+
 
 module.exports = router

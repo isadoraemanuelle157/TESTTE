@@ -47,7 +47,7 @@
     <!-- Header -->
     <header class="room-header">
       <div class="header-left">
-        <button class="back-btn" @click="leaveRoom">
+       <button class="back-btn" @click="confirmLeaveRoom">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
@@ -76,7 +76,7 @@
       </div>
      
       <div class="header-actions">
-        <button class="action-btn" @click="showShareModal = true">
+       <button class="action-btn" @click="showShareModal = true" v-if="canInvitePeople">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="18" cy="5" r="3"/>
             <circle cx="6" cy="12" r="3"/>
@@ -310,18 +310,33 @@
                  :class="{ 'is-me': listener.id === currentUser.id }">
               <div class="listener-avatar">
                 <img :src="listener.avatar || 'https://via.placeholder.com/150'" :alt="listener.name" />
-                <div class="online-indicator"></div>
-              </div>
-              <div class="listener-info">
-                <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.id ? '(Você)' : '' }}</span>
-                <span class="listener-status">{{ isPlaying ? '▶ Tocando agora' : '⏸ Pausado' }}</span>
-              </div>
-              <button
-                v-if="canKickUsers && listener.id !== currentUser.id && listener.role !== 'owner'"
-                class="kick-btn"
-                @click="kickUser(listener.id, listener.name)"
-                title="Expulsar usuário"
-              >
+
+                 <!-- ← ADICIONAR: Badge de moderador se for mod -->
+    <div v-if="listener.role === 'moderator'" class="mod-badge">MOD</div>
+    <div class="online-indicator"></div>
+  </div>
+  <div class="listener-info">
+    <span class="listener-name">{{ listener.name }} {{ listener.id === currentUser.id ? '(Você)' : '' }}</span>
+    <span class="listener-status">{{ isPlaying ? '▶ Tocando agora' : '⏸ Pausado' }}</span>
+  </div>
+  
+  <!-- ← ADICIONAR: Botão de coroa (só para dono, se permissão permitir) -->
+  <button
+    v-if="currentUserRole === 'owner' && listener.id !== currentUser.id && canPromoteModerators"
+    class="crown-btn"
+    @click="promoteToModerator(listener.id, listener.name)"
+    title="Promover a moderador"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+    </svg>
+  </button>
+           <button
+  v-if="canKickUsers && listener.id !== currentUser.id && listener.role !== 'owner'"
+  class="kick-btn"
+  @click="openKickModal(listener.id, listener.name)"
+  title="Expulsar usuário"
+>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"/>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -387,7 +402,11 @@
             <p>Fila vazia</p>
           </div>
 
-          <button class="add-music-btn" @click="showAddMusic = true">
+          <button 
+  class="add-music-btn" 
+  @click="showAddMusic = true"
+  v-if="canAddMusic"
+>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"/>
               <line x1="5" y1="12" x2="19" y2="12"/>
@@ -627,6 +646,91 @@
         </div>
       </Transition>
     </Teleport>
+    <!-- Leave Confirmation Modal -->
+<Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showLeaveModal" class="modal-overlay" @click.self="showLeaveModal = false">
+      <div class="modal-content leave-modal">
+        <div class="modal-header">
+          <h3>Sair da Sala</h3>
+          <button class="close-btn" @click="showLeaveModal = false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="leave-content">
+          <div class="leave-warning">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ffc107" stroke-width="1.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p>Tem certeza que deseja sair da sala <strong>"{{ room.name }}"</strong>?</p>
+            <span>Você será desconectado dos outros ouvintes.</span>
+          </div>
+          <div class="leave-actions">
+            <button class="cancel-btn" @click="showLeaveModal = false">
+              Ficar na Sala
+            </button>
+            <button class="confirm-leave-btn" @click="leaveRoomConfirmed">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair da Sala
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
+<!-- Kick Confirmation Modal -->
+<Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showKickModal" class="modal-overlay" @click.self="showKickModal = false">
+      <div class="modal-content kick-modal">
+        <div class="modal-header">
+          <h3>Expulsar Usuário</h3>
+          <button class="close-btn" @click="showKickModal = false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="kick-content">
+          <div class="kick-warning">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="1.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p>Tem certeza que deseja expulsar <strong>"{{ userToKick?.name }}"</strong>?</p>
+            <span>O usuário será removido imediatamente e receberá um alerta.</span>
+          </div>
+          <div class="kick-actions">
+            <button class="cancel-btn" @click="showKickModal = false">
+              Cancelar
+            </button>
+            <button class="confirm-kick-btn" @click="kickUser">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+              Expulsar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
   </div>
 </template>
 
@@ -669,9 +773,36 @@ const hideToast = () => {
 // ========== LISTENERS & PERMISSÕES ==========
 const activeListeners = ref([])
 const currentUserRole = ref('participant')
+// ========== PERMISSÕES CORRETAS ==========
 const canKickUsers = computed(() =>
   currentUserRole.value === 'owner' || currentUserRole.value === 'moderator'
 )
+
+const canAddMusic = computed(() => {
+  if (!room.value.id) return false
+  // Se não tiver permissões definidas, permite todos (fallback)
+  const perm = room.value.permissions?.addMusic || 'everyone'
+  if (perm === 'everyone') return true
+  if (perm === 'moderators') return currentUserRole.value === 'owner' || currentUserRole.value === 'moderator'
+  if (perm === 'owner') return currentUserRole.value === 'owner'
+  return false
+})
+
+const canInvitePeople = computed(() => {
+  if (!room.value.id) return false
+  const perm = room.value.permissions?.invitePeople || 'moderators'
+  if (perm === 'everyone') return true
+  if (perm === 'moderators') return currentUserRole.value === 'owner' || currentUserRole.value === 'moderator'
+  if (perm === 'owner') return currentUserRole.value === 'owner'
+  return false
+})
+const canPromoteModerators = computed(() => {
+  if (!room.value.id) return false
+  const perm = room.value.permissions?.promoteModerators || 'owner'
+  if (perm === 'owner') return currentUserRole.value === 'owner'
+  if (perm === 'moderators') return currentUserRole.value === 'owner' || currentUserRole.value === 'moderator'
+  return false
+})
 const isRoomOwner = ref(false)
 const listenersSectionRef = ref(null)
 
@@ -759,6 +890,8 @@ const unreadMessages = ref(0)
 const showShareModal = ref(false)
 const showAddMusic = ref(false)
 const showJoinModal = ref(false)
+const hasJoined = ref(false)
+const isJoining = ref(false)  // ← ADICIONAR
 
 // Search Deezer
 const searchQuery = ref('')
@@ -813,9 +946,12 @@ async function fetchJsonDeezer(pathAndQuery) {
 const recentMessages = computed(() => messages.value.slice(-50))
 
 // Methods
-const togglePlay = () => {
+// EM: MusicRoom.vue, método togglePlay (linha ~680)
+const togglePlay = async () => {
   if (!audioPlayer.value || !currentTrack.value.id) return
- 
+  
+  const newIsPlaying = !isPlaying.value
+  
   if (isPlaying.value) {
     audioPlayer.value.pause()
     isPlaying.value = false
@@ -828,6 +964,20 @@ const togglePlay = () => {
         console.warn('Erro ao tocar:', err)
         isPlaying.value = false
       })
+  }
+  
+  // ← ADICIONAR: Enviar estado de play/pause para o backend
+  try {
+    await apiFetch(`/api/rooms/${room.value.id}/sync`, {
+      method: 'POST',
+      body: JSON.stringify({
+        isPlaying: newIsPlaying,
+        currentTime: currentTime.value,
+        trackId: currentTrack.value.id
+      })
+    })
+  } catch (e) {
+    console.warn('Erro ao sincronizar reprodução:', e)
   }
 }
 
@@ -843,10 +993,21 @@ const previousTrack = () => {
   // Implementar histórico
 }
 
-const nextTrack = () => {
+const nextTrack = async () => {
+  // Toca a próxima da fila local
   if (queue.value.length > 0) {
     const next = queue.value.shift()
     loadTrack(next)
+    
+    // Atualiza no backend a música atual
+    try {
+      await apiFetch(`/api/rooms/${room.value.id}/track`, {
+        method: 'POST',
+        body: JSON.stringify(next)
+      })
+    } catch (e) {
+      console.warn('Erro ao atualizar track no backend:', e)
+    }
   } else {
     isPlaying.value = false
     currentTime.value = 0
@@ -923,16 +1084,35 @@ const formatTimeAgo = (timestamp) => {
   return `${Math.floor(minutes / 60)}h`
 }
 
-const sendMessage = () => {
-  if (!newMessage.value.trim()) return
-  messages.value.push({
-    id: Date.now(),
+// ========== CHAT COM BACKEND ==========
+const sendMessage = async () => {
+  if (!newMessage.value.trim() || !room.value.id) return
+  
+  const msgData = {
     userId: currentUser.value.id,
     userName: currentUser.value.name,
     avatar: currentUser.value.avatar,
-    text: newMessage.value,
+    text: newMessage.value.trim(),
+    timestamp: new Date().toISOString()
+  }
+
+  // Envia para o backend
+  try {
+    await apiFetch(`/api/rooms/${room.value.id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(msgData)
+    })
+  } catch (e) {
+    console.warn('Erro ao enviar mensagem:', e)
+  }
+
+  // Adiciona localmente para feedback imediato
+  messages.value.push({
+    id: Date.now(),
+    ...msgData,
     timestamp: Date.now()
   })
+  
   newMessage.value = ''
   nextTick(() => {
     const container = document.querySelector('.chat-messages')
@@ -974,7 +1154,43 @@ const fetchDeezerChart = async () => {
   }
 }
 
-const addToQueue = (track) => {
+// ADICIONAR APÓS kickUser (linha ~1130)
+
+const promoteToModerator = async (userId, userName) => {
+  try {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/moderadores`, {
+      method: 'POST',
+      body: JSON.stringify({ moderadorId: userId })
+    })
+    
+    if (response.ok) {
+      // Atualiza localmente
+      const listener = activeListeners.value.find(l => l.id === userId)
+      if (listener) {
+        listener.role = 'moderator'
+      }
+      
+      messages.value.push({
+        id: Date.now(),
+        userId: 'system',
+        userName: 'Sistema',
+        avatar: 'https://via.placeholder.com/150',
+        text: `${userName} foi promovido a moderador!`,
+        timestamp: Date.now()
+      })
+      
+      showToast('success', 'Moderador Promovido', `${userName} agora é moderador da sala`)
+    } else {
+      const error = await response.json()
+      showToast('error', 'Erro', error.error || 'Erro ao promover moderador')
+    }
+  } catch (error) {
+    console.error('Erro ao promover:', error)
+    showToast('error', 'Erro', 'Erro ao promover moderador')
+  }
+}
+
+const addToQueue = async (track) => {
   const trackData = {
     id: track.id,
     title: track.title,
@@ -986,6 +1202,17 @@ const addToQueue = (track) => {
     preview: track.preview
   }
  
+  // Envia para o backend (sincroniza com todos)
+  try {
+    await apiFetch(`/api/rooms/${room.value.id}/queue`, {
+      method: 'POST',
+      body: JSON.stringify(trackData)
+    })
+  } catch (e) {
+    console.warn('Erro ao adicionar na fila do backend:', e)
+  }
+
+  // Atualiza localmente também
   queue.value.push(trackData)
   showAddMusic.value = false
   searchQuery.value = ''
@@ -1034,12 +1261,14 @@ const shareVia = (platform) => {
 
 // ========== LEAVE ROOM WITH TOAST ==========
 const leaveRoom = async () => {
-  // Remove self from listeners before leaving
   if (room.value.id && currentUser.value.id) {
     try {
       await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
         method: 'DELETE',
-        body: JSON.stringify({ userIdToRemove: currentUser.value.id })
+        body: JSON.stringify({ 
+          userIdToRemove: currentUser.value.id,
+          requesterId: currentUser.value.id  // ← ADICIONAR ISTO
+        })
       })
     } catch (e) {
       console.warn('Erro ao remover listener:', e)
@@ -1049,12 +1278,22 @@ const leaveRoom = async () => {
   stopListenersPolling()
  
   // Show toast notification
-  showToast('info', 'Você saiu da sala', `Até logo, ${currentUser.value.name}!`, 3000)
- 
+    showToast('info', 'Até logo!', `Você saiu da sala ${room.value.name}. Volte sempre!`, 3000)
   // Small delay to show the toast before navigating
   setTimeout(() => {
     router.push('/rooms')
   }, 800)
+}
+
+const showLeaveModal = ref(false)
+
+const confirmLeaveRoom = () => {
+  showLeaveModal.value = true
+}
+
+const leaveRoomConfirmed = async () => {
+  showLeaveModal.value = false
+  await leaveRoom() // Chama o leaveRoom original
 }
 
 // Join Room Logic
@@ -1129,9 +1368,13 @@ const checkRoomAccess = async () => {
 
 const joinRoom = async () => {
   accessError.value = ''
+  
+  // ← ADICIONAR: Marca que está em processo de entrada imediatamente
+  isJoining.value = true
 
   if (!joinUserName.value.trim()) {
     accessError.value = 'Digite seu nome'
+    isJoining.value = false  // ← ADICIONAR: Libera se erro
     return
   }
 
@@ -1143,6 +1386,8 @@ const joinRoom = async () => {
     await determineUserRole()
     startListenersPolling()
     showToast('success', 'Bem-vindo!', `Você entrou como dono da sala`)
+    // ← ADICIONAR: Libera flag no final
+    isJoining.value = false
     return
   }
 
@@ -1176,6 +1421,7 @@ const joinRoom = async () => {
       await addSelfToListeners()
       await determineUserRole()
       startListenersPolling()
+      isJoining.value = false
       showToast('success', 'Bem-vindo!', `Você entrou na sala ${room.value.name}`)
       return
     }
@@ -1243,15 +1489,46 @@ const joinRoom = async () => {
 }
 
 // ========== GERENCIAR LISTENERS ==========
+const checkIfKicked = () => {
+  // ← ADICIONAR: Se ainda está em processo de entrada, não verifica expulsão
+  if (isJoining.value) return
+  
+  // ← ADICIONAR: Se ainda não entrou na sala (modal de join aberto), não verifica
+  if (showJoinModal.value) return
+
+  // ← ADICIONAR: Se não tem room.id ainda, não verifica
+  if (!room.value.id) return
+
+  // Verifica se o usuário atual ainda está na lista de listeners
+  const stillInRoom = activeListeners.value.some(l => l.id === currentUser.value.id)
+  
+  if (!stillInRoom && room.value.id && currentUser.value.id) {
+    // Foi expulso! Mostrar alerta e redirecionar
+    showToast('error', 'Você foi Expulso', 'Um moderador removeu você da sala.', 0)
+    
+    // Parar polling
+    stopListenersPolling()
+    stopChatPolling()
+    
+    // Redirecionar após delay
+    setTimeout(() => {
+      router.push('/rooms')
+    }, 3000)
+  }
+}
 
 const fetchActiveListeners = async () => {
   if (!room.value.id) return
- 
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`)
     if (response.ok) {
       const listeners = await response.json()
       activeListeners.value = listeners
+      // ✅ Só verifica expulsão se o usuário JÁ ENTROU na sala (hasJoined = true)
+      // ← MUDAR: E também se o modal de join está fechado
+      if (hasJoined.value && !showJoinModal.value) {
+        checkIfKicked()
+      }
     }
   } catch (error) {
     console.error('Erro ao buscar listeners:', error)
@@ -1260,6 +1537,9 @@ const fetchActiveListeners = async () => {
 
 const addSelfToListeners = async () => {
   if (!room.value.id) return
+
+  // Marca que está em processo de entrada
+  isJoining.value = true  // ← ADICIONAR
 
   // Add current user locally first so they appear immediately in the list
   const selfListener = {
@@ -1288,33 +1568,53 @@ const addSelfToListeners = async () => {
     })
    
     await fetchActiveListeners()
+    
+    // Só marca como "entrou de verdade" quando confirmado no backend
+    hasJoined.value = true
   } catch (error) {
     console.error('Erro ao adicionar listener:', error)
+    // Se falhou, não marca como entrou
+    hasJoined.value = false
+  } finally {
+    // Libera a flag de "entrando" independente do resultado
+    isJoining.value = false  // ← ADICIONAR
   }
 }
 
-const kickUser = async (userId, userName) => {
-  if (!confirm(`Expulsar ${userName} da sala?`)) return
- 
+const userToKick = ref(null)
+const showKickModal = ref(false)
+
+const openKickModal = (userId, userName) => {
+  userToKick.value = { id: userId, name: userName }
+  showKickModal.value = true
+}
+
+const kickUser = async () => {
+  if (!userToKick.value) return
+  
+  const { id: userId, name: userName } = userToKick.value
+  
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'DELETE',
       body: JSON.stringify({ userIdToRemove: userId })
     })
-   
+    
     if (response.ok) {
       activeListeners.value = activeListeners.value.filter(l => l.id !== userId)
-     
+      
       messages.value.push({
         id: Date.now(),
         userId: 'system',
         userName: 'Sistema',
         avatar: 'https://via.placeholder.com/150',
-        text: `${userName} foi removido da sala.`,
+        text: `${userName} foi removido da sala por um moderador.`,
         timestamp: Date.now()
       })
-     
-      showToast('success', 'Usuário expulso', `${userName} foi removido da sala`)
+      
+      showKickModal.value = false
+      userToKick.value = null
+      showToast('success', 'Usuário Expulso', `${userName} foi removido da sala`)
     } else {
       const error = await response.json()
       showToast('error', 'Erro', error.error || 'Erro ao expulsar usuário')
@@ -1372,12 +1672,106 @@ const drop = (event, dropIndex) => {
   dragStartIndex.value = null
 }
 
-// Lifecycle
+// Carrega mensagens do backend ao entrar
+const fetchMessages = async () => {
+  if (!room.value.id) return
+  try {
+    const response = await apiFetch(`/api/rooms/${room.value.id}/messages`)
+    if (response.ok) {
+      const data = await response.json()
+      messages.value = (data.messages || []).map((msg, i) => ({
+        id: msg.id || `msg_${i}_${Date.now()}`,
+        userId: msg.userId,
+        userName: msg.userName,
+        avatar: msg.avatar,
+        text: msg.text,
+        timestamp: new Date(msg.timestamp).getTime()
+      }))
+    }
+  } catch (e) {
+    console.warn('Erro ao carregar mensagens:', e)
+  }
+}
+
+const syncRoomState = async () => {
+  if (!room.value.id) return
+  try {
+    const response = await apiFetch(`/api/rooms/${room.value.id}`)
+    if (response.ok) {
+      const data = await response.json()
+      
+      // Sincroniza fila
+      if (data.queue && JSON.stringify(data.queue) !== JSON.stringify(queue.value)) {
+        queue.value = data.queue
+      }
+      
+      // Sincroniza música atual
+      if (data.currentTrack?.id && data.currentTrack.id !== currentTrack.value.id) {
+        loadTrack(data.currentTrack)
+      }
+      
+      // ← ADICIONAR: Sincroniza estado de play/pause
+      if (data.syncState && data.syncState.trackId === currentTrack.value.id) {
+        // Se o estado remoto é diferente do local, sincroniza
+        if (data.syncState.isPlaying !== isPlaying.value) {
+          if (data.syncState.isPlaying) {
+            // Remoto está tocando, local deve tocar
+            if (audioPlayer.value) {
+              audioPlayer.value.currentTime = data.syncState.currentTime || 0
+              audioPlayer.value.play().then(() => {
+                isPlaying.value = true
+              }).catch(err => {
+                console.warn('Autoplay bloqueado:', err)
+              })
+            }
+          } else {
+            // Remoto está pausado, local deve pausar
+            if (audioPlayer.value) {
+              audioPlayer.value.pause()
+              isPlaying.value = false
+            }
+          }
+        }
+        
+        // Sincroniza tempo se estiver muito diferente (mais de 3 segundos)
+        if (data.syncState.isPlaying && audioPlayer.value) {
+          const timeDiff = Math.abs(audioPlayer.value.currentTime - (data.syncState.currentTime || 0))
+          if (timeDiff > 3) {
+            audioPlayer.value.currentTime = data.syncState.currentTime || 0
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Erro ao sincronizar sala:', e)
+  }
+}
+
+let syncInterval = null
+
 onMounted(() => {
   checkAuth()
   checkRoomAccess()
   fetchDeezerChart()
- 
+  // ← MUDAR: Só busca mensagens e inicia polling se NÃO precisar mostrar modal
+  if (!showJoinModal.value) {
+    fetchMessages()
+    syncRoomState()
+    syncInterval = setInterval(syncRoomState, 3000)
+    startListenersPolling()
+    startChatPolling()
+  }
+  if (!room.value.isPublic) {
+    showJoinModal.value = true
+    // ← ADICIONAR: Não inicia polling ainda
+    return
+  }
+
+  if (!isLoggedIn.value) {
+    showJoinModal.value = true
+    // ← ADICIONAR: Não inicia polling ainda
+    return
+  }
   setInterval(saveRoomState, 5000)
 })
 
@@ -1465,7 +1859,11 @@ let listenersInterval = null
 
 const startListenersPolling = () => {
   fetchActiveListeners()
-  listenersInterval = setInterval(fetchActiveListeners, 5000)
+  fetchMessages() // ← ADICIONAR
+  listenersInterval = setInterval(() => {
+    fetchActiveListeners()
+    fetchMessages() // ← ADICIONAR
+  }, 2000) // ← MUDAR de 5000 para 2000
 }
 
 const stopListenersPolling = () => {
@@ -1475,18 +1873,43 @@ const stopListenersPolling = () => {
   }
 }
 
+// ADICIONAR NOVOS MÉTODOS após startListenersPolling (linha ~1170)
+
+let chatInterval = null
+
+const startChatPolling = () => {
+  fetchMessages()
+  chatInterval = setInterval(fetchMessages, 1500) // Chat a cada 1.5s
+}
+
+const stopChatPolling = () => {
+  if (chatInterval) {
+    clearInterval(chatInterval)
+    chatInterval = null
+  }
+}
+
 onUnmounted(() => {
   clearTimeout(searchTimeout)
   stopListenersPolling()
+  stopChatPolling() 
  
   if (room.value.id && currentUser.value.id) {
     apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'DELETE',
-      body: JSON.stringify({ userIdToRemove: currentUser.value.id })
+      body: JSON.stringify({ 
+        userIdToRemove: currentUser.value.id,
+        requesterId: currentUser.value.id
+      })
     }).catch(() => {})
   }
  
   if (toastTimeout) clearTimeout(toastTimeout)
+  if (syncInterval) clearInterval(syncInterval)
+  
+  // Reseta as flags ao sair do componente
+  hasJoined.value = false
+  isJoining.value = false  // ← ADICIONAR
 })
 </script>
 
@@ -1586,6 +2009,151 @@ onUnmounted(() => {
   background: rgba(10, 10, 10, 0.8);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Toast Notification - Estilo Premium */
+.toast-notification {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(18, 18, 18, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  min-width: 320px;
+  max-width: 420px;
+  transform: translateX(120%);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-notification.show {
+  transform: translateX(0);
+}
+
+/* Tipos de toast com gradientes sutis */
+.toast-notification.success {
+  border-left: 4px solid #1db954;
+  background: linear-gradient(135deg, rgba(29, 185, 84, 0.15), rgba(18, 18, 18, 0.95));
+}
+
+.toast-notification.error {
+  border-left: 4px solid #ff6b6b;
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(18, 18, 18, 0.95));
+}
+
+.toast-notification.info {
+  border-left: 4px solid #667eea;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(18, 18, 18, 0.95));
+}
+
+.toast-notification.warning {
+  border-left: 4px solid #ffc107;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(18, 18, 18, 0.95));
+}
+
+.toast-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-notification.success .toast-icon {
+  background: rgba(29, 185, 84, 0.2);
+  color: #1db954;
+}
+
+.toast-notification.error .toast-icon {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+.toast-notification.info .toast-icon {
+  background: rgba(102, 126, 234, 0.2);
+  color: #667eea;
+}
+
+.toast-notification.warning .toast-icon {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.toast-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toast-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.toast-message {
+  font-size: 0.875rem;
+  color: #b3b3b3;
+  line-height: 1.4;
+}
+
+.toast-close {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #b3b3b3;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+/* Animação de entrada/saída */
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(120%) scale(0.9);
+}
+
+.toast-enter-to {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.toast-leave-from {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(120%) scale(0.9);
 }
 
 .header-left {
@@ -3154,6 +3722,166 @@ onUnmounted(() => {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* ADICIONAR no <style scoped> (linha ~1800) */
+
+.leave-modal {
+  max-width: 400px;
+}
+
+.leave-content {
+  padding: 1.5rem;
+}
+
+.leave-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.leave-warning p {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.leave-warning span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.leave-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.leave-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.confirm-leave-btn {
+  background: #ff6b6b;
+  color: white;
+}
+
+.confirm-leave-btn:hover {
+  background: #ff5252;
+  transform: translateY(-1px);
+}
+
+/* ADICIONAR no <style scoped> (linha ~1850) */
+
+.crown-btn {
+  background: rgba(255, 193, 7, 0.2);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffc107;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.3s;
+  margin-right: 0.5rem;
+}
+
+.listener-item:hover .crown-btn {
+  opacity: 1;
+}
+
+.crown-btn:hover {
+  background: rgba(255, 193, 7, 0.4);
+  transform: scale(1.1);
+}
+
+.crown-btn svg {
+  fill: #ffc107;
+}
+
+/* ADICIONAR no <style scoped> */
+
+.kick-modal {
+  max-width: 400px;
+}
+
+.kick-content {
+  padding: 1.5rem;
+}
+
+.kick-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.kick-warning p {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.kick-warning span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.kick-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.kick-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.confirm-kick-btn {
+  background: #ff6b6b;
+  color: white;
+}
+
+.confirm-kick-btn:hover {
+  background: #ff5252;
+  transform: translateY(-1px);
 }
 
 /* Responsive */

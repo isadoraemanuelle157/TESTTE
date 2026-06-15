@@ -22,7 +22,8 @@ const criar = async (dados, userId) => {
     // Permissões padrão
     permissions: {
       addMusic: dados.permissions?.addMusic || 'everyone',
-      invitePeople: dados.permissions?.invitePeople || 'moderators'
+      invitePeople: dados.permissions?.invitePeople || 'moderators',
+      promoteModerators: dados.permissions?.promoteModerators || 'owner'
     }
   }
 
@@ -256,15 +257,35 @@ const getUserRole = async (roomId, userId) => {
 }
 
 const adicionarModerador = async (roomId, userId, novoModeradorId) => {
-  const room = await Room.findOneAndUpdate(
-    { _id: roomId, createdBy: userId },
+  const room = await Room.findById(roomId)
+    .populate('moderators', '_id')
+  
+  if (!room) throw new Error('Sala não encontrada')
+
+  const isOwner = String(room.createdBy) === String(userId)
+  const isModerator = room.moderators.some(m => 
+    String(m._id || m) === String(userId)
+  )
+
+  // Verifica permissão promoteModerators
+  const perm = room.permissions?.promoteModerators || 'owner'
+  
+  let canPromote = false
+  if (perm === 'owner' && isOwner) canPromote = true
+  if (perm === 'moderators' && (isOwner || isModerator)) canPromote = true
+  if (perm === 'everyone') canPromote = true
+
+  if (!canPromote) {
+    throw new Error('Sem permissão para promover moderadores')
+  }
+
+  const updatedRoom = await Room.findByIdAndUpdate(
+    roomId,
     { $addToSet: { moderators: novoModeradorId } },
     { new: true }
-  )
-    .populate('moderators', 'nome username avatar')
+  ).populate('moderators', 'nome username avatar')
 
-  if (!room) throw new Error('Sala não encontrada ou sem permissão')
-  return room
+  return updatedRoom
 }
 
 const removerModerador = async (roomId, userId, moderadorId) => {

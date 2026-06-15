@@ -32,6 +32,7 @@ import MusicPlayer from '@/components/MusicPlayer.vue'
 import DetalheCantor from '@/views/DetalheCantor.vue'
 import RecuperarSenha from '@/banco/RecuperarSenha.vue'
 import Termos from '@/components/Termos.vue'
+import Cookies from '@/components/Cookies.vue'
 import Privacidade from '@/components/Privacidade.vue'
 import Contato from '@/components/Contato.vue'
 import Ajuda from '@/components/Ajuda.vue'
@@ -251,6 +252,11 @@ const router = createRouter({
       path: '/privacidade',
       name: 'privacidade',
       component: Privacidade,
+    },
+      {
+      path: '/cookies',
+      name: 'cookies',
+      component: Cookies,
     },
     {
       path: '/contato',

@@ -192,9 +192,20 @@ async function excluirMensagem({ suporteId, user }) {
   return true
 }
 
+// ✅ ADICIONAR no suporteService.js, antes do module.exports:
+
+async function listarTodasMensagens() {
+  return SuporteMensagem.find()
+    .sort({ ultimaMensagemEm: -1 })
+    .populate('usuario', 'nome email role')
+    .populate('mensagens.autor', 'nome email avatar role')
+}
+
+// ✅ CORRIGIDO - module.exports:
 module.exports = {
   criarMensagem,
   listarMinhasMensagens,
+  listarTodasMensagens,   // ← ADICIONAR
   responderMensagem,
   excluirMensagem
 }

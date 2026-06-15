@@ -109,7 +109,7 @@
           <span class="divider">|</span>
           <a href="#" @click.prevent="navigateTo('/termos')">Termos</a>
           <span class="divider">|</span>
-          <a href="#" @click.prevent="showCookies">Cookies</a>
+          <a href="#" @click.prevent="navigateTo('/cookies')">Cookies</a>
         </div>
         <div class="footer-music-wave">
           <span v-for="n in 5" :key="n" class="wave-bar" :style="{ animationDelay: (n * 0.1) + 's' }"></span>

@@ -289,6 +289,118 @@
         </div>
       </section>
 
+      <!-- ===== ADMIN: PAINEL DE CONTATO ===== -->
+<section v-if="isAdmin" class="messages-history-card">
+  <div class="history-header">
+    <div class="header-title">
+      <div class="header-icon">
+        <i class="fa fa-envelope"></i>
+      </div>
+      <h2>Mensagens de Contato (Admin)</h2>
+      <span v-if="allContactMessages.length > 0" class="message-count">
+        {{ allContactMessages.length }}
+      </span>
+    </div>
+    
+    <button class="refresh-btn" @click="loadAllContactMessages" :class="{ 'spinning': loadingMessages }">
+      <i class="fa fa-refresh"></i>
+      <span>Atualizar</span>
+    </button>
+  </div>
+
+  <div v-if="loadingMessages" class="history-empty loading-state">
+    <div class="spinner-ring">
+      <div></div><div></div><div></div><div></div>
+    </div>
+    <p>Carregando mensagens...</p>
+  </div>
+
+  <div v-else-if="allContactMessages.length === 0" class="history-empty">
+    <div class="empty-illustration">
+      <i class="fa fa-inbox"></i>
+    </div>
+    <p>Nenhuma mensagem de contato.</p>
+  </div>
+
+  <div v-else class="messages-list">
+    <div
+      v-for="item in allContactMessages"
+      :key="item._id"
+      class="message-thread"
+      :class="{ 'expanded': !collapsedThreads[item._id] }"
+    >
+      <div class="thread-top" @click="toggleLocalHistory(item._id)">
+        <div class="thread-info">
+          <div class="thread-icon" :class="item.categoria">
+            <i class="fa" :class="getCategoryIcon(item.categoria)"></i>
+          </div>
+          <div class="thread-details">
+            <h3>{{ item.assunto }}</h3>
+            <p class="thread-meta">
+              <span class="category-tag">{{ item.categoria }}</span>
+              <span class="date">{{ formatDate(item.ultimaMensagemEm) }}</span>
+              <span class="user-name">
+                <i class="fa fa-user"></i> {{ item.usuario?.nome || 'Usuário' }}
+              </span>
+            </p>
+          </div>
+        </div>
+        <div class="thread-actions">
+          <span class="status-badge" :class="item.status">
+            {{ item.status }}
+          </span>
+          <button class="soften-btn" @click.stop="toggleLocalHistory(item._id)">
+            <i class="fa" :class="collapsedThreads[item._id] ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+          </button>
+        </div>
+      </div>
+
+      <transition name="expand">
+        <div v-show="!collapsedThreads[item._id]" class="thread-content">
+          <!-- Mensagens da conversa -->
+          <div class="thread-messages">
+            <div
+              v-for="msg in item.mensagens"
+              :key="msg._id"
+              class="thread-message"
+              :class="msg.autorTipo"
+            >
+              <div class="message-bubble">
+                <div class="msg-label">
+                  <i class="fa" :class="msg.autorTipo === 'admin' ? 'fa-headset' : 'fa-user'"></i>
+                  {{ msg.autorTipo === 'admin' ? 'Suporte' : msg.nomeAutor || 'Usuário' }}
+                </div>
+                <p>{{ msg.mensagem }}</p>
+                <small class="msg-time">{{ formatDate(msg.createdAt) }}</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Caixa de resposta do admin -->
+          <div class="thread-reply-box">
+            <div class="reply-input-wrapper">
+              <i class="fa fa-reply reply-icon"></i>
+              <textarea
+                v-model="replyMap[item._id]"
+                rows="2"
+                placeholder="Escreva uma resposta como administrador..."
+              ></textarea>
+            </div>
+            <button
+              @click="adminReplyContact(item._id, replyMap[item._id])"
+              class="reply-btn"
+              :disabled="!replyMap[item._id] || !replyMap[item._id].trim()"
+            >
+              <i class="fa fa-paper-plane"></i>
+              Responder como Suporte
+            </button>
+          </div>
+        </div>
+      </transition>
+    </div>
+  </div>
+</section>
+
       <!-- Alerta customizado -->
       <transition name="alert-fade">
         <div v-if="alert.visible" class="custom-alert" :class="alert.type" @click="closeAlert">
@@ -334,13 +446,15 @@
   import axios from 'axios'
 
   export default {
-    name: 'SupportPage',
+    name: 'ContactPage',
 
     data() {
       return {
         isLoggedIn: false,
         sending: false,
         loadingMessages: false,
+        isAdmin: false,
+allContactMessages: [],
         myMessages: [],
         replyMap: {},
         collapsedThreads: {},
@@ -384,6 +498,10 @@
       if (this.isLoggedIn) {
         this.loadMyMessages()
       }
+      this.checkAdmin()
+if (this.isAdmin) {
+  this.loadAllContactMessages()
+}
     },
 
     beforeUnmount() {
@@ -393,6 +511,28 @@
     },
 
     methods: {
+      // ✅ ADICIONAR nos methods do ContactPage.vue:
+async adminReplyContact(contatoId, mensagem) {
+  try {
+    await axios.post(
+      `http://localhost:3002/contato/${contatoId}/responder`,
+      { mensagem },
+      { headers: { Authorization: `Bearer ${this.getToken()}` } }
+    )
+    this.showAlert('success', 'Respondido!', 'Resposta enviada ao usuário.')
+    await this.loadAllContactMessages()
+  } catch (error) {
+    this.showAlert('error', 'Erro', 'Erro ao responder contato.')
+  }
+},
+// ✅ ADICIONAR nos methods do ContactPage.vue:
+toggleLocalHistory(id) {
+  this.collapsedThreads = {
+    ...this.collapsedThreads,
+    [id]: !this.collapsedThreads[id]
+  }
+},
+
       showAlert(type, title, message, duration = 4000) {
         if (this.alert.timer) {
           clearTimeout(this.alert.timer)
@@ -488,6 +628,22 @@ handleConfirmAction() {
       loadAuth() {
         this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
       },
+
+      checkAdmin() {
+  const user = JSON.parse(localStorage.getItem('usuario') || '{}')
+  this.isAdmin = user.role === 'admin'
+},
+
+async loadAllContactMessages() {
+  try {
+    const { data } = await axios.get('http://localhost:3002/contato/todas', {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    })
+    this.allContactMessages = data
+  } catch (error) {
+    console.error(error)
+  }
+},
 
       getToken() {
         return localStorage.getItem('token')

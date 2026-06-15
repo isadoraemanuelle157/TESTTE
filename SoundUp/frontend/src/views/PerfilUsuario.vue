@@ -1081,10 +1081,19 @@ mounted() {
   
   // Listener para mudanças
   window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
+
+   this.handleOpenTab = (e) => {
+    const tab = e.detail?.tab
+    if (tab && this.allTabs.find(t => t.id === tab && !t.locked)) {
+      this.activeTab = tab
+    }
+  }
+  window.addEventListener('open-profile-tab', this.handleOpenTab);
 },
 
 beforeUnmount() {
   window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
+   window.removeEventListener('open-profile-tab', this.handleOpenTab);
 },
 
   methods: {

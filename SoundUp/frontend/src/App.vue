@@ -43,6 +43,9 @@
 
     <!-- MUSICPLAYER - SEMPRE VISÍVEL -->
     <MusicPlayer />
+
+      <!-- ADICIONAR AQUI: Barra de Cookies -->
+    <CookieBanner />
   </div>
 </template>
 
@@ -51,6 +54,7 @@ import Sidebar from "@/components/Sidebar.vue"
 import Navbar from "@/components/Navbar.vue"
 import MusicPlayer from "@/components/MusicPlayer.vue"
 import Footer from "@/components/Footer.vue"
+import CookieBanner from "@/components/CookieBanner.vue"
 
 export default {
   name: 'App',
@@ -59,7 +63,8 @@ export default {
     Sidebar,
     Navbar,
     MusicPlayer,
-    Footer
+    Footer,
+    CookieBanner
   },
 
   data() {

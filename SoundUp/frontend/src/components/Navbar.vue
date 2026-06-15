@@ -504,26 +504,38 @@ const handleAvatarGoldChanged = (e) => {
     }
 
     const getNotifVisual = (tipo) => {
-      const map = {
-        follow_request: {
-          icon: 'fa fa-user-plus',
-          color: 'linear-gradient(135deg, #2563eb, #7c3aed)'
-        },
-        follow_accept: {
-          icon: 'fa fa-check',
-          color: 'linear-gradient(135deg, #10b981, #34d399)'
-        },
-        follow_reject: {
-          icon: 'fa fa-times',
-          color: 'linear-gradient(135deg, #ef4444, #f97316)'
-        }
-      }
+  const map = {
+    follow_request: {
+      icon: 'fa fa-user-plus',
+      color: 'linear-gradient(135deg, #2563eb, #7c3aed)'
+    },
+    follow_accept: {
+      icon: 'fa fa-check',
+      color: 'linear-gradient(135deg, #10b981, #34d399)'
+    },
+    follow_reject: {
+      icon: 'fa fa-times',
+      color: 'linear-gradient(135deg, #ef4444, #f97316)'
+    },
+    // ✅ NOVO: Notificações de suporte
+    support_message: {
+      icon: 'fa fa-headset',
+      color: 'linear-gradient(135deg, #f59e0b, #d97706)'
+    },
+    support_reply: {
+      icon: 'fa fa-commenting-o',
+      color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+    },
+    // ✅ NOVO: Notificações de contato (se houver)
+   contact_message: { icon: 'fa fa-envelope', color: 'linear-gradient(135deg, #ec4899, #db2777)' },
+contact_reply: { icon: 'fa fa-reply', color: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
+  }
 
-      return map[tipo] || {
-        icon: 'fa fa-bell',
-        color: 'linear-gradient(135deg, #64748b, #334155)'
-      }
-    }
+  return map[tipo] || {
+    icon: 'fa fa-bell',
+    color: 'linear-gradient(135deg, #64748b, #334155)'
+  }
+}
 
     // ===== REMOVER NOTIFICAÇÕES DUPLICADAS =====
     // Mantém apenas a notificação mais recente de cada (tipo + usuarioOrigem)
@@ -552,54 +564,68 @@ const handleAvatarGoldChanged = (e) => {
       return Array.from(mapa.values())
     }
 
-    const carregarNotificacoes = async () => {
-      try {
-        const token = localStorage.getItem('token')
-        if (!token) return
+   const carregarNotificacoes = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) return
 
-        const res = await axios.get('http://localhost:3002/notificacoes', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+    const res = await axios.get('http://localhost:3002/notificacoes', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
 
-        // Remove duplicadas antes de mapear
-        const notificacoesUnicas = removerDuplicadas(res.data || [])
+    // Remove duplicadas antes de mapear
+    const notificacoesUnicas = removerDuplicadas(res.data || [])
 
-        notifications.value = notificacoesUnicas.map(n => {
-          const visual = getNotifVisual(n.tipo)
-          const nome = n.usuarioOrigem?.nome || 'Alguém'
+    notifications.value = notificacoesUnicas.map(n => {
+      const visual = getNotifVisual(n.tipo)
+      const nome = n.usuarioOrigem?.nome || 'Alguém'
 
-          let mensagemFormatada = n.mensagem
+      let mensagemFormatada = n.mensagem
 
-          if (n.tipo === 'follow_request') {
-            mensagemFormatada = `${nome} quer te seguir`
-          }
-          if (n.tipo === 'follow_accept') {
-            mensagemFormatada = `${nome} aceitou sua solicitação`
-          }
-          if (n.tipo === 'follow_reject') {
-            mensagemFormatada = `${nome} recusou sua solicitação`
-          }
-
-          return {
-            id: n._id,
-            tipo: n.tipo,
-            title: mensagemFormatada,
-            time: formatTimeAgo(n.createdAt),
-            icon: visual.icon,
-            color: visual.color,
-            read: n.lida,
-            // Flag 'aceita' baseada no backend ou false por padrão
-            aceita: n.aceita || false,
-            user: n.usuarioOrigem,
-            userAvatar: n.usuarioOrigem?.avatar || null
-          }
-        })
-
-        notificationCount.value = notifications.value.filter(n => !n.read).length
-      } catch (error) {
-        console.error('Erro ao carregar notificações:', error)
+      if (n.tipo === 'follow_request') {
+        mensagemFormatada = `${nome} quer te seguir`
       }
-    }
+      if (n.tipo === 'follow_accept') {
+        mensagemFormatada = `${nome} aceitou sua solicitação`
+      }
+      if (n.tipo === 'follow_reject') {
+        mensagemFormatada = `${nome} recusou sua solicitação`
+      }
+      // ✅ NOVO: Formatar mensagens de suporte
+      if (n.tipo === 'support_message') {
+        mensagemFormatada = n.mensagem || `${nome} enviou uma mensagem de suporte`
+      }
+      if (n.tipo === 'support_reply') {
+        mensagemFormatada = n.mensagem || `Suporte respondeu: ${n.meta?.assunto || 'sua mensagem'}`
+      }
+      if (n.tipo === 'contact_message') {
+  mensagemFormatada = n.mensagem || `${nome} enviou uma mensagem de contato`
+}
+if (n.tipo === 'contact_reply') {
+  mensagemFormatada = n.mensagem || `Resposta ao seu contato: ${n.meta?.assunto || ''}`
+}
+
+      return {
+        id: n._id,
+        tipo: n.tipo,
+        title: mensagemFormatada,
+        time: formatTimeAgo(n.createdAt),
+        icon: visual.icon,
+        color: visual.color,
+        read: n.lida,
+        aceita: n.aceita || false,
+        user: n.usuarioOrigem,
+        userAvatar: n.usuarioOrigem?.avatar || null,
+        // ✅ NOVO: Guardar meta para redirecionamento
+        meta: n.meta || {}
+      }
+    })
+
+    notificationCount.value = notifications.value.filter(n => !n.read).length
+  } catch (error) {
+    console.error('Erro ao carregar notificações:', error)
+  }
+}
 
     const handleScroll = () => {
       const currentScrollY = window.scrollY
@@ -629,32 +655,73 @@ const handleAvatarGoldChanged = (e) => {
     }
 
     // ===== markAsRead CORRIGIDO =====
-    const markAsRead = async (notif) => {
-      try {
-        // Se já está lida, não faz nada
-        if (notif.read) return
-
-        const token = localStorage.getItem('token')
-        
-        await axios.patch(
-          `http://localhost:3002/notificacoes/${notif.id}/lida`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-
-        // Atualiza reativamente no array usando o índice
-        const index = notifications.value.findIndex(n => n.id === notif.id)
-        if (index !== -1) {
-          notifications.value[index].read = true
-        }
-        
-        // Decrementa contador
-        notificationCount.value = Math.max(0, notificationCount.value - 1)
-        
-      } catch (error) {
-        console.error('Erro ao marcar notificação como lida:', error)
-      }
+   // ===== markAsRead COM REDIRECIONAMENTO =====
+const markAsRead = async (notif) => {
+  try {
+    // Se já está lida, só redireciona
+    if (notif.read) {
+      redirectByNotificationType(notif)
+      return
     }
+
+    const token = localStorage.getItem('token')
+    
+    await axios.patch(
+      `http://localhost:3002/notificacoes/${notif.id}/lida`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+
+    // Atualiza reativamente no array usando o índice
+    const index = notifications.value.findIndex(n => n.id === notif.id)
+    if (index !== -1) {
+      notifications.value[index].read = true
+    }
+    
+    // Decrementa contador
+    notificationCount.value = Math.max(0, notificationCount.value - 1)
+    
+    // ✅ NOVO: Redirecionar após marcar como lida
+    redirectByNotificationType(notif)
+    
+  } catch (error) {
+    console.error('Erro ao marcar notificação como lida:', error)
+  }
+}
+
+// ✅ NOVO: Função de redirecionamento por tipo de notificação
+const redirectByNotificationType = (notif) => {
+  // Fecha os dropdowns/modais
+  showNotifications.value = false
+  showNotifModal.value = false
+  
+  const tipo = notif.tipo
+  
+  // Redirecionamentos específicos
+  if (tipo === 'support_message' || tipo === 'support_reply') {
+    // Vai para a página de suporte
+    router.push('/suporte')
+    return
+  }
+  
+  if (tipo === 'contact_message' || tipo === 'contact_reply') {
+    // Vai para a página de contato
+    router.push('/contato')
+    return
+  }
+  
+  if (tipo === 'follow_request' || tipo === 'follow_accept' || tipo === 'follow_reject') {
+    // Vai para o perfil do usuário
+    if (notif.user?._id || notif.user?.id) {
+      router.push(`/perfil/${notif.user._id || notif.user.id}`)
+    } else {
+      router.push('/perfil')
+    }
+    return
+  }
+  
+  // Padrão: não faz nada ou vai para notificações
+}
 
     // ===== markAllRead CORRIGIDO =====
     const markAllRead = async () => {
@@ -972,6 +1039,7 @@ goToSupport,
       goToLibrary,
       handleAvatarError,
       isAvatarGoldEquipped,
+      redirectByNotificationType,
     }
   }
 }

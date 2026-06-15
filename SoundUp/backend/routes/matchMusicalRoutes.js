@@ -16,8 +16,8 @@ router.delete('/curtidas/:trackId', requireAuth, matchController.removerCurtida)
 router.get('/', requireAuth, matchController.listarMatches)
 router.put('/:id/visto', requireAuth, matchController.marcarVisto)
 router.put('/:id/responder', requireAuth, matchController.responder)
-router.delete('/:id', requireAuth, matchController.removerMatch)
-// Excluir conta do usuário
 router.delete('/conta', requireAuth, matchController.excluirConta)
+router.delete('/:id', requireAuth, matchController.removerMatch)
+
 
 module.exports = router

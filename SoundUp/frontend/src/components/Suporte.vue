@@ -399,6 +399,104 @@
 
       </section>
 
+      <!-- ===== ADMIN: TODAS AS MENSAGENS ===== -->
+<section v-if="isAdmin" class="admin-section">
+  <div class="ticket-card">
+    <div class="section-title">
+      <div class="title-icon">
+        <i class="fa-solid fa-headset"></i>
+      </div>
+      <div>
+        <h2>Painel de Suporte (Admin)</h2>
+        <p>Todas as mensagens de suporte para responder.</p>
+      </div>
+    </div>
+
+    <div v-if="allSupportMessages.length === 0" class="empty-history">
+      <i class="fa fa-inbox"></i>
+      <span>Nenhuma mensagem de suporte.</span>
+    </div>
+
+    <div v-else class="messages-list">
+      <div
+        v-for="item in allSupportMessages"
+        :key="item._id"
+        class="message-thread"
+        :class="{ 'expanded': !collapsedThreads[item._id] }"
+      >
+        <div class="thread-top" @click="softenConversation(item._id)">
+          <div class="thread-info">
+            <div class="thread-icon" :class="item.categoria">
+              <i class="fa" :class="getCategoryIcon(item.categoria)"></i>
+            </div>
+            <div class="thread-details">
+              <h3>{{ item.assunto }}</h3>
+              <p class="thread-meta">
+                <span class="category-tag">{{ item.categoria }}</span>
+                <span class="date">{{ formatDate(item.ultimaMensagemEm) }}</span>
+                <span class="user-name">
+                  <i class="fa fa-user"></i> {{ item.usuario?.nome || 'Usuário' }}
+                </span>
+              </p>
+            </div>
+          </div>
+          <div class="thread-actions">
+            <span class="status-badge" :class="item.status">
+              {{ item.status }}
+            </span>
+            <button class="soften-btn" @click.stop="softenConversation(item._id)">
+              <i class="fa" :class="collapsedThreads[item._id] ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+            </button>
+          </div>
+        </div>
+
+        <transition name="expand">
+          <div v-show="!collapsedThreads[item._id]" class="thread-content">
+            <!-- Mensagens da conversa -->
+            <div class="thread-messages">
+              <div
+                v-for="msg in item.mensagens"
+                :key="msg._id"
+                class="thread-message"
+                :class="msg.autorTipo"
+              >
+                <div class="message-bubble">
+                  <div class="msg-label">
+                    <i class="fa" :class="msg.autorTipo === 'admin' ? 'fa-headset' : 'fa-user'"></i>
+                    {{ msg.autorTipo === 'admin' ? 'Suporte' : msg.nomeAutor || 'Usuário' }}
+                  </div>
+                  <p>{{ msg.mensagem }}</p>
+                  <small class="msg-time">{{ formatDate(msg.createdAt) }}</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Caixa de resposta do admin -->
+            <div class="thread-reply-box">
+              <div class="reply-input-wrapper">
+                <i class="fa fa-reply reply-icon"></i>
+                <textarea
+                  v-model="replyMap[item._id]"
+                  rows="2"
+                  placeholder="Escreva uma resposta como administrador..."
+                ></textarea>
+              </div>
+              <button
+                @click="adminReply(item._id, replyMap[item._id])"
+                class="reply-btn"
+                :disabled="!replyMap[item._id] || !replyMap[item._id].trim()"
+              >
+                <i class="fa fa-paper-plane"></i>
+                Responder como Suporte
+              </button>
+            </div>
+          </div>
+        </transition>
+      </div>
+    </div>
+  </div>
+</section>
+
     </main>
 <!-- ========================= -->
 <!-- MODAL EMAIL -->
@@ -507,6 +605,8 @@ export default {
       isLoggedIn: false,
       sending: false,
       loadingMessages: false,
+      isAdmin: false,
+allSupportMessages: [],
 
       myMessages: [],
       supportHistory: [],
@@ -589,6 +689,11 @@ export default {
     this.supportHistory = JSON.parse(
   localStorage.getItem('supportHistory') || '[]'
 )
+
+this.checkAdmin()
+if (this.isAdmin) {
+  this.loadAllMessages() // carrega TODAS as mensagens
+}
 
     if (this.isLoggedIn) {
       this.loadMyMessages()
@@ -714,6 +819,41 @@ toggleLocalHistory(id) {
       this.isLoggedIn =
         localStorage.getItem('isLoggedIn') === 'true'
     },
+
+    checkAdmin() {
+  const user = JSON.parse(localStorage.getItem('usuario') || '{}')
+  this.isAdmin = user.role === 'admin'
+},
+
+async loadAllMessages() {
+  if (!this.isAdmin) return
+  try {
+    this.loadingMessages = true
+    const { data } = await axios.get('http://localhost:3002/suporte/todas', {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    })
+    this.allSupportMessages = data
+  } catch (error) {
+    console.error('Erro ao carregar todas as mensagens:', error)
+  } finally {
+    this.loadingMessages = false
+  }
+},
+
+// Admin responde uma mensagem
+async adminReply(suporteId, mensagem) {
+  try {
+    await axios.post(
+      `http://localhost:3002/suporte/${suporteId}/responder`,
+      { mensagem },
+      { headers: { Authorization: `Bearer ${this.getToken()}` } }
+    )
+    this.showAlert('success', 'Respondido!', 'Resposta enviada ao usuário.')
+    await this.loadAllMessages()
+  } catch (error) {
+    this.showAlert('error', 'Erro', 'Erro ao responder.')
+  }
+},
 
     getToken() {
       return localStorage.getItem('token')

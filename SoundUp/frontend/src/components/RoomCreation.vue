@@ -218,6 +218,31 @@
         </button>
       </div>
     </div>
+    <!-- Adicionar após o bloco de "Convidar Pessoas" -->
+<div class="permission-item">
+  <div class="permission-info">
+    <strong>Promover Moderadores</strong>
+    <span>Quem pode promover outros a moderador</span>
+  </div>
+  <div class="permission-options">
+    <button
+      type="button"
+      class="perm-btn"
+      :class="{ 'active': roomForm.permissions.promoteModerators === 'owner' }"
+      @click="roomForm.permissions.promoteModerators = 'owner'"
+    >
+      Apenas Dono
+    </button>
+    <button
+      type="button"
+      class="perm-btn"
+      :class="{ 'active': roomForm.permissions.promoteModerators === 'moderators' }"
+      @click="roomForm.permissions.promoteModerators = 'moderators'"
+    >
+      Moderadores
+    </button>
+  </div>
+</div>
   </div>
 </div>
 
@@ -515,6 +540,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
@@ -589,7 +615,9 @@ const roomForm = ref({
   password: '',
   permissions: {
     addMusic: 'everyone',
-    invitePeople: 'moderators'
+    invitePeople: 'moderators',
+        promoteModerators: 'owner'
+
   }
 })
 
@@ -721,6 +749,28 @@ const resetRoomForm = () => {
   }
   selectedInvites.value = new Set()
   inviteTab.value = 'followers'
+}
+
+// ============================================
+// NOTIFICAÇÕES
+// ============================================
+const notificarConviteSala = async (salaId, usuarioConvidadoId) => {
+  try {
+    const token = localStorage.getItem('token')
+    const storedUser = localStorage.getItem('usuario')
+    const userData = storedUser ? JSON.parse(storedUser) : {}
+    
+    await axios.post('http://localhost:3002/notificacoes', {
+      tipo: 'sala_musica_convite',
+      destinatarioId: usuarioConvidadoId,
+      referenciaId: salaId,
+      mensagem: `${userData.nome || 'Alguém'} te convidou para uma sala de música`
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch (err) {
+    console.error('Erro ao notificar convite:', err)
+  }
 }
 
 const createRoom = async () => {

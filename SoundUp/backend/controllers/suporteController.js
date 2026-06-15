@@ -87,9 +87,29 @@ const excluir = async (req, res) => {
   }
 }
 
+// ✅ ADICIONAR no suporteController.js, antes do module.exports:
+
+const todas = async (req, res) => {
+  try {
+    const isAdmin = req.user?.role === 'admin'
+
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' })
+    }
+
+    const data = await suporteService.listarTodasMensagens()
+    res.json(data)
+  } catch (error) {
+    console.error('❌ ERRO LISTAR TODAS SUPORTE:', error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+// ✅ CORRIGIDO - module.exports:
 module.exports = {
   criar,
   minhas,
+  todas,        // ← ADICIONAR
   responder,
   excluir
 }

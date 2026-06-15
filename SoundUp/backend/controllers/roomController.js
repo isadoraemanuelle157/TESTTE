@@ -32,7 +32,7 @@ const criar = async (req, res) => {
       moderators: moderators || [],
       password: isPublicBool === false ? String(password || '').trim() : undefined,
       source: 'spotify',
-      permissions: permissions || { addMusic: 'everyone', invitePeople: 'moderators' }
+      permissions: permissions || { addMusic: 'everyone', invitePeople: 'moderators', promoteModerators: 'owner' }
     }
 
     const room = await roomService.criar(roomData, req.user.id)
@@ -352,6 +352,53 @@ const listarListeners = async (req, res) => {
     res.status(400).json({ error: error.message })
   }
 }
+
+// EM: controllers/roomController.js (adicionar ao exports):
+
+const sincronizarReproducao = async (req, res) => {
+  try {
+    const { isPlaying, currentTime, trackId } = req.body
+    
+    const room = await Room.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          'syncState.isPlaying': isPlaying,
+          'syncState.currentTime': currentTime,
+          'syncState.trackId': trackId,
+          'syncState.lastUpdated': new Date()
+        }
+      },
+      { new: true }
+    )
+    
+    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
+    res.json({ success: true, syncState: room.syncState })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+}
+
+const listarMensagens = async (req, res) => {
+  try {
+    const room = await roomService.buscarPorId(req.params.id)
+    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
+    
+    // Retorna as últimas 100 mensagens
+    const mensagens = (room.messages || []).slice(-100).map((msg, i) => ({
+      id: msg._id || `msg_${i}_${Date.now()}`,
+      userId: msg.userId,
+      userName: msg.userName,
+      avatar: msg.avatar,
+      text: msg.text,
+      timestamp: msg.timestamp
+    }))
+    
+    res.json({ messages: mensagens })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}
 module.exports = {
   criar,
   listarMinhas,
@@ -373,5 +420,7 @@ module.exports = {
   listarListeners,     // ← NOVO
   atualizarTrack,
   adicionarNaFila,
-  enviarMensagem
+  enviarMensagem,
+   listarMensagens,
+  sincronizarReproducao 
 }

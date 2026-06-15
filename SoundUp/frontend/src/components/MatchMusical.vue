@@ -1850,9 +1850,20 @@ canProceedStep2() {
         }
       },
 
-  async mounted() {
-    await this.fetchGenres()
-    await this.bootstrapUser()
+async mounted() {
+  // ✅ Verifica se usuário saiu do Musical Match
+  const matchLoggedIn = localStorage.getItem('musicalMatchLoggedIn')
+  if (matchLoggedIn === 'false') {
+    this.hasProfile = false
+    this.loading = false
+    // NÃO chama bootstrapUser() — usuário escolheu sair
+    localStorage.removeItem('musicalMatchLoggedIn')
+    await this.fetchGenres() // Só carrega gêneros para onboarding
+    return
+  }
+  
+  await this.fetchGenres()
+  await this.bootstrapUser()
      await this.buscarChats()
       const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
   if (savedGoldState !== null) {
@@ -1885,7 +1896,15 @@ canProceedStep2() {
         },
 
 async verifyAndLogin() {
-  const username = this.loginUsername.trim()
+   const username = this.loginUsername.trim()
+ 
+  // ✅ BLOQUEIO: Verifica se conta foi excluída
+  const accountDeleted = localStorage.getItem('musicalMatchAccountDeleted')
+  if (accountDeleted === 'true') {
+    this.loginError = 'Esta conta foi excluída. Crie uma nova conta para continuar.'
+    this.loginLoading = false
+    return
+  }
  
   // ✅ ALERTA DE VALIDAÇÃO — antes de chamar a API
   if (!username) {
@@ -2876,16 +2895,24 @@ this.showToast({
     return null
   },
 
-  async bootstrapUser() {
-    try {
-      const savedAuthUser = JSON.parse(localStorage.getItem('user') || 'null')
-      const token = localStorage.getItem('token')
+async bootstrapUser() {
+  try {
+    // ✅ Verifica se usuário já escolheu sair anteriormente
+    const matchLoggedIn = localStorage.getItem('musicalMatchLoggedIn')
+    if (matchLoggedIn === 'false') {
+      this.loading = false
+      this.hasProfile = false
+      return
+    }
 
-      if (!savedAuthUser || !token) {
-        this.loading = false
-        this.hasProfile = false
-        return
-      }
+    const savedAuthUser = JSON.parse(localStorage.getItem('user') || 'null')
+    const token = localStorage.getItem('token')
+
+    if (!savedAuthUser || !token) {
+      this.loading = false
+      this.hasProfile = false
+      return
+    }
 
       const userId = savedAuthUser.id || savedAuthUser._id
 
@@ -2901,15 +2928,18 @@ this.showToast({
 
       localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
 
-      if (data.onboardingCompleto) {
-        this.hasProfile = true
+// ✅ ALTERNATIVA: garantir que curtidas/favoritos carreguem ANTES das sugestões
+if (data.onboardingCompleto) {
+  this.hasProfile = true
 
+  // Primeiro: carregar preferências do usuário
   await Promise.all([
     this.buscarCurtidas(),
     this.buscarFavoritos(),
     this.buscarMatches()
   ])
 
+  // Depois: carregar sugestões (que dependem de saber o que já foi curtido)
   await this.buscarSugestoes()
 
       } else {
@@ -3404,6 +3434,10 @@ getGenreEmoji(name) {
       localStorage.setItem('musicalMatchProfile', JSON.stringify(this.currentUser))
       localStorage.setItem('user', JSON.stringify(updatedUser))
       localStorage.setItem('usuario', JSON.stringify(updatedUser))
+      localStorage.setItem('musicalMatchLoggedIn', 'true')
+
+// Remove flag de conta excluída se existir
+localStorage.removeItem('musicalMatchAccountDeleted')
 
       await Promise.all([
         this.buscarCurtidas(),
@@ -3412,6 +3446,7 @@ getGenreEmoji(name) {
       ])
 
       await this.buscarSugestoes()
+      this.loading = false
 
     } catch (error) {
       console.error('❌ Erro no finishOnboarding:', error)
@@ -3447,7 +3482,9 @@ getGenreEmoji(name) {
         },
 
 logout() {
-  // Limpa TODOS os dados de sessão do Musical Match
+  // ✅ CORRETO: NÃO remove token do app principal!
+  // Apenas marca que saiu do Musical Match
+  
   const keysToRemove = [
     'musicalMatchProfile',
     'musicalMatchOnboarding',
@@ -3456,7 +3493,7 @@ logout() {
   ]
   keysToRemove.forEach(key => localStorage.removeItem(key))
 
-  // Reseta estado completo
+  // Reseta estado completo do Match
   this.hasProfile = false
   this.onboardingStep = 1
   this.onboardingData = {
@@ -3490,8 +3527,11 @@ logout() {
 
   this.stopAudio()
   this.stopChatPolling()
+  
+  // ✅ MARCA que saiu (impede auto-login no próximo acesso)
+  localStorage.setItem('musicalMatchLoggedIn', 'false')
 
-  // Mostra toast de confirmação
+  // Toast de confirmação
   this.showToast({
     type: 'success',
     title: 'Até logo!',
@@ -3523,16 +3563,20 @@ async deleteAccount() {
     })
 
     // Limpa dados locais
-    const keysToRemove = [
-      'musicalMatchProfile',
-      'musicalMatchOnboarding',
-      'matchLikedSongs',
-      'matchFavorites'
-    ]
-    keysToRemove.forEach(key => localStorage.removeItem(key))
+ localStorage.setItem('musicalMatchAccountDeleted', 'true')
+  
+  // Limpa dados locais
+  const keysToRemove = [
+    'musicalMatchProfile',
+    'musicalMatchOnboarding',
+    'matchLikedSongs',
+    'matchFavorites',
+    'musicalMatchLoggedIn'
+  ]
+  keysToRemove.forEach(key => localStorage.removeItem(key))
 
-    this.showDeleteAccountConfirm = false
-    this.deletingAccount = false
+  this.showDeleteAccountConfirm = false
+  this.deletingAccount = false
 
     // Reseta estado completo
     this.hasProfile = false
@@ -3579,6 +3623,39 @@ async deleteAccount() {
       title: 'Erro ao excluir',
       message: error.response?.data?.error || error.message || 'Tente novamente mais tarde.'
     })
+  }
+},
+
+// Após criar um match bem-sucedido
+async notificarMatch(matchData) {
+  try {
+    const token = localStorage.getItem('token')
+    await axios.post('http://localhost:3002/notificacoes', {
+      tipo: 'matchmusical',
+      destinatarioId: matchData.user.id, // ID do outro usuário
+      referenciaId: matchData.id, // ID do match
+      mensagem: `Você deu match musical com ${this.currentUser.name}!`
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch (err) {
+    console.error('Erro ao notificar match:', err)
+  }
+},
+
+async notificarMensagemMatch(chatId, remetenteId, destinatarioId) {
+  try {
+    const token = localStorage.getItem('token')
+    await axios.post('http://localhost:3002/notificacoes', {
+      tipo: 'matchmusical_mensagem',
+      destinatarioId: destinatarioId,
+      referenciaId: chatId,
+      mensagem: `Nova mensagem no Match Musical`
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch (err) {
+    console.error('Erro ao notificar mensagem:', err)
   }
 },
 
