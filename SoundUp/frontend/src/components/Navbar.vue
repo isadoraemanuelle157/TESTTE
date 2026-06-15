@@ -578,8 +578,8 @@ const handleAvatarGoldChanged = (e) => {
       if (n.tipo === 'follow_request') {
         mensagemFormatada = `${nome} quer te seguir`
       }
-  if (n.tipo === 'follow_accept') {
-  mensagemFormatada = `${nome} começou a seguir você`
+if (n.tipo === 'follow_accept') {
+  mensagemFormatada = `${nome} aceitou sua solicitação`
 }
 if (n.tipo === 'new_follower') {
   mensagemFormatada = `${nome} começou a seguir você`
@@ -712,10 +712,11 @@ const redirectByNotificationType = (notif) => {
     return
   }
   
-  if (tipo === 'follow_request' || tipo === 'follow_accept' || tipo === 'follow_reject') {
-    // Vai para o perfil do usuário
-    if (notif.user?._id || notif.user?.id) {
-      router.push(`/perfil/${notif.user._id || notif.user.id}`)
+  if (tipo === 'follow_request' || tipo === 'follow_accept' || tipo === 'follow_reject' || tipo === 'new_follower') {
+    // Vai para o perfil do usuário que seguiu/aceitou/enviou solicitação
+    const userId = notif.user?._id || notif.user?.id || notif.meta?.usuarioOrigemId
+    if (userId) {
+      router.push(`/usuario/${userId}`)
     } else {
       router.push('/perfil')
     }
