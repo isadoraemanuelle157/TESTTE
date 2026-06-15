@@ -20,23 +20,14 @@
     <div class="reading-progress" :style="{ width: scrollProgress + '%' }"></div>
 
     <!-- Header -->
-    <header class="cookies-header">
-      <div class="logo-wrapper" @click="goHome">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 18V5l12-2v13"></path>
-            <circle cx="6" cy="18" r="3"></circle>
-            <circle cx="18" cy="16" r="3"></circle>
-          </svg>
-        </div>
-        <span class="logo-text">SoundUp</span>
-      </div>
+<header class="cookies-header">
+  <div></div> <!-- espaçador vazio para manter o flex space-between -->
 
-      <button class="back-button" @click="goBack">
-        <i class="fa-solid fa-arrow-left"></i>
-        <span>Voltar</span>
-      </button>
-    </header>
+  <button class="back-button" @click="goBack">
+    <i class="fa-solid fa-arrow-left"></i>
+    <span>Voltar</span>
+  </button>
+</header>
 
     <!-- Main -->
     <main class="cookies-container" ref="container">
@@ -982,7 +973,7 @@ export default {
   z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end; /* alinha tudo à direita */
   padding: 16px 40px;
   backdrop-filter: blur(20px) saturate(180%);
   background: rgba(5, 5, 8, 0.7);

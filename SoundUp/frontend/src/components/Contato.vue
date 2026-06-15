@@ -289,75 +289,32 @@
         </div>
       </section>
 
-      <!-- ===== ADMIN: PAINEL DE CONTATO ===== -->
-<section v-if="isAdmin" class="messages-history-card">
+      <!-- ===== MENSAGENS DE CONTATO DO USUÁRIO ===== -->
+<section v-if="isLoggedIn && myContactMessages.length > 0" class="messages-history-card">
   <div class="history-header">
     <div class="header-title">
       <div class="header-icon">
         <i class="fa fa-envelope"></i>
       </div>
-      <h2>Mensagens de Contato (Admin)</h2>
-      <span v-if="allContactMessages.length > 0" class="message-count">
-        {{ allContactMessages.length }}
-      </span>
+      <h2>Suas mensagens de Contato</h2>
+      <span class="message-count">{{ myContactMessages.length }}</span>
     </div>
-    
-    <button class="refresh-btn" @click="loadAllContactMessages" :class="{ 'spinning': loadingMessages }">
-      <i class="fa fa-refresh"></i>
-      <span>Atualizar</span>
-    </button>
   </div>
 
-  <div v-if="loadingMessages" class="history-empty loading-state">
-    <div class="spinner-ring">
-      <div></div><div></div><div></div><div></div>
-    </div>
-    <p>Carregando mensagens...</p>
-  </div>
-
-  <div v-else-if="allContactMessages.length === 0" class="history-empty">
-    <div class="empty-illustration">
-      <i class="fa fa-inbox"></i>
-    </div>
-    <p>Nenhuma mensagem de contato.</p>
-  </div>
-
-  <div v-else class="messages-list">
+  <div class="messages-list">
     <div
-      v-for="item in allContactMessages"
+      v-for="item in myContactMessages"
       :key="item._id"
       class="message-thread"
       :class="{ 'expanded': !collapsedThreads[item._id] }"
     >
-      <div class="thread-top" @click="toggleLocalHistory(item._id)">
-        <div class="thread-info">
-          <div class="thread-icon" :class="item.categoria">
-            <i class="fa" :class="getCategoryIcon(item.categoria)"></i>
-          </div>
-          <div class="thread-details">
-            <h3>{{ item.assunto }}</h3>
-            <p class="thread-meta">
-              <span class="category-tag">{{ item.categoria }}</span>
-              <span class="date">{{ formatDate(item.ultimaMensagemEm) }}</span>
-              <span class="user-name">
-                <i class="fa fa-user"></i> {{ item.usuario?.nome || 'Usuário' }}
-              </span>
-            </p>
-          </div>
-        </div>
-        <div class="thread-actions">
-          <span class="status-badge" :class="item.status">
-            {{ item.status }}
-          </span>
-          <button class="soften-btn" @click.stop="toggleLocalHistory(item._id)">
-            <i class="fa" :class="collapsedThreads[item._id] ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
-          </button>
-        </div>
+      <!-- Mesma estrutura do myMessages, mas com resposta para contato -->
+      <div class="thread-top" @click="softenConversation(item._id)">
+        <!-- ... mesmo layout ... -->
       </div>
-
+      
       <transition name="expand">
         <div v-show="!collapsedThreads[item._id]" class="thread-content">
-          <!-- Mensagens da conversa -->
           <div class="thread-messages">
             <div
               v-for="msg in item.mensagens"
@@ -368,7 +325,7 @@
               <div class="message-bubble">
                 <div class="msg-label">
                   <i class="fa" :class="msg.autorTipo === 'admin' ? 'fa-headset' : 'fa-user'"></i>
-                  {{ msg.autorTipo === 'admin' ? 'Suporte' : msg.nomeAutor || 'Usuário' }}
+                  {{ msg.autorTipo === 'admin' ? 'Suporte' : 'Você' }}
                 </div>
                 <p>{{ msg.mensagem }}</p>
                 <small class="msg-time">{{ formatDate(msg.createdAt) }}</small>
@@ -376,23 +333,23 @@
             </div>
           </div>
 
-          <!-- Caixa de resposta do admin -->
+          <!-- Caixa de resposta do usuário para contato -->
           <div class="thread-reply-box">
             <div class="reply-input-wrapper">
               <i class="fa fa-reply reply-icon"></i>
               <textarea
                 v-model="replyMap[item._id]"
                 rows="2"
-                placeholder="Escreva uma resposta como administrador..."
+                placeholder="Escreva uma resposta..."
+                @keydown.enter.prevent="replyContactMessage(item._id)"
               ></textarea>
             </div>
-            <button
-              @click="adminReplyContact(item._id, replyMap[item._id])"
+            <button 
+              @click="replyContactMessage(item._id)"
               class="reply-btn"
               :disabled="!replyMap[item._id] || !replyMap[item._id].trim()"
             >
-              <i class="fa fa-paper-plane"></i>
-              Responder como Suporte
+              <i class="fa fa-paper-plane"></i> Responder
             </button>
           </div>
         </div>
@@ -455,6 +412,7 @@
         loadingMessages: false,
         isAdmin: false,
 allContactMessages: [],
+myContactMessages: [],
         myMessages: [],
         replyMap: {},
         collapsedThreads: {},
@@ -497,6 +455,7 @@ allContactMessages: [],
       this.loadAuth()
       if (this.isLoggedIn) {
         this.loadMyMessages()
+         this.loadMyContactMessages()
       }
       this.checkAdmin()
 if (this.isAdmin) {
@@ -512,19 +471,27 @@ if (this.isAdmin) {
 
     methods: {
       // ✅ ADICIONAR nos methods do ContactPage.vue:
+// ✅ DEPOIS:
 async adminReplyContact(contatoId, mensagem) {
+  if (!mensagem || !mensagem.trim()) {
+    return this.showAlert('warning', 'Atenção', 'Digite uma resposta.')
+  }
+
   try {
     await axios.post(
       `http://localhost:3002/contato/${contatoId}/responder`,
       { mensagem },
       { headers: { Authorization: `Bearer ${this.getToken()}` } }
     )
+    
+    this.replyMap[contatoId] = '' // limpa o campo
+    await this.loadAllContactMessages() // recarrega painel admin
     this.showAlert('success', 'Respondido!', 'Resposta enviada ao usuário.')
-    await this.loadAllContactMessages()
   } catch (error) {
     this.showAlert('error', 'Erro', 'Erro ao responder contato.')
   }
 },
+
 // ✅ ADICIONAR nos methods do ContactPage.vue:
 toggleLocalHistory(id) {
   this.collapsedThreads = {
@@ -710,31 +677,61 @@ async loadAllContactMessages() {
         }
       },
 
-      async replySupportMessage(suporteId) {
-        const mensagem = this.replyMap[suporteId]
+      async loadMyContactMessages() {
+  try {
+    this.loadingMessages = true
+    const { data } = await axios.get('http://localhost:3002/contato/minhas', {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    })
+    this.myContactMessages = data
+  } catch (error) {
+    console.error('Erro ao carregar mensagens de contato:', error)
+  } finally {
+    this.loadingMessages = false
+  }
+},
 
-        if (!mensagem || !mensagem.trim()) {
-          return this.showAlert('warning', 'Atenção', 'Digite uma resposta.')
-        }
+    // ✅ DEPOIS:
+async replySupportMessage(suporteId) {
+  const mensagem = this.replyMap[suporteId]
+  if (!mensagem || !mensagem.trim()) {
+    return this.showAlert('warning', 'Atenção', 'Digite uma resposta.')
+  }
 
-        try {
-          await axios.post(
-            `http://localhost:3002/suporte/${suporteId}/responder`,
-            { mensagem },
-            {
-              headers: {
-                Authorization: `Bearer ${this.getToken()}`
-              }
-            }
-          )
+  try {
+    await axios.post(
+      `http://localhost:3002/suporte/${suporteId}/responder`,
+      { mensagem },
+      { headers: { Authorization: `Bearer ${this.getToken()}` } }
+    )
 
-          this.replyMap[suporteId] = ''
-          await this.loadMyMessages()
-          this.showAlert('success', 'Respondido!', 'Resposta enviada com sucesso!')
-        } catch (error) {
-          this.showAlert('error', 'Erro', 'Erro ao responder mensagem.')
-        }
-      },
+    this.replyMap[suporteId] = ''
+    await this.loadMyMessages() // ← mostra a resposta do admin
+    this.showAlert('success', 'Respondido!', 'Resposta enviada com sucesso!')
+  } catch (error) {
+    this.showAlert('error', 'Erro', 'Erro ao responder mensagem.')
+  }
+},
+async replyContactMessage(contatoId) {
+  const mensagem = this.replyMap[contatoId]
+  if (!mensagem || !mensagem.trim()) {
+    return this.showAlert('warning', 'Atenção', 'Digite uma resposta.')
+  }
+
+  try {
+    await axios.post(
+      `http://localhost:3002/contato/${contatoId}/responder`,
+      { mensagem },
+      { headers: { Authorization: `Bearer ${this.getToken()}` } }
+    )
+
+    this.replyMap[contatoId] = ''
+    await this.loadMyContactMessages()
+    this.showAlert('success', 'Respondido!', 'Resposta enviada com sucesso!')
+  } catch (error) {
+    this.showAlert('error', 'Erro', 'Erro ao responder mensagem de contato.')
+  }
+},
 
       formatDate(date) {
         if (!date) return ''

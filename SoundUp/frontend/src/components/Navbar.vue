@@ -503,32 +503,24 @@ const handleAvatarGoldChanged = (e) => {
       return `${Math.floor(diff / 86400)} dia(s) atrás`
     }
 
-    const getNotifVisual = (tipo) => {
+   const getNotifVisual = (tipo) => {
   const map = {
-    follow_request: {
-      icon: 'fa fa-user-plus',
-      color: 'linear-gradient(135deg, #2563eb, #7c3aed)'
+    follow_request: { icon: 'fa fa-user-plus', color: 'linear-gradient(135deg, #2563eb, #7c3aed)' },
+    follow_accept: { icon: 'fa fa-check', color: 'linear-gradient(135deg, #10b981, #34d399)' },
+    follow_reject: { icon: 'fa fa-times', color: 'linear-gradient(135deg, #ef4444, #f97316)' },
+    // ✅ NOVO: Notificações de Match Musical
+    matchmusical: { 
+      icon: 'fa fa-music', 
+      color: 'linear-gradient(135deg, #ec4899, #8b5cf6)' 
     },
-    follow_accept: {
-      icon: 'fa fa-check',
-      color: 'linear-gradient(135deg, #10b981, #34d399)'
+    matchmusical_mensagem: { 
+      icon: 'fa fa-comment', 
+      color: 'linear-gradient(135deg, #f59e0b, #d97706)' 
     },
-    follow_reject: {
-      icon: 'fa fa-times',
-      color: 'linear-gradient(135deg, #ef4444, #f97316)'
-    },
-    // ✅ NOVO: Notificações de suporte
-    support_message: {
-      icon: 'fa fa-headset',
-      color: 'linear-gradient(135deg, #f59e0b, #d97706)'
-    },
-    support_reply: {
-      icon: 'fa fa-commenting-o',
-      color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
-    },
-    // ✅ NOVO: Notificações de contato (se houver)
-   contact_message: { icon: 'fa fa-envelope', color: 'linear-gradient(135deg, #ec4899, #db2777)' },
-contact_reply: { icon: 'fa fa-reply', color: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
+    support_message: { icon: 'fa fa-headset', color: 'linear-gradient(135deg, #f59e0b, #d97706)' },
+    support_reply: { icon: 'fa fa-commenting-o', color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
+    contact_message: { icon: 'fa fa-envelope', color: 'linear-gradient(135deg, #ec4899, #db2777)' },
+    contact_reply: { icon: 'fa fa-reply', color: 'linear-gradient(135deg, #06b6d4, #0891b2)' },
   }
 
   return map[tipo] || {
@@ -604,6 +596,12 @@ contact_reply: { icon: 'fa fa-reply', color: 'linear-gradient(135deg, #06b6d4, #
 if (n.tipo === 'contact_reply') {
   mensagemFormatada = n.mensagem || `Resposta ao seu contato: ${n.meta?.assunto || ''}`
 }
+if (n.tipo === 'matchmusical') {
+        mensagemFormatada = n.mensagem || `🎵 Match musical com ${nome}!`
+      }
+      if (n.tipo === 'matchmusical_mensagem') {
+        mensagemFormatada = n.mensagem || `💬 Nova mensagem no Match Musical`
+      }
 
       return {
         id: n._id,
@@ -716,6 +714,16 @@ const redirectByNotificationType = (notif) => {
       router.push(`/perfil/${notif.user._id || notif.user.id}`)
     } else {
       router.push('/perfil')
+    }
+    return
+  }
+    // ✅ NOVO: Redirecionamento para Match Musical
+  if (tipo === 'matchmusical' || tipo === 'matchmusical_mensagem') {
+    // Vai para a página do Musical Match (ou chat do match)
+    if (notif.meta?.matchId || notif.meta?.chatId) {
+      router.push(`/musical-match?chat=${notif.meta.chatId || notif.meta.matchId}`)
+    } else {
+      router.push('/musical-match')
     }
     return
   }

@@ -2688,11 +2688,20 @@ closeChat() {
   const conteudo = this.novaMensagem.trim()
   this.novaMensagem = ''
 
-  try {
-    await api.post(`/chats/${this.activeChat.id}/mensagens`, {
-      conteudo,
-      tipo: 'texto'
-    })
+ try {
+      await api.post(`/chats/${this.activeChat.id}/mensagens`, {
+        conteudo,
+        tipo: 'texto'
+      })
+
+      // ✅ NOVO: Notificar o outro usuário (se chat não estiver silenciado)
+      if (!this.chatSilenciado && this.activeChat.user?.id) {
+        this.notificarMensagemMatch(
+          this.activeChat.id,
+          this.currentUserId,
+          this.activeChat.user.id
+        )
+      }
 
     const { data } = await api.get(`/chats/${this.activeChat.id}/mensagens`)
     this.chatMessages = data.mensagens || []
@@ -3847,11 +3856,13 @@ onDrag(e) {
         m => !oldIds.includes(m.id)
       )
 
-      if (newMatch) {
-
+           if (newMatch) {
         this.lastMatch = newMatch
         this.showMatchNotification = true
-
+        
+        // ✅ NOVO: Enviar notificação para o outro usuário
+        this.notificarMatch(newMatch)
+        
         setTimeout(() => {
           this.showMatchNotification = false
         }, 5000)

@@ -290,12 +290,12 @@
       <i class="fas fa-wave-square"></i>
       Instrumental
     </span>
-    
+   
     <!-- Texto da música -->
     <span v-else class="lyric-text" :style="{ fontSize: fontSize + 'px' }">
       {{ line.text }}
     </span>
-    
+   
     <!-- ✅ MOVIDO PARA DENTRO de .lyric-content, DEPOIS do texto -->
     <div v-if="showPhonetic && line.phonetic" class="lyric-phonetic">
       {{ line.phonetic }}
@@ -553,8 +553,8 @@
       </div>
 
       <div v-else class="history-list">
-        <div 
-          v-for="(game, index) in gameHistory.slice().reverse()" 
+        <div
+          v-for="(game, index) in gameHistory.slice().reverse()"
           :key="index"
           class="history-item"
         >
@@ -565,7 +565,7 @@
               <span>{{ game.artist }}</span>
             </div>
           </div>
-          
+         
           <div class="history-stats">
             <div class="history-stat">
               <span class="stat-label">Pontuação</span>
@@ -590,7 +590,7 @@
               </span>
             </div>
           </div>
-          
+         
           <div class="history-date">{{ formatDate(game.date) }}</div>
         </div>
       </div>
@@ -606,7 +606,7 @@
 </transition>
 
 <!-- ============ ADICIONAR DEPOIS do History Modal ============ -->
-<<transition name="fade">
+<transition name="fade">
   <div v-if="showDeleteConfirmModal" class="settings-modal confirm-modal" @click.self="showDeleteConfirmModal = false">
     <div class="settings-content confirm-content">
       <div class="confirm-icon warning">
@@ -640,6 +640,38 @@
       crossorigin="anonymous"
       loop
     ></audio>
+        <!-- Exit Confirmation Modal -->
+    <transition name="fade">
+      <div v-if="showExitConfirmModal" class="exit-confirm-modal" @click.self="cancelExitKaraoke">
+        <div class="exit-confirm-content">
+          <div class="exit-confirm-icon">
+            <i class="fas fa-door-open"></i>
+          </div>
+          <h3>Sair do Karaokê?</h3>
+          <p class="exit-confirm-text">
+            <span v-if="currentScore > 0">
+              Você tem <strong>{{ Math.round(currentScore) }}</strong> pontos e
+              <strong>{{ Math.round(accuracyPercent) }}%</strong> de precisão.
+              Se sair agora, seu progresso será salvo no histórico.
+            </span>
+            <span v-else>
+              Tem certeza que deseja sair? Sua sessão atual será encerrada.
+            </span>
+          </p>
+          <div class="exit-confirm-actions">
+            <button class="btn-exit-cancel" @click="cancelExitKaraoke">
+              <i class="fas fa-play"></i>
+              Continuar Cantando
+            </button>
+            <button class="btn-exit-confirm" @click="doExitKaraoke">
+              <i class="fas fa-sign-out-alt"></i>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
   </div>
 </template>
 
@@ -670,6 +702,8 @@ export default {
       displayLimit: 24,
       showHistoryModal: false,
       showDeleteConfirmModal: false,
+      showExitConfirmModal: false,
+      wasPlayingBeforeConfirm: false,
       spotifyPlayer: null,
 spotifyDeviceId: null,
 isSpotifyPremium: false,
@@ -908,10 +942,10 @@ vocalRemoval() {
  async mounted() {
   this.detectAuthProvider()
   this.initAudio()
-  
+ 
   // Inicializa Spotify Player se tiver token
   await this.initSpotifyPlayer()
-  
+ 
   if (this.withMicrophone) {
     this.initSpeechRecognition()
   }
@@ -928,7 +962,7 @@ beforeUnmount() {
   if (this.withMicrophone && !this.showSongSelection && this.currentScore > 0) {
     this.saveGameToHistory()
   }
-  
+ 
   this.stopPlayback()
   this.stopMicrophone()
   window.removeEventListener('keydown', this.handleKeydown)
@@ -998,7 +1032,7 @@ loadGameHistory() {
 
 saveGameToHistory() {
   if (!this.withMicrophone) return // só salva no modo com microfone
-  
+ 
   const game = {
     date: new Date().toISOString(),
     song: this.currentSong.title,
@@ -1011,14 +1045,14 @@ saveGameToHistory() {
     combo: this.combo,
     stars: this.starRating
   }
-  
+ 
   this.gameHistory.push(game)
-  
+ 
   // Mantém apenas últimas 50 jogadas
   if (this.gameHistory.length > 50) {
     this.gameHistory = this.gameHistory.slice(-50)
   }
-  
+ 
   localStorage.setItem('karaokeGameHistory', JSON.stringify(this.gameHistory))
 },
 
@@ -1030,7 +1064,7 @@ confirmClearHistory() {
   this.gameHistory = []
   localStorage.removeItem('karaokeGameHistory')
   this.showDeleteConfirmModal = false
-  
+ 
   this.showMicPermissionToast(
     'success',
     'Histórico apagado',
@@ -1164,7 +1198,7 @@ formatDate(isoString) {
  // ============ ADICIONAR dentro de selectTrackAndStart ============
 async selectTrackAndStart(track) {
   await this.setSongData(track)
-  
+ 
   // Se é Spotify e usuário tem Premium, toca música completa como backing
   if (track.source === 'spotify' && this.isSpotifyPremium && this.spotifyPlayer) {
     try {
@@ -1180,14 +1214,14 @@ async selectTrackAndStart(track) {
           })
         })
       })
-      
+     
       // Atualiza duração real
       this.duration = track.duration || 180
       this.currentSong.previewDuration = track.duration || 180
-      
+     
       // Inicia karaoke sync
       this.startKaraokeSync()
-      
+     
     } catch (e) {
       console.error('Erro ao tocar no Spotify:', e)
       // Fallback para preview
@@ -1197,7 +1231,7 @@ async selectTrackAndStart(track) {
     // Fallback Deezer
     this.audioPreviewUrl = track.preview || track.preview_url || ''
   }
-  
+ 
   this.showSongSelection = false
   this.searchQuery = ''
   this.displayLimit = 12
@@ -1207,23 +1241,23 @@ async selectTrackAndStart(track) {
 startKaraokeSync() {
   // Em vez de usar timeupdate do audio, usa o estado do Spotify SDK
   if (!this.spotifyPlayer) return
-  
+ 
   const syncInterval = setInterval(async () => {
     const state = await this.spotifyPlayer.getCurrentState()
     if (!state) return
-    
+   
     this.currentTime = state.position / 1000
     this.duration = state.duration / 1000
     this.progressPercent = (this.currentTime / this.duration) * 100
     this.syncLyricsWithAudio()
-    
+   
     if (state.paused) {
       this.isPlaying = false
     } else {
       this.isPlaying = true
     }
   }, 300)
-  
+ 
   // Limpa no beforeUnmount
   this._karaokeSyncInterval = syncInterval
 },
@@ -1887,7 +1921,7 @@ generatePhonetic(text) {
   }
 
   const lowerText = text.toLowerCase().trim().replace(/[^\w\s']/g, '')
-  
+ 
   // Tenta frase exata primeiro
   if (phraseMap[lowerText]) {
     return phraseMap[lowerText]
@@ -1919,28 +1953,28 @@ generatePhonetic(text) {
     // ✅ NOVO: Tenta primeiro o backend karaoke para sincronia perfeita
     let lrcData = null
     let previewOffset = 0
-    
+   
     try {
       const syncRes = await fetch(
-        `${this.API_BASE}/api/karaoke/lyrics-sync?` + 
+        `${this.API_BASE}/api/karaoke/lyrics-sync?` +
         `title=${encodeURIComponent(this.currentSong.title)}&` +
         `artist=${encodeURIComponent(this.currentSong.artist)}&` +
         `previewDuration=${this.currentSong.previewDuration || 30}`
       )
-      
+     
     if (syncRes.ok) {
   const syncData = await syncRes.json()
   lrcData = syncData.lyrics
   previewOffset = syncData.suggestedOffset || 0
   this.currentSong.duration = syncData.fullDuration || this.currentSong.duration
-  
+ 
   // ✅ LOG para debug (remova depois)
   console.log(`[KARAOKE] Preview offset: ${previewOffset}s, Full: ${syncData.fullDuration}s`)
 }
     } catch (e) {
      console.warn('[KARAOKE] Backend indisponível, usando fallback LRCLIB:', e)
     }
-    
+   
     // Fallback direto pro LRCLIB se backend falhar
     if (!lrcData) {
       lrcData = await this.fetchLRCFromLRCLIB(
@@ -1952,23 +1986,23 @@ generatePhonetic(text) {
 
     if (lrcData && lrcData.length > 0) {
       this.rawLyrics = lrcData.map(l => l.text).join('\n')
-      
+     
       // ✅ Aplica o offset do preview nos tempos
       const adjustedLrc = lrcData.map(l => ({
         ...l,
         time: Math.max(0, l.time - previewOffset)  // Ajusta tempo pro preview
       })).filter(l => l.time >= 0 && l.time <= (this.currentSong.previewDuration || 30))
-      
+     
       this.processedLyrics = this.processLyricsWithTiming(
         this.rawLyrics,
         this.currentSong.duration,
         adjustedLrc
       )
-      
+     
       this.hasRealLRC = true
       this.previewStartOffset = previewOffset  // Guarda o offset usado
      console.log('[KARAOKE] Letra sincronizada. Offset do preview:', previewOffset)
-      
+     
     } else {
       // Fallback para letras não sincronizadas
       let lyricsText = await this.fetchLyricsFromGenius(
@@ -2063,10 +2097,10 @@ syncLyricsWithAudio() {
   for (let i = 0; i < this.processedLyrics.length; i++) {
     const line = this.processedLyrics[i]
     const nextLine = this.processedLyrics[i + 1]
-    
+   
     const start = line.time
     const end = nextLine ? nextLine.time : line.time + (line.duration || 3)
-    
+   
     // ✅ Compara com effectiveTime que JÁ INCLUI o offset
     if (effectiveTime >= start && effectiveTime < end) {
       newLineIndex = i
@@ -2103,7 +2137,7 @@ onAudioTimeUpdate() {
   this.progressPercent = (this.currentTime / this.duration) * 100
 
   this.syncLyricsWithAudio()
-  
+ 
   // ✅ NOVO: Auto-salva a cada 10 segundos se estiver com microfone e pontuando
   if (this.withMicrophone && this.currentScore > 0 && Math.floor(this.currentTime) % 10 === 0) {
     this.saveGameToHistory()
@@ -2585,7 +2619,7 @@ else if (match.score >= 0.70) points = 180
 // ===================== VOCAL REMOVAL (Karaokê) =====================
 toggleVocalRemoval() {
   this.saveSettings()
-  
+ 
   if (this.vocalRemoval) {
     this.setupVocalRemoval()
   } else {
@@ -2616,10 +2650,10 @@ setupVocalRemoval() {
     const source = this.audioSourceNode
 
     // ==== CADEIA AGRESSIVA DE REMOÇÃO DE VOZ ====
-    
+   
     // 1. Splitter stereo
     const splitter = ctx.createChannelSplitter(2)
-    
+   
     // 2. Ganho para canal invertido (-1 = fase invertida)
     const invertGain = ctx.createGain()
     invertGain.gain.value = -1
@@ -2679,7 +2713,7 @@ setupVocalRemoval() {
 
     // === CONEXÕES ===
     source.connect(splitter)
-    
+   
     // L - R = cancelamento de centro (voz)
     splitter.connect(merger, 0, 0)      // L → L
     splitter.connect(invertGain, 1)      // R → invert
@@ -2721,7 +2755,7 @@ disableVocalRemoval() {
       this.audioSourceNode.disconnect()
       // Reconecta direto ao destination (áudio normal)
       this.audioSourceNode.connect(this.audioContextPlayer.destination)
-      
+     
       this.isVocalRemovalSetup = false
       this.vocalRemovalNode = null
     } catch (e) {
@@ -2789,7 +2823,7 @@ disableVocalRemoval() {
 setDisplayMode(mode) {
   this.displayMode = mode
   this.saveSettings()
-  
+ 
   // ✅ NOVO: Aplica classes CSS específicas para cada modo
   const container = this.$el
   if (container) {
@@ -2891,16 +2925,73 @@ setDisplayMode(mode) {
       this.pitchShift = Math.max(-5, Math.min(5, this.pitchShift + delta))
     },
 
- goBack() {
-  // ✅ SALVAR antes de sair se estiver jogando com microfone
-  if (this.withMicrophone && !this.showSongSelection && this.currentScore > 0) {
-    this.saveGameToHistory()
-  }
-  
-  this.showSongSelection = true
-  this.stopPlayback()
-  this.stopMicrophone()
-},
+     // ===================== UI / MISC =====================
+    showMicPermissionToast(type, title, message, duration = 5000) {
+      if (this.micPermissionToast.timer) {
+        clearTimeout(this.micPermissionToast.timer)
+      }
+      this.micPermissionToast = {
+        show: true,
+        type,
+        title,
+        message,
+        timer: setTimeout(() => {
+          this.hideMicPermissionToast()
+        }, duration)
+      }
+    },
+
+    hideMicPermissionToast() {
+      if (this.micPermissionToast.timer) {
+        clearTimeout(this.micPermissionToast.timer)
+      }
+      this.micPermissionToast.show = false
+    },
+
+    // ============ MODAL DE CONFIRMAÇÃO DE SAÍDA ============
+    confirmExitKaraoke() {
+      // Se não está tocando ou não tem score, sai direto
+      if (this.showSongSelection || (!this.isPlaying && this.currentScore === 0)) {
+        this.doExitKaraoke()
+        return
+      }
+
+      // Abre o modal de confirmação
+      this.showExitConfirmModal = true
+
+      // Pausa a música enquanto o modal está aberto
+      if (this.isPlaying) {
+        this.wasPlayingBeforeConfirm = true
+        this.togglePlay()
+      } else {
+        this.wasPlayingBeforeConfirm = false
+      }
+    },
+
+    doExitKaraoke() {
+      // Salva no histórico se tiver score
+      if (this.withMicrophone && this.currentScore > 0) {
+        this.saveGameToHistory()
+      }
+
+      this.showExitConfirmModal = false
+      this.showSongSelection = true
+      this.stopPlayback()
+      this.stopMicrophone()
+    },
+
+    cancelExitKaraoke() {
+      this.showExitConfirmModal = false
+
+      // Retoma a música se estava tocando
+      if (this.wasPlayingBeforeConfirm && !this.isPlaying) {
+        this.togglePlay()
+      }
+    },
+
+    goBack() {
+      this.confirmExitKaraoke()
+    },
 
     formatTime(seconds) {
       const mins = Math.floor(seconds / 60)
@@ -3318,7 +3409,7 @@ async refreshSpotifyToken() {
   align-items: center;
   justify-content: center;
  padding: 0;
-  margin-bottom: -40px; 
+  margin-bottom: -40px;
   z-index: 10;
   position: relative;
 }
@@ -3413,7 +3504,7 @@ width: 16px;
   margin-top: 0;
   padding-top: 40px;   /* Espaço pro header flutuante */
   justify-content: flex-start; /* Começa do topo, mas scrolla */
- padding-bottom: 20px; 
+ padding-bottom: 20px;
   display: flex;
   flex-direction: column;
   mask-image: linear-gradient(to bottom, black 0%, black 95%, transparent 100%);
@@ -5191,6 +5282,7 @@ width: 16px;
 .karaoke-container.minimal .lyrics-section {
   height: 70vh;
 }
+
 /* ============ RESPONSIVE ============ */
 
 @media (max-width: 1200px) {
@@ -5270,6 +5362,189 @@ width: 16px;
     flex-direction: column;
     gap: 4px;
     text-align: center;
+  }
+}
+
+/* ============ MODAL DE CONFIRMAÇÃO DE SAÍDA ============ */
+
+.exit-confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.exit-confirm-content {
+  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 40px 36px 32px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow:
+    0 32px 64px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: exitConfirmPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes exitConfirmPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.exit-confirm-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.2), rgba(131, 56, 236, 0.2));
+  border: 2px solid rgba(255, 0, 110, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 28px;
+  color: #ff006e;
+  animation: exitIconBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes exitIconBounce {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.exit-confirm-content h3 {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.3px;
+}
+
+.exit-confirm-text {
+  margin: 0 0 28px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.exit-confirm-text strong {
+  color: #ff006e;
+  font-weight: 700;
+}
+
+.exit-confirm-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.exit-confirm-actions button {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn-exit-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.btn-exit-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+}
+
+.btn-exit-cancel i {
+  color: #22c55e;
+}
+
+.btn-exit-confirm {
+  background: linear-gradient(135deg, #ff006e, #8338ec);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(255, 0, 110, 0.3);
+}
+
+.btn-exit-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 0, 110, 0.5);
+  background: linear-gradient(135deg, #e6005c, #752fd1);
+}
+
+.btn-exit-confirm i {
+  opacity: 0.9;
+}
+
+/* Animação de saída do modal */
+.exit-confirm-modal.fade-leave-active .exit-confirm-content {
+  animation: exitConfirmFadeOut 0.3s ease forwards;
+}
+
+@keyframes exitConfirmFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .exit-confirm-content {
+    padding: 32px 24px 24px;
+    border-radius: 20px;
+  }
+
+  .exit-confirm-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .exit-confirm-content h3 {
+    font-size: 20px;
+  }
+
+  .exit-confirm-text {
+    font-size: 14px;
+  }
+
+  .exit-confirm-actions {
+    flex-direction: column;
+  }
+
+  .exit-confirm-actions button {
+    width: 100%;
   }
 }
 </style>
