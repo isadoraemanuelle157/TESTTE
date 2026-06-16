@@ -184,6 +184,19 @@
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
       </div>
+       <button 
+    v-if="isAdmin"
+    class="delete-room-admin-btn" 
+    @click.stop="confirmDeleteRoom(room)"
+    title="Deletar sala (Admin)"
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" y1="11" x2="10" y2="17"/>
+      <line x1="14" y1="11" x2="14" y2="17"/>
+    </svg>
+  </button>
     </div>
   </div>
 </main>
@@ -303,6 +316,44 @@
       </div>
     </Transition>
     </Teleport>
+    <!-- ✅ ADICIONAR este modal de delete admin APÓS o </Teleport> do join-by-link -->
+<Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div class="modal-content delete-modal">
+        <div class="modal-header">
+          <h3>Deletar Sala (Admin)</h3>
+          <button class="close-btn" @click="showDeleteModal = false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="delete-content">
+          <div class="delete-warning">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="1.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p>Tem certeza que deseja deletar a sala <strong>"{{ roomToDelete?.name }}"</strong>?</p>
+            <span>Esta ação não pode ser desfeita. Como admin, você pode deletar qualquer sala.</span>
+          </div>
+          <div class="delete-actions">
+            <button class="cancel-btn" @click="showDeleteModal = false" :disabled="isDeleting">
+              Cancelar
+            </button>
+            <button class="confirm-delete-btn" @click="deleteRoom" :disabled="isDeleting">
+              <span v-if="isDeleting" class="loader"></span>
+              <span v-else>Deletar Sala</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
   </div>
 </template>
 
@@ -363,6 +414,58 @@ const checkAuth = () => {
   }
 
   isLoggedIn.value = false
+}
+
+const isAdmin = computed(() => {
+  const userRaw = localStorage.getItem('usuario') || localStorage.getItem('user')
+  if (!userRaw) return false
+  try {
+    const userData = JSON.parse(userRaw)
+    return userData.role === 'admin' || userData.tipo === 'admin'
+  } catch {
+    return false
+  }
+})
+
+const showDeleteModal = ref(false)
+const roomToDelete = ref(null)
+const isDeleting = ref(false)
+
+// ✅ ADICIONAR: funções de delete
+const confirmDeleteRoom = (room) => {
+  roomToDelete.value = room
+  showDeleteModal.value = true
+}
+
+// ✅ CONFIRME que a função deleteRoom no RoomsList.vue está assim:
+const deleteRoom = async () => {
+  if (!roomToDelete.value) return
+  isDeleting.value = true
+
+  try {
+    const roomId = roomToDelete.value.id || roomToDelete.value._id
+    
+    // Admin deleta via API (backend já verifica role)
+    const response = await apiFetch(`/api/rooms/${roomId}`, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload.error || `Erro ${response.status}`)
+    }
+
+    // Remove da lista local
+    allRooms.value = allRooms.value.filter(r => (r.id || r._id) !== roomId)
+    
+    showDeleteModal.value = false
+    roomToDelete.value = null
+  } catch (error) {
+    console.error('Erro ao deletar sala:', error)
+    alert(error.message || 'Não foi possível deletar a sala')
+  } finally {
+    isDeleting.value = false
+  }
 }
 
 // ============================================
@@ -1477,11 +1580,102 @@ onMounted(async () => {
   background: rgba(255, 0, 146, 0.2);
   color: #ff0092;
 }
+/* ✅ ADICIONAR no final do <style> */
+.delete-room-admin-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  background: rgba(239, 68, 68, 0.8);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  z-index: 10;
+}
+
+.delete-room-admin-btn:hover {
+  background: rgba(239, 68, 68, 1);
+  transform: scale(1.1);
+}
+
+.delete-modal {
+  max-width: 400px;
+}
+
+.delete-content {
+  padding: 1.5rem;
+}
+
+.delete-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.delete-warning p {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.delete-warning span {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.delete-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.delete-actions button {
+  flex: 1;
+  padding: 0.875rem;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.confirm-delete-btn {
+  background: #ff6b6b;
+  color: white;
+}
+
+.confirm-delete-btn:hover:not(:disabled) {
+  background: #ff5252;
+  transform: translateY(-1px);
+}
+
+.delete-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .lock-icon {
   position: absolute;
   top: 1rem;
-  right: 1rem;
+ left: 1rem;
   width: 36px;
   height: 36px;
   background: rgba(0, 0, 0, 0.5);

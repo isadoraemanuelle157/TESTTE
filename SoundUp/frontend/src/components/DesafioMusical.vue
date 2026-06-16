@@ -1,5 +1,17 @@
 <template>
   <div id="app" class="rhythm-quest">
+    <!-- Toast Container -->
+<div class="toast-container">
+  <div
+    v-for="(toast, index) in toasts"
+    :key="toast.id"
+    class="toast-item"
+    :class="toast.type"
+  >
+    <i :class="toast.icon"></i>
+    <span>{{ toast.message }}</span>
+  </div>
+</div>
     <!-- Background Effects -->
     <div class="ambient-bg">
       <div class="gradient-orb orb-1"></div>
@@ -28,7 +40,7 @@
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </button>
-          <button 
+          <button
   v-if="hasEmojiPack"
   class="btn-emoji-toggle"
   :class="{ 'active': customIconsActive }"
@@ -37,7 +49,7 @@
 >
   <i :class="customIconsActive ? 'fa-solid fa-icons' : 'fa-solid fa-icons'"></i>
 </button>
-<button 
+<button
   v-else
   class="btn-emoji-locked"
   title="Compre o Pack de Ícones na loja para desbloquear"
@@ -45,7 +57,7 @@
 >
   <i class="fa-solid fa-lock"></i>
 </button>
-          <button 
+          <button
   v-if="hasThemeItem"
   class="btn-theme-toggle"
   :class="{ 'dark': themeDark }"
@@ -54,7 +66,7 @@
 >
   <i :class="themeDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon'"></i>
 </button>
-<button 
+<button
   v-else
   class="btn-theme-locked"
   title="Compre o Tema Noturno na loja para desbloquear"
@@ -116,9 +128,9 @@
           <div class="ticker-content">
             <div class="ticker-track" :style="{ animationPlayState: isPaused ? 'paused' : 'running' }">
               <div v-for="(activity, index) in [...activities, ...activities]" :key="index" class="ticker-item">
-                <img 
-  :src="activity.avatar" 
-  :alt="activity.user" 
+                <img
+  :src="activity.avatar"
+  :alt="activity.user"
   class="ticker-avatar"
   @error="$event.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(activity.user) + '&background=6366f1&color=fff'"
 >
@@ -134,10 +146,10 @@
 
       <!-- Hero Visual -->
   <div class="hero-visual">
-  <div 
-    class="vinyl-record" 
-    :class="{ 
-      'playing': isPlaying, 
+  <div
+    class="vinyl-record"
+    :class="{
+      'playing': isPlaying,
       'rare-vinyl': hasRareVinyl,
       'rare-vinyl-equipped': hasRareVinylEquipped || forceVinylEquipped  // ← ADICIONAR forceVinylEquipped
     }"
@@ -148,17 +160,17 @@
     </div>
     <div class="tonearm" :class="{ 'active': isPlaying }"></div>
   </div>
-  
+ 
   <!-- Botão de equipar/desequipar -->
   <div v-if="hasRareVinyl" class="vinil-controls">
-    <button 
+    <button
       v-if="!hasRareVinylEquipped && !forceVinylEquipped"  
       class="btn-equip-vinil"
       @click="equipRareVinyl"
     >
       <i class="fa-solid fa-compact-disc"></i> Equipar Vinil
     </button>
-    <button 
+    <button
       v-else
       class="btn-unequip-vinil"
       @click="unequipRareVinyl"
@@ -352,7 +364,7 @@
               <div class="trophy"><i class="fa-solid fa-trophy"></i></div>
               <h2>Desafio Completado!</h2>
               <p>Você completou o nível {{ currentDifficulty?.name }}</p>
-              
+             
               <div class="completion-stats">
                 <div class="comp-stat">
                   <span class="comp-label">Pontuação</span>
@@ -369,9 +381,9 @@
               </div>
 
               <div class="completion-actions">
-              <button 
-  v-if="canAdvanceLevel" 
-  class="btn-advance" 
+              <button
+  v-if="canAdvanceLevel"
+  class="btn-advance"
   @click="advanceToNextLevel"
   type="button"
 >
@@ -382,21 +394,21 @@
 </button>
 
 <!-- ⚡ Mostra mensagem quando NÃO desbloqueou o próximo nível -->
-<div 
-  v-else-if="nextDifficulty && currentDifficulty?.level !== 'hard'" 
+<div
+  v-else-if="nextDifficulty && currentDifficulty?.level !== 'hard'"
   class="unlock-hint"
 >
   <i class="fa-solid fa-lock"></i>
   Acerte pelo menos <strong>70%</strong> para desbloquear o nível <strong>{{ nextDifficulty?.name }}</strong>
 </div>
-                
+               
                 <button class="btn-restart" @click="restartSameLevel">
                   <span>Jogar Novamente</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                   </svg>
                 </button>
-                
+               
                 <button class="btn-menu" @click="exitToMenu">
                   <span>Menu Principal</span>
                 </button>
@@ -488,10 +500,10 @@
                 </div>
 
                 <!-- Preview apenas em Easy e Medium -->
-                <button 
+                <button
                   v-if="showArtistPreviewButton"
-                  class="btn-play-voice" 
-                  @click="toggleAudio" 
+                  class="btn-play-voice"
+                  @click="toggleAudio"
                   :class="{ 'playing': isAudioPlaying }"
                 >
                   <svg v-if="!isAudioPlaying" viewBox="0 0 24 24" fill="currentColor">
@@ -499,7 +511,7 @@
                   </svg>
                   <span v-else>Ouvindo...</span>
                 </button>
-                
+               
                 <p v-else class="no-preview-hint">
                   <i class="fa-solid fa-music"></i> Modo Difícil: Sem preview de áudio!
                 </p>
@@ -518,19 +530,7 @@
               </div>
              
               <div class="lyrics-challenge">
-                <div class="audio-mini-player">
-                  <button class="play-btn" @click="toggleAudio">
-                    <svg v-if="!isAudioPlaying" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <svg v-else viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                    </svg>
-                  </button>
-                  <div class="audio-waves" v-if="isAudioPlaying">
-                    <span v-for="n in 4" :key="n"></span>
-                  </div>
-                </div>
+               
 
                 <div class="title-puzzle">
                   <h3 class="puzzle-title">Qual é o título completo?</h3>
@@ -724,7 +724,7 @@
           <h3>Loja de Recompensas</h3>
           <p>Use suas moedas para desbloquear itens exclusivos</p>
           <div class="shop-items">
-            <div v-for="(item, idx) in serverShopItems" :key="idx" 
+            <div v-for="(item, idx) in serverShopItems" :key="idx"
             class="shop-item" :class="{ 'owned': item.possuido }">
               <div class="item-icon"><i :class="item.iconClass || 'fa-solid fa-box-open'"></i></div>
               <div class="item-info">
@@ -733,8 +733,8 @@
               </div>
 <button
   class="btn-buy"
-  :class="{ 
-    'owned': item.possuido, 
+  :class="{
+    'owned': item.possuido,
     'affordable': totalCoins >= item.preco && !item.possuido,
     'equipped': item.equipado || item.ativo
   }"
@@ -858,7 +858,7 @@ const OFFLINE_TRACKS = {
     { id: 9, title: "Stay", artist: { name: "The Kid LAROI & Justin Bieber", id: 8 }, album: { title: "F*CK LOVE 3", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-9.dzcdn.net/stream/c-9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i9i-4.mp3", release_date: "2021-07-09" },
     { id: 10, title: "Heat Waves", artist: { name: "Glass Animals", id: 9 }, album: { title: "Dreamland", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-0.dzcdn.net/stream/c-0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j0j-1.mp3", release_date: "2020-06-29" }
   ],
-  
+ 
   // Artistas variados para "Adivinhe o Artista"
   guessArtist: [
     { id: 11, title: "Can't Feel My Face", artist: { name: "The Weeknd", id: 1, picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a/250x250-000000-80-0-0.jpg" }, album: { title: "Beauty Behind the Madness", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-1.dzcdn.net/stream/c-1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a-2.mp3", release_date: "2015-08-28" },
@@ -872,7 +872,7 @@ const OFFLINE_TRACKS = {
     { id: 19, title: "Peaches", artist: { name: "Justin Bieber", id: 13, picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q/250x250-000000-80-0-0.jpg" }, album: { title: "Justice", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/9r9r9r9r9r9r9r9r9r9r9r9r9r9r9r9r/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-9.dzcdn.net/stream/c-9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q9q-1.mp3", release_date: "2021-03-19" },
     { id: 20, title: "Drivers License", artist: { name: "Olivia Rodrigo", id: 14, picture_medium: "https://e-cdns-images.dzcdn.net/images/artist/0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s/250x250-000000-80-0-0.jpg" }, album: { title: "SOUR", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/0t0t0t0t0t0t0t0t0t0t0t0t0t0t0t0t/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-0.dzcdn.net/stream/c-0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s0s-2.mp3", release_date: "2021-01-08" }
   ],
-  
+ 
   // Títulos curtos para "Complete a Música"
   completeLyric: [
     { id: 21, title: "Let It Be", artist: { name: "The Beatles", id: 15 }, album: { title: "Let It Be", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-1.dzcdn.net/stream/c-1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u1u-1.mp3", release_date: "1970-03-06" },
@@ -886,7 +886,7 @@ const OFFLINE_TRACKS = {
     { id: 29, title: "Smells Like Teen Spirit", artist: { name: "Nirvana", id: 22 }, album: { title: "Nevermind", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-9.dzcdn.net/stream/c-9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c9c-3.mp3", release_date: "1991-09-24" },
     { id: 30, title: "Wonderwall", artist: { name: "Oasis", id: 23 }, album: { title: "(What's the Story) Morning Glory?", cover_medium: "https://e-cdns-images.dzcdn.net/images/cover/0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d/250x250-000000-80-0-0.jpg" }, preview: "https://cdns-preview-0.dzcdn.net/stream/c-0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d-1.mp3", release_date: "1995-10-30" }
   ],
-  
+ 
   // Músicas clássicas para "Quiz Musical"
   musicTrivia: [
     { id: 31, title: "Thriller", artist: { name: "Michael Jackson", id: 20 }, album: { title: "Thriller", cover_small: "https://e-cdns-images.dzcdn.net/images/cover/1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e/56x56-000000-80-0-0.jpg" }, preview: "https://cdns-preview-1.dzcdn.net/stream/c-1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e-1.mp3", release_date: "1982-11-30" },
@@ -1024,6 +1024,8 @@ export default {
   name: 'SoundUp',
   data() {
     return {
+        toasts: [],           // ← ADICIONAR
+    toastIdCounter: 0,    // ← ADICIONAR
       serverDifficulties: [],
       serverLeaderboard: [],
       serverDailyRewards: [],
@@ -1090,7 +1092,7 @@ export default {
         { user: 'Lucas_Pop', song: 'As It Was', time: '8m', avatar: 'https://i.pravatar.cc/150?img=3' },
         { user: 'Julia_Indie', song: 'Heat Waves', time: '12m', avatar: 'https://i.pravatar.cc/150?img=4' }
       ],
-    
+   
       gameModes: [
         {
           id: 'guess-song',
@@ -1293,7 +1295,7 @@ async mounted() {
     document.body.classList.toggle('theme-dark', this.themeDark);
     this.customIconsActive = localStorage.getItem('soundup_custom_icons') === 'true';
   }
-  
+ 
   await this.loadServerData();
 },
 
@@ -1307,11 +1309,40 @@ beforeUnmount() {
 },
  
   methods: {
+    // ⬇️ ADICIONAR ISTO nos methods
+getTriviaIcon(categoria) {
+  const icons = {
+    'História': 'fa-solid fa-landmark',
+    'Recordes': 'fa-solid fa-trophy',
+    'Curiosidades': 'fa-solid fa-lightbulb',
+    'Rock': 'fa-solid fa-guitar',
+    'Pop': 'fa-solid fa-microphone-lines',
+    'Brasil': 'fa-solid fa-flag',
+    'Instrumentos': 'fa-solid fa-drum',
+    'Hip Hop': 'fa-solid fa-headphones',
+    'Anos 80': 'fa-solid fa-compact-disc',
+    'Prêmios': 'fa-solid fa-medal',
+    'Clássica': 'fa-solid fa-music',
+    'Moderno': 'fa-solid fa-mobile-screen',
+    'Festival': 'fa-solid fa-calendar-star',
+    'Álbuns': 'fa-solid fa-record-vinyl',
+    'Produção': 'fa-solid fa-sliders',
+    'Polêmica': 'fa-solid fa-fire',
+    'Alternativo': 'fa-solid fa-compact-disc',
+    'Eletrônica': 'fa-solid fa-bolt',
+    'Mundo': 'fa-solid fa-globe',
+    'MPB': 'fa-solid fa-music',
+    'Internet': 'fa-solid fa-wifi',
+    'Festivais': 'fa-solid fa-calendar-days'
+  }
+  return icons[categoria] || 'fa-solid fa-music'
+},
+
     async toggleActivateEmoji(item) {
   if (item.ativo) return; // já ativo
-  
+ 
   const token = localStorage.getItem('token');
-  
+ 
   if (!token) {
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
     const invItem = offlineInventory.find(i => i.itemId === item.id);
@@ -1324,7 +1355,7 @@ beforeUnmount() {
     }
     return;
   }
-  
+ 
   try {
     await gameApi.equipItem(item.id);
     this.customIconsActive = true;
@@ -1405,7 +1436,7 @@ async unequipRareVinyl() {
 
     async toggleCustomIcons() {
       const token = localStorage.getItem('token');
-      
+     
       if (!token) {
         // Modo offline
         const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
@@ -1417,13 +1448,13 @@ async unequipRareVinyl() {
           localStorage.setItem('soundup_custom_icons', String(invItem.ativo));
           this.loadOfflineInventory();
           this.showNotification(
-            invItem.ativo ? 'Ícones customizados ativados!' : 'Ícones customizados desativados!', 
+            invItem.ativo ? 'Ícones customizados ativados!' : 'Ícones customizados desativados!',
             'success'
           );
         }
         return;
       }
-      
+     
       // Modo online
       try {
         const newState = !this.customIconsActive;
@@ -1434,14 +1465,14 @@ async unequipRareVinyl() {
         }
         this.customIconsActive = newState;
         localStorage.setItem('soundup_custom_icons', String(newState));
-        
+       
         const shopRes = await gameApi.getShop();
         this.serverShopItems = shopRes.data.items.map(i => ({
           ...i,
           equipado: i.ativo || false,
           ativo: i.ativo || false
         }));
-        
+       
         this.showNotification(
           newState ? 'Ícones customizados ativados!' : 'Ícones customizados desativados!',
           'success'
@@ -1452,9 +1483,27 @@ async unequipRareVinyl() {
       }
     },
 
-    showNotification(message, type = 'info') {
-  console.log(`[${type}] ${message}`)
-  alert(message)
+showNotification(message, type = 'info') {
+  const icons = {
+    success: 'fa-solid fa-circle-check',
+    error: 'fa-solid fa-circle-xmark',
+    warning: 'fa-solid fa-triangle-exclamation',
+    info: 'fa-solid fa-circle-info'
+  }
+ 
+  const toast = {
+    id: ++this.toastIdCounter,
+    message,
+    type,
+    icon: icons[type] || icons.info
+  }
+ 
+  this.toasts.push(toast)
+ 
+  setTimeout(() => {
+    const idx = this.toasts.findIndex(t => t.id === toast.id)
+    if (idx !== -1) this.toasts.splice(idx, 1)
+  }, 3000)
 },
 
 showCoinAnimation(coins) {
@@ -1540,9 +1589,9 @@ showCoinAnimation(coins) {
 async toggleEquipItem(item) {
   // Só equipa, não desequipa mais
   if (item.equipado) return; // já equipado, não faz nada
-  
+ 
   const token = localStorage.getItem('token');
-  
+ 
   if (!token) {
     // Modo offline
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
@@ -1558,7 +1607,7 @@ async toggleEquipItem(item) {
       }
       invItem.ativo = true;
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
-      
+     
       // Atualiza UI
       const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
       if (itemIndex >= 0) {
@@ -1574,7 +1623,7 @@ async toggleEquipItem(item) {
     }
     return;
   }
-  
+ 
   // Modo online — só equipa
   try {
     await gameApi.equipItem(item.id);
@@ -1590,16 +1639,16 @@ async toggleEquipItem(item) {
 loadOfflineInventory() {
   const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
   const offlineCoins = parseInt(localStorage.getItem('soundup_coins') || '0');
-  
+ 
   // ← ADICIONAR: sincroniza estado do vinil
   const vinylItem = offlineInventory.find(i => i.itemId === 'vinyl_rare');
   this.forceVinylEquipped = vinylItem?.ativo || false;
-  
+ 
   if (offlineInventory.length > 0 && this.serverShopItems.length > 0) {
     this.serverShopItems = this.serverShopItems.map(item => {
       const invItem = offlineInventory.find(i => i.itemId === item.id);
       const owned = !!invItem;
-      
+     
       return {
         ...item,
         possuido: owned,
@@ -1741,7 +1790,7 @@ loadOfflineData() {
 
    this.loadOfflineInventory()
 },
-    
+   
 async loadDifficulties(modoId) {
   try {
     const res = await gameApi.getDifficulties(modoId)
@@ -1760,7 +1809,7 @@ async loadDifficulties(modoId) {
     console.error('Erro ao carregar dificuldades:', error)
   }
 },
-    
+   
 async startGameWithDifficulty(difficulty) {
   if (difficulty.locked) return
 
@@ -1811,20 +1860,20 @@ async startGameWithDifficulty(difficulty) {
     this.startTimer()
   }
 },
-    
+   
 async selectAnswer(index) {
   if (this.showAnswer) return;
 
   this.selectedAnswer = index;
   this.showAnswer = true;
   this.cleanupAudio();
-  
+ 
   // ⚡ PARA o timer ao selecionar resposta
   if (this.timerInterval) {
     clearInterval(this.timerInterval);
     this.timerInterval = null;
   }
-  
+ 
     // Modo offline/demo — processa localmente
     if (this.isOfflineMode || !this.sessionId || this.sessionId.toString().startsWith('demo-')) {
         this.processOfflineAnswer(index);
@@ -1886,25 +1935,25 @@ if (this.timerInterval) {
 // NOVO MÉTODO: Processa resposta no modo offline
 processOfflineAnswer(index) {
   const isCorrect = index === this.correctAnswerIndex;
-  
+ 
   if (isCorrect) {
     this.correctAnswers++;
     // ⚡ RECOMPENSA DESDE A PRIMEIRA PERGUNTA
     const basePoints = 100;
     const baseCoins = 10;
     const multiplier = this.currentDifficulty?.multiplier || 1;
-    
+   
     // Bônus por streak (acertos seguidos)
     const streakBonus = Math.min(this.correctAnswers, 5); // max 5x streak
     const pts = Math.floor((basePoints + (streakBonus * 10)) * multiplier);
     const coins = Math.floor((baseCoins + (streakBonus * 2)) * multiplier);
-    
+   
     this.score += pts;
     this.sessionCoins += coins;
     this.totalCoins += coins;
     this.lastPointsGained = pts;
     this.lastCoinsGained = coins;
-    
+   
     // Efeito visual de moedas ganhas
     this.showCoinAnimation(coins);
   } else {
@@ -1912,24 +1961,24 @@ processOfflineAnswer(index) {
     this.lastCoinsGained = 0;
   }
 },
-    
+   
 async nextQuestion() {
   // ⚡ LIMPA estados ANTES de tudo
   this.selectedAnswer = null;
   this.showAnswer = false;
   this.cleanupAudio();
-  
+ 
   if (this.gameCompleted) return;
-  
+ 
   // Incrementa número da pergunta
   this.currentQuestionNum++;
-  
+ 
   // Verifica se completou o jogo
   if (this.currentQuestionNum > this.totalQuestions) {
   const levels = ['easy', 'medium', 'hard'];
   const currentIdx = levels.indexOf(this.currentDifficulty?.level);
   const precision = Math.round((this.correctAnswers / this.totalQuestions) * 100);
-  
+ 
   // ⚡ Sempre define nivelDesbloqueado se houver próximo nível teórico
   // A regra de 70% agora é só no computed canAdvanceLevel (UI)
   const nextLevel = (currentIdx >= 0 && currentIdx < levels.length - 1)
@@ -1944,11 +1993,11 @@ async nextQuestion() {
     acertos: this.correctAnswers,
     precisao: precision
   };
-  
+ 
   this.completeGame();
   return;
 }
-  
+ 
   // Modo offline/demo: carrega próxima pergunta das tracks locais
   if (this.isOfflineMode || !this.sessionId || this.sessionId.toString().startsWith('demo-')) {
     this.loadNextOfflineQuestion();
@@ -1959,7 +2008,7 @@ async nextQuestion() {
     this.startTimer();
     return;
   }
-  
+ 
   // Modo online: usa próxima pergunta da API
   if (this.nextQuestionData) {
     this.currentTrack = this.normalizeQuestion(this.nextQuestionData);
@@ -1970,18 +2019,18 @@ async nextQuestion() {
     // Fallback: tenta carregar do servidor ou offline
     this.loadNextOfflineQuestion();
   }
-  
+ 
   this.selectedAnswer = null;
   this.showAnswer = false;
   this.timerWidth = 100;
   this.answerTime = 0;
   this.startTimer();
 },
-    
+   
 async claimDailyReward(day) {
   // ⚡ VALIDAÇÃO: garante que day.dia existe e é válido
   const diaNum = parseInt(day?.dia)
-  
+ 
   if (!day || isNaN(diaNum) || diaNum < 1 || diaNum > 7) {
     console.error('Dia inválido:', day)
     this.showNotification('Erro: dia da recompensa inválido', 'error')
@@ -2007,33 +2056,33 @@ async claimDailyReward(day) {
     this.showNotification(error.response?.data?.error || 'Erro', 'error')
   }
 },
-    
+   
  async claimAchievement(achievement) {
   // Só permite resgatar se estiver desbloqueada e não resgatada
   if (!achievement.desbloqueada || achievement.resgatada) return;
-  
+ 
   // Se não estiver logado, mostra alerta
   const token = localStorage.getItem('token');
   if (!token) {
     alert('Faça login para resgatar conquistas!');
     return;
   }
-  
+ 
   try {
     const res = await gameApi.claimAchievement(achievement.id);
     this.totalCoins = res.data.moedasTotais;
-    
+   
     // Recarrega conquistas do servidor
     const achievementsRes = await gameApi.getAchievements();
     this.serverAchievements = achievementsRes.data.achievements;
-    
+   
     alert(`🏆 +${res.data.moedasGanhas} moedas!`);
   } catch (error) {
     console.error('Erro ao resgatar conquista:', error);
     alert(error.response?.data?.error || 'Erro ao resgatar conquista');
   }
 },
-    
+   
 async advanceToNextLevel() {
   // ⚡ Usa nextDifficulty diretamente — não depende mais de completionResult
   const next = this.nextDifficulty;
@@ -2041,18 +2090,18 @@ async advanceToNextLevel() {
     console.warn('Nenhum próximo nível disponível');
     return;
   }
-  
+ 
   // Procura na lista de dificuldades; se não achar, usa o objeto retornado
   let diff = this.serverDifficulties.find(d => d.level === next.level);
   if (!diff) {
     this.serverDifficulties.push(next);
     diff = next;
   }
-  
+ 
   // Desbloqueia e marca como não completado
   diff.locked = false;
   diff.completed = false;
-  
+ 
   // Persiste progresso offline
   const savedProgress = JSON.parse(localStorage.getItem('soundup_progress') || '{}');
   if (!savedProgress[this.currentGame.id]) savedProgress[this.currentGame.id] = {};
@@ -2060,7 +2109,7 @@ async advanceToNextLevel() {
     savedProgress[this.currentGame.id][next.level] = { completed: false, bestScore: 0 };
   }
   localStorage.setItem('soundup_progress', JSON.stringify(savedProgress));
-  
+ 
   await this.startGameWithDifficulty(diff);
 },
 
@@ -2087,20 +2136,20 @@ async advanceToNextLevel() {
         try {
           const proxy = CORS_PROXIES[this.currentProxyIndex];
           const url = `${proxy}${encodeURIComponent(`${DEEZER_API}${endpoint}`)}`;
-          
+         
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
-          
+         
           const response = await fetch(url, { signal: controller.signal });
           clearTimeout(timeoutId);
-          
+         
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          
+         
           const data = await response.json();
           return data.contents ? JSON.parse(data.contents) : data;
         } catch (error) {
           console.warn(`Tentativa ${i + 1} falhou:`, error.message);
-          
+         
           if (i < retries - 1) {
             this.getNextProxy();
             await new Promise(r => setTimeout(r, 1000));
@@ -2283,7 +2332,7 @@ markDifficultyCompleted() {
       }, 100);
     },
    
-    
+   
     // Retorna o texto da resposta correta para o feedback
 getCorrectAnswerText() {
   if (this.currentGame?.id === 'complete-lyric') {
@@ -2300,7 +2349,7 @@ async completeGame() {
   this.selectedAnswer = null;
   this.cleanupAudio();
   this.markDifficultyCompleted();
-  
+ 
   // ⚡ LIMPA timer se estiver rodando
   if (this.timerInterval) {
     clearInterval(this.timerInterval);
@@ -2315,8 +2364,8 @@ async completeGame() {
     }
   }
  const answeredCount = this.currentQuestionNum - 1; // quantas foram respondidas
-const accuracy = answeredCount > 0 
-  ? Math.round((this.correctAnswers / answeredCount) * 100) 
+const accuracy = answeredCount > 0
+  ? Math.round((this.correctAnswers / answeredCount) * 100)
   : 0;
       this.accuracy = Math.round((this.accuracy + accuracy) / 2) || accuracy;
      
@@ -2325,7 +2374,7 @@ const accuracy = answeredCount > 0
      
       this.totalCoins += completionBonus;
       this.sessionCoins += completionBonus;
-      
+     
       // Salva progresso
       localStorage.setItem('soundup_coins', this.totalCoins);
       localStorage.setItem('soundup_score', this.totalScore);
@@ -2369,7 +2418,7 @@ restartSameLevel() {
 async selectMode(mode) {
   // Verifica se usuário está logado para modos que precisam de auth
   const token = localStorage.getItem('token')
-  
+ 
   if (!token) {
     // Modo demo/offline - não carrega dificuldades do servidor
     this.selectedMode = mode
@@ -2386,7 +2435,7 @@ this.serverDifficulties = [
 ]
     return
   }
-  
+ 
   this.selectedMode = mode
   await this.loadDifficulties(mode.id)
   this.showDifficultyModal = true
@@ -2797,7 +2846,7 @@ body.theme-dark {
 }
 /* Vinil Raro brilhante */
 .vinyl-record.rare-vinyl {
-  box-shadow: 
+  box-shadow:
     0 0 0 10px #111,
     0 0 0 12px #333,
     0 20px 60px rgba(0,0,0,0.8),
@@ -2806,7 +2855,7 @@ body.theme-dark {
 
 .vinyl-record.rare-vinyl-equipped {
   animation: rareVinylGlow 3s ease-in-out infinite;
-  box-shadow: 
+  box-shadow:
     0 0 0 10px #111,
     0 0 0 12px #ffd700,
     0 20px 60px rgba(0,0,0,0.8),
@@ -2815,16 +2864,16 @@ body.theme-dark {
 }
 
 @keyframes rareVinylGlow {
-  0%, 100% { 
-    box-shadow: 
+  0%, 100% {
+    box-shadow:
       0 0 0 10px #111,
       0 0 0 12px #ffd700,
       0 20px 60px rgba(0,0,0,0.8),
       0 0 50px rgba(255, 215, 0, 0.6),
       0 0 100px rgba(255, 215, 0, 0.3);
   }
-  50% { 
-    box-shadow: 
+  50% {
+    box-shadow:
       0 0 0 10px #111,
       0 0 0 14px #ffd700,
       0 20px 60px rgba(0,0,0,0.8),
@@ -2841,7 +2890,7 @@ body.theme-dark {
   display: flex;
   gap: 0.5rem;
   z-index: 10;
-} 
+}
 
 .btn-equip-vinil, .btn-unequip-vinil {
   padding: 0.5rem 1rem;
@@ -2915,12 +2964,12 @@ body.theme-dark {
 .badge-pro-sun .sun-ray:nth-child(8) { transform: translate(-50%, -100%) rotate(315deg); animation-delay: 1.4s; }
 
 @keyframes sunRayFloat {
-  0%, 100% { 
-    opacity: 1; 
+  0%, 100% {
+    opacity: 1;
     transform: translate(-50%, -100%) rotate(var(--rotation, 0deg)) scaleY(1);
   }
-  50% { 
-    opacity: 0.6; 
+  50% {
+    opacity: 0.6;
     transform: translate(-50%, -110%) rotate(var(--rotation, 0deg)) scaleY(1.3);
   }
 }
@@ -2931,15 +2980,15 @@ body.theme-dark {
 }
 
 @keyframes sunRayLoose {
-  0%, 100% { 
+  0%, 100% {
     transform: translate(-50%, -100%) rotate(var(--rotation, 0deg)) scaleY(1);
     opacity: 1;
   }
-  25% { 
+  25% {
     transform: translate(-50%, -120%) rotate(calc(var(--rotation, 0deg) + 10deg)) scaleY(1.2);
     opacity: 0.8;
   }
-  75% { 
+  75% {
     transform: translate(-50%, -90%) rotate(calc(var(--rotation, 0deg) - 5deg)) scaleY(0.9);
     opacity: 0.9;
   }
@@ -5348,7 +5397,7 @@ body.custom-icons-active .card-icon i.fa-headphones::before { content: '\f1de'; 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+ 
   .completion-stats {
     grid-template-columns: 1fr;
   }
@@ -5420,7 +5469,7 @@ body.custom-icons-active .card-icon i.fa-headphones::before { content: '\f1de'; 
   .rewards-track {
     overflow-x: scroll;
   }
-  
+ 
   .title-display {
     font-size: 1.25rem;
   }
@@ -5460,5 +5509,78 @@ body.custom-icons-active .card-icon i.fa-headphones::before { content: '\f1de'; 
   box-shadow:
     0 10px 25px rgba(124, 58, 237, 0.35),
     0 0 20px rgba(37, 99, 235, 0.25);
+}
+/* ═══════════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS
+   ═══════════════════════════════════════════════════════════════ */
+.toast-container {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.toast-item {
+  pointer-events: auto;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+             toastOut 0.3s ease 2.7s forwards;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.15);
+  min-width: 300px;
+  max-width: 400px;
+  backdrop-filter: blur(10px);
+}
+
+.toast-item.success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(5, 150, 105, 0.95));
+}
+.toast-item.error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+}
+.toast-item.warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(217, 119, 6, 0.95));
+}
+.toast-item.info {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(79, 70, 229, 0.95));
+}
+
+.toast-item i {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+@keyframes toastIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes toastOut {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(120%); opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  .toast-container {
+    top: 80px;
+    right: 10px;
+    left: 10px;
+    align-items: center;
+  }
+  .toast-item {
+    min-width: auto;
+    width: 100%;
+    max-width: 100%;
+  }
 }
 </style>

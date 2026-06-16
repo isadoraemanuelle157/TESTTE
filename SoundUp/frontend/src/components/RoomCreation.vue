@@ -286,17 +286,23 @@
 
             <!-- Followers List -->
             <div v-else-if="inviteTab === 'followers'" class="friends-list">
+               <div v-if="followers.length > 0" class="select-all-bar">
+    <button class="select-all-btn" @click="toggleSelectAllFollowers">
+      <i class="fa" :class="allFollowersSelected ? 'fa-check-square' : 'fa-square-o'"></i>
+      {{ allFollowersSelected ? 'Desmarcar todos' : 'Marcar todos' }}
+    </button>
+  </div>
               <div v-if="followers.length === 0" class="empty-friends">
                 <p>Você ainda não tem seguidores</p>
               </div>
-          <div 
-  v-for="friend in followers" 
-  :key="friend.id"
+<div v-for="friend in followers" 
+  :key="friend.id || friend._id"
   class="friend-item"
   :class="{ 
-    'selected': selectedInvites.has(friend.id),
-    'moderator': selectedModerators.has(friend.id)
+    'selected': selectedInvites.has(friend.id || friend._id),
+    'moderator': selectedModerators.has(friend.id || friend._id)
   }"
+  @click="toggleInvite(friend.id || friend._id)"
 >
   <img :src="friend.avatar" class="friend-avatar" />
   <div class="friend-info">
@@ -305,10 +311,10 @@
   </div>
   
   <!-- Botão de Moderador -->
-  <button
-    class="mod-btn"
-    :class="{ 'active': selectedModerators.has(friend.id) }"
-    @click.stop="toggleModerator(friend.id)"
+<button
+  class="mod-btn"
+  :class="{ 'active': selectedModerators.has(friend.id || friend._id) }"
+  @click.stop="toggleModerator(friend.id || friend._id)"
     title="Declarar como moderador"
   >
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -327,26 +333,33 @@
             </div>
 
             <!-- Following List -->
-            <div v-else class="friends-list">
+         <div v-else class="friends-list">
+  <!-- ✅ ADICIONAR AQUI: -->
+  <div v-if="following.length > 0" class="select-all-bar">
+    <button class="select-all-btn" @click="toggleSelectAllFollowing">
+      <i class="fa" :class="allFollowingSelected ? 'fa-check-square' : 'fa-square-o'"></i>
+      {{ allFollowingSelected ? 'Desmarcar todos' : 'Marcar todos' }}
+    </button>
+  </div>
               <div v-if="following.length === 0" class="empty-friends">
                 <p>Você ainda não segue ninguém</p>
               </div>
-              <div 
-                v-for="friend in following" 
-                :key="friend.id"
-                class="friend-item"
-                :class="{ 'selected': selectedInvites.has(friend.id) }"
-                @click="toggleInvite(friend.id)"
-              >
+   <div 
+  v-for="friend in following" 
+  :key="friend.id || friend._id"
+  class="friend-item"
+  :class="{ 'selected': selectedInvites.has(friend.id || friend._id) }"
+  @click="toggleInvite(friend.id || friend._id)"
+>
                 <img :src="friend.avatar" class="friend-avatar" />
                 <div class="friend-info">
                   <span class="friend-name">{{ friend.name }}</span>
                   <span class="friend-username">@{{ friend.username }}</span>
                 </div>
-                 <button
-    class="mod-btn"
-    :class="{ 'active': selectedModerators.has(friend.id) }"
-    @click.stop="toggleModerator(friend.id)"
+<button
+  class="mod-btn"
+  :class="{ 'active': selectedModerators.has(friend.id || friend._id) }"
+  @click.stop="toggleModerator(friend.id || friend._id)"
     title="Declarar como moderador"
   >
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -430,7 +443,7 @@
               </svg>
             </button>
 
-            <button 
+<button 
   class="delete-room-btn" 
   @click.stop="confirmDeleteRoom(room)"
   title="Deletar sala"
@@ -634,7 +647,21 @@ const canCreate = computed(() => {
   if (isLoggedIn.value) return true
   return userRoomsCount.value < MAX_GUEST_ROOMS
 })
+const allFollowersSelected = computed(() => {
+  if (followers.value.length === 0) return false
+  return followers.value.every(f => {
+    const id = f.id || f._id
+    return id && selectedInvites.value.has(id)
+  })
+})
 
+const allFollowingSelected = computed(() => {
+  if (following.value.length === 0) return false
+  return following.value.every(f => {
+    const id = f.id || f._id
+    return id && selectedInvites.value.has(id)
+  })
+})
 // ============================================
 // INVITE SYSTEM
 // ============================================
@@ -644,11 +671,14 @@ const following = ref([])
 const selectedInvites = ref(new Set())
 
 const toggleInvite = (id) => {
+  if (!id) return
   if (selectedInvites.value.has(id)) {
     selectedInvites.value.delete(id)
   } else {
     selectedInvites.value.add(id)
   }
+  // Forçar reatividade
+  selectedInvites.value = new Set(selectedInvites.value)
 }
 
 const setRoomVisibility = (isPublic) => {
@@ -727,11 +757,14 @@ const fetchMyRooms = async () => {
 const selectedModerators = ref(new Set())
 
 const toggleModerator = (id) => {
+  if (!id) return
   if (selectedModerators.value.has(id)) {
     selectedModerators.value.delete(id)
   } else {
     selectedModerators.value.add(id)
   }
+  // Forçar reatividade
+  selectedModerators.value = new Set(selectedModerators.value)
 }
 // ============================================
 // CREATE ROOM
@@ -750,29 +783,6 @@ const resetRoomForm = () => {
   selectedInvites.value = new Set()
   inviteTab.value = 'followers'
 }
-
-// ============================================
-// NOTIFICAÇÕES
-// ============================================
-const notificarConviteSala = async (salaId, usuarioConvidadoId) => {
-  try {
-    const token = localStorage.getItem('token')
-    const storedUser = localStorage.getItem('usuario')
-    const userData = storedUser ? JSON.parse(storedUser) : {}
-    
-    await axios.post('http://localhost:3002/notificacoes', {
-      tipo: 'sala_musica_convite',
-      destinatarioId: usuarioConvidadoId,
-      referenciaId: salaId,
-      mensagem: `${userData.nome || 'Alguém'} te convidou para uma sala de música`
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-  } catch (err) {
-    console.error('Erro ao notificar convite:', err)
-  }
-}
-
 const createRoom = async () => {
   if (!canCreate.value || !roomForm.value.name.trim()) return
 
@@ -869,7 +879,7 @@ const roomData = {
 }
 
 const sendInvites = async (roomId) => {
-  const invites = Array.from(selectedInvites.value).map(userId =>
+  const invites = Array.from(selectedInvites.value).map((userId) =>
     apiFetch('/api/rooms/invite', {
       method: 'POST',
       body: JSON.stringify({ roomId, userId })
@@ -877,6 +887,41 @@ const sendInvites = async (roomId) => {
   )
 
   await Promise.allSettled(invites)
+}
+
+
+const toggleSelectAllFollowers = () => {
+  if (allFollowersSelected.value) {
+    // Desmarcar todos os seguidores
+    followers.value.forEach(f => {
+      const id = f.id || f._id
+      if (id) selectedInvites.value.delete(id)
+    })
+  } else {
+    // Marcar todos os seguidores
+    followers.value.forEach(f => {
+      const id = f.id || f._id
+      if (id) selectedInvites.value.add(id)
+    })
+  }
+  selectedInvites.value = new Set(selectedInvites.value)
+}
+
+const toggleSelectAllFollowing = () => {
+  if (allFollowingSelected.value) {
+    // Desmarcar todos os seguindo
+    following.value.forEach(f => {
+      const id = f.id || f._id
+      if (id) selectedInvites.value.delete(id)
+    })
+  } else {
+    // Marcar todos os seguindo
+    following.value.forEach(f => {
+      const id = f.id || f._id
+      if (id) selectedInvites.value.add(id)
+    })
+  }
+  selectedInvites.value = new Set(selectedInvites.value)
 }
 
 const generateRoomId = () => {
@@ -955,11 +1000,10 @@ const deleteRoom = async () => {
       const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
       const updatedRooms = guestRooms.filter(r => (r.id || r._id) !== roomId)
       localStorage.setItem('guest_rooms', JSON.stringify(updatedRooms))
-
       myRooms.value = updatedRooms.map(normalizeRoom)
       userRoomsCount.value = myRooms.value.length
     } else {
-      // Deletar sala no backend
+      // ✅ Backend já verifica se é admin ou dono
       const response = await apiFetch(`/api/rooms/${roomId}`, {
         method: 'DELETE'
       })
@@ -1456,6 +1500,30 @@ onMounted(async () => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s;
+}
+
+.select-all-bar {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.select-all-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s;
+}
+
+.select-all-btn:hover {
+  color: var(--primary-dark);
 }
 
 .delete-room-btn:hover {

@@ -606,12 +606,14 @@
               </div>
 
               <div class="join-form">
-                <input
-                  v-model="joinUserName"
-                  placeholder="Seu nome"
-                  type="text"
-                  maxlength="20"
-                />
+            <input
+  v-model="joinUserName"
+  placeholder="Seu nome"
+  type="text"
+  maxlength="20"
+  readonly
+  style="background: rgba(255,255,255,0.08); cursor: default;"
+/>
 
                 <input
                   v-if="!isRoomOwner && !room.isPublic"
@@ -1297,6 +1299,10 @@ const shareVia = (platform) => {
 
 // ========== LEAVE ROOM ==========
 const leaveRoom = async () => {
+    activeListeners.value = activeListeners.value.filter(
+    l => l.id !== currentUser.value.id
+  )
+
   if (room.value.id && currentUser.value.id) {
     try {
       await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
@@ -1325,10 +1331,49 @@ const confirmLeaveRoom = () => {
 
 const leaveRoomConfirmed = async () => {
   showLeaveModal.value = false
+  
+  // ✅ Remove da lista de listeners localmente ANTES de sair
+  activeListeners.value = activeListeners.value.filter(
+    l => l.id !== currentUser.value.id
+  )
+  
+  // ✅ Notifica backend para remover
+  if (room.value.id && currentUser.value.id) {
+    try {
+      await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+        method: 'DELETE',
+        body: JSON.stringify({
+          userIdToRemove: currentUser.value.id,
+          requesterId: currentUser.value.id
+        })
+      })
+    } catch (e) {
+      console.warn('Erro ao remover listener ao sair:', e)
+    }
+  }
+  
   await leaveRoom()
 }
 
 // ========== JOIN ROOM ==========
+const checkIfAlreadyInRoom = async (roomIdFromUrl) => {
+  try {
+    const listenersRes = await apiFetch(`/api/rooms/${roomIdFromUrl}/listeners`)
+    if (listenersRes.ok) {
+      const listeners = await listenersRes.json()
+      const alreadyInRoom = listeners.some(l => 
+        String(l.id) === String(currentUser.value.id) ||
+        String(l.userId?._id || l.userId) === String(currentUser.value.id)
+      )
+      return alreadyInRoom
+    }
+  } catch (e) {
+    console.warn('Erro ao verificar listeners:', e)
+  }
+  return false
+}
+
+// ✅ MODIFICAR o fluxo no checkRoomAccess():
 const checkRoomAccess = async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const roomIdFromUrl = urlParams.get('room')
@@ -1343,13 +1388,39 @@ const checkRoomAccess = async () => {
 
   room.value.id = roomIdFromUrl
 
+  // ✅ ADICIONAR: Verificar se já está na sala (F5)
+  const alreadyInRoom = await checkIfAlreadyInRoom(roomIdFromUrl)
+  
+  if (alreadyInRoom) {
+    // Já está na sala, só reconecta sem mostrar modal
+    showJoinModal.value = false
+    hasJoined.value = true
+    await determineUserRole()
+    startAllPolling()
+    return
+  }
+
+  const fromInvite = urlParams.get('from') === 'invite'
   const isOwner = localStorage.getItem(`room_${roomIdFromUrl}_owner`) === 'true'
   isRoomOwner.value = isOwner
+
+  if (isLoggedIn.value && currentUser.value.name && currentUser.value.name !== 'Voce') {
+  joinUserName.value = currentUser.value.name
+} else if (!isLoggedIn.value) {
+  // Gera nome aleatório para visitante se não tiver
+  joinUserName.value = 'Visitante ' + Math.floor(Math.random() * 1000)
+}
 
   try {
     await loadRoomData(roomIdFromUrl)
   } catch (error) {
     console.error('Erro ao carregar dados da sala:', error)
+  }
+
+  // Se veio de convite e NÃO é dono, mostra modal de join direto
+  if (fromInvite && !isOwner) {
+    showJoinModal.value = true
+    return
   }
 
   if (isOwner) {
@@ -1369,6 +1440,56 @@ const checkRoomAccess = async () => {
     })
     return
   }
+  if (isOwner && currentUser.value.name && currentUser.value.name !== 'Voce') {
+  showJoinModal.value = false
+  currentUserRole.value = 'owner'
+  await addSelfToListeners()
+  await determineUserRole()
+  startAllPolling()
+  
+  messages.value.push({
+    id: Date.now(),
+    userId: 'system',
+    userName: 'Sistema',
+    avatar: 'https://via.placeholder.com/150',
+    text: `${currentUser.value.name} entrou na sala!`,
+    timestamp: Date.now()
+  })
+  return
+}
+
+  try {
+    const listenersRes = await apiFetch(`/api/rooms/${roomIdFromUrl}/listeners`)
+    if (listenersRes.ok) {
+      const listeners = await listenersRes.json()
+      const alreadyInRoom = listeners.some(l => 
+        String(l.id) === String(currentUser.value.id) ||
+        String(l.userId?._id || l.userId) === String(currentUser.value.id)
+      )
+      
+if (alreadyInRoom) {
+  showJoinModal.value = false
+  hasJoined.value = true
+  await determineUserRole()
+  
+  // ✅ NOVO: Se sala privada, recuperar senha do sessionStorage
+  const savedPassword = sessionStorage.getItem(`room_${roomIdFromUrl}_password`)
+  if (savedPassword && !room.value.isPublic) {
+    joinPassword.value = savedPassword
+  }
+  
+// Após entrar com sucesso, salvar senha no sessionStorage para F5
+if (!room.value.isPublic && joinPassword.value) {
+  sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
+}
+
+  startAllPolling()
+  return
+}
+    }
+  } catch (e) {
+    console.warn('Erro ao verificar listeners:', e)
+  }
 
   const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
   if (savedRoom) {
@@ -1381,10 +1502,11 @@ const checkRoomAccess = async () => {
     }
   }
 
-  if (!room.value.isPublic) {
-    showJoinModal.value = true
-    return
+if (!room.value.isPublic) {
+    sessionStorage.setItem(`room_${room.value.id}_password`, senha)
   }
+  
+  currentUser.value.name = joinUserName.value.trim()
 
   if (!isLoggedIn.value) {
     showJoinModal.value = true
@@ -1415,6 +1537,7 @@ const joinRoom = async () => {
     await determineUserRole()
     startAllPolling()
     showToast('success', 'Bem-vindo!', `Voce entrou como dono da sala`)
+    sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
     isJoining.value = false
     return
   }
@@ -1453,6 +1576,7 @@ const joinRoom = async () => {
       startAllPolling()
       isJoining.value = false
       showToast('success', 'Bem-vindo!', `Voce entrou na sala ${room.value.name}`)
+      sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
       return
     }
 
@@ -1492,6 +1616,7 @@ const joinRoom = async () => {
       })
 
       showToast('success', 'Bem-vindo!', `Voce entrou na sala ${room.value.name}`)
+      sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
     } catch (error) {
       console.error('Erro ao verificar senha:', error)
       accessError.value = 'Erro ao conectar. Tente novamente.'
@@ -1517,6 +1642,7 @@ const joinRoom = async () => {
   })
 
   showToast('success', 'Bem-vindo!', `Voce entrou na sala ${room.value.name}`)
+  sessionStorage.setItem(`room_${room.value.id}_password`)
   isJoining.value = false
 }
 
@@ -1788,20 +1914,19 @@ const stopAllPolling = () => {
 }
 
 // ========== LIFECYCLE ==========
-onMounted(() => {
+let saveRoomStateInterval = null
+
+onMounted(async () => {
   checkAuth()
-  checkRoomAccess()
+  await checkRoomAccess()
   fetchDeezerChart()
 
-  if (!showJoinModal.value) {
-    fetchMessages()
-    syncRoomState()
-    syncInterval = setInterval(syncRoomState, 2000)
-    startAllPolling()
+  saveRoomStateInterval = setInterval(saveRoomState, 5000)
+   if (room.value.id) {
+    sessionStorage.removeItem(`room_${room.value.id}_password`)
   }
-
-  setInterval(saveRoomState, 5000)
 })
+
 
 const checkAuth = () => {
   const token = localStorage.getItem('token')
@@ -1879,6 +2004,11 @@ onUnmounted(() => {
   clearTimeout(searchTimeout)
   stopAllPolling()
 
+  if (saveRoomStateInterval) {
+    clearInterval(saveRoomStateInterval)
+    saveRoomStateInterval = null
+  }
+
   if (room.value.id && currentUser.value.id) {
     apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'DELETE',
@@ -1894,6 +2024,7 @@ onUnmounted(() => {
   hasJoined.value = false
   isJoining.value = false
 })
+
 </script>
 <style scoped>
 :root {

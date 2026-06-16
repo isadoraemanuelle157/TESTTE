@@ -155,8 +155,13 @@ const atualizar = async (id, userId, dados) => {
   return room
 }
 
-const deletar = async (id, userId) => {
-  const room = await Room.findOneAndDelete({ _id: id, createdBy: userId })
+const deletar = async (id, userId, userRole) => {
+  // ✅ ADICIONAR: Admin pode deletar qualquer sala
+  const query = userRole === 'admin' 
+    ? { _id: id }  // admin deleta qualquer uma
+    : { _id: id, createdBy: userId }  // dono só deleta a dele
+    
+  const room = await Room.findOneAndDelete(query)
   if (!room) throw new Error('Sala não encontrada ou sem permissão')
   return room
 }

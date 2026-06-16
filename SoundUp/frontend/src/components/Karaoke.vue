@@ -505,17 +505,31 @@
         <label for="autoscroll">Auto-scroll de Letras</label>
       </div>
 
-      <!-- ✅ NOVO: Silenciar voz do cantor -->
-      <div class="setting-item checkbox vocal-remover">
-        <input type="checkbox" v-model="vocalRemoval" id="vocalremoval" @change="toggleVocalRemoval">
-        <label for="vocalremoval">
-          <i class="fas fa-microphone-slash"></i>
-          Silenciar Voz do Cantor (Modo Instrumental)
-        </label>
-      </div>
-  <small v-if="vocalRemoval" class="vocal-hint">
-  <i class="fas fa-microphone-slash"></i> A voz original será reduzida. Ideal para você cantar!
-</small>
+   <!-- ✅ NOVO: Slider de intensidade da remoção vocal -->
+<div class="setting-item vocal-remover-slider">
+  <label>
+    <i class="fas fa-microphone-slash"></i>
+    Redução da Voz do Cantor: {{ vocalRemovalIntensity }}%
+  </label>
+  <input
+    type="range"
+    min="0"
+    max="100"
+    step="5"
+    v-model.number="vocalRemovalIntensity"
+    class="setting-slider"
+    @input="updateVocalRemovalIntensity"
+  >
+  <div class="vocal-labels">
+   
+  </div>
+  <small v-if="vocalRemovalIntensity > 0" class="vocal-hint" :class="{ 'strong': vocalRemovalIntensity >= 70 }">
+    <i class="fas fa-microphone-slash"></i>
+    <span v-if="vocalRemovalIntensity < 30">Redução leve da voz</span>
+    <span v-else-if="vocalRemovalIntensity < 70">Redução moderada da voz</span>
+    <span v-else>Redução agressiva da voz — ideal para cantar!</span>
+  </small>
+</div>
 
       <div v-if="withMicrophone" class="setting-item">
         <label>Sensibilidade do Microfone: {{ micSensitivity }}%</label>
@@ -784,8 +798,8 @@ spotifyToken: null,
       showPhonetic: false,
       visualFeedback: true,
       autoScroll: true,
-      // ✅ NOVO: Vocal Removal
-vocalRemoval: false,
+// ✅ NOVO: Controle de intensidade da remoção vocal (0-100%)
+vocalRemovalIntensity: 0, // 0 = sem remoção, 100 = máxima remoção
 vocalRemovalNode: null,
 audioSourceNode: null,
 audioContextPlayer: null,
@@ -853,9 +867,10 @@ isVocalRemovalSetup: false,
   },
 
 watch: {
-vocalRemoval() {
-  this.saveSettings()
-},
+  vocalRemovalIntensity(newVal) {
+    this.saveSettings()
+    this.updateVocalRemovalIntensity()
+  },
   lyricsSyncOffset(newVal, oldVal) {
     if (newVal !== oldVal) {
       // Força re-sync imediato
@@ -2617,17 +2632,21 @@ else if (match.score >= 0.70) points = 180
     },
 
 // ===================== VOCAL REMOVAL (Karaokê) =====================
-toggleVocalRemoval() {
-  this.saveSettings()
+updateVocalRemovalIntensity() {
+  const intensity = this.vocalRemovalIntensity
  
-  if (this.vocalRemoval) {
+  if (intensity > 0 && !this.isVocalRemovalSetup) {
     this.setupVocalRemoval()
-  } else {
+  } else if (intensity === 0 && this.isVocalRemovalSetup) {
     this.disableVocalRemoval()
+  } else if (this.isVocalRemovalSetup && this.vocalRemovalNode) {
+    // Atualiza o ganho baseado na intensidade
+    const gainValue = intensity / 100  // 0.0 a 1.0
+    this.vocalRemovalNode.gain.value = 0.5 + (gainValue * 2.5)  // 0.5 a 3.0
   }
+ 
+  this.saveSettings()
 },
-
-// SUBSTITUIR o método setupVocalRemoval() inteiro:
 
 setupVocalRemoval() {
   const audio = this.$refs.audioPlayer
@@ -2648,78 +2667,77 @@ setupVocalRemoval() {
 
     const ctx = this.audioContextPlayer
     const source = this.audioSourceNode
+    const intensity = this.vocalRemovalIntensity / 100  // 0.0 a 1.0
 
-    // ==== CADEIA AGRESSIVA DE REMOÇÃO DE VOZ ====
+    // ==== CADEIA DE REMOÇÃO DE VOZ COM INTENSIDADE VARIÁVEL ====
    
     // 1. Splitter stereo
     const splitter = ctx.createChannelSplitter(2)
    
-    // 2. Ganho para canal invertido (-1 = fase invertida)
+    // 2. Ganho para canal invertido (fase invertida proporcional à intensidade)
     const invertGain = ctx.createGain()
-    invertGain.gain.value = -1
+    invertGain.gain.value = -0.5 - (intensity * 0.5)  // -0.5 a -1.0
 
     // 3. Merger L - R (cancela o centro onde está a voz)
     const merger = ctx.createChannelMerger(2)
 
-    // 4. PRIMEIRO NOTCH: corta frequência fundamental da voz (85-255Hz = grave)
+    // 4. NOTCH: corta frequência fundamental da voz (grave)
     const notchLow = ctx.createBiquadFilter()
     notchLow.type = 'notch'
     notchLow.frequency.value = 180
-    notchLow.Q.value = 0.3  // Largura maior = corte mais agressivo
+    notchLow.Q.value = 0.3 + (intensity * 0.4)  // Mais largo = mais agressivo
 
-    // 5. SEGUNDO NOTCH: corta corpo da voz (255-500Hz)
+    // 5. NOTCH: corpo da voz (255-500Hz)
     const notchMid1 = ctx.createBiquadFilter()
     notchMid1.type = 'notch'
     notchMid1.frequency.value = 350
-    notchMid1.Q.value = 0.4
+    notchMid1.Q.value = 0.4 + (intensity * 0.3)
 
-    // 6. TERCEIRO NOTCH: presença vocal (500Hz-2kHz) — ONDE A VOZ MAIS ESTÁ
+    // 6. NOTCH: presença vocal (500Hz-2kHz) — ONDE A VOZ MAIS ESTÁ
     const notchMid2 = ctx.createBiquadFilter()
     notchMid2.type = 'notch'
     notchMid2.frequency.value = 1000
-    notchMid2.Q.value = 0.5
+    notchMid2.Q.value = 0.5 + (intensity * 0.4)
 
-    // 7. QUARTO NOTCH: harmônicos agudos da voz (2-4kHz)
+    // 7. NOTCH: harmônicos agudos da voz (2-4kHz)
     const notchHigh = ctx.createBiquadFilter()
     notchHigh.type = 'notch'
     notchHigh.frequency.value = 3000
-    notchHigh.Q.value = 0.6
+    notchHigh.Q.value = 0.6 + (intensity * 0.2)
 
-    // 8. BANDPASS: deixa passar só o que NÃO é voz (instrumentos)
-    // Voz humana = 85Hz a 4kHz. Instrumentos = fora disso + estéreo
+    // 8. BANDPASS: deixa passar o que NÃO é voz (instrumentos)
     const bandpass = ctx.createBiquadFilter()
     bandpass.type = 'bandpass'
-    bandpass.frequency.value = 8000  // Foca nos agudos (pratos, guitarras)
+    bandpass.frequency.value = 6000 + (intensity * 4000)  // 6kHz a 10kHz
     bandpass.Q.value = 0.4
 
-    // 9. PEAKING: boost em frequências de instrumentos (6-12kHz brilho)
+    // 9. PEAKING: boost em frequências de instrumentos
     const peakBoost = ctx.createBiquadFilter()
     peakBoost.type = 'peaking'
     peakBoost.frequency.value = 8000
-    peakBoost.gain.value = 8  // Boost AGRESSIVO nos agudos
+    peakBoost.gain.value = intensity * 10  // 0 a 10dB boost
     peakBoost.Q.value = 0.5
 
     // 10. Compressor para nivelar
     const compressor = ctx.createDynamicsCompressor()
     compressor.threshold.value = -30
     compressor.knee.value = 20
-    compressor.ratio.value = 20  // Mais compressão
+    compressor.ratio.value = 10 + (intensity * 15)  // 10 a 25
     compressor.attack.value = 0.001
     compressor.release.value = 0.1
 
-    // 11. Ganho final COMPENSATÓRIO (a voz sumiu, soou baixo, boost aqui)
+    // 11. Ganho final (compensatório baseado na intensidade)
     this.vocalRemovalNode = ctx.createGain()
-    this.vocalRemovalNode.gain.value = 2.2  // BOOST MAIOR
+    this.vocalRemovalNode.gain.value = 0.8 + (intensity * 2.2)  // 0.8 a 3.0
 
     // === CONEXÕES ===
     source.connect(splitter)
    
-    // L - R = cancelamento de centro (voz)
     splitter.connect(merger, 0, 0)      // L → L
     splitter.connect(invertGain, 1)      // R → invert
     invertGain.connect(merger, 0, 1)     // -R → R
 
-    // Cadeia de filtros agressivos
+    // Cadeia de filtros
     merger.connect(notchLow)
     notchLow.connect(notchMid1)
     notchMid1.connect(notchMid2)
@@ -2735,11 +2753,11 @@ setupVocalRemoval() {
     this.showMicPermissionToast(
       'success',
       'Modo Karaokê ATIVADO',
-      'Voz do cantor REDUZIDA AO MÁXIMO. Cante por cima!'
+      `Redução de voz em ${this.vocalRemovalIntensity}% — cante por cima!`
     )
   } catch (error) {
     console.error('Erro ao configurar vocal removal:', error)
-    this.vocalRemoval = false
+    this.vocalRemovalIntensity = 0
     this.showMicPermissionToast(
       'warning',
       'Não foi possível ativar',
@@ -2751,9 +2769,7 @@ setupVocalRemoval() {
 disableVocalRemoval() {
   if (this.audioSourceNode && this.audioContextPlayer) {
     try {
-      // Desconecta TUDO do source
       this.audioSourceNode.disconnect()
-      // Reconecta direto ao destination (áudio normal)
       this.audioSourceNode.connect(this.audioContextPlayer.destination)
      
       this.isVocalRemovalSetup = false
@@ -2799,7 +2815,7 @@ disableVocalRemoval() {
     this.micSensitivity = Number(settings.micSensitivity ?? 70)
     this.selectedDifficulty = settings.selectedDifficulty ?? 'medium'
     this.playbackRate = Number(settings.playbackRate ?? 1)
-    this.vocalRemoval = typeof settings.vocalRemoval === 'boolean' ? settings.vocalRemoval : false
+    this.vocalRemovalIntensity = Number(settings.vocalRemovalIntensity ?? 0)
 
   } catch (e) {
     console.error('Erro ao carregar configurações:', e)
@@ -2815,7 +2831,7 @@ disableVocalRemoval() {
         autoScroll: this.autoScroll,
         micSensitivity: this.micSensitivity,
         selectedDifficulty: this.selectedDifficulty,
-        vocalRemoval: this.vocalRemoval
+        vocalRemovalIntensity: this.vocalRemovalIntensity
       }
       localStorage.setItem('karaokeSettings', JSON.stringify(settings))
     },
@@ -5546,5 +5562,90 @@ width: 16px;
   .exit-confirm-actions button {
     width: 100%;
   }
+}
+/* ============ VOCAL REMOVAL SLIDER ============ */
+
+.setting-item.vocal-remover-slider {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.08), rgba(131, 56, 236, 0.08));
+  border: 2px solid rgba(255, 0, 110, 0.15);
+  border-radius: 16px;
+  padding: 18px 20px;
+  margin-top: 8px;
+  transition: all 0.3s ease;
+}
+
+.setting-item.vocal-remover-slider:hover {
+  border-color: rgba(255, 0, 110, 0.3);
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.12), rgba(131, 56, 236, 0.12));
+}
+
+.setting-item.vocal-remover-slider label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+.setting-item.vocal-remover-slider label i {
+  color: #ff006e;
+  font-size: 16px;
+}
+
+.vocal-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vocal-hint {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 14px;
+  background: rgba(34, 197, 94, 0.08);
+  border-left: 3px solid #22c55e;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  line-height: 1.4;
+  transition: all 0.3s ease;
+}
+
+.vocal-hint.strong {
+  background: linear-gradient(135deg, rgba(255, 0, 110, 0.15), rgba(131, 56, 236, 0.15));
+  border-left-color: #ff006e;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vocal-hint i {
+  margin-right: 6px;
+  color: #22c55e;
+}
+
+.vocal-hint.strong i {
+  color: #ff006e;
+}
+
+/* Slider estilizado para vocal removal */
+.setting-item.vocal-remover-slider .setting-slider {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.15) 0%,
+    rgba(255, 0, 110, 0.4) 50%,
+    rgba(131, 56, 236, 0.6) 100%
+  );
+}
+
+.setting-item.vocal-remover-slider .setting-slider::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  background: linear-gradient(135deg, #ff006e, #8338ec);
+  box-shadow: 0 2px 12px rgba(255, 0, 110, 0.5);
 }
 </style>

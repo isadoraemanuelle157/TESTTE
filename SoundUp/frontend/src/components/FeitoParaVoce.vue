@@ -411,15 +411,78 @@ export default {
     goBackFromSuccess() { this.showSuccess = false },
     skipOnboarding() { if (confirm('Tem certeza que deseja pular?')) this.finishOnboarding() },
     saveSelectionsToStorage() { localStorage.setItem('feitoParaVoceSelections', JSON.stringify({ genres: this.selectedGenres, artists: this.selectedArtists, vibes: this.selectedVibes, timestamp: Date.now() })); console.log('✅ Seleções salvas no localStorage') },
-    createPersonalizedMixes() {
+         createPersonalizedMixes() {
       const m = []
-      if (this.selectedGenres.length) m.push({ id: 'mix_generos_' + Date.now(), title: 'Mix dos Gêneros', description: `Baseado em: ${this.selectedGenres.map(g=>g.name).join(', ')}`, tracks: this.selectedGenres.length * 10, cover: this.selectedGenres[0]?.gradient || this.getGradient(0), gradient: this.selectedGenres[0]?.gradient || this.getGradient(0), _tracks: this.selectedGenres.map(g => ({ id: g.id, title: `Top ${g.name}`, artist: g.name, cover: '', url: '', duration: 180, source: g.source || 'mixed' })) })
-      if (this.selectedArtists.length) m.push({ id: 'mix_artistas_' + Date.now(), title: 'Mix dos Artistas', description: `Com: ${this.selectedArtists.map(a=>a.name).join(', ')}`, tracks: this.selectedArtists.length * 5, cover: this.selectedArtists[0]?.photo || '', gradient: this.getGradient(3), _tracks: this.selectedArtists.map(a => ({ id: a.id, title: `Hits de ${a.name}`, artist: a.name, cover: a.photo || '', url: '', duration: 180, source: a.source || 'mixed' })) })
-      if (this.selectedVibes.length) m.push({ id: 'mix_vibes_' + Date.now(), title: 'Mix das Vibes', description: `Para: ${this.selectedVibes.map(v=>v.name).join(', ')}`, tracks: this.selectedVibes.length * 8, cover: this.selectedVibes[0]?.gradient || this.getGradient(5), gradient: this.selectedVibes[0]?.gradient || this.getGradient(5), _tracks: this.selectedVibes.map(v => ({ id: v.id, title: `Vibe ${v.name}`, artist: v.name, cover: '', url: '', duration: 200, source: v.source || 'mixed' })) })
-      m.push({ id: 'mix_diario_' + Date.now(), title: 'Mix Diário', description: 'Personalizado para você', tracks: 50, cover: this.getGradient(7), gradient: this.getGradient(7), _tracks: [...this.selectedGenres.map(g => ({ id: g.id, title: `Top ${g.name}`, artist: g.name, cover: '', url: '', duration: 180, source: g.source || 'mixed' })), ...this.selectedArtists.map(a => ({ id: a.id, title: `Hits de ${a.name}`, artist: a.name, cover: a.photo || '', url: '', duration: 180, source: a.source || 'mixed' }))] })
-      m.push({ id: 'mix_descobertas_' + Date.now(), title: 'Descobertas', description: 'Novas músicas para você', tracks: 30, cover: this.getGradient(2), gradient: this.getGradient(2), _tracks: this.selectedGenres.slice(0,3).map(g => ({ id: 'discover_' + g.id, title: `Descubra ${g.name}`, artist: 'Vários artistas', cover: '', url: '', duration: 190, source: g.source || 'mixed' })) })
-      m.push({ id: 'mix_onrepeat_' + Date.now(), title: 'On Repeat', description: 'Músicas que você ama', tracks: this.selectedArtists.length * 5 + this.selectedGenres.length * 5, cover: this.getGradient(4), gradient: this.getGradient(4), _tracks: this.selectedArtists.map(a => ({ id: 'repeat_' + a.id, title: `On Repeat: ${a.name}`, artist: a.name, cover: a.photo || '', url: '', duration: 180, source: a.source || 'mixed' })) })
-      m.push({ id: 'mix_radar_' + Date.now(), title: 'Radar', description: 'Atualizado toda sexta', tracks: 30, cover: this.getGradient(6), gradient: this.getGradient(6), _tracks: this.selectedGenres.slice(0,2).map(g => ({ id: 'radar_' + g.id, title: `Radar ${g.name}`, artist: 'Novidades', cover: '', url: '', duration: 185, source: g.source || 'mixed' })) })
+      
+      // Mix por gênero - um para cada gênero selecionado
+      this.selectedGenres.forEach((g, i) => {
+        m.push({
+          id: 'mix_genero_' + g.id + '_' + Date.now(),
+          title: `Mix ${g.name}`,
+          description: `Baseado em ${g.name}`,
+          tracks: 0,
+          cover: g.gradient || this.getGradient(i),
+          gradient: g.gradient || this.getGradient(i),
+          _tracks: [],
+          tipo: 'mix',
+          basedOn: g.name,
+          genreId: g.id,        // ✅ ADICIONADO: ID do gênero para busca
+          artistId: null        // ✅ ADICIONADO: explicitamente null
+        })
+      })
+      
+      // Mix por artista - um para cada artista selecionado
+      this.selectedArtists.forEach((a, i) => {
+        m.push({
+          id: 'mix_artista_' + a.id + '_' + Date.now(),
+          title: `Mix ${a.name}`,
+          description: `Com os melhores de ${a.name}`,
+          tracks: 0,
+          cover: a.photo || a.picture_medium || this.getGradient(i + 5),
+          gradient: this.getGradient(i + 5),
+          _tracks: [],
+          tipo: 'mix',
+          basedOn: a.name,
+          artistId: a.id,         // ✅ ADICIONADO: ID do artista para busca
+          genreId: null           // ✅ ADICIONADO: explicitamente null
+        })
+      })
+      
+      // Mix por vibe
+      this.selectedVibes.forEach((v, i) => {
+        m.push({
+          id: 'mix_vibe_' + v.id + '_' + Date.now(),
+          title: `Mix ${v.name}`,
+          description: v.description || `Para o momento ${v.name}`,
+          tracks: 0,
+          cover: v.gradient || this.getGradient(i + 10),
+          gradient: v.gradient || this.getGradient(i + 10),
+          _tracks: [],
+          tipo: 'mix',
+          basedOn: v.name,
+          vibeId: v.id,           // ✅ ADICIONADO: ID da vibe
+          artistId: null,         // ✅ ADICIONADO
+          genreId: null           // ✅ ADICIONADO
+        })
+      })
+      
+      // Sempre adicionar mix geral se houver seleções
+      if (this.selectedGenres.length > 0 || this.selectedArtists.length > 0) {
+        m.push({
+          id: 'mix_diario_' + Date.now(),
+          title: 'Mix Diário',
+          description: 'Personalizado para você',
+          tracks: 0,
+          cover: this.getGradient(7),
+          gradient: this.getGradient(7),
+          _tracks: [],
+          tipo: 'mix',
+          basedOn: 'geral',
+          artistId: null,         // ✅ ADICIONADO
+          genreId: null           // ✅ ADICIONADO
+        })
+      }
+      
       localStorage.setItem('feitoParaVoceMixes', JSON.stringify(m))
       console.log('🎵 Mixes personalizados criados:', m.length)
       return m
@@ -793,5 +856,27 @@ export default {
 @media(max-width:1024px){.global-header{padding:14px 20px}.content-area{padding:20px}.step-header h1{font-size:28px}.genres-masonry{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}.artists-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}.vibes-showcase{grid-template-columns:1fr}.step-footer{padding:16px 20px}.btn-nav{padding:10px 18px;font-size:14px}}
 @media(max-width:480px){.step-header h1{font-size:24px}.genre-tile.is-large{grid-column:span 1;grid-row:span 1}.preview-bar{bottom:80px;padding:10px 14px;width:95%}.preview-chip{padding:5px 10px;font-size:11px}.btn-back-modal{top:16px;left:16px;padding:10px 16px;font-size:13px}.btn-back-modal svg{width:18px;height:18px}.success-content{padding:24px}.success-content h2{font-size:22px}}
 @media(prefers-reduced-motion:reduce){.splash-logo-glow,.sound-wave span,.splash-progress-shine,.particle,.step-spinner,.loading-spinner,.btn-spinner{animation:none}.splash-title span{opacity:1;transform:none;animation:none}.genre-tile,.artist-card-large,.vibe-showcase-card,.btn-nav,.btn-start,.btn-back-modal,.btn-retry{transition:none}.genre-tile:hover,.artist-card-large:hover,.vibe-showcase-card:hover,.btn-primary:hover,.btn-start:hover{transform:none}.content-area{scroll-behavior:auto}}
-@media(prefers-contrast:more){.step-header h1{-webkit-text-fill-color:#fff;background:none}.selection-counter{border-width:3px}.artist-card-large.active,.vibe-showcase-card.active{outline:3px solid #fff;outline-offset:2px}}
+@media(prefers-contrast:more){.step-header h1{-webkit-text-fill-color:#fff;background:none}.selection-counter{border-width:3px}.artist-card-large.active,.vibe-showcase-card.active{outline:3px solid #fff;outline-offset:2px}}/* ===== UNIFORMIZAR CARDS ===== */
+.artist-card-large {
+  min-height: 240px;
+}
+
+.artist-card-large .artist-image {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
+
+.artist-card-large .artist-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.genre-tile {
+  aspect-ratio: 1 / 1;
+}
+
+.vibe-showcase-card {
+  min-height: 160px;
+}
 </style>

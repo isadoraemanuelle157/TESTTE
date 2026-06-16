@@ -267,11 +267,11 @@ const gerarPerguntaCompleteLyric = async (dificuldade, sessionId = null) => {
   const track = available[Math.floor(Math.random() * available.length)];
   markLyricQuestionUsed(sessionId, track.titulo);
   const words = track.titulo.split(' ');
-  let maskCount;
+   let maskCount;
   if (dificuldade === 'easy') {
-    maskCount = Math.max(1, Math.floor(words.length * 0.3));
+    maskCount = Math.max(1, Math.floor(words.length * 0.5));
   } else if (dificuldade === 'medium') {
-    maskCount = Math.max(1, Math.floor(words.length * 0.6));
+    maskCount = Math.max(1, Math.floor(words.length * 0.7));
   } else {
     maskCount = Math.max(1, words.length - 1);
   }

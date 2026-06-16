@@ -109,7 +109,8 @@ const deletar = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-    await roomService.deletar(req.params.id, req.user.id)
+    // ✅ ADICIONAR: passar role para o service
+    await roomService.deletar(req.params.id, req.user.id, req.user.role)
     res.json({ message: 'Sala deletada com sucesso' })
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -126,6 +127,22 @@ const convidar = async (req, res) => {
       return res.status(400).json({ error: 'roomId e userId são obrigatórios' })
     }
     const room = await roomService.convidar(roomId, req.user.id, userId)
+    
+    // ✅ ADICIONAR: Criar notificação para o convidado
+    const notificacaoService = require('../services/notificacaoService')
+// ✅ CORRIGIDO - inclui referenciaId e roomName no meta:
+await notificacaoService.criar({
+  usuarioDestino: userId,
+  usuarioOrigem: req.user.id,
+  tipo: 'sala_musica_convite',
+  mensagem: `${req.user.nome || 'Alguém'} te convidou para a sala "${room.name}"`,
+  meta: { 
+    roomId: roomId,           // para compatibilidade
+    referenciaId: roomId,     // usado no frontend
+    roomName: room.name       // nome da sala para o modal
+  }
+})
+    
     res.json({ message: 'Convite enviado', room })
   } catch (error) {
     res.status(400).json({ error: error.message })

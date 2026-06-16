@@ -356,6 +356,33 @@
       </button>
     </div>
   </transition>
+
+    <!-- ===== MODAL DE ENTRAR NA SALA (CONVITE) ===== -->
+  <transition name="modal">
+    <div v-if="showJoinRoomModal" class="notif-modal-overlay" @click.self="fecharJoinModal">
+      <div class="notif-modal" style="max-width: 420px;">
+        <div class="notif-modal-header">
+          <h3><i class="fa fa-headphones"></i> Convite para Sala</h3>
+   <button class="modal-close" @click="fecharJoinModal">
+    <i class="fa fa-times"></i>
+  </button>
+        </div>
+        <div class="notif-modal-body" style="padding: 24px; text-align: center;">
+          <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #1db954, #1ed760); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+            <i class="fa fa-music" style="font-size: 32px; color: white;"></i>
+          </div>
+          <h4 style="margin: 0 0 8px; color: #f8fafc;">{{ joinRoomData.roomName }}</h4>
+          <p style="color: #94a3b8; margin: 0 0 24px;">Você foi convidado para entrar nesta sala de música</p>
+          <button 
+            @click="entrarNaSalaConvite"
+            style="width: 100%; padding: 14px; background: linear-gradient(135deg, #1db954, #1ed760); border: none; border-radius: 12px; color: black; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s;"
+          >
+            <i class="fa fa-sign-in"></i> Entrar na Sala
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script>
@@ -387,6 +414,7 @@ export default {
     const router = useRouter()
 
     const isScrolled = ref(false)
+    const intervalId = ref(null)
     const isHidden = ref(false)
     let lastScrollY = 0
     const showNotifications = ref(false)
@@ -395,6 +423,9 @@ export default {
     const searchQuery = ref('')
 
     const isLoggedIn = ref(false)
+    const showNotifModal = ref(false)
+    const showJoinRoomModal = ref(false)
+const joinRoomData = ref({ roomId: '', roomName: '' })
     const userName = ref('')
     const userEmail = ref('')
    const userAvatar = ref(null)
@@ -405,7 +436,6 @@ const isAvatarGoldEquipped = ref(false) // 🔥 NOVO
     const notificationCount = ref(0)
     const hasNewNotifications = computed(() => notificationCount.value > 0)
     const maxNotifVisiveis = ref(5)
-    const showNotifModal = ref(false)
 
     // ===== TOAST =====
     const toast = ref({
@@ -518,6 +548,10 @@ const handleAvatarGoldChanged = (e) => {
       icon: 'fa fa-comment', 
       color: 'linear-gradient(135deg, #f59e0b, #d97706)' 
     },
+     sala_musica_convite: { 
+      icon: 'fa fa-headphones', 
+      color: 'linear-gradient(135deg, #1db954, #1ed760)' 
+    },
     support_message: { icon: 'fa fa-headset', color: 'linear-gradient(135deg, #f59e0b, #d97706)' },
     support_reply: { icon: 'fa fa-commenting-o', color: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
     contact_message: { icon: 'fa fa-envelope', color: 'linear-gradient(135deg, #ec4899, #db2777)' },
@@ -530,32 +564,33 @@ const handleAvatarGoldChanged = (e) => {
   }
 }
 
-    // ===== REMOVER NOTIFICAÇÕES DUPLICADAS =====
-    // Mantém apenas a notificação mais recente de cada (tipo + usuarioOrigem)
-    const removerDuplicadas = (notificacoes) => {
-      const mapa = new Map()
-      
-      notificacoes.forEach(n => {
-        // Chave única: tipo + id do usuário origem
-        const userId = n.usuarioOrigem?._id || n.usuarioOrigem?.id || 'unknown'
-        const chave = `${n.tipo}_${userId}`
-        
-        // Se já existe uma notificação com essa chave, mantém a mais recente
-        if (mapa.has(chave)) {
-          const existente = mapa.get(chave)
-          const dataNova = new Date(n.createdAt || 0)
-          const dataExistente = new Date(existente.createdAt || 0)
-          
-          if (dataNova > dataExistente) {
-            mapa.set(chave, n)
-          }
-        } else {
-          mapa.set(chave, n)
-        }
-      })
-      
-      return Array.from(mapa.values())
+  const removerDuplicadas = (notificacoes) => {
+  const mapa = new Map()
+
+  notificacoes.forEach(n => {
+    const userId = n.usuarioOrigem?._id || n.usuarioOrigem?.id || 'unknown'
+    const roomId =
+      n.tipo === 'sala_musica_convite'
+        ? (n.meta?.roomId || n.meta?.referenciaId || 'sem-sala')
+        : 'default'
+
+    const chave = `${n.tipo}_${userId}_${roomId}`
+
+    if (mapa.has(chave)) {
+      const existente = mapa.get(chave)
+      const dataNova = new Date(n.createdAt || 0)
+      const dataExistente = new Date(existente.createdAt || 0)
+
+      if (dataNova > dataExistente) {
+        mapa.set(chave, n)
+      }
+    } else {
+      mapa.set(chave, n)
     }
+  })
+
+  return Array.from(mapa.values())
+}
 
    const carregarNotificacoes = async () => {
   try {
@@ -606,6 +641,9 @@ if (n.tipo === 'matchmusical') {
       if (n.tipo === 'matchmusical_mensagem') {
         mensagemFormatada = n.mensagem || `💬 Nova mensagem no Match Musical`
       }
+      if (n.tipo === 'sala_musica_convite') {
+  mensagemFormatada = n.mensagem || `🎧 ${nome} te convidou para uma sala de música`
+}
 
       return {
         id: n._id,
@@ -656,7 +694,6 @@ if (n.tipo === 'matchmusical') {
       showNotifications.value = false
     }
 
-    // ===== markAsRead CORRIGIDO =====
    // ===== markAsRead COM REDIRECIONAMENTO =====
 const markAsRead = async (notif) => {
   try {
@@ -730,7 +767,17 @@ const redirectByNotificationType = (notif) => {
     } 
     return
   }
-  
+if (tipo === 'sala_musica_convite') {
+  const roomId = notif.meta?.roomId || notif.meta?.referenciaId
+  const roomName = notif.meta?.roomName || extractRoomNameFromMessage(notif.title)
+
+  if (roomId) {
+    abrirJoinModal(roomId, roomName)
+  } else {
+    mostrarToast('Convite inválido', 'Não foi possível identificar a sala do convite.', 'warning')
+  }
+  return
+}
   // Padrão: não faz nada ou vai para notificações
 }
 
@@ -759,6 +806,30 @@ const redirectByNotificationType = (notif) => {
         mostrarToast('Erro ao marcar notificações', error.message, 'error')
       }
     }
+
+    const abrirJoinModal = (roomId, roomName) => {
+  joinRoomData.value = { roomId, roomName }
+  showJoinRoomModal.value = true
+  showNotifications.value = false
+  showNotifModal.value = false
+  document.body.style.overflow = 'hidden'
+}
+
+// ✅ CONFIRMAR que fecharJoinModal está assim (linha ~680):
+const fecharJoinModal = () => {
+  showJoinRoomModal.value = false
+  joinRoomData.value = { roomId: '', roomName: '' }
+  document.body.style.overflow = ''  // ✅ garantir que está limpando
+}
+
+const entrarNaSalaConvite = () => {
+  const { roomId, roomName } = joinRoomData.value
+
+  if (roomId) {
+    router.push(`/room?room=${roomId}&from=invite&roomName=${encodeURIComponent(roomName || 'Sala de Música')}`)
+    fecharJoinModal()
+  }
+}
 
     // ===== DELETAR NOTIFICAÇÃO =====
     const deletarNotificacao = async (notif) => {
@@ -919,6 +990,11 @@ const aceitar = async (notif) => {
       userAvatar.value = null
     }
 
+const extractRoomNameFromMessage = (message = '') => {
+  const match = message.match(/sala\s+"([^"]+)"/i)
+  return match?.[1] || 'Sala de Música'
+}
+
     const handleClickOutside = (e) => {
       const nav = document.querySelector('.navbar')
       if (nav && !nav.contains(e.target)) {
@@ -927,21 +1003,22 @@ const aceitar = async (notif) => {
       }
     }
 
-    const handleUserLoggedIn = async () => {
-      loadUserData()
-      await carregarNotificacoes()
-    }
+const handleUserLoggedIn = async () => {
+  loadUserData()
+  iniciarPollingNotificacoes()  // ← MUDANÇA: inicia polling quando usuário loga
+}
 
-    const handleUserLoggedOut = () => {
-      isLoggedIn.value = false
-      userName.value = ''
-      userEmail.value = ''
-      userAvatar.value = null
-      userId.value = null
-      notifications.value = []
-      notificationCount.value = 0
-      showUserMenu.value = false
-    }
+const handleUserLoggedOut = () => {
+  isLoggedIn.value = false
+  userName.value = ''
+  userEmail.value = ''
+  userAvatar.value = null
+  userId.value = null
+  notifications.value = []
+  notificationCount.value = 0
+  showUserMenu.value = false
+  pararPollingNotificacoes()  // ← MUDANÇA: para o polling ao deslogar
+}
 
     const handleProfileUpdated = () => {
       loadUserData()
@@ -965,13 +1042,38 @@ const aceitar = async (notif) => {
       }
     }
 
+    // ===== POLLING DE NOTIFICAÇÕES =====
+const iniciarPollingNotificacoes = () => {
+  // Limpa interval anterior se existir
+  if (intervalId.value) {
+    clearInterval(intervalId.value)
+  }
+
+  // Carrega imediatamente
+  carregarNotificacoes()
+
+  // Depois a cada 10 segundos
+  intervalId.value = setInterval(() => {
+    if (isLoggedIn.value) {
+      carregarNotificacoes()
+    }
+  }, 10000) // 10 segundos
+}
+
+const pararPollingNotificacoes = () => {
+  if (intervalId.value) {
+    clearInterval(intervalId.value)
+    intervalId.value = null
+  }
+}
+
 onMounted(async () => {
   loadUserData()
   checkGoldenAvatar() 
 
-      if (isLoggedIn.value) {
-        await carregarNotificacoes()
-      }
+  if (isLoggedIn.value) {
+    iniciarPollingNotificacoes()  // ← MUDANÇA: inicia polling ao invés de carregar uma vez
+  }
 
       window.addEventListener('scroll', handleScroll)
       document.addEventListener('click', handleClickOutside)
@@ -984,7 +1086,7 @@ onMounted(async () => {
        window.addEventListener('avatar-gold-changed', handleAvatarGoldChanged)
     })
 
-    onUnmounted(() => {
+      onUnmounted(() => {
       window.removeEventListener('scroll', handleScroll)
       document.removeEventListener('click', handleClickOutside)
       document.removeEventListener('keydown', handleKeydown)
@@ -993,7 +1095,9 @@ onMounted(async () => {
       window.removeEventListener('user-logged-out', handleUserLoggedOut)
       window.removeEventListener('perfil-updated', handleProfileUpdated)
       window.removeEventListener('storage', handleStorage)
-       window.removeEventListener('avatar-gold-changed', handleAvatarGoldChanged)
+      window.removeEventListener('avatar-gold-changed', handleAvatarGoldChanged)
+
+      pararPollingNotificacoes()  // ← MUDANÇA: limpa o interval ao destruir componente
 
       if (toast.value.timer) clearTimeout(toast.value.timer)
     })
@@ -1038,6 +1142,14 @@ goToSupport,
       handleAvatarError,
       isAvatarGoldEquipped,
       redirectByNotificationType,
+      showJoinRoomModal,
+  joinRoomData,
+  abrirJoinModal,
+  fecharJoinModal,
+  entrarNaSalaConvite,
+  intervalId,  // ← ADICIONAR
+      iniciarPollingNotificacoes,  // ← ADICIONAR
+      pararPollingNotificacoes,  
     }
   }
 }

@@ -7,14 +7,10 @@ let lastRequestTime = 0  // ✅ NOVO: controla tempo entre requests
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-/**
- * ✅ NOVO: Delay entre requests para evitar rate limit
- * Mínimo 500ms entre cada request ao Spotify
- */
 async function respectRateLimit() {
   const now = Date.now()
   const timeSinceLastRequest = now - lastRequestTime
- const minDelay = 200 
+  const minDelay = 800
   
   if (timeSinceLastRequest < minDelay) {
     const wait = minDelay - timeSinceLastRequest
@@ -72,7 +68,7 @@ async function getSpotifyToken(retries = 5) {
  * 1. Delay de 500ms entre requests consecutivos
  * 2. retry-after limitado a 10 segundos (nunca 100 min!)
  */
-async function spotifyRequest(config, retries = 3, userToken = null) {
+async function spotifyRequest(config, retries = 5, userToken = null) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       await respectRateLimit()
@@ -127,21 +123,20 @@ async function spotifyRequest(config, retries = 3, userToken = null) {
       // =========================
       // RATE LIMIT 429
       // =========================
-      if (status === 429) {
+           if (status === 429) {
         const retryAfter = parseInt(
           error.response?.headers?.['retry-after'] || '3',
           10
         )
 
- const delay = Math.min(retryAfter, 60) * 1000
+        const delay = Math.min(retryAfter, 300) * 1000
 
-  console.warn(`🚫 Spotify Rate Limit → aguardando ${delay}ms`)
+        console.warn(`🚫 Spotify Rate Limit → aguardando ${delay}ms (retry-after: ${retryAfter}s)`)
 
-  // ✅ AJUSTE 2: Aumentar retries de 3 para 5
-  if (attempt >= retries) {  // antes era >= retries (3)
-    error.isRateLimit = true
-    throw error
-  }
+        if (attempt >= 5) {
+          error.isRateLimit = true
+          throw error
+        }
 
         await sleep(delay)
         continue

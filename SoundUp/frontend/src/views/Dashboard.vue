@@ -109,13 +109,13 @@
       Explorar tudo <i class="fa fa-chevron-right"></i>
     </button>
   </div>
-  
+ 
   <!-- Cards de Mixes (visão resumida) -->
    <div class="cards-row" :class="{ 'expanded': showAllReleases }">
-<div v-for="(mix, index) in madeForYou.slice(0, showAllReleases ? 50 : 5)" 
-     :key="'mix-'+mix.id" 
-     class="music-card album-card" 
-     @click="openMixModal(mix)" 
+<div v-for="(mix, index) in madeForYou.slice(0, showAllReleases ? 50 : 5)"
+     :key="'mix-'+mix.id"
+     class="music-card album-card"
+     @click="openMixModal(mix)"
      :class="{ 'active': isCurrentMix(mix) }">
       <div class="card-image">
         <img :src="mix.cover" @error="handleImageError" alt="Mix Cover" />
@@ -144,10 +144,10 @@
           <i class="fa fa-times"></i>
         </button>
       </div>
-      
+     
       <!-- Tabs de Categoria -->
       <div class="category-tabs">
-        <button v-for="tab in recommendationTabs" 
+        <button v-for="tab in recommendationTabs"
                 :key="tab.key"
                 class="tab-btn"
                 :class="{ active: activeRecommendationTab === tab.key }"
@@ -159,24 +159,24 @@
           </span>
         </button>
       </div>
-      
+     
       <!-- Conteúdo das Recomendações -->
       <div class="modal-body recommendations-body">
         <div v-if="loadingRecommendations" class="loading-recommendations">
           <div class="loading-spinner"></div>
           <p>Carregando recomendações...</p>
         </div>
-        
+       
         <div v-else-if="!hasRecommendations" class="empty-recommendations">
           <i class="fa fa-music"></i>
           <p>Nenhuma recomendação encontrada para esta categoria</p>
           <button class="btn-retry" @click="loadRecommendations(activeRecommendationTab)">Tentar novamente</button>
         </div>
-        
+       
         <div v-else class="recommendations-list">
           <!-- MÚSICAS -->
           <template v-if="activeRecommendationTab === 'musicas'">
-            <div v-for="(item, index) in recommendations.musicas" 
+            <div v-for="(item, index) in recommendations.musicas"
                  :key="'rec-music-'+item.id+'-'+index"
                  class="recommendation-item music-item"
                  @click="playRecommendation(item)">
@@ -196,10 +196,10 @@
               </div>
             </div>
           </template>
-          
+         
           <!-- ÁLBUNS -->
           <template v-if="activeRecommendationTab === 'albuns'">
-            <div v-for="(item, index) in recommendations.albuns" 
+            <div v-for="(item, index) in recommendations.albuns"
                  :key="'rec-album-'+item.id+'-'+index"
                  class="recommendation-item album-item"
                  @click="playAlbumTracks(item)">
@@ -218,10 +218,10 @@
               </div>
             </div>
           </template>
-          
+         
           <!-- ARTISTAS -->
           <template v-if="activeRecommendationTab === 'artistas'">
-            <div v-for="(item, index) in recommendations.artistas" 
+            <div v-for="(item, index) in recommendations.artistas"
                  :key="'rec-artist-'+item.id+'-'+index"
                  class="recommendation-item artist-item"
                  @click="goToArtist(item)">
@@ -246,10 +246,10 @@
               </button>
             </div>
           </template>
-          
+         
           <!-- PLAYLISTS -->
           <template v-if="activeRecommendationTab === 'playlists'">
-            <div v-for="(item, index) in recommendations.playlists" 
+            <div v-for="(item, index) in recommendations.playlists"
                  :key="'rec-playlist-'+item.id+'-'+index"
                  class="recommendation-item playlist-item"
                  @click="openPlaylist(item)">
@@ -268,10 +268,10 @@
               </div>
             </div>
           </template>
-          
+         
           <!-- TUDO (MIX) -->
           <template v-if="activeRecommendationTab === 'tudo'">
-            <div v-for="(item, index) in recommendations.tudo" 
+            <div v-for="(item, index) in recommendations.tudo"
                  :key="'rec-all-'+item.id+'-'+index"
                  class="recommendation-item"
                  :class="item.type || item.categoria || 'music-item'"
@@ -502,10 +502,10 @@
 </button>
         </div>
 <div class="cards-row" :class="{ 'expanded': showAllReleases }">
-  <div v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, showAllReleases ? 50 : 5)" 
-       :key="'release-'+album.id" 
-       class="music-card album-card" 
-       @click="playAlbumTracks(album)" 
+  <div v-for="(album, index) in (spotifyNewReleases.length > 0 ? spotifyNewReleases : newReleases).slice(0, showAllReleases ? 50 : 5)"
+       :key="'release-'+album.id"
+       class="music-card album-card"
+       @click="playAlbumTracks(album)"
        :class="{ 'active': isCurrentAlbum(album) }">
             <div class="card-image">
               <img :src="album.cover || album.cover_medium" @error="handleImageError" alt="Album Cover" />
@@ -573,7 +573,7 @@
                 <i class="fa fa-times"></i>
               </button>
             </div>
-            
+           
             <div class="modal-body recommendations-body">
               <div v-if="!currentMixModal?._tracks?.length" class="empty-recommendations">
                 <i class="fa fa-music"></i>
@@ -582,9 +582,9 @@
                   <i class="fa fa-play"></i> Gerar Mix Agora
                 </button>
               </div>
-              
+             
               <div v-else class="recommendations-list">
-                <div v-for="(item, index) in currentMixModal._tracks" 
+                <div v-for="(item, index) in currentMixModal._tracks"
                      :key="'mix-track-'+item.id+'-'+index"
                      class="recommendation-item music-item"
                      @click="playRecommendation(item)">
@@ -713,7 +713,7 @@ export default {
         progress: 100,
         timer: null
       },
-      
+     
 
       musicas: [],
       isLoading: false,
@@ -771,38 +771,7 @@ showAllReleases: false,
 
   created() {
   // Carregar mock pool do localStorage ou definir aqui
-// Pool de músicas mockadas sincronizado com o backend
-this.MOCK_TRACKS_POOL = [
-  { id: "mock_rock_1", title: "Bohemian Rhapsody", artist: "Queen", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273e8b066f70c206551210d902b", url: "https://p.scdn.co/mp3-preview/sample1", duration: 354, source: "spotify" },
-  { id: "mock_rock_2", title: "Stairway to Heaven", artist: "Led Zeppelin", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273c8a11e3f7e6e7b5e5b5b5b5b", url: "https://p.scdn.co/mp3-preview/sample2", duration: 482, source: "spotify" },
-  { id: "mock_rock_3", title: "Hotel California", artist: "Eagles", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273b5d4c4c4c4c4c4c4c4c4c4c4", url: "https://p.scdn.co/mp3-preview/sample3", duration: 391, source: "spotify" },
-  { id: "mock_rock_4", title: "Sweet Child O' Mine", artist: "Guns N' Roses", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273a1a1a1a1a1a1a1a1a1a1a1a1", url: "https://p.scdn.co/mp3-preview/sample4", duration: 356, source: "spotify" },
-  { id: "mock_rock_5", title: "Smells Like Teen Spirit", artist: "Nirvana", genre: "rock", cover: "https://i.scdn.co/image/ab67616d0000b273b2b2b2b2b2b2b2b2b2b2b2b2", url: "https://p.scdn.co/mp3-preview/sample5", duration: 301, source: "spotify" },
-  { id: "mock_pop_1", title: "Blinding Lights", artist: "The Weeknd", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36", url: "https://p.scdn.co/mp3-preview/sample6", duration: 200, source: "spotify" },
-  { id: "mock_pop_2", title: "Levitating", artist: "Dua Lipa", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273bd6f8ac82dc5fe1028c14f7d", url: "https://p.scdn.co/mp3-preview/sample7", duration: 203, source: "spotify" },
-  { id: "mock_pop_3", title: "Anti-Hero", artist: "Taylor Swift", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273bb54dde68cd23e2a268a0d6d", url: "https://p.scdn.co/mp3-preview/sample8", duration: 200, source: "spotify" },
-  { id: "mock_pop_4", title: "As It Was", artist: "Harry Styles", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273b46f74097655d7f353caac71", url: "https://p.scdn.co/mp3-preview/sample9", duration: 167, source: "spotify" },
-  { id: "mock_pop_5", title: "Flowers", artist: "Miley Cyrus", genre: "pop", cover: "https://i.scdn.co/image/ab67616d0000b273f5e7b2e5e5e5e5e5e5e5e5e5", url: "https://p.scdn.co/mp3-preview/sample10", duration: 200, source: "spotify" },
-  { id: "mock_funk_1", title: "Dançarina", artist: "MC Pedrinho", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273c3c3c3c3c3c3c3c3c3c3c3c3", url: "https://p.scdn.co/mp3-preview/sample11", duration: 180, source: "spotify" },
-  { id: "mock_funk_2", title: "Tá OK", artist: "DENNIS", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273d4d4d4d4d4d4d4d4d4d4d4d4", url: "https://p.scdn.co/mp3-preview/sample12", duration: 175, source: "spotify" },
-  { id: "mock_funk_3", title: "Vai Descendo", artist: "MC Zaac", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273e5e5e5e5e5e5e5e5e5e5e5e5", url: "https://p.scdn.co/mp3-preview/sample13", duration: 190, source: "spotify" },
-  { id: "mock_funk_4", title: "Bum Bum Tam Tam", artist: "MC Fioti", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273f6f6f6f6f6f6f6f6f6f6f6f6", url: "https://p.scdn.co/mp3-preview/sample14", duration: 185, source: "spotify" },
-  { id: "mock_funk_5", title: "Envolver", artist: "Anitta", genre: "funk", cover: "https://i.scdn.co/image/ab67616d0000b273a7a7a7a7a7a7a7a7a7a7a7a7", url: "https://p.scdn.co/mp3-preview/sample15", duration: 193, source: "spotify" },
-  { id: "mock_sert_1", title: "Notificação Preferida", artist: "Zé Neto & Cristiano", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273e3e3e3e3e3e3e3e3e3e3e3e3", url: "https://p.scdn.co/mp3-preview/sample31", duration: 185, source: "spotify" },
-  { id: "mock_sert_2", title: "Ciumeira", artist: "Marília Mendonça", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273f4f4f4f4f4f4f4f4f4f4f4f4", url: "https://p.scdn.co/mp3-preview/sample32", duration: 190, source: "spotify" },
-  { id: "mock_sert_3", title: "Infiel", artist: "Marília Mendonça", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273f4f4f4f4f4f4f4f4f4f4f4f4", url: "https://p.scdn.co/mp3-preview/sample33", duration: 188, source: "spotify" },
-  { id: "mock_sert_4", title: "Mal Feito", artist: "Henrique & Juliano", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273a5a5a5a5a5a5a5a5a5a5a5a5", url: "https://p.scdn.co/mp3-preview/sample34", duration: 192, source: "spotify" },
-  { id: "mock_sert_5", title: "Evidências", artist: "Chitãozinho & Xororó", genre: "sertanejo", cover: "https://i.scdn.co/image/ab67616d0000b273b6b6b6b6b6b6b6b6b6b6b6b6", url: "https://p.scdn.co/mp3-preview/sample35", duration: 280, source: "spotify" },
-  { id: "mock_samb_1", title: "Garota de Ipanema", artist: "Tom Jobim", genre: "samba", cover: "https://i.scdn.co/image/ab67616d0000b273f8f8f8f8f8f8f8f8f8f8f8f8", url: "https://p.scdn.co/mp3-preview/sample26", duration: 185, source: "spotify" },
-  { id: "mock_samb_2", title: "Mas Que Nada", artist: "Sérgio Mendes", genre: "samba", cover: "https://i.scdn.co/image/ab67616d0000b273a9a9a9a9a9a9a9a9a9a9a9a9", url: "https://p.scdn.co/mp3-preview/sample27", duration: 180, source: "spotify" },
-  { id: "mock_gosp_1", title: "Oceans", artist: "Hillsong United", genre: "gospel", cover: "https://i.scdn.co/image/ab67616d0000b273a3a3a3a3a3a3a3a3a3a3a3a3", url: "https://p.scdn.co/mp3-preview/sample21", duration: 560, source: "spotify" },
-  { id: "mock_elec_1", title: "Titanium", artist: "David Guetta ft. Sia", genre: "eletronica", cover: "https://i.scdn.co/image/ab67616d0000b273b8b8b8b8b8b8b8b8b8b8b8b8", url: "https://p.scdn.co/mp3-preview/sample16", duration: 245, source: "spotify" },
-  { id: "mock_indi_1", title: "Do I Wanna Know?", artist: "Arctic Monkeys", genre: "indie", cover: "https://i.scdn.co/image/ab67616d0000b2734c4c4c4c4c4c4c4c4c4c4c4c", url: "https://p.scdn.co/mp3-preview/sample36", duration: 272, source: "spotify" },
-  { id: "mock_rap_1", title: "Lose Yourself", artist: "Eminem", genre: "rap", cover: "https://i.scdn.co/image/ab67616d0000b273c2c2c2c2c2c2c2c2c2c2c2c2", url: "https://p.scdn.co/mp3-preview/sample41", duration: 326, source: "spotify" },
-  { id: "mock_regg_1", title: "No Woman, No Cry", artist: "Bob Marley", genre: "reggae", cover: "https://i.scdn.co/image/ab67616d0000b273d7d7d7d7d7d7d7d7d7d7d7d7", url: "https://p.scdn.co/mp3-preview/sample56", duration: 230, source: "spotify" },
-  { id: "mock_lat_1", title: "Despacito", artist: "Luis Fonsi", genre: "latino", cover: "https://i.scdn.co/image/ab67616d0000b273c2c2c2c2c2c2c2c2c2c2c2c2", url: "https://p.scdn.co/mp3-preview/sample61", duration: 228, source: "spotify" },
-  { id: "mock_lofi_1", title: "lofi study beats", artist: "ChilledCow", genre: "lofi", cover: "https://i.scdn.co/image/ab67616d0000b273a3a3a3a3a3a3a3a3a3a3a3a3", url: "https://p.scdn.co/mp3-preview/sample71", duration: 180, source: "spotify" }
-]
+
 },
 
   async mounted() {
@@ -882,25 +851,14 @@ window.addEventListener('storage', (e) => {
   }
   this.showAllReleases = !this.showAllReleases
 },
-    gerarMockTracksParaMix(genero, seed) {
-  const aliases = this.getGenreAliases ? this.getGenreAliases(genero) : [genero]
-  const pool = this.MOCK_TRACKS_POOL || []
-  const filtrados = pool.filter(t => aliases.includes(t.genre))
-  const poolFinal = filtrados.length >= 15 ? filtrados : pool
-  const shuffled = poolFinal.sort(() => Math.random() - 0.5)
-  return shuffled.slice(0, 15).map((t, i) => ({
-    ...t,
-    id: `${t.id}_mix${seed}_${i}`,
-    razao: `Top ${genero}`
-  }))
-},
+   
     async openRecommendationsModal() {
       this.showRecommendationsModal = true
       document.body.style.overflow = 'hidden'
       this.activeRecommendationTab = 'tudo'
       await this.loadRecommendations('tudo')
     },
-    
+   
     closeRecommendationsModal() {
       this.showRecommendationsModal = false
       document.body.style.overflow = ''
@@ -912,26 +870,36 @@ window.addEventListener('storage', (e) => {
         await this.loadRecommendations(tabKey)
       }
     },
-    
+   
     async loadRecommendations(tipo = 'tudo') {
       this.loadingRecommendations = true
       try {
         const token = localStorage.getItem('token')
         const user = JSON.parse(localStorage.getItem('usuario') || '{}')
         const userId = user?._id || user?.id
-        
+       
         if (!userId || !token) {
           this.loadMockRecommendations()
           return
         }
-        
+       
         const res = await fetch(`${this.API_BASE_URL}/usuarios/${userId}/recomendacoes?tipo=${tipo}&limit=50`, {
           headers: { Authorization: `Bearer ${token}` }
         })
-        
+       
         if (!res.ok) throw new Error(`Erro ${res.status}`)
-        
-        const data = await res.json()
+       
+               const data = await res.json()
+       
+        // ✅ VERIFICA se veio dados REAIS do backend (conectados às escolhas do usuário)
+        const hasRealData = (data.tudo?.length > 0 || data.musicas?.length > 0) && data.preferences
+       
+        if (!hasRealData) {
+          console.log('⚠️ Backend sem dados personalizados, usando seleções locais')
+          this.loadMockRecommendations()
+          return
+        }
+       
         this.recommendations = {
           tudo: data.tudo || [],
           musicas: data.musicas || [],
@@ -939,15 +907,16 @@ window.addEventListener('storage', (e) => {
           artistas: data.artistas || [],
           playlists: data.playlists || []
         }
-        
+       
         // Texto das preferências
         const prefs = data.preferences || {}
+
         const parts = []
         if (prefs.generos?.length) parts.push(prefs.generos.slice(0, 2).join(', '))
         if (prefs.artistas?.length) parts.push(prefs.artistas.slice(0, 2).join(', '))
         if (prefs.vibes?.length) parts.push(prefs.vibes.slice(0, 2).join(', '))
         this.recommendationPreferencesText = parts.join(' • ') || 'Suas escolhas'
-        
+       
       } catch (err) {
         console.error('Erro ao carregar recomendações:', err)
         this.loadMockRecommendations()
@@ -955,161 +924,103 @@ window.addEventListener('storage', (e) => {
         this.loadingRecommendations = false
       }
     },
-    
- loadMockRecommendations() {
-  // ✅ USAR AS MÚSICAS REAIS DOS MIXES (que já vêm filtradas pelo gênero correto)
-  const tracksDosMixes = this.madeForYou.flatMap(m => 
-    (m._tracks || []).map(t => ({
-      ...t,
-      razao: t.razao || `Do mix: ${m.title}`
-    }))
-  )
-
-// ✅ Usar preferências do usuário para gerar mocks relevantes
-const generoPrincipal = this.selectedGenres[0]?.name || 'pop'
-const artistaPrincipal = this.selectedArtists[0]?.name || ''
-const vibePrincipal = this.selectedVibes[0]?.name || ''
-
-// Gerar 15 músicas baseadas nas preferências reais
-let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal, artistaPrincipal, vibePrincipal)
-
-  if (musicasFinais.length < 15) {
-    const faltam = 15 - musicasFinais.length
-    for (let i = 0; i < faltam; i++) {
-      const genero = this.selectedGenres[i % Math.max(this.selectedGenres.length, 1)]?.name || generoPrincipal
-      const artista = this.selectedArtists[i % Math.max(this.selectedArtists.length, 1)]?.name || artistaPrincipal
-      musicasFinais.push({
-        id: `local_fb_${i}_${Date.now()}`,
-        title: `Hit de ${genero} #${i + 1}`,
-        artist: artista,
-        cover: this.selectedArtists[i % Math.max(this.selectedArtists.length, 1)]?.photo 
-          || `https://picsum.photos/seed/${encodeURIComponent(genero + i)}/300/300`,
-        url: '',
-        duration: 180 + (i * 5),
-        source: 'spotify',
-        categoria: 'musicas',
-        razao: `Baseado em ${genero}`
-      })
+   
+      loadMockRecommendations() {
+    // ✅ Fallback: usa APENAS dados reais das seleções do usuário
+    // NUNCA usa mocks aleatórios - só exibe o que o usuário realmente escolheu
+   
+    const musicasFinais = []
+    const albunsFinais = []
+    const artistasFinais = []
+    const playlistsFinais = []
+   
+    // === MÚSICAS: usar _tracks dos mixes reais do usuário ===
+    this.madeForYou.forEach(mix => {
+      if (mix._tracks && mix._tracks.length > 0) {
+        mix._tracks.forEach((t, i) => {
+          if (musicasFinais.length < 15) {
+            musicasFinais.push({
+              ...t,
+              razao: `Do seu mix: ${mix.title}`,
+              categoria: 'musicas'
+            })
+          }
+        })
+      }
+    })
+   
+    // === ARTISTAS: usar selectedArtists REAIS do usuário ===
+    this.selectedArtists.forEach((a, i) => {
+      if (i < 15) {
+        artistasFinais.push({
+          id: a.id,
+          title: a.name,
+          cover: a.photo || a.picture_medium || '',
+          categoria: 'artistas',
+          razao: 'Você curte este artista',
+          source: a.source || 'local',
+          type: 'artist',
+          followers: a.followers || 0,
+          popularity: a.popularity || 80,
+          genres: [a.genre || '']
+        })
+      }
+    })
+   
+    // === PLAYLISTS: criar a partir dos gêneros e vibes REAIS do usuário ===
+    this.selectedGenres.forEach((g, i) => {
+      if (i < 8) {
+        playlistsFinais.push({
+          id: 'pl_gen_' + g.id,
+          title: `This Is ${g.name}`,
+          description: `Os maiores hits de ${g.name}`,
+          cover: g.gradient || '',
+          owner: 'SoundUp',
+          tracksCount: 30,
+          categoria: 'playlists',
+          razao: `Baseado em ${g.name}`,
+          source: 'spotify',
+          type: 'playlist'
+        })
+      }
+    })
+   
+    this.selectedVibes.forEach((v, i) => {
+      if (i < 7) {
+        playlistsFinais.push({
+          id: 'pl_vibe_' + v.id,
+          title: v.name,
+          description: v.description || `Playlist para o momento ${v.name}`,
+          cover: v.gradient || '',
+          owner: 'SoundUp',
+          tracksCount: 25,
+          categoria: 'playlists',
+          razao: `Para a vibe ${v.name}`,
+          source: 'spotify',
+          type: 'playlist'
+        })
+      }
+    })
+   
+    this.recommendations = {
+      tudo: [
+        ...musicasFinais.slice(0, 3).map(m => ({ ...m, type: 'musicas' })),
+        ...artistasFinais.slice(0, 3).map(a => ({ ...a, type: 'artistas' })),
+        ...playlistsFinais.slice(0, 3).map(p => ({ ...p, type: 'playlists' }))
+      ].filter(item => item.title || item.name),
+      musicas: musicasFinais,
+      albuns: albunsFinais,
+      artistas: artistasFinais,
+      playlists: playlistsFinais
     }
-  }
-
-  // Álbuns: gerados a partir dos artistas favoritos
-  const albunsFinais = []
-  this.selectedArtists.slice(0, 8).forEach((artista, i) => {
-    albunsFinais.push({
-      id: `album_fb_${i}_${Date.now()}`,
-      title: `Best of ${artista.name}`,
-      artist: artista.name,
-      cover: artista.photo || `https://picsum.photos/seed/album_${i}/300/300`,
-      releaseDate: `202${(i % 4) + 1}-0${(i % 9) + 1}-15`,
-      totalTracks: 10 + i,
-      categoria: 'albuns',
-      razao: `Álbuns de ${artista.name}`,
-      source: artista.source || 'spotify',
-      type: 'album'
-    })
-  })
-  // Completar com álbuns por gênero
-  while (albunsFinais.length < 15) {
-    const i = albunsFinais.length
-    const g = this.selectedGenres[i % Math.max(this.selectedGenres.length, 1)]?.name || generoPrincipal
-    albunsFinais.push({
-      id: `album_gen_${i}_${Date.now()}`,
-      title: `${g} Essentials`,
-      artist: 'Vários Artistas',
-      cover: `https://picsum.photos/seed/${encodeURIComponent(g + i)}/300/300`,
-      releaseDate: `2024-0${(i % 9) + 1}-15`,
-      totalTracks: 15 + i,
-      categoria: 'albuns',
-      razao: `Álbum de ${g}`,
-      source: 'spotify',
-      type: 'album'
-    })
-  }
-
-  // Artistas: os favoritos + sugestões do mesmo gênero
-  const artistasFinais = this.selectedArtists.slice(0, 15).map((a, i) => ({
-    id: a.id,
-    title: a.name,
-    cover: a.photo || a.picture_medium || `https://picsum.photos/seed/artist_${a.id}/300/300`,
-    categoria: 'artistas',
-    razao: 'Você curte este artista',
-    source: a.source || 'local',
-    type: 'artist',
-    followers: 1000000 + Math.floor(Math.random() * 50000000),
-    popularity: a.popularity || 80 + (i % 15),
-    genres: [a.genre || generoPrincipal]
-  }))
-
-  // Playlists: baseadas em gêneros e vibes reais
-  const playlistsFinais = []
-  this.selectedGenres.forEach((g, i) => {
-    playlistsFinais.push({
-      id: `pl_gen_${g.id}_${i}`,
-      title: `This Is ${g.name}`,
-      description: `Os maiores hits de ${g.name}`,
-      cover: g.gradient || `https://picsum.photos/seed/${encodeURIComponent(g.name)}/300/300`,
-      owner: 'SoundUp',
-      tracksCount: 30 + (i * 5),
-      categoria: 'playlists',
-      razao: `Playlist de ${g.name}`,
-      source: 'spotify',
-      type: 'playlist'
-    })
-  })
-  this.selectedVibes.forEach((v, i) => {
-    playlistsFinais.push({
-      id: `pl_vibe_${v.id}_${i}`,
-    title: v.name,
-      description: v.description || `Playlist para o momento ${v.name}`,
-      cover: v.gradient || `https://picsum.photos/seed/${encodeURIComponent(v.name)}/300/300`,
-      owner: 'SoundUp',
-      tracksCount: 25 + (i * 4),
-      categoria: 'playlists',
-      razao: `Para a vibe ${v.name}`,
-      source: 'spotify',
-      type: 'playlist'
-    })
-  })
-  // Completar até 15
-  while (playlistsFinais.length < 15) {
-    const i = playlistsFinais.length
-    const g = this.selectedGenres[i % Math.max(this.selectedGenres.length, 1)]?.name || generoPrincipal
-    playlistsFinais.push({
-      id: `pl_extra_${i}_${Date.now()}`,
-      title: `Mix ${g} #${i}`,
-      description: `Mix personalizado de ${g}`,
-      cover: `https://picsum.photos/seed/pl_${i}/300/300`,
-      owner: 'SoundUp',
-      tracksCount: 20 + i,
-      categoria: 'playlists',
-      razao: `Mix de ${g}`,
-      source: 'spotify',
-      type: 'playlist'
-    })
-  }
-
-  this.recommendations = {
-    tudo: [
-      ...musicasFinais.slice(0, 4).map(m => ({ ...m, type: 'musicas' })),
-      ...albunsFinais.slice(0, 4).map(a => ({ ...a, type: 'albuns' })),
-      ...artistasFinais.slice(0, 4).map(a => ({ ...a, type: 'artistas' })),
-      ...playlistsFinais.slice(0, 4).map(p => ({ ...p, type: 'playlists' }))
-    ].sort(() => Math.random() - 0.5),
-    musicas: musicasFinais,
-    albuns: albunsFinais.slice(0, 15),
-    artistas: artistasFinais,
-    playlists: playlistsFinais.slice(0, 15)
-  }
-
-  // Texto descritivo das preferências
-  const partes = []
-  if (this.selectedGenres.length) partes.push(this.selectedGenres.slice(0, 2).map(g => g.name).join(', '))
-  if (this.selectedArtists.length) partes.push(this.selectedArtists.slice(0, 2).map(a => a.name).join(', '))
-  if (this.selectedVibes.length) partes.push(this.selectedVibes.slice(0, 2).map(v => v.name).join(', '))
-  this.recommendationPreferencesText = partes.join(' • ') || 'Seus gostos musicais'
-},
-    
+   
+    const partes = []
+    if (this.selectedGenres.length) partes.push(this.selectedGenres.slice(0, 2).map(g => g.name).join(', '))
+    if (this.selectedArtists.length) partes.push(this.selectedArtists.slice(0, 2).map(a => a.name).join(', '))
+    if (this.selectedVibes.length) partes.push(this.selectedVibes.slice(0, 2).map(v => v.name).join(', '))
+    this.recommendationPreferencesText = partes.join(' • ') || 'Suas escolhas musicais'
+  },
+   
     handleRecommendationClick(item) {
       const type = item.type || item.categoria || 'musicas'
       switch(type) {
@@ -1133,7 +1044,7 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
           this.playRecommendation(item)
       }
     },
-    
+   
     playRecommendation(item) {
       const playerSong = {
         id: item.id,
@@ -1144,7 +1055,7 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
         duration: item.duration || 30,
         source: item.source || 'spotify'
       }
-      
+     
       window.dispatchEvent(new CustomEvent('play-song', {
         detail: {
           song: playerSong,
@@ -1156,10 +1067,10 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
           context: 'recommendations'
         }
       }))
-      
+     
       this.showToast('Tocando', item.title, 'success', 'fa fa-music')
     },
-    
+   
     getTypeIcon(type) {
       const icons = {
         musicas: 'fa fa-music',
@@ -1173,7 +1084,7 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
       }
       return icons[type] || 'fa fa-music'
     },
-    
+   
     getTypeLabel(type) {
       const labels = {
         musicas: 'Música',
@@ -1193,7 +1104,7 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
       this.currentMixModal = mix
       this.showMixModal = true
       document.body.style.overflow = 'hidden'
-      
+     
       // Se o mix tiver tracks, mostra no modal
       if (mix._tracks && mix._tracks.length > 0) {
         this.recommendations.musicas = mix._tracks.map(t => ({
@@ -1213,14 +1124,14 @@ let musicasFinais = this.gerarMockTracks('musicas', Date.now(), generoPrincipal,
   try {
     const token = localStorage.getItem('token')
     if (!token) return
-    
+   
     const res = await fetch(`${this.API_BASE_URL}/historico/estatisticas/mensal`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    
+   
     if (!res.ok) throw new Error(`Erro ${res.status}`)
     const data = await res.json()
-    
+   
     this.userStats.hoursListened = data.horasOuvidasEsteMes || 0
   } catch (err) {
     console.error('Erro ao carregar horas ouvidas:', err)
@@ -1291,7 +1202,7 @@ async loadSequencia() {
       if (data.selectedGenres) this.selectedGenres = data.selectedGenres
       if (data.selectedArtists) this.selectedArtists = data.selectedArtists
       if (data.selectedVibes) this.selectedVibes = data.selectedVibes
-      if (data.madeForYou) {
+           if (data.madeForYou) {
         this.madeForYou = data.madeForYou.map((mix, index) => ({
           id: mix.id,
           title: mix.title,
@@ -1299,7 +1210,10 @@ async loadSequencia() {
           tracks: mix.tracks || 0,
           cover: mix.cover || mix.gradient || this.genreGradients[index % this.genreGradients.length],
           gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
-          _tracks: mix._tracks || []
+          _tracks: mix._tracks || [],
+          artistId: mix.artistId || null,   // ✅ ADICIONADO
+          genreId: mix.genreId || null,     // ✅ ADICIONADO
+          vibeId: mix.vibeId || null        // ✅ ADICIONADO
         }))
       }
       if (data.followedArtists) {
@@ -1313,7 +1227,7 @@ async loadSequencia() {
       this.showToast('Perfil Atualizado', 'Suas preferências foram sincronizadas!', 'success', 'fa fa-magic')
     },
 
-    async playMix(mix) {
+        async playMix(mix) {
       if (mix._tracks && mix._tracks.length > 0) {
         const playerSongs = mix._tracks.map(t => ({
           id: t.id,
@@ -1331,12 +1245,168 @@ async loadSequencia() {
         return
       }
 
+      // ✅ CORREÇÃO: Se o mix tem artistId, busca tracks DESSE artista específico
+      if (mix.artistId) {
+        await this.playMixFromArtist(mix, mix.artistId)
+        return
+      }
+
+      // ✅ CORREÇÃO: Se o mix tem genreId, busca tracks de artistas DESSE gênero
+      if (mix.genreId) {
+        await this.playMixFromGenre(mix, mix.genreId)
+        return
+      }
+
+      // ✅ Fallback: só usa selectedArtists se o mix não tem artista/gênero específico
       if (this.selectedArtists.length > 0) {
         await this.playMixFromSelectedArtists(mix)
         return
       }
 
       this.showToast("Mix vazio", "Nenhuma música disponível neste mix", "info", "fa fa-info-circle")
+    },
+        async playMixFromArtist(mix, artistId) {
+      this.loading = true
+      try {
+        // Busca o artista nos dados locais primeiro
+        const artist = this.selectedArtists.find(a => a.id === artistId) ||
+                       this.followedArtists.find(a => a.id === artistId) ||
+                       this.spotifyPopularArtists.find(a => a.id === artistId)
+       
+        const artistName = artist?.name || mix.basedOn || 'Artista'
+       
+        // Tenta buscar do backend (Deezer ou Spotify)
+        let allTracks = []
+       
+        // Tenta Deezer primeiro
+        try {
+          const response = await fetch(`${this.API_BASE_URL}/deezer/artist/${artistId}/top?limit=15`)
+          const data = await response.json()
+          if (data.data && data.data.length > 0) {
+            allTracks = data.data.map(track => ({
+              id: track.id,
+              title: track.title,
+              artist: track.artist?.name || artistName,
+              cover: track.album?.cover_medium || artist?.photo || artist?.picture_medium || '',
+              url: track.preview,
+              duration: track.duration || 30,
+              source: 'deezer'
+            }))
+          }
+        } catch (e) {
+          console.warn(`⚠️ Deezer falhou para artista ${artistId}, tentando Spotify...`, e)
+        }
+
+        // Se Deezer falhou, tenta Spotify
+        if (allTracks.length === 0) {
+          try {
+            const response = await fetch(`${this.API_BASE_URL}/spotify/artists/${artistId}/top-tracks?market=BR`)
+            const data = await response.json()
+            if (data.tracks && data.tracks.length > 0) {
+              allTracks = data.tracks.map(track => ({
+                id: track.id,
+                title: track.name,
+                artist: track.artists?.[0]?.name || artistName,
+                cover: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url || '',
+                url: track.preview_url,
+                duration: Math.floor((track.duration_ms || 30000) / 1000),
+                source: 'spotify'
+              }))
+            }
+          } catch (e) {
+            console.warn(`⚠️ Spotify também falhou para artista ${artistId}:`, e)
+          }
+        }
+
+        if (allTracks.length > 0) {
+          // Salva no mix para próxima vez
+          mix._tracks = allTracks
+         
+          // Atualiza no localStorage
+          const mixes = JSON.parse(localStorage.getItem('feitoParaVoceMixes') || '[]')
+          const mixIndex = mixes.findIndex(m => m.id === mix.id)
+          if (mixIndex >= 0) {
+            mixes[mixIndex]._tracks = allTracks
+            localStorage.setItem('feitoParaVoceMixes', JSON.stringify(mixes))
+          }
+
+          window.dispatchEvent(new CustomEvent("play-song", {
+            detail: {
+              song: allTracks[0],
+              playlist: allTracks,
+              index: 0,
+              context: "made-for-you"
+            }
+          }))
+          this.showToast("Tocando Mix", `${mix.title} — ${allTracks.length} músicas`, "success", "fa fa-music")
+        } else {
+          // Fallback: se não achou tracks do artista, tenta os artistas selecionados
+          await this.playMixFromSelectedArtists(mix)
+        }
+      } catch (error) {
+        console.error('Erro ao criar mix do artista:', error)
+        this.showToast("Erro", "Falha ao carregar músicas do artista", "error", "fa fa-times")
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async playMixFromGenre(mix, genreId) {
+      this.loading = true
+      try {
+        // Busca o gênero nos dados locais
+        const genre = this.selectedGenres.find(g => g.id === genreId)
+        const genreName = genre?.name || mix.basedOn || 'Gênero'
+       
+        // Busca artistas populares desse gênero do Spotify
+        let allTracks = []
+       
+        try {
+          const response = await fetch(`${this.API_BASE_URL}/spotify/search?q=genre:"${encodeURIComponent(genreName.toLowerCase())}"&type=track&limit=20&market=BR`)
+          const data = await response.json()
+          if (data.tracks?.items && data.tracks.items.length > 0) {
+            allTracks = data.tracks.items.map(track => ({
+              id: track.id,
+              title: track.name,
+              artist: track.artists?.[0]?.name || 'Artista',
+              cover: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url || '',
+              url: track.preview_url,
+              duration: Math.floor((track.duration_ms || 30000) / 1000),
+              source: 'spotify'
+            }))
+          }
+        } catch (e) {
+          console.warn(`⚠️ Busca por gênero falhou:`, e)
+        }
+
+        if (allTracks.length > 0) {
+          mix._tracks = allTracks
+         
+          const mixes = JSON.parse(localStorage.getItem('feitoParaVoceMixes') || '[]')
+          const mixIndex = mixes.findIndex(m => m.id === mix.id)
+          if (mixIndex >= 0) {
+            mixes[mixIndex]._tracks = allTracks
+            localStorage.setItem('feitoParaVoceMixes', JSON.stringify(mixes))
+          }
+
+          window.dispatchEvent(new CustomEvent("play-song", {
+            detail: {
+              song: allTracks[0],
+              playlist: allTracks,
+              index: 0,
+              context: "made-for-you"
+            }
+          }))
+          this.showToast("Tocando Mix", `${mix.title} — ${allTracks.length} músicas`, "success", "fa fa-music")
+        } else {
+          await this.playMixFromSelectedArtists(mix)
+        }
+      } catch (error) {
+        console.error('Erro ao criar mix do gênero:', error)
+        this.showToast("Erro", "Falha ao carregar músicas do gênero", "error", "fa fa-times")
+      } finally {
+        this.loading = false
+      }
     },
 
     async playMixFromSelectedArtists(mix) {
@@ -1431,7 +1501,7 @@ async loadSequencia() {
   try {
     const response = await fetch(`${this.API_BASE_URL}/spotify/artists/popular?limit=45&market=BR`)
     const data = await response.json()
-    
+   
     // Seu backend retorna { artists: [...], groups: [...] }
     if (data.artists) {
       this.spotifyPopularArtists = data.artists.map(artist => ({
@@ -1544,7 +1614,7 @@ async loadSequencia() {
         const data = await response.json()
 
         if (Array.isArray(data.mixes) && data.mixes.length > 0) {
-          this.madeForYou = data.mixes.map((mix, index) => ({
+                    this.madeForYou = data.mixes.map((mix, index) => ({
             id: mix.id,
             title: mix.title,
             description: mix.description,
@@ -1553,9 +1623,12 @@ async loadSequencia() {
             gradient: mix.gradient || this.genreGradients[index % this.genreGradients.length],
             _tracks: mix._tracks || [],
             tipo: mix.tipo || 'mix',
-            basedOn: mix.basedOn || ''
+            basedOn: mix.basedOn || '',
+            artistId: mix.artistId || null,   // ✅ ADICIONADO
+            genreId: mix.genreId || null,     // ✅ ADICIONADO
+            vibeId: mix.vibeId || null        // ✅ ADICIONADO
           }))
-          
+         
           // Atualiza texto de preferências
           if (data.preferences) {
             const parts = []
@@ -1564,7 +1637,7 @@ async loadSequencia() {
             if (data.preferences.vibes?.length) parts.push(data.preferences.vibes.slice(0, 2).join(', '))
             this.recommendationPreferencesText = parts.join(' • ') || 'Suas escolhas'
           }
-          
+         
           return
         }
         this.loadMockMadeForYou()
@@ -1574,75 +1647,96 @@ async loadSequencia() {
       }
     },
 
-loadMockMadeForYou() {
-  // Usar preferências reais do usuário se disponíveis, senão usar defaults
-  const generoPrincipal = this.selectedGenres[0]?.name || 'pop'
-  const artistaPrincipal = this.selectedArtists[0]?.name || ''
-  
-  // Gêneros disponíveis no pool para mapeamento
-  const generosDisponiveis = ['rock', 'pop', 'funk', 'sertanejo', 'samba', 'gospel', 'eletronica', 'indie', 'rap', 'reggae', 'latino', 'lofi']
-  const generoNormalizado = this.getGenreAliases ? this.getGenreAliases(generoPrincipal)[0] : generoPrincipal.toLowerCase()
-  const generoPool = generosDisponiveis.includes(generoNormalizado) ? generoNormalizado : 'pop'
-
-  this.madeForYou = [
-    { 
-      id: 'mix_mock_1', 
-      title: `Mix ${generoPrincipal}`, 
-      description: `Baseado em suas escolhas de ${generoPrincipal}`, 
-      tracks: 15, 
-      cover: this.selectedGenres[0]?.gradient || "https://e-cdns-images.dzcdn.net/images/playlist/1/250x250.jpg", 
-      gradient: this.selectedGenres[0]?.gradient || "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", 
-      _tracks: this.gerarMockTracksParaMix(generoPool, 1),
-      tipo: 'mix',
-      basedOn: generoPrincipal
-    },
-    { 
-      id: 'mix_mock_2', 
-      title: "Descobertas", 
-      description: "Novas músicas para você", 
-      tracks: 15, 
-      cover: "https://e-cdns-images.dzcdn.net/images/playlist/3/250x250.jpg", 
-      gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", 
-      _tracks: this.gerarMockTracksParaMix(generoPool, 2),
-      tipo: 'descobertas',
-      basedOn: 'múltiplos gostos'
-    },
-    { 
-      id: 'mix_mock_3', 
-      title: "On Repeat", 
-      description: "Músicas que você ama", 
-      tracks: 15, 
-      cover: "https://e-cdns-images.dzcdn.net/images/playlist/4/250x250.jpg", 
-      gradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", 
-      _tracks: this.gerarMockTracksParaMix(generoPool, 3),
-      tipo: 'mix',
-      basedOn: `${generoPrincipal}, Pop`
-    },
-    { 
-      id: 'mix_mock_4', 
-      title: "Radar", 
-      description: "Atualizado toda sexta", 
-      tracks: 15, 
-      cover: "https://e-cdns-images.dzcdn.net/images/playlist/5/250x250.jpg", 
-      gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", 
-      _tracks: this.gerarMockTracksParaMix(generoPool, 4),
-      tipo: 'top',
-      basedOn: generoPrincipal
-    },
-    { 
-      id: 'mix_mock_5', 
-      title: artistaPrincipal ? `Mix ${artistaPrincipal}` : "Mix Diário", 
-      description: artistaPrincipal ? `Hits de ${artistaPrincipal}` : "Personalizado para você", 
-      tracks: 15, 
-      cover: this.selectedArtists[0]?.photo || "https://e-cdns-images.dzcdn.net/images/playlist/2/250x250.jpg", 
-      gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", 
-      _tracks: this.gerarMockTracksParaMix(generoPool, 5),
-      tipo: 'mix',
-      basedOn: artistaPrincipal || generoPrincipal
+  loadMockMadeForYou() {
+    // ✅ Fallback: cria mixes APENAS a partir das seleções REAIS do usuário
+    const generoPrincipal = this.selectedGenres[0]?.name || ''
+    const artistaPrincipal = this.selectedArtists[0]?.name || ''
+   
+    this.madeForYou = []
+   
+    // Mix por cada gênero selecionado
+    if (this.selectedGenres.length > 0) {
+      this.selectedGenres.forEach((g, i) => {
+        if (i < 5) {
+          this.madeForYou.push({
+            id: 'mix_genre_' + g.id,
+            title: 'Mix ' + g.name,
+            description: `Baseado em ${g.name}`,
+            tracks: 0,
+            cover: g.gradient || this.genreGradients[i % this.genreGradients.length],
+            gradient: g.gradient || this.genreGradients[i % this.genreGradients.length],
+            _tracks: [],
+            tipo: 'mix',
+            basedOn: g.name,
+            genreId: g.id,        // ✅ ADICIONADO
+            artistId: null        // ✅ ADICIONADO
+          })
+        }
+      })
     }
-  ]
-  this.recommendationPreferencesText = [generoPrincipal, artistaPrincipal].filter(Boolean).join(', ') || 'Suas escolhas'
-},
+   
+    // Mix por cada artista selecionado
+    if (this.selectedArtists.length > 0) {
+      this.selectedArtists.forEach((a, i) => {
+        if (i < 3) {
+          this.madeForYou.push({
+            id: 'mix_artist_' + a.id,
+            title: 'Mix ' + a.name,
+            description: `Com ${a.name}`,
+            tracks: 0,
+            cover: a.photo || a.picture_medium || this.genreGradients[i % this.genreGradients.length],
+            gradient: this.genreGradients[i % this.genreGradients.length],
+            _tracks: [],
+            tipo: 'mix',
+            basedOn: a.name,
+            artistId: a.id,       // ✅ ADICIONADO
+            genreId: null         // ✅ ADICIONADO
+          })
+        }
+      })
+    }
+   
+    // Mix por cada vibe selecionada
+    if (this.selectedVibes.length > 0) {
+      this.selectedVibes.forEach((v, i) => {
+        if (i < 3) {
+          this.madeForYou.push({
+            id: 'mix_vibe_' + v.id,
+            title: 'Mix ' + v.name,
+            description: v.description || `Para o momento ${v.name}`,
+            tracks: 0,
+            cover: v.gradient || this.genreGradients[(i + 5) % this.genreGradients.length],
+            gradient: v.gradient || this.genreGradients[(i + 5) % this.genreGradients.length],
+            _tracks: [],
+            tipo: 'mix',
+            basedOn: v.name,
+            vibeId: v.id,         // ✅ ADICIONADO
+            artistId: null,       // ✅ ADICIONADO
+            genreId: null         // ✅ ADICIONADO
+          })
+        }
+      })
+    }
+   
+    // Só adiciona mix padrão se NÃO houver nenhuma seleção
+    if (this.madeForYou.length === 0) {
+      this.madeForYou = [{
+        id: 'mix_default',
+        title: 'Mix de Descobertas',
+        description: 'Explore novas músicas',
+        tracks: 0,
+        cover: this.genreGradients[0],
+        gradient: this.genreGradients[0],
+        _tracks: [],
+        tipo: 'mix',
+        basedOn: 'geral',
+        artistId: null,         // ✅ ADICIONADO
+        genreId: null           // ✅ ADICIONADO
+      }]
+    }
+   
+    this.recommendationPreferencesText = [generoPrincipal, artistaPrincipal].filter(Boolean).join(', ') || 'Suas escolhas'
+  },
 
     async loadAllData() {
       this.loading = true
@@ -1656,7 +1750,7 @@ loadMockMadeForYou() {
           this.loadUserPlaylists(),
           this.carregarCurtidas(),
            this.loadHorasOuvidas(),
-           this.loadSequencia() 
+           this.loadSequencia()
         ])
       } catch (error) {
         console.error("Erro ao carregar dashboard:", error)
@@ -2132,9 +2226,9 @@ async loadNewReleases() {
         source: 'spotify'
       }))
     }
-  } catch (error) { 
+  } catch (error) {
     console.error('Erro lançamentos:', error)
-    this.newReleases = [] 
+    this.newReleases = []
   }
 },
     async loadGenres() {
@@ -2294,7 +2388,7 @@ this.followedArtists = cantores
   try {
     const response = await fetch(`${this.API_BASE_URL}/spotify/album/${album.id}`)
     const data = await response.json()
-    
+   
     if (data.tracks?.items?.length > 0) {
       this.currentAlbum = album
       const playerSong = {
@@ -2357,17 +2451,17 @@ this.followedArtists = cantores
  async loadMoreReleases() {
   this.loadingMoreTracks = true
   this.showToast('Carregando', 'Buscando mais lançamentos...', 'info', 'fa fa-spinner fa-spin')
-  
+ 
   try {
     const token = localStorage.getItem('token')
     const offset = this.spotifyNewReleases.length  // ← MUDADO
-    
+   
     const response = await fetch(
       `${this.API_BASE_URL}/spotify/search?q=tag:new&type=album&limit=10&offset=${offset}&market=BR`,
       { headers: { Authorization: `Bearer ${token}` } }
     )
     const data = await response.json()
-    
+   
     if (data.albums?.items && data.albums.items.length > 0) {
       const newAlbums = data.albums.items.map(album => ({
         id: album.id,
@@ -2379,10 +2473,10 @@ this.followedArtists = cantores
         total_tracks: album.total_tracks,
         source: 'spotify'
       }))
-      
+     
       const existingIds = new Set(this.spotifyNewReleases.map(a => a.id))  // ← MUDADO
       const uniqueNewAlbums = newAlbums.filter(a => !existingIds.has(a.id))
-      
+     
       this.spotifyNewReleases = [...this.spotifyNewReleases, ...uniqueNewAlbums]  // ← MUDADO
       this.showToast('Pronto!', `${uniqueNewAlbums.length} novos lançamentos carregados`, 'success', 'fa fa-check')
     } else {
@@ -5301,25 +5395,25 @@ this.followedArtists = cantores
     max-height: 100vh;
     border-radius: 0;
   }
-  
+ 
   .category-tabs {
     padding: 12px 16px;
   }
-  
+ 
   .tab-btn {
     padding: 8px 14px;
     font-size: 13px;
   }
-  
+ 
   .recommendations-body {
     padding: 12px 16px;
   }
-  
+ 
   .rec-cover {
     width: 48px;
     height: 48px;
   }
-  
+ 
   .rec-meta {
     display: none;
   }
@@ -5354,5 +5448,26 @@ this.followedArtists = cantores
     font-size: 18px;
   }
 }
+/* ===== UNIFORMIZAR CARDS FEITO PARA VOCÊ ===== */
+.music-card.album-card .card-image,
+.music-card.album-card .card-image img {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
 
+.music-card.album-card {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.music-card.album-card .card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 70px;
+}
 </style>
