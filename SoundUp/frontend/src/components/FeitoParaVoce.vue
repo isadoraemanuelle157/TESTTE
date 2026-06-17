@@ -535,7 +535,8 @@ export default {
         this.saveFollowedArtists()
         this.dispatchDashboardUpdate()
         localStorage.setItem("artistasFavoritos", JSON.stringify(this.selectedArtists.map(a => a.id)))
-        localStorage.setItem("onboardingCompleto", "true")
+       localStorage.setItem("onboardingCompleto", "true")
+localStorage.setItem("onboardingStep", "3")        // ✅ ADICIONAR ESTA LINHA
         this.showSuccess = false
         await new Promise(r => setTimeout(r, 300))
         await this.startSplashTransition()

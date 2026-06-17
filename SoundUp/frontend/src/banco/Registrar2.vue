@@ -476,6 +476,7 @@ if (!isValid) {
         localStorage.setItem("token", token)
         localStorage.setItem("isLoggedIn", "true")
         localStorage.removeItem('usuario_temp')
+        localStorage.setItem("onboardingStep", "2")   
         localStorage.removeItem('registrar_etapa1_dados')
         localStorage.removeItem('registrar_etapa2_dados')
 
@@ -560,6 +561,7 @@ if (!isValid) {
         localStorage.setItem("usuario_perfil", JSON.stringify(userData))
         localStorage.setItem("token", token)
         localStorage.setItem("isLoggedIn", "true")
+        localStorage.setItem("onboardingStep", "2") 
         localStorage.removeItem('registrar_etapa1_dados')
         localStorage.removeItem('registrar_etapa2_dados')
 

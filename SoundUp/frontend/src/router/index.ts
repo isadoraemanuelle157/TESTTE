@@ -85,12 +85,12 @@ const router = createRouter({
       name: 'musicplayer',
       component: MusicPlayer,
     },
-    {
-      path: '/feitoparavoce',
-      name: 'feitoparavoce',
-      component: FeitoParaVoce,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
+{
+  path: '/feitoparavoce',
+  name: 'feitoparavoce',
+  component: FeitoParaVoce,
+  meta: { requiresAuth: true, requiresOnboardingOrder: true },  // ← ADICIONAR requiresOnboardingOrder
+},
     {
       path: '/notificacoes',
       name: 'notificacoes',
@@ -211,32 +211,36 @@ const router = createRouter({
       component: EditarUsuario,
       meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
-    {
-      path: '/generos',
-      name: 'generos',
-      component: Generos,
-    },
-    {
-      path: '/vibe',
-      name: 'vibe',
-      component: Vibe,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
-    {
-      path: '/musicas',
-      name: 'musicas',
-      component: Musicas,
-    },
-    {
-      path: '/albuns',
-      name: 'albuns',
-      component: Albuns,
-    },
-    {
-      path: '/cantor',
-      name: 'cantor',
-      component: Cantor,
-    },
+   {
+  path: '/generos',
+  name: 'generos',
+  component: Generos,
+  meta: { requiresAdmin: true },  // ← ADICIONAR
+},
+{
+  path: '/vibe',
+  name: 'vibe',
+  component: Vibe,
+  meta: { requiresAdmin: true },  // ← SUBSTITUIR o meta anterior
+},
+{
+  path: '/musicas',
+  name: 'musicas',
+  component: Musicas,
+  meta: { requiresAdmin: true },  // ← ADICIONAR
+},
+{
+  path: '/albuns',
+  name: 'albuns',
+  component: Albuns,
+  meta: { requiresAdmin: true },  // ← ADICIONAR
+},
+{
+  path: '/cantor',
+  name: 'cantor',
+  component: Cantor,
+  meta: { requiresAdmin: true },  // ← ADICIONAR
+},
      {
       path: '/cantor/:id',
       name: 'DetalheCantor',
@@ -282,25 +286,80 @@ const router = createRouter({
 })
 
 // 🔥 NOVO: Guarda de navegação global
+// 🔥 NOVO: Guarda de navegação global
 router.beforeEach((to, from, next) => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
   const token = localStorage.getItem('token')
-
-  // Verifica se rota requer autenticação
+  
+  // ─── 1. Verifica se rota requer autenticação ───
   if (to.meta.requiresAuth) {
     if (!isLoggedIn || !token) {
-      // Não está logado, redireciona para login
-      next('/login')
-      return
+      return next('/login')
     }
   }
 
-  // Verifica se rota é só para visitantes (não logados)
+  // ─── 2. Verifica se rota é só para visitantes (não logados) ───
   if (to.meta.guestOnly) {
     if (isLoggedIn && token) {
-      // Já está logado, redireciona para dashboard
-      next('/dashboard')
-      return
+      return next('/dashboard')
+    }
+  }
+
+  // ─── 3. Verifica se rota requer ADMIN ───
+  // ✅ ADICIONAR ESTE BLOCO INTEIRO
+  if (to.meta.requiresAdmin) {
+    if (!isLoggedIn || !token) {
+      return next('/login')
+    }
+    
+    // Decodifica o token para pegar a role
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const userRole = payload.role || 'user'
+      
+      if (userRole !== 'admin') {
+        // Não é admin, redireciona para dashboard
+        return next('/dashboard')
+      }
+    } catch (e) {
+      // Token inválido
+      localStorage.removeItem('token')
+      localStorage.removeItem('isLoggedIn')
+      return next('/login')
+    }
+  }
+
+  // ─── 4. Verifica ordem do onboarding (FeitoParaVoce) ───
+  // ✅ ADICIONAR ESTE BLOCO INTEIRO
+  if (to.meta.requiresOnboardingOrder) {
+    if (!isLoggedIn || !token) {
+      return next('/login')
+    }
+    
+    // ✅ NOVO: Verificar se é admin — admins podem acessar a qualquer momento
+    let isAdmin = false
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      isAdmin = payload.role === 'admin'
+    } catch (e) {
+      isAdmin = false
+    }
+    
+    // Se for admin, pula a verificação de onboarding
+    if (isAdmin) {
+      // Admin pode acessar /feitoparavoce sem restrição
+      return next()
+    }
+    
+    // Verifica se o usuário completou o registrar2 (etapa 2)
+    const onboardingStep = localStorage.getItem('onboardingStep')
+    const onboardingCompleto = localStorage.getItem('onboardingCompleto') === 'true'
+    
+    // Só permite acessar se já passou pela etapa 2 (registrar2)
+    // ou se já completou o onboarding alguma vez
+    if (!onboardingCompleto && onboardingStep !== '2' && onboardingStep !== '3') {
+      // Redireciona para o registrar2 se ainda não completou etapa 2
+      return next('/registrar2')
     }
   }
 

@@ -127,6 +127,47 @@
               </router-link>
             </li>
 
+            <!-- ✅ ADICIONAR ESTE BLOCO INTEIRO no <nav><ul>, depois do Match Musical -->
+<!-- Divider de Admin -->
+<li v-if="isAdmin" class="admin-divider">
+  <span class="admin-label">Admin</span>
+</li>
+
+<li v-if="isAdmin">
+  <router-link to="/albuns" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-folder-open"></i>
+    <span>Álbuns</span>
+  </router-link>
+</li>
+
+<li v-if="isAdmin">
+  <router-link to="/cantor" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-user"></i>
+    <span>Cantores</span>
+  </router-link>
+</li>
+
+<li v-if="isAdmin">
+  <router-link to="/generos" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-tags"></i>
+    <span>Gêneros</span>
+  </router-link>
+</li>
+
+<li v-if="isAdmin">
+  <router-link to="/musicas" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-music"></i>
+    <span>Músicas</span>
+  </router-link>
+</li>
+
+<li v-if="isAdmin">
+  <router-link to="/vibe" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-bolt"></i>
+    <span>Vibes</span>
+  </router-link>
+</li>
+
           </ul>
         </nav>
       </div>
@@ -150,6 +191,7 @@ export default {
   data() {
     return {
       isLoggedIn: false,
+      isAdmin: false,
       currentUser: {
         firstName: 'Usuário',
         avatar: 'https://i.pravatar.cc/150?img=11',
@@ -174,14 +216,33 @@ export default {
   },
 
   methods: {
-    checkAuthStatus() {
-      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
-      this.isLoggedIn = isLoggedIn
-      
-      if (isLoggedIn) {
-        this.loadUserData()
-      }
-    },
+checkAuthStatus() {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
+  this.isLoggedIn = isLoggedIn
+  
+  if (isLoggedIn) {
+    this.loadUserData()
+    this.checkAdminRole()   // ← ADICIONAR ESTA LINHA
+  } else {
+    this.isAdmin = false    // ← ADICIONAR ESTA LINHA
+  }
+},
+
+// ✅ ADICIONAR ESTE MÉTODO NOVO nos methods
+checkAdminRole() {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    this.isAdmin = false
+    return
+  }
+  
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    this.isAdmin = payload.role === 'admin'
+  } catch (e) {
+    this.isAdmin = false
+  }
+},
 
     loadUserData() {
       const storedUser = localStorage.getItem('usuario')
@@ -199,25 +260,27 @@ export default {
       }
     },
 
-    handleLogin(e) {
-      this.isLoggedIn = true
-      if (e.detail) {
-        this.currentUser = {
-          firstName: e.detail.nome ? e.detail.nome.split(' ')[0] : e.detail.firstName || 'Usuário',
-          avatar: e.detail.avatar || e.detail.foto || 'https://i.pravatar.cc/150?img=11',
-          plan: e.detail.plano || e.detail.plan || 'Free'
-        }
-      }
-    },
+handleLogin(e) {
+  this.isLoggedIn = true
+  if (e.detail) {
+    this.currentUser = {
+      firstName: e.detail.nome ? e.detail.nome.split(' ')[0] : e.detail.firstName || 'Usuário',
+      avatar: e.detail.avatar || e.detail.foto || 'https://i.pravatar.cc/150?img=11',
+      plan: e.detail.plano || e.detail.plan || 'Free'
+    }
+  }
+  this.checkAdminRole()   // ← ADICIONAR ESTA LINHA
+},
 
-    handleLogout() {
-      this.isLoggedIn = false
-      this.currentUser = {
-        firstName: 'Usuário',
-        avatar: 'https://i.pravatar.cc/150?img=11',
-        plan: 'Free'
-      }
-    },
+handleLogout() {
+  this.isLoggedIn = false
+  this.isAdmin = false          // ← ADICIONAR ESTA LINHA
+  this.currentUser = {
+    firstName: 'Usuário',
+    avatar: 'https://i.pravatar.cc/150?img=11',
+    plan: 'Free'
+  }
+},
 
     logout() {
       // Limpar todos os dados do localStorage
@@ -561,6 +624,21 @@ export default {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+/* ✅ ADICIONAR no final do <style scoped> */
+.admin-divider {
+  padding: 16px 20px 8px;
+  margin: 8px 12px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #ec4899;
 }
 
 /* ========== NAVEGAÇÃO ========== */
