@@ -62,7 +62,10 @@
         <div v-else class="genres-masonry">
           <button v-for="(genre, i) in genres" :key="genre.id" class="genre-tile" :class="{ active: selectedGenres.some(g => g.id === genre.id), 'is-large': i % 7 === 0 }" :style="{ '--genre-color': genre.color, '--genre-gradient': genre.gradient, animationDelay: i * 0.04 + 's' }" @click="toggleGenre(genre)">
             <div class="tile-bg" :style="{ background: genre.gradient }"></div>
-            <div class="tile-content"><span class="genre-emoji">{{ genre.emoji }}</span><span class="genre-name">{{ genre.name }}</span></div>
+           <div class="tile-content">
+  <span class="genre-emoji"><i :class="genre.emoji"></i></span>
+  <span class="genre-name">{{ genre.name }}</span>
+</div>
             <div class="tile-check"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>
             <div class="tile-shine"></div>
           </button>
@@ -299,7 +302,10 @@ export default {
       return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(${hue},70%,20%)"/><stop offset="100%" stop-color="hsl(${hue},70%,10%)"/></linearGradient></defs><rect width="400" height="400" fill="url(#g)"/><circle cx="200" cy="150" r="50" fill="rgba(255,255,255,0.1)"/><ellipse cx="200" cy="340" rx="90" ry="70" fill="rgba(255,255,255,0.1)"/><circle cx="200" cy="135" r="45" fill="rgba(255,255,255,0.15)"/><ellipse cx="200" cy="330" rx="80" ry="60" fill="rgba(255,255,255,0.15)"/></svg>`)}`
     },
     handleImageError(e) { e.target.src = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="%231a1a2e"/><circle cx="200" cy="160" r="60" fill="%23333"/><ellipse cx="200" cy="320" rx="100" ry="80" fill="%23333"/><text x="200" y="380" font-family="Arial" font-size="16" fill="%23666" text-anchor="middle">Artista</text></svg>`)}` },
-    limitGenres(list) { return this.mergeUniqueByName([], list).slice(0, 15) },
+limitGenres(list) { 
+  // Aumentar limite para 30 gêneros em vez de 15
+  return this.mergeUniqueByName([], list).slice(0, 30) 
+},
     limitVibes(list) { return this.mergeUniqueByName([], list).slice(0, 18) },
     limitArtistsByGenre(list) {
       if (list.length <= 45) return list
@@ -330,7 +336,11 @@ export default {
         let g = [], a = [], v = []
         if (spotify.status === 'fulfilled') { g = [...g, ...spotify.value.genres]; a = [...a, ...spotify.value.artists]; v = [...v, ...spotify.value.vibes] }
         if (local.status === 'fulfilled') { g = [...g, ...local.value.genres]; a = [...a, ...local.value.artists]; v = [...v, ...local.value.vibes] }
-        this.genres = this.limitGenres(this.mergeUniqueByName([], g))
+      // Mesclar e garantir que todos os gêneros únicos apareçam
+const mergedGenres = this.mergeUniqueByName([], g)
+console.log('🎵 Total de gêneros antes do limit:', mergedGenres.length)
+this.genres = this.limitGenres(mergedGenres)
+console.log('🎵 Total de gêneros após limit:', this.genres.length)
         this.artists = this.limitArtistsByGenre(this.mergeUniqueByName([], a))
         this.vibes = this.limitVibes(this.mergeUniqueByName([], v))
         console.log('📊 Dados carregados:', { genres: this.genres.length, artists: this.artists.length, vibes: this.vibes.length })
@@ -342,12 +352,22 @@ export default {
       try {
         const data = await this.fetchJson("http://localhost:3002/spotify/artists/popular", "Spotify artists popular")
         const generosUnicos = new Map(), artists = []
-        ;(data.groups || []).forEach((group, i) => {
-          if (group.genre) {
-            const nomeFormatado = group.genre.replace('brazilian ', '').replace(/^./, s => s.toUpperCase())
-            const genreKey = this.normalizeText(group.genre)
-            if (!generosUnicos.has(genreKey)) generosUnicos.set(genreKey, { id: "spotify_" + genreKey, name: nomeFormatado, emoji: this.getEmoji(group.genre), color: this.getColor(i), gradient: this.getGradient(i), source: "spotify" })
-          }
+;(data.groups || []).forEach((group, i) => {
+  if (group.genre) {
+    const nomeFormatado = group.genre.replace('brazilian ', '').replace(/^./, s => s.toUpperCase())
+    const genreKey = this.normalizeText(group.genre)
+    if (!generosUnicos.has(genreKey)) {
+      generosUnicos.set(genreKey, { 
+        id: "spotify_" + genreKey, 
+        name: nomeFormatado, 
+        emoji: this.getEmoji(group.genre), 
+        color: this.getColor(i), 
+        gradient: this.getGradient(i), 
+        source: "spotify" 
+      })
+      console.log('🎵 Gênero Spotify adicionado:', nomeFormatado)
+    }
+  }
           ;(group.artists || []).slice(0, 3).forEach((artist, j) => {
             artists.push({ id: artist.id, name: artist.name, photo: artist.images?.[0]?.url || this.getPlaceholderImage(i * 3 + j), genre: group.genre, genreGroup: group.genre, popularity: artist.popularity || Math.floor(Math.random() * 20) + 70, source: "spotify" })
           })
@@ -363,9 +383,22 @@ export default {
     async loadAllLocalData() {
       const [gr, cr, vr] = await Promise.allSettled([fetch("http://localhost:3002/generos"), fetch("http://localhost:3002/cantores"), fetch("http://localhost:3002/vibes")])
       let genres = [], artists = [], vibes = []
-      if (gr.status === 'fulfilled' && gr.value.ok) {
-        try { const d = await gr.value.json(); genres = Object.values(d).flat().map((g, i) => ({ id: g._id, name: g.nome, emoji: g.icon || this.getEmoji(g.nome), color: g.color || this.getColor(i), gradient: g.gradient || this.getGradient(i), source: "local" })) } catch (e) { console.error("Erro generos:", e) }
-      }
+if (gr.status === 'fulfilled' && gr.value.ok) {
+  try { 
+    const d = await gr.value.json()
+    // Se vier como objeto agrupado (ex: {popular: [...], rock: [...]}), achatar
+    let flatGenres = Array.isArray(d) ? d : Object.values(d).flat()
+    console.log('📦 Gêneros locais carregados:', flatGenres.length)
+    genres = flatGenres.map((g, i) => ({ 
+      id: g._id || g.id || `local_${i}`, 
+      name: g.nome || g.name || 'Gênero', 
+      emoji: g.icon || g.emoji || this.getEmoji(g.nome || g.name), 
+      color: g.color || this.getColor(i), 
+      gradient: g.gradient || this.getGradient(i), 
+      source: "local" 
+    })) 
+  } catch (e) { console.error("Erro generos:", e) }
+}
       if (cr.status === 'fulfilled' && cr.value.ok) {
         try { const d = await cr.value.json(); artists = d.map((c, i) => ({ id: c._id, name: c.nome, photo: c.foto || this.getPlaceholderImage(i + 10), genre: c.generos?.length ? c.generos.map(g => g.nome).join(", ") : "Sem genero", popularity: Math.floor(Math.random() * 20) + 80, source: "local" })) } catch (e) { console.error("Erro cantores:", e) }
       }
@@ -394,10 +427,30 @@ export default {
       })
       this.vibes = this.limitVibes(this.mergeUniqueByName(this.vibes, novas))
     },
-    getEmoji(nome) {
-      const map = { pop: "🎵", rock: "🎸", funk: "🔥", hiphop: "🎤", trap: "🎤", rap: "🎤", eletronica: "🎹", gospel: "🙏", samba: "🥁", sertanejo: "🌾", mpb: "🇧🇷", pagode: "🪘", reggae: "🌿", indie: "🎧", metal: "🤘", jazz: "🎷", blues: "🎺", country: "🤠", classical: "🎻", reggaeton: "🔊", kpop: "🇰🇷", latino: "💃", rnb: "🎶", soul: "🕊️", disco: "🕺", punk: "👿", folk: "🪕", ambient: "🌊", "lo-fi": "☕", house: "🏠", techno: "🤖", trance: "🌀", dubstep: "💥", drumnbass: "🥁", afrobeat: "🌍", bossa: "🌴", forro: "🪗", axe: "🎉", brega: "💎", arrocha: "💔", sambarock: "🎸", tropical: "🌺", chill: "😌", workout: "💪", party: "🎊", study: "📚", sleep: "😴", focus: "🎯", commute: "🚗", cooking: "🍳", gaming: "🎮", meditation: "🧘", romance: "💕", sad: "😢", happy: "😊", angry: "😤", nostalgic: "📸" }
-      return map[this.normalizeText(nome).replace(/\s/g, "")] || "🎶"
-    },
+getEmoji(nome) {
+  const map = { 
+    pop: "fas fa-music", rock: "fas fa-guitar", funk: "fas fa-fire", 
+    hiphop: "fas fa-microphone", trap: "fas fa-microphone", rap: "fas fa-microphone", 
+    eletronica: "fas fa-bolt", gospel: "fas fa-praying-hands", samba: "fas fa-drum", 
+    sertanejo: "fas fa-hat-cowboy", mpb: "fas fa-flag", pagode: "fas fa-users", 
+    reggae: "fas fa-leaf", indie: "fas fa-headphones", metal: "fas fa-hand-rock", 
+    jazz: "fas fa-saxophone", blues: "fas fa-guitar", country: "fas fa-hat-cowboy", 
+    classical: "fas fa-violin", reggaeton: "fas fa-volume-up", kpop: "fas fa-star", 
+    latino: "fas fa-dancer", rnb: "fas fa-heart", soul: "fas fa-dove", 
+    disco: "fas fa-compact-disc", punk: "fas fa-skull", folk: "fas fa-guitar", 
+    ambient: "fas fa-water", "lo-fi": "fas fa-coffee", house: "fas fa-home", 
+    techno: "fas fa-robot", trance: "fas fa-sun", dubstep: "fas fa-bomb", 
+    drumnbass: "fas fa-drum", afrobeat: "fas fa-globe-americas", bossa: "fas fa-umbrella-beach", 
+    forro: "fas fa-accordion", axe: "fas fa-bullhorn", brega: "fas fa-gem", 
+    arrocha: "fas fa-heart-broken", sambarock: "fas fa-guitar", tropical: "fas fa-sun", 
+    chill: "fas fa-couch", workout: "fas fa-dumbbell", party: "fas fa-glass-cheers", 
+    study: "fas fa-book", sleep: "fas fa-bed", focus: "fas fa-bullseye", 
+    commute: "fas fa-car", cooking: "fas fa-utensils", gaming: "fas fa-gamepad", 
+    meditation: "fas fa-spa", romance: "fas fa-heart", sad: "fas fa-sad-tear", 
+    happy: "fas fa-smile", angry: "fas fa-angry", nostalgic: "fas fa-camera-retro" 
+  }
+  return map[this.normalizeText(nome).replace(/\s/g, "")] || "fas fa-music"
+},
     getColor(i) { return ["#E91E63","#F44336","#FF9800","#00BCD4","#9C27B0","#4CAF50","#3F51B5","#FF5722","#009688","#795548","#607D8B","#8BC34A","#CDDC39","#FFEB3B","#00ACC1"][i % 15] },
     getGradient(i) { return ["linear-gradient(135deg,#E91E63,#F48FB1)","linear-gradient(135deg,#F44336,#EF5350)","linear-gradient(135deg,#FF9800,#FFB74D)","linear-gradient(135deg,#00BCD4,#4DD0E1)","linear-gradient(135deg,#9C27B0,#CE93D8)","linear-gradient(135deg,#4CAF50,#81C784)","linear-gradient(135deg,#3F51B5,#7986CB)","linear-gradient(135deg,#FF5722,#FF8A65)","linear-gradient(135deg,#009688,#80CBC4)","linear-gradient(135deg,#795548,#BCAAA4)","linear-gradient(135deg,#607D8B,#B0BEC5)","linear-gradient(135deg,#8BC34A,#C5E1A5)","linear-gradient(135deg,#CDDC39,#E6EE9C)","linear-gradient(135deg,#FFEB3B,#FFF59D)","linear-gradient(135deg,#00ACC1,#80DEEA)"][i % 15] },
     getBgStyle(step) { return { background: { 1: 'radial-gradient(circle at 20% 50%, rgba(233,30,99,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,152,0,0.1) 0%, transparent 50%)', 2: 'radial-gradient(circle at 50% 50%, rgba(29,185,84,0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(138,43,226,0.1) 0%, transparent 50%)', 3: 'radial-gradient(circle at 80% 20%, rgba(102,126,234,0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(240,147,251,0.1) 0%, transparent 50%)' }[step] } },
@@ -658,8 +711,9 @@ localStorage.setItem("onboardingStep", "3")        // ✅ ADICIONAR ESTA LINHA
 .tile-bg{position:absolute;inset:0;opacity:0;transition:opacity .3s ease}
 .genre-tile.active .tile-bg{opacity:1}
 .tile-content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px}
-.genre-emoji{font-size:24px;filter:grayscale(100%);transition:all .3s ease}
-.genre-tile.active .genre-emoji{filter:grayscale(0%);transform:scale(1.1)}
+.genre-emoji{font-size:24px;color:rgba(255,255,255,.6);transition:all .3s ease}
+.genre-emoji i{font-size:inherit}
+.genre-tile.active .genre-emoji{color:#fff;transform:scale(1.1)}
 .is-large .genre-emoji{font-size:28px}
 .genre-name{font-size:12px;font-weight:700;color:rgba(255,255,255,.8);text-align:center;line-height:1.2}
 .genre-tile.active .genre-name{color:#fff}

@@ -107,7 +107,7 @@ const FALLBACK_VIBES = [
   { id: 'spotify_treino', name: 'Treino', emoji: '💪', description: 'Energia pra academia', gradient: 'linear-gradient(135deg,#11998e,#38ef7d)', tags: ['academia', 'foco', 'energia'] },
   { id: 'spotify_focus', name: 'Focus', emoji: '🧠', description: 'Concentração total', gradient: 'linear-gradient(135deg,#36d1dc,#5b86e5)', tags: ['estudo', 'trabalho', 'lo-fi'] },
   { id: 'spotify_sertanejo', name: 'Modão', emoji: '🤠', description: 'Raiz e sofrência', gradient: 'linear-gradient(135deg,#8B4513,#D2691E)', tags: ['sertanejo', 'modão', 'universitário'] },
-  { id: 'spotify_pagode', name: 'Pagode', emoji: '🪘', description: 'Roda de samba e resenha', gradient: 'linear-gradient(135deg,#FF6B35,#F7931E)', tags: ['samba', 'pagode', 'resenha'] },
+  { id: 'spotify_pagode', name: 'Pagode', emoji: '🥁', description: 'Roda de samba e resenha', gradient: 'linear-gradient(135deg,#FF6B35,#F7931E)', tags: ['samba', 'pagode', 'resenha'] },
   { id: 'spotify_funk', name: 'Funk', emoji: '🔥', description: 'Batida brasileira', gradient: 'linear-gradient(135deg,#E91E63,#9C27B0)', tags: ['funk', 'baile', 'ritmo'] },
   { id: 'spotify_gospel', name: 'Gospel', emoji: '🙏', description: 'Fé e inspiração', gradient: 'linear-gradient(135deg,#FFD700,#FF8C00)', tags: ['gospel', 'louvor', 'fé'] }
 ]
