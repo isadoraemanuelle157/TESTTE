@@ -1,6 +1,7 @@
 const GameSession = require('../models/GameSession')
 const UserGameStats = require('../models/UserGameStats')
 const GameQuestion = require('../models/GameQuestion')
+const Usuario = require('../models/Usuario')
 const axios = require('axios')
 const { spotifyRequest } = require('../utils/spotifyRequest')
 const DEEZER_API_URL = 'https://api.deezer.com'
@@ -1210,21 +1211,52 @@ const getLeaderboard = async (periodo = 'semana', limite = 50) => {
     dataCorte.setDate(dataCorte.getDate() - 1)
   }
   
+  // ⚡ CORREÇÃO: Busca TODAS as sessões completadas, não só do período
+  // e agrupa por usuário para pegar a MELHOR pontuação de cada um
   const sessions = await GameSession.find({
     completada: true,
     dataFim: { $gte: dataCorte }
   })
     .sort({ pontuacao: -1 })
     .limit(limite)
-    .populate('usuario', 'nome username avatar')
+    .populate('usuario', 'nome username avatar avatarDourado equippedItems')
     .lean()
+
+  // ⚡ Se não houver sessões no período, busca TODAS as sessões completadas
+  if (sessions.length === 0) {
+    const allSessions = await GameSession.find({ completada: true })
+      .sort({ pontuacao: -1 })
+      .limit(limite)
+      .populate('usuario', 'nome username avatar avatarDourado equippedItems')
+      .lean()
+    
+    return formatLeaderboard(allSessions)
+  }
   
-  return sessions.map((s, idx) => ({
+  return formatLeaderboard(sessions)
+}
+
+// ⚡ NOVO: Helper para formatar o leaderboard
+const formatLeaderboard = (sessions) => {
+  // Remove duplicados de usuário (mantém apenas a melhor pontuação de cada um)
+  const seenUsers = new Map()
+  
+  sessions.forEach(s => {
+    const userId = s.usuario?._id?.toString()
+    if (!userId) return
+    
+    if (!seenUsers.has(userId) || seenUsers.get(userId).pontuacao < s.pontuacao) {
+      seenUsers.set(userId, s)
+    }
+  })
+  
+  return Array.from(seenUsers.values()).map((s, idx) => ({
     posicao: idx + 1,
     usuario: {
       id: s.usuario?._id,
-      nome: s.usuario?.nome || 'Anônimo',
-      avatar: s.usuario?.avatar
+      nome: s.usuario?.nome || s.usuario?.username || 'Anônimo',
+      avatar: s.usuario?.avatar || null,
+      avatarDourado: s.usuario?.avatarDourado || false
     },
     pontuacao: s.pontuacao,
     modo: s.modo,
@@ -1356,16 +1388,16 @@ const LOJA_ITENS = [
       possuido: false,
       equipado: false
     },
-    {
-      id: 'badge_pro',
-      nome: 'Badge PRO',
-      descricao: 'Distintivo exclusivo PRO no seu perfil',
-      preco: 1500,
-        iconClass: 'fa-solid fa-sun',
-      tipo: 'badge',
-      possuido: false,
-      equipado: false
-    },
+{
+  id: 'badge_pro',
+  nome: 'Badge PRO',
+  descricao: 'Mostre que você é PRO com um badge dourado em forma de sol no seu perfil',
+  preco: 5000,  // ajuste o preço
+  tipo: 'badge',
+  iconClass: 'fa-solid fa-sun',
+  possuido: false,
+  equipado: false
+},
     {
       id: 'vinyl_rare',
       nome: 'Vinil Raro',
@@ -1402,68 +1434,65 @@ const getShopItems = async (userId) => {
 
 const buyItem = async (userId, itemId) => {
   try {
-    const stats = await getOrCreateUserStats(userId);
-    if (!stats) throw new Error('Erro ao carregar estatísticas do usuário');
-    
-    const item = LOJA_ITENS.find(i => i.id === itemId);
-    if (!item) throw new Error('Item não encontrado na loja');
-    
-    // Garante que inventário existe
-    if (!stats.inventario) stats.inventario = [];
-    
-    const jaPossui = stats.inventario.some(i => i.itemId === itemId);
-    if (jaPossui) throw new Error('Item já possuído');
-    
+    const stats = await getOrCreateUserStats(userId)
+    if (!stats) throw new Error('Erro ao carregar estatísticas do usuário')
+
+    const item = LOJA_ITENS.find(i => i.id === itemId)
+    if (!item) throw new Error('Item não encontrado na loja')
+
+    if (!stats.inventario) stats.inventario = []
+
+    const jaPossui = stats.inventario.some(i => i.itemId === itemId)
+    if (jaPossui) throw new Error('Item já possuído')
+
     if (stats.estatisticas.totalMoedas < item.preco) {
-      throw new Error(`Moedas insuficientes. Você tem ${stats.estatisticas.totalMoedas}, precisa de ${item.preco}`);
+      throw new Error(`Moedas insuficientes. Você tem ${stats.estatisticas.totalMoedas}, precisa de ${item.preco}`)
     }
-    
-    // Desconta moedas
-    stats.estatisticas.totalMoedas -= item.preco;
-    
-    // Adiciona ao inventário
+
+    stats.estatisticas.totalMoedas -= item.preco
+
     const novoItem = {
       itemId: item.id,
       nome: item.nome,
-      icon: item.icon,
+      icon: item.iconClass || item.icon || null,
       tipo: item.tipo || 'geral',
       comprado: true,
-      ativo: true,
+      ativo: false, // ✅ comprar não equipa
       dataCompra: new Date()
-    };
-    stats.inventario.push(novoItem);
-    
-    // Aplica efeito
-    await aplicarEfeitoItem(stats, item);
-    
-    // Verifica conquista
-    const conquista = stats.conquistas.find(c => c.id === 'collector');
-    if (conquista && !conquista.desbloqueada && stats.inventario.length >= 3) {
-      conquista.desbloqueada = true;
-      conquista.dataDesbloqueio = new Date();
     }
-    
-    await stats.save();
-    
+
+    stats.inventario.push(novoItem)
+
+    const conquista = stats.conquistas.find(c => c.id === 'collector')
+    if (conquista && !conquista.desbloqueada && stats.inventario.length >= 3) {
+      conquista.desbloqueada = true
+      conquista.dataDesbloqueio = new Date()
+    }
+
+    await stats.save()
+    await sincronizarVisuaisUsuario(userId, stats)
+
     return {
       success: true,
-      item: { 
-        ...item, 
-        possuido: true, 
-        podeComprar: false, 
-        ativo: true,
-        equipado: true 
+      item: {
+        ...item,
+        possuido: true,
+        podeComprar: false,
+        ativo: false,
+        equipado: false
       },
       moedasRestantes: stats.estatisticas.totalMoedas,
       inventario: stats.inventario,
       comprado: true,
-      efeitoAplicado: item.tipo
-    };
+      equipado: false,
+      message: 'Item comprado com sucesso. Equipe-o no inventário para ativar.'
+    }
   } catch (error) {
-    console.error('Erro em buyItem:', error);
-    throw error;
+    console.error('Erro em buyItem:', error)
+    throw error
   }
-};
+}
+
 
 // ⚡ NOVO MÉTODO: Aplica efeitos específicos por tipo de item
 const aplicarEfeitoItem = async (stats, item) => {
@@ -1579,7 +1608,7 @@ const getLiveActivities = async (limite = 10) => {
     completada: true,
     dataFim: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // últimos 5 min
   })
-    .populate('usuario', 'nome avatar')
+.populate('usuario', 'nome avatar avatarDourado equippedItems')
     .sort({ dataFim: -1 })
     .limit(limite)
     .lean()
@@ -1627,47 +1656,56 @@ const generateFakeActivity = () => {
 // ============================================
 
 const equiparItem = async (userId, itemId) => {
-  const stats = await getOrCreateUserStats(userId);
-  const item = stats.inventario.find(i => i.itemId === itemId);
-  
-  if (!item) throw new Error('Item não encontrado no inventário');
-  if (!item.comprado) throw new Error('Item não foi comprado');
-  
-  // Se for avatar ou tema, desativa outros do mesmo tipo
-   // Se for avatar, tema OU emoji, desativa outros do mesmo tipo
+  const stats = await getOrCreateUserStats(userId)
+  const item = stats.inventario.find(i => i.itemId === itemId)
+
+  if (!item) throw new Error('Item não encontrado no inventário')
+  if (!item.comprado) throw new Error('Item não foi comprado')
+
+  // itens exclusivos por tipo
   if (['avatar', 'tema', 'emoji'].includes(item.tipo)) {
     stats.inventario.forEach(i => {
-      if (i.tipo === item.tipo && i.itemId !== itemId) {
-        i.ativo = false;
+      if (i.tipo === item.tipo) {
+        i.ativo = false
       }
-    });
+    })
   }
-  
-  item.ativo = true;
-  await stats.save();
-  
+
+  item.ativo = true
+
+  await stats.save()
+  await sincronizarVisuaisUsuario(userId, stats)
+
   return {
     itemId: item.itemId,
     nome: item.nome,
     tipo: item.tipo,
-    ativo: true
-  };
-};
+    ativo: true,
+    equipado: true,
+    avatarDourado: item.itemId === 'avatar_gold'
+  }
+}
+
 
 const desativarItem = async (userId, itemId) => {
-  const stats = await getOrCreateUserStats(userId);
-  const item = stats.inventario.find(i => i.itemId === itemId);
-  
-  if (!item) throw new Error('Item não encontrado');
-  
-  item.ativo = false;
-  await stats.save();
-  
+  const stats = await getOrCreateUserStats(userId)
+  const item = stats.inventario.find(i => i.itemId === itemId)
+
+  if (!item) throw new Error('Item não encontrado')
+
+  item.ativo = false
+
+  await stats.save()
+  await sincronizarVisuaisUsuario(userId, stats)
+
   return {
     itemId: item.itemId,
-    ativo: false
-  };
-};
+    ativo: false,
+    equipado: false,
+    avatarDourado: false
+  }
+}
+
 
 const getInventarioAtivo = async (userId) => {
   const stats = await getOrCreateUserStats(userId);
@@ -1684,6 +1722,37 @@ const getEquippedItems = async (userId) => {
   const stats = await getOrCreateUserStats(userId);
   return stats.inventario.filter(i => i.ativo === true);
 };
+
+const sincronizarVisuaisUsuario = async (userId, stats) => {
+  const inventario = stats?.inventario || []
+
+  const itensAtivos = inventario.filter(item =>
+    item &&
+    item.comprado === true &&
+    item.ativo === true
+  )
+
+  const equippedItems = itensAtivos.map(item => ({
+    itemId: item.itemId,
+    tipo: item.tipo,
+    ativo: true
+  }))
+
+  const avatarDouradoAtivo = itensAtivos.some(item =>
+    item.itemId === 'avatar_gold' &&
+    item.tipo === 'avatar'
+  )
+
+  await Usuario.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        avatarDourado: avatarDouradoAtivo,
+        equippedItems
+      }
+    }
+  )
+}
 
 module.exports = {
   iniciarSessao,

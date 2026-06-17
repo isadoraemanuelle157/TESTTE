@@ -761,7 +761,7 @@
 
       <div class="leaderboard-container">
 <div class="podium">
-  <div class="podium-place second" v-if="top2 && top2.usuario">
+<div class="podium-place second" v-if="top2">
     <div class="podium-avatar">
       <img :src="top2.usuario?.avatar || `https://i.pravatar.cc/150?img=12`" alt="2º lugar">
       <div class="place-badge">2</div>
@@ -773,7 +773,7 @@
    
   </div>
 
-  <div class="podium-place first" v-if="top1 && top1.usuario">
+<div class="podium-place first" v-if="top1">
     <div class="crown"><i class="fa-solid fa-crown"></i></div>
     <div class="podium-avatar">
       <img :src="top1.usuario?.avatar || `https://i.pravatar.cc/150?img=11`" alt="1º lugar">
@@ -785,7 +785,7 @@
     </div>
   </div>
 
-  <div class="podium-place third" v-if="top3 && top3.usuario">
+ <div class="podium-place third" v-if="top3">
     <div class="podium-avatar">
       <img :src="top3.usuario?.avatar || `https://i.pravatar.cc/150?img=5`" alt="3º lugar">
       <div class="place-badge">3</div>
@@ -798,25 +798,26 @@
 </div>
 
 <div class="leaderboard-list">
-  <div
-    v-for="(player, index) in restLeaderboard"
-    :key="player._id || index"
-    class="leaderboard-item"
-    :class="{ 'highlight': index === 0 }"
+<div
+  v-for="(player, index) in restLeaderboard"
+  :key="player._id || `player-${index}`"
+  class="leaderboard-item"
+  :class="{ 'highlight': index === 0 }"
+>
+  <span class="rank">{{ player.posicao || (index + 4) }}</span>
+  <img
+    :src="player.usuario?.avatar || `https://i.pravatar.cc/150?img=${((index + 6) % 70) + 1}`"
+    :alt="player.usuario?.nome || 'Anônimo'"
+    class="player-avatar"
+    @error="$event.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(player.usuario?.nome || 'Anon')}&background=6366f1&color=fff`"
   >
-    <span class="rank">{{ player.posicao || (index + 4) }}</span>
-    <img
-      :src="player.usuario?.avatar || `https://i.pravatar.cc/150?img=${(index + 6) % 70}`"
-      :alt="player.usuario?.nome || 'Anônimo'"
-      class="player-avatar"
-    >
-    <div class="player-info">
-      <span class="player-name">{{ player.usuario?.nome || 'Anônimo' }}</span>
-      <span class="player-mode">{{ formatModeName(player.modo) }} • {{ formatDifficulty(player.dificuldade) }}</span>
-    </div>
-    <span class="player-score">{{ (player.pontuacao || 0).toLocaleString() }} pts</span>
-    <span class="player-trend up"><i class="fa-solid fa-arrow-trend-up"></i></span>
+  <div class="player-info">
+    <span class="player-name">{{ player.usuario?.nome || 'Anônimo' }}</span>
+    <span class="player-mode">{{ formatModeName(player.modo) }} • {{ formatDifficulty(player.dificuldade) }}</span>
   </div>
+  <span class="player-score">{{ (player.pontuacao || 0).toLocaleString() }} pts</span>
+  <span class="player-trend up"><i class="fa-solid fa-arrow-trend-up"></i></span>
+</div>
 </div>
 
 
@@ -1203,18 +1204,37 @@ hasRareVinylEquipped() {
     return Math.round((this.correctAnswers / answered) * 100)
   },
 
-  top1() {
-    return this.serverLeaderboard?.[0] || null
-  },
-  top2() {
-    return this.serverLeaderboard?.[1] || null
-  },
-  top3() {
-    return this.serverLeaderboard?.[2] || null
-  },
-  restLeaderboard() {
-    return this.serverLeaderboard?.slice(3) || []
-  },
+top1() {
+  const entry = this.serverLeaderboard?.[0]
+  if (!entry) return null
+  return {
+    ...entry,
+    usuario: entry.usuario || { nome: 'Anônimo', avatar: null }
+  }
+},
+top2() {
+  const entry = this.serverLeaderboard?.[1]
+  if (!entry) return null
+  return {
+    ...entry,
+    usuario: entry.usuario || { nome: 'Anônimo', avatar: null }
+  }
+},
+top3() {
+  const entry = this.serverLeaderboard?.[2]
+  if (!entry) return null
+  return {
+    ...entry,
+    usuario: entry.usuario || { nome: 'Anônimo', avatar: null }
+  }
+},
+restLeaderboard() {
+  const rest = this.serverLeaderboard?.slice(3) || []
+  return rest.map(entry => ({
+    ...entry,
+    usuario: entry.usuario || { nome: 'Anônimo', avatar: null }
+  }))
+},
 
 canClaimDaily() {
   const token = localStorage.getItem('token')
@@ -1587,8 +1607,12 @@ showCoinAnimation(coins) {
 
 // ⚡ NOVO: Equipar/Desequipar item
 async toggleEquipItem(item) {
-  // Só equipa, não desequipa mais
-  if (item.equipado) return; // já equipado, não faz nada
+  // Se já está equipado, permite desequipar
+  if (item.equipado) {
+    // Desequipar
+    await this.unequipItem(item);
+    return;
+  }
  
   const token = localStorage.getItem('token');
  
@@ -1597,41 +1621,43 @@ async toggleEquipItem(item) {
     const offlineInventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
     const invItem = offlineInventory.find(i => i.itemId === item.id);
     if (invItem) {
-      // Desativa outros do mesmo tipo
-      if (['avatar', 'tema', 'badge', 'vinil', 'emoji'].includes(invItem.tipo)) {
-        offlineInventory.forEach(i => {
-          if (i.tipo === invItem.tipo && i.itemId !== item.id) {
-            i.ativo = false;
-          }
-        });
-      }
+      // Desativa TODOS os outros do mesmo tipo antes de equipar
+      offlineInventory.forEach(i => {
+        if (i.tipo === invItem.tipo && i.itemId !== item.id) {
+          i.ativo = false;
+        }
+      });
       invItem.ativo = true;
       localStorage.setItem('soundup_inventory', JSON.stringify(offlineInventory));
-     
-      // Atualiza UI
-      const itemIndex = this.serverShopItems.findIndex(i => i.id === item.id);
-      if (itemIndex >= 0) {
-        this.serverShopItems[itemIndex].equipado = true;
-        if (['avatar', 'tema', 'badge', 'vinil', 'emoji'].includes(invItem.tipo)) {
-          this.serverShopItems.forEach((si, idx) => {
-            if (si.tipo === invItem.tipo && si.id !== item.id) {
-              this.serverShopItems[idx].equipado = false;
-            }
-          });
-        }
-      }
+      this.loadOfflineInventory();
+      
+      // Dispara evento para atualizar o perfil
+      window.dispatchEvent(new CustomEvent('inventory-updated'));
     }
     return;
   }
  
-  // Modo online — só equipa
+  // Modo online
   try {
+    // Primeiro desequipa todos do mesmo tipo
+    const sameTypeItems = this.serverShopItems.filter(i => 
+      i.tipo === item.tipo && i.id !== item.id && i.equipado
+    );
+    for (const otherItem of sameTypeItems) {
+      await gameApi.unequipItem(otherItem.id);
+    }
+    
+    // Depois equipa o selecionado
     await gameApi.equipItem(item.id);
-    const shopRes = await gameApi.getShop();
-    this.serverShopItems = shopRes.data.items.map(i => ({
+    
+    // Atualiza estado local
+    this.serverShopItems = this.serverShopItems.map(i => ({
       ...i,
-      equipado: i.ativo || false
+      equipado: i.id === item.id ? true : (i.tipo === item.tipo ? false : i.equipado)
     }));
+    
+    // Dispara evento
+    window.dispatchEvent(new CustomEvent('inventory-updated'));
   } catch (error) {
     console.error('Erro ao equipar:', error);
   }
@@ -1707,13 +1733,31 @@ async loadServerData() {
     const token = localStorage.getItem('token')
     const isLoggedIn = !!token
 
-    try {
-      const leaderboardRes = await gameApi.getLeaderboard()
-      this.serverLeaderboard = leaderboardRes.data.leaderboard || []
-    } catch (e) {
-      console.warn('Leaderboard offline:', e.message)
-      this.serverLeaderboard = []
-    }
+try {
+  const leaderboardRes = await gameApi.getLeaderboard()
+  // ⚡ Verifica se a resposta tem a estrutura correta
+  const leaderboardData = leaderboardRes.data?.leaderboard || []
+  
+  // ⚡ Valida cada entrada do leaderboard
+  this.serverLeaderboard = leaderboardData.map((entry, index) => ({
+    _id: entry._id || `rank-${index}`,
+    posicao: entry.posicao || (index + 1),
+    usuario: {
+      nome: entry.usuario?.nome || entry.usuario?.username || 'Anônimo',
+      avatar: entry.usuario?.avatar || null,
+      avatarDourado: entry.usuario?.avatarDourado || false
+    },
+    pontuacao: entry.pontuacao || 0,
+    modo: entry.modo || 'guess-song',
+    dificuldade: entry.dificuldade || 'easy',
+    precisao: entry.precisao || 0
+  }))
+  
+  console.log('✅ Leaderboard carregado:', this.serverLeaderboard.length, 'jogadores')
+} catch (e) {
+  console.error('❌ Erro ao carregar leaderboard:', e.message)
+  this.serverLeaderboard = []
+}
 
     try {
       const activitiesRes = await gameApi.getLiveActivities()

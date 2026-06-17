@@ -287,63 +287,70 @@ const getUserById = async (id, currentUserId) => {
     const blockRelation = await getBlockRelation(currentUserId, id)
 
     if (blockRelation.blocked) {
-      return {
-        id: formatted.id,
-        nome: formatted.nome,
-        username: formatted.username,
-        avatar: formatted.avatar,
-        cover: formatted.cover || null,
-        bio: '',
-        membroDesde: formatted.membroDesde || null,
-        perfilPrivado: false,
-        onboardingCompleto: formatted.onboardingCompleto || false,
-        generos: { todos: [], locais: [], externos: [] },
-        artistasFavoritos: { todos: [], locais: [], externos: [] },
-        vibesFavoritas: { todos: [], locais: [], externas: [] },
-        acessoLiberado: false,
-        solicitacaoPendente: false,
-        perfilBloqueado: true,
-        bloqueadoPorMim: blockRelation.blockedByMe,
-        meBloqueou: blockRelation.blockedMe
-      }
+return {
+  id: formatted.id,
+  nome: formatted.nome,
+  username: formatted.username,
+  avatar: formatted.avatar,
+  avatarDourado: !!formatted.avatarDourado,
+  equippedItems: formatted.equippedItems || [],
+  cover: formatted.cover || null,
+  bio: '',
+  membroDesde: formatted.membroDesde || null,
+  perfilPrivado: false,
+  onboardingCompleto: formatted.onboardingCompleto || false,
+  generos: { todos: [], locais: [], externos: [] },
+  artistasFavoritos: { todos: [], locais: [], externos: [] },
+  vibesFavoritas: { todos: [], locais: [], externas: [] },
+  acessoLiberado: false,
+  solicitacaoPendente: false,
+  perfilBloqueado: true,
+  bloqueadoPorMim: blockRelation.blockedByMe,
+  meBloqueou: blockRelation.blockedMe
+}
     }
   }
 
-  const montarResposta = async (completo = false) => {
-    if (!completo) {
-      return {
-        id: formatted.id,
-        nome: formatted.nome,
-        username: formatted.username,
-        avatar: formatted.avatar,
-        cover: formatted.cover || null,
-        bio: formatted.bio || '',
-        membroDesde: formatted.membroDesde || null,
-        perfilPrivado: formatted.perfilPrivado,
-        onboardingCompleto: formatted.onboardingCompleto || false,
-        generos: { todos: [], locais: [], externos: [] },
-        artistasFavoritos: { todos: [], locais: [], externos: [] },
-        vibesFavoritas: { todos: [], locais: [], externas: [] },
-        acessoLiberado: false,
-        solicitacaoPendente: false
-      }
-    }
-
-    const [generos, artistas, vibes] = await Promise.all([
-      user.getGenerosCompletos(),
-      user.getArtistasCompletos(),
-      user.getVibesCompletas()
-    ])
-
+const montarResposta = async (completo = false) => {
+  if (!completo) {
     return {
-      ...formatted,
-      generos: { todos: generos, locais: formatted.generos?.locais, externos: formatted.generos?.externos },
-      artistasFavoritos: { todos: artistas, locais: formatted.artistasFavoritos?.locais, externos: formatted.artistasFavoritos?.externos },
-      vibesFavoritas: { todos: vibes, locais: formatted.vibesFavoritas?.locais, externas: formatted.vibesFavoritas?.externas },
-      acessoLiberado: true,
+      id: formatted.id,
+      nome: formatted.nome,
+      username: formatted.username,
+      avatar: formatted.avatar,
+      avatarDourado: !!formatted.avatarDourado,
+      equippedItems: formatted.equippedItems || [],
+      cover: formatted.cover || null,
+      bio: formatted.bio || '',
+      membroDesde: formatted.membroDesde || null,
+      perfilPrivado: formatted.perfilPrivado,
+      onboardingCompleto: formatted.onboardingCompleto || false,
+      generos: { todos: [], locais: [], externos: [] },
+      artistasFavoritos: { todos: [], locais: [], externos: [] },
+      vibesFavoritas: { todos: [], locais: [], externas: [] },
+      acessoLiberado: false,
       solicitacaoPendente: false
     }
   }
+
+  const [generos, artistas, vibes] = await Promise.all([
+    user.getGenerosCompletos(),
+    user.getArtistasCompletos(),
+    user.getVibesCompletas()
+  ])
+
+  return {
+    ...formatted,
+    avatarDourado: !!formatted.avatarDourado,
+    equippedItems: formatted.equippedItems || [],
+    generos: { todos: generos, locais: formatted.generos?.locais, externos: formatted.generos?.externos },
+    artistasFavoritos: { todos: artistas, locais: formatted.artistasFavoritos?.locais, externos: formatted.artistasFavoritos?.externos },
+    vibesFavoritas: { todos: vibes, locais: formatted.vibesFavoritas?.locais, externas: formatted.vibesFavoritas?.externas },
+    acessoLiberado: true,
+    solicitacaoPendente: false
+  }
+}
+
 
   // Público ou dono
   if (!formatted.perfilPrivado || isOwner) {
@@ -433,23 +440,26 @@ const deleteUser = async (id) => {
 const searchUsers = async (query) => {
   if (!query || query.trim() === '') return []
   const regex = new RegExp(query, 'i')
-  const users = await Usuario.find({
-    $or: [
-      { nome: { $regex: regex } },
-      { username: { $regex: regex } },
-      { email: { $regex: regex } }
-    ]
-  }, 'nome username avatar bio perfilPrivado mostrarAtividade').limit(10)
+const users = await Usuario.find({
+  $or: [
+    { nome: { $regex: regex } },
+    { username: { $regex: regex } },
+    { email: { $regex: regex } }
+  ]
+}, 'nome username avatar avatarDourado equippedItems bio perfilPrivado mostrarAtividade').limit(10)
 
-  return users.map(user => ({
-    id: user._id.toString(),
-    nome: user.nome,
-    username: user.username,
-    avatar: user.avatar,
-    bio: user.bio || '',
-    perfilPrivado: !!user.perfilPrivado,
-    mostrarAtividade: user.mostrarAtividade !== false
-  }))
+return users.map(user => ({
+  id: user._id.toString(),
+  nome: user.nome,
+  username: user.username,
+  avatar: user.avatar,
+  avatarDourado: !!user.avatarDourado,
+  equippedItems: user.equippedItems || [],
+  bio: user.bio || '',
+  perfilPrivado: !!user.perfilPrivado,
+  mostrarAtividade: user.mostrarAtividade !== false
+}))
+
 }
 
 const getUserStats = async (userId) => {
@@ -1458,7 +1468,7 @@ const getPublicFollowers = async (targetUserId, viewerId) => {
     seguindo_id: targetUserId,
     tipo: 'usuario'
   })
-    .populate('seguidor_id', 'nome username avatar')
+.populate('seguidor_id', 'nome username avatar avatarDourado equippedItems')
     .sort({ createdAt: -1 })
     .lean()
 
@@ -1467,15 +1477,18 @@ const getPublicFollowers = async (targetUserId, viewerId) => {
       const user = item.seguidor_id
       if (!user) return null
 
-      return {
-        _id: user._id,
-        id: user._id,
-        nome: user.nome,
-        username: user.username,
-        avatar: user.avatar || null,
-        tipo: 'usuario',
-        isFollowing: followingViewerSet.has(String(user._id))
-      }
+return {
+  _id: user._id,
+  id: user._id,
+  nome: user.nome,
+  username: user.username,
+  avatar: user.avatar || null,
+  avatarDourado: !!user.avatarDourado,
+  equippedItems: user.equippedItems || [],
+  tipo: 'usuario',
+  isFollowing: followingViewerSet.has(String(user._id))
+}
+
     })
     .filter(Boolean)
 }
@@ -1500,7 +1513,7 @@ const getPublicFollowing = async (targetUserId, viewerId) => {
       seguidor_id: targetUserId,
       tipo: 'usuario'
     })
-      .populate('seguindo_id', 'nome username avatar')
+.populate('seguindo_id', 'nome username avatar avatarDourado equippedItems')
       .sort({ createdAt: -1 })
       .lean(),
 
@@ -1518,14 +1531,16 @@ const getPublicFollowing = async (targetUserId, viewerId) => {
       const user = item.seguindo_id
       if (!user) return null
 
-      return {
-        _id: user._id,
-        id: user._id,
-        nome: user.nome,
-        username: user.username,
-        avatar: user.avatar || null,
-        tipo: 'usuario'
-      }
+return {
+  _id: user._id,
+  id: user._id,
+  nome: user.nome,
+  username: user.username,
+  avatar: user.avatar || null,
+  avatarDourado: !!user.avatarDourado,
+  equippedItems: user.equippedItems || [],
+  tipo: 'usuario'
+}
     })
     .filter(Boolean)
 

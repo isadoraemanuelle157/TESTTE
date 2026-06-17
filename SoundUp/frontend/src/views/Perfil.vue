@@ -54,12 +54,14 @@
        
         <div class="profile-info-container">
           <div class="avatar-section">
-           <div class="avatar-wrapper" 
-     :class="{ 
-       'online': isOnline, 
-       'has-story': hasStory,
-       'avatar-dourado': hasGoldenAvatar 
-     }">
+<div 
+  class="avatar-wrapper" 
+  :class="{ 
+    'online': isOnline, 
+    'has-story': hasStory && !hasGoldenAvatar,  /* ← Só mostra story se NÃO tiver dourado */
+    'avatar-dourado': hasGoldenAvatar           /* ← Só aplica quando equipado */
+  }"
+>
               <!-- Anel de story -->
               <div class="story-ring" v-if="hasStory" @click="viewStory">
                 <div class="story-progress" :style="storyProgressStyle"></div>
@@ -81,6 +83,24 @@
 >
   {{ userInitials }}
 </div>
+
+<!-- Badge PRO no avatar -->
+  <div
+    v-if="isProBadgeEquipped || isPro"
+    class="avatar-pro-badge"
+    :class="{ equipped: isProBadgeEquipped }"
+  >
+    <div class="avatar-pro-sun">
+      <div class="sun-core"></div>
+      <div
+        v-for="n in 8"
+        :key="`avatar-pro-${n}`"
+        class="sun-ray"
+        :style="{ '--rotation': `${(n - 1) * 45}deg` }"
+      ></div>
+    </div>
+    <span>PRO</span>
+  </div>
 
               <div class="avatar-status" v-if="isOwnProfile"></div>
 
@@ -104,8 +124,26 @@
           </div>
          
           <div class="user-details">
-            <div class="user-badges" v-if="usuario.membroDesde">
-              <span class="badge badge-pro" v-if="isPro">PRO</span>
+           <div class="user-badges">
+<span 
+  class="badge badge-pro" 
+  v-if="isProBadgeEquipped || isPro"
+>
+
+  <div 
+    class="badge-pro-sun"
+    :class="{ 'badge-pro-equipped': hasProBadgeEquipped }"
+  >
+    <div class="sun-core"></div>
+    <div 
+      v-for="n in 8" 
+      :key="n" 
+      class="sun-ray"
+      :style="{ '--rotation': `${(n - 1) * 45}deg` }"
+    ></div>
+  </div>
+  PRO
+</span>
               <span class="badge badge-new" v-if="isNewMember">NOVO</span>
               <span class="badge badge-verified" v-if="usuario.verificado">
                 <i class="fa fa-check-circle"></i> Verificado
@@ -941,6 +979,8 @@
   {{ userInitials }}
 </div>
 
+
+
 <button type="button" class="btn-change-avatar" @click="openAvatarSelector">
   <i class="fa fa-camera"></i>
 </button>
@@ -1372,6 +1412,20 @@
       <span v-if="equippingGold"><i class="fa fa-spinner fa-spin"></i></span>
       <span v-else>{{ isAvatarGoldEquipped ? 'Dourado Ativo' : 'Equipar Dourado' }}</span>
     </button>
+
+    <!-- BOTÃO EQUIPAR BADGE PRO -->
+<button 
+  v-if="hasProBadgeInInventory"
+  type="button"
+  class="btn-equip-pro"
+  :class="{ 'equipped': isProBadgeEquipped }"
+  @click="toggleEquipProBadge"
+  :disabled="equippingProBadge"
+>
+  <i :class="isProBadgeEquipped ? 'fa fa-sun-o' : 'fa fa-circle-o'"></i>
+  <span v-if="equippingProBadge"><i class="fa fa-spinner fa-spin"></i></span>
+  <span v-else>{{ isProBadgeEquipped ? 'PRO Ativo' : 'Equipar PRO' }}</span>
+</button>
     
     <button class="btn-close" @click="closeAvatarSelector">
       <i class="fa fa-times"></i>
@@ -1543,6 +1597,9 @@ export default {
       openedPlaylist: null,
       showAvatarSelector: false,
         isAvatarGoldEquipped: false,
+        hasProBadgeItem: false,      // possui o item comprado
+    isProBadgeEquipped: false,   // está equipado no perfil
+    equippingProBadge: false, 
     hasGoldenAvatarItem: false,
     equippingGold: false,
       activeAvatarTab: 'initials',
@@ -1719,10 +1776,11 @@ activityResources: [
   },
 
   computed: {
- hasGoldenAvatar() {
-    // Verifica se o avatar dourado está EQUIPADO (ativo no perfil)
-    return this.isAvatarGoldEquipped;
-  },
+hasGoldenAvatar() {
+  // SEMPRE retorna o estado equipado (não verifica mais se possui)
+  // A verificação de posse é feita no botão (hasGoldenAvatarInInventory)
+  return this.isAvatarGoldEquipped === true;
+},
   
   // ⚡ NOVO: Verifica se POSSUI o item (comprado)
   hasGoldenAvatarInInventory() {
@@ -1736,6 +1794,24 @@ activityResources: [
     
     // Modo online — verificado via API no mounted
     return this.hasGoldenAvatarItem;
+  },
+
+ hasProBadge() {
+    // Verifica se o badge PRO está EQUIPADO (ativo no perfil)
+    return this.isProBadgeEquipped;
+  },
+  
+  hasProBadgeInInventory() {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      return inventory.some(i => i.itemId === 'badge_pro');
+    }
+    
+    // Modo online
+    return this.hasProBadgeItem;
   },
 
 usuarioGenerosList() {
@@ -2003,6 +2079,7 @@ mounted() {
   this.loadCustomAvatarOptions()
   this.generateArtisticAvatars()
   this.generateFunAvatars()
+   this.checkProBadgeStatus();
 
   // 🔥 ORDEM CORRETA: curtidas primeiro, depois histórico (precisa dos curtidos)
   this.carregarCurtidas().then(() => {
@@ -2047,6 +2124,9 @@ mounted() {
   window.addEventListener('perfil-updated', this.onPerfilUpdated)
   window.addEventListener('focus', this.handleFocus)
   window.addEventListener('storage', this.handleStorage)
+   window.addEventListener('badge-pro-changed', (e) => {
+    this.isProBadgeEquipped = e.detail.equipped;
+  });
   
   // 🔥 REMOVER este listener duplicado de focus — já está no handleFocus
   // window.addEventListener('focus', () => { ... })  ← REMOVER
@@ -2075,6 +2155,112 @@ mounted() {
   },
 
   methods: {
+     async checkProBadgeStatus() {
+    const token = localStorage.getItem('token');
+    const savedEquipped = localStorage.getItem('soundup_badge_pro_equipped');
+    
+    if (!token) {
+      // Modo offline
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const proItem = inventory.find(i => i.itemId === 'badge_pro');
+      this.hasProBadgeItem = !!proItem;
+      this.isProBadgeEquipped = savedEquipped !== null 
+        ? savedEquipped === 'true' 
+        : (proItem?.ativo || false);
+      return;
+    }
+    
+    // Modo online
+    try {
+      const res = await gameApi.getEquippedItems();
+      const equipped = res.data?.equipped || [];
+      const serverState = equipped.some(i => i.itemId === 'badge_pro');
+      this.hasProBadgeItem = true;
+      
+      if (savedEquipped === null) {
+        this.isProBadgeEquipped = serverState;
+        localStorage.setItem('soundup_badge_pro_equipped', String(serverState));
+      } else {
+        this.isProBadgeEquipped = savedEquipped === 'true';
+      }
+    } catch (error) {
+      console.error('Erro ao verificar badge PRO:', error);
+      const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+      const proItem = inventory.find(i => i.itemId === 'badge_pro');
+      this.hasProBadgeItem = !!proItem;
+      this.isProBadgeEquipped = savedEquipped !== null 
+        ? savedEquipped === 'true' 
+        : (proItem?.ativo || false);
+    }
+  },
+  
+  async toggleEquipProBadge() {
+    if (this.equippingProBadge) return;
+    
+    this.equippingProBadge = true;
+    const token = localStorage.getItem('token');
+    const newState = !this.isProBadgeEquipped;
+    
+    try {
+      if (!token) {
+        // Modo offline
+        const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
+        const itemIndex = inventory.findIndex(i => i.itemId === 'badge_pro');
+        
+        if (itemIndex >= 0) {
+          inventory[itemIndex].ativo = newState;
+          
+          // Desativa outros badges do mesmo tipo
+          if (newState) {
+            inventory.forEach(i => {
+              if (i.tipo === 'badge' && i.itemId !== 'badge_pro') {
+                i.ativo = false;
+              }
+            });
+          }
+          
+          localStorage.setItem('soundup_inventory', JSON.stringify(inventory));
+        }
+      } else {
+        // Modo online
+        if (newState) {
+          await gameApi.equipItem('badge_pro');
+        } else {
+          await gameApi.unequipItem('badge_pro');
+        }
+      }
+      
+      this.isProBadgeEquipped = newState;
+      localStorage.setItem('soundup_badge_pro_equipped', String(newState));
+      
+      // Dispara eventos para atualizar
+      window.dispatchEvent(new CustomEvent('inventory-updated'));
+      window.dispatchEvent(new CustomEvent('badge-pro-changed', { 
+        detail: { equipped: newState } 
+      }));
+      
+      this.showToast({
+        title: newState ? "☀️ Badge PRO Ativado!" : "Badge PRO Removido",
+        message: newState 
+          ? "Seu badge dourado está ativo no perfil" 
+          : "Você desativou o badge PRO",
+        type: "success",
+        icon: newState ? "fa fa-sun-o" : "fa fa-circle-o"
+      });
+      
+    } catch (error) {
+      console.error('Erro ao equipar badge PRO:', error);
+      this.showToast({
+        title: "Erro",
+        message: "Não foi possível atualizar o badge PRO",
+        type: "error",
+        icon: "fa fa-exclamation-circle"
+      });
+    } finally {
+      this.equippingProBadge = false;
+    }
+  },
+
     getPlaylistCover(playlist) {
     const cover = playlist?.cover || playlist?.capa
     if (!cover || typeof cover !== 'string') return null
@@ -4869,28 +5055,27 @@ html, body {
 
 /* ===== CSS DO AVATAR DOURADO - DEVE VIR DEPOIS DO PADRÃO ===== */
 .avatar-wrapper.avatar-dourado {
-  padding: 4px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  padding: 4px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%) !important;
   box-shadow: 
     0 0 0 2px #B8860B,
     0 0 20px rgba(255, 215, 0, 0.6),
-    0 8px 32px rgba(0, 0, 0, 0.4);
+    0 8px 32px rgba(0, 0, 0, 0.4) !important;
 }
 
 .avatar-wrapper.avatar-dourado .avatar,
 .avatar-wrapper.avatar-dourado .generated-avatar {
   border: 3px solid #1a1a2e !important;
   box-shadow: none !important;
-  width: calc(100% - 6px);
-  height: calc(100% - 6px);
-  margin: 3px;
+  width: calc(100% - 6px) !important;
+  height: calc(100% - 6px) !important;
+  margin: 3px !important;
 }
 
+/* Remove story ring quando avatar dourado está ativo */
 .avatar-wrapper.avatar-dourado .story-ring {
-  inset: -10px;
-  background: conic-gradient(from 0deg, #FFD700, #FFA500, #FFD700) !important;
-  padding: 4px;
+  display: none !important;
 }
 
 /* Anel de Story */
@@ -6255,7 +6440,39 @@ html, body {
   gap: 16px;
   padding: 20px 24px;     /* 🔥 AJUSTAR - padding menor */
 }
+/* Botão Equipar Badge PRO */
+.btn-equip-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 2px solid #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 12px;
+}
 
+.btn-equip-pro:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.2);
+  transform: scale(1.05);
+}
+
+.btn-equip-pro.equipped {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+  border-color: #fbbf24;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
+}
+
+.btn-equip-pro:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 /* Botão fechar (X) */
 .btn-close {
   width: 36px;
@@ -7831,6 +8048,70 @@ html, body {
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
   border-color: transparent;
   color: white;
+}
+.avatar-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  overflow: visible;
+}
+
+.avatar-pro-badge {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #111827;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    0 0 0 2px #0f172a;
+}
+
+.avatar-pro-badge.equipped {
+  background: linear-gradient(135deg, #fde68a, #f59e0b);
+}
+
+.avatar-pro-badge span {
+  line-height: 1;
+}
+
+.avatar-pro-sun {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.avatar-pro-sun .sun-core {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #fff7cc;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+}
+
+.avatar-pro-sun .sun-ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 14px;
+  background: rgba(255, 248, 220, 0.95);
+  border-radius: 999px;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--rotation))
+    translateY(-7px);
+  transform-origin: center center;
 }
 
 /* Preferences */

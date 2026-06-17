@@ -689,7 +689,7 @@ const listMatches = async (userId) => {
     ocultoPor: { $nin: [userId] },
     status: { $ne: 'recusado' }
   })
-    .populate('usuarios', 'nome idade avatar localizacao bio')
+.populate('usuarios', 'nome idade avatar avatarDourado equippedItems localizacao bio')
     .sort({ updatedAt: -1 })
     .lean()
 
@@ -704,14 +704,17 @@ const listMatches = async (userId) => {
       unread,
       commonSongs: (match.commonSongs || []).map(song => song.title),
       commonGenres: match.commonGenres || [],
-      user: {
-        id: otherUser?._id?.toString() || '',
-        name: otherUser?.nome || 'Usuário',
-        age: otherUser?.idade || null,
-        avatar: otherUser?.avatar || '',
-        location: otherUser?.localizacao || '',
-        bio: otherUser?.bio || ''
-      }
+user: {
+  id: otherUser?._id?.toString() || '',
+  name: otherUser?.nome || 'Usuário',
+  age: otherUser?.idade || null,
+  avatar: otherUser?.avatar || '',
+  avatarDourado: !!otherUser?.avatarDourado,
+  equippedItems: otherUser?.equippedItems || [],
+  location: otherUser?.localizacao || '',
+  bio: otherUser?.bio || ''
+}
+
     }
   })
 

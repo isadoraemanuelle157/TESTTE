@@ -150,12 +150,21 @@ const getLeaderboard = async (req, res) => {
     const { periodo = 'semana', limite = 50 } = req.query
     const leaderboard = await gameService.getLeaderboard(periodo, parseInt(limite))
     
-    res.json({ leaderboard })
+    // ⚡ Garante que sempre retorne um array, mesmo vazio
+    res.json({ 
+      success: true,
+      leaderboard: leaderboard || [],
+      total: leaderboard?.length || 0
+    })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error('Erro no leaderboard:', error)
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      leaderboard: []
+    })
   }
 }
-
 // ============================================
 // 🎁 RECOMPENSAS
 // ============================================
