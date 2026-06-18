@@ -199,12 +199,12 @@ const router = createRouter({
       component: SelecionarAvatar,
       meta: { requiresAuth: true }, // 🔥 Protege a rota
     },
-    {
-      path: '/tabelausuario',
-      name: 'tabelausuario',
-      component: TabelaUsuario,
-      meta: { requiresAuth: true }, // 🔥 Protege a rota
-    },
+{
+  path: '/tabelausuario',
+  name: 'tabelausuario',
+  component: TabelaUsuario,
+  meta: { requiresAdmin: true },  // ← MUDAR: agora só admin acessa
+},
     {
       path: '/editarusuario/:id',
       name: 'editarusuario',

@@ -168,6 +168,14 @@
   </router-link>
 </li>
 
+<!-- ✅ ADICIONAR DEPOIS do link "Vibes" -->
+<li v-if="isAdmin">
+  <router-link to="/tabelausuario" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-table"></i>
+    <span>Usuários</span>
+  </router-link>
+</li>
+
           </ul>
         </nav>
       </div>

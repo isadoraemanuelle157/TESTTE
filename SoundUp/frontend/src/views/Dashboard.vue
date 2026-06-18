@@ -44,58 +44,132 @@
         </div>
       </section>
 
-      <div v-if="continueListening.length > 0" class="hero-banner continue-listening" :style="heroGradient">
-        <div class="hero-ambient"></div>
-        <div class="hero-content">
-          <div class="hero-badge">
-            <i class="fa fa-play-circle"></i>
-            {{ isPlaying ? 'Tocando Agora' : 'Continue Ouvindo' }}
-            <span class="badge-live" v-if="isPlaying"><span class="live-dot"></span> LIVE</span>
-          </div>
-          <h1 class="hero-title">{{ currentTrack?.title || continueListening[0].title }}</h1>
-          <p class="hero-artist">{{ currentTrack?.artist || continueListening[0].artist }}</p>
-          <p class="hero-description" v-if="!isPlaying && continueListening[0].progress < 95">
-            De onde você parou <span class="highlight">{{ Math.round(continueListening[0].progress || 0) }}% completo</span>
-          </p>
-        <p class="hero-description" v-else-if="isPlaying"><span class="highlight"><i class="fa fa-play"></i> Reproduzindo agora</span></p>
-          <div class="hero-progress" v-if="continueListening[0]">
-            <div class="progress-bar">
-              <div class="progress-fill" :style="{ width: (isPlaying ? progressPercent : (continueListening[0].progress || 0)) + '%' }"></div>
-            </div>
-            <div class="progress-time">
-              <span>{{ formatTime(isPlaying ? currentTime : continueListening[0].currentTime) }}</span>
-              <span>{{ formatTime(isPlaying ? duration : continueListening[0].duration) }}</span>
-            </div>
-          </div>
-          <div class="hero-actions">
-            <button class="btn-primary btn-glow" @click="playContinueListening(0)">
-              <i class="fa" :class="isPlaying ? 'fa-pause' : 'fa-play'"></i>
-              {{ isPlaying ? 'Pausar' : (continueListening[0].progress > 0 ? 'Continuar' : 'Tocar') }}
-            </button>
-            <button class="btn-secondary" @click="playNextInQueue"><i class="fa fa-step-forward"></i> Próxima</button>
-            <button class="btn-secondary btn-icon" @click="toggleLike" :class="{ 'active': isLiked }">
-              <i class="fa" :class="isLiked ? 'fa-heart' : 'fa-heart-o'"></i>
-            </button>
-          </div>
+     <div v-if="continueListening.length > 0" class="hero-banner continue-listening" :style="heroGradient">
+  <div class="hero-ambient"></div>
+  <div class="hero-glass"></div>
+  
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span class="badge-icon">
+        <i class="fa" :class="isPlaying ? 'fa-volume-up' : 'fa-play-circle'"></i>
+      </span>
+      <span class="badge-text">{{ isPlaying ? 'Tocando Agora' : 'Continue Ouvindo' }}</span>
+      <span class="badge-live" v-if="isPlaying">
+        <span class="live-dot"></span>
+        <span class="live-text">AO VIVO</span>
+      </span>
+      <span class="badge-source" v-if="currentTrack?.source">
+        <i :class="getSourceIcon(currentTrack.source)"></i>
+      </span>
+    </div>
+
+    <h1 class="hero-title">{{ currentTrack?.title || continueListening[0].title }}</h1>
+    <p class="hero-artist">
+      <i class="fa fa-microphone"></i>
+      {{ currentTrack?.artist || continueListening[0].artist }}
+    </p>
+
+    <p class="hero-description" v-if="!isPlaying && continueListening[0].progress < 95">
+      <i class="fa fa-clock-o"></i>
+      De onde você parou 
+      <span class="highlight">{{ Math.round(continueListening[0].progress || 0) }}% completo</span>
+    </p>
+    <p class="hero-description playing-status" v-else-if="isPlaying">
+      <span class="equalizer-mini">
+        <span></span><span></span><span></span><span></span>
+      </span>
+      <span class="highlight">Reproduzindo agora</span>
+    </p>
+
+    <div class="hero-progress" v-if="continueListening[0]">
+      <div class="progress-bar" :class="{ 'active': isPlaying }">
+        <div class="progress-fill" :style="{ width: (isPlaying ? progressPercent : (continueListening[0].progress || 0)) + '%' }">
+          <div class="progress-glow" v-if="isPlaying"></div>
         </div>
-        <div class="hero-image">
-          <div class="vinyl-container" :class="{ 'playing': isPlaying }">
-            <div class="vinyl-record">
-              <div class="vinyl-grooves"></div>
-              <div class="vinyl-label">
-                <img v-if="(currentTrack?.cover || continueListening[0]?.cover)" :src="currentTrack?.cover || continueListening[0].cover" @error="handleImageError" alt="Album Cover" />
-                <i v-else class="fa fa-music"></i>
-              </div>
-            </div>
-            <div class="vinyl-reflection"></div>
-          </div>
-          <div class="floating-notes" v-if="isPlaying">
-            <i class="fa fa-music note-1"></i>
-            <i class="fa fa-music note-2"></i>
-            <i class="fa fa-music note-3"></i>
-          </div>
+        <div class="progress-wave" v-if="isPlaying">
+          <span v-for="n in 20" :key="n" :style="{ animationDelay: (n * 0.1) + 's' }"></span>
         </div>
       </div>
+      <div class="progress-time">
+        <span class="time-current">{{ formatTime(isPlaying ? currentTime : continueListening[0].currentTime) }}</span>
+        <span class="time-separator">/</span>
+        <span class="time-total">{{ formatTime(isPlaying ? duration : continueListening[0].duration) }}</span>
+      </div>
+    </div>
+
+    <div class="hero-actions">
+      <button class="btn-control btn-shuffle" @click="toggleShuffle" :class="{ 'active': isShuffle }" title="Aleatório">
+        <i class="fa fa-random"></i>
+      </button>
+      
+      <button class="btn-control btn-prev" @click="playPrevInQueue" title="Anterior">
+        <i class="fa fa-step-backward"></i>
+      </button>
+      
+      <button class="btn-primary btn-glow btn-play-main" @click="playContinueListening(0)">
+        <span class="play-icon">
+          <i class="fa" :class="isPlaying ? 'fa-pause' : 'fa-play'"></i>
+        </span>
+        <span class="play-text">{{ isPlaying ? 'Pausar' : (continueListening[0].progress > 0 ? 'Continuar' : 'Tocar') }}</span>
+      </button>
+      
+      <button class="btn-control btn-next" @click="playNextInQueue" title="Próxima">
+        <i class="fa fa-step-forward"></i>
+      </button>
+      
+      <button class="btn-control btn-repeat" @click="toggleRepeat" :class="{ 'active': isRepeat }" title="Repetir">
+        <i class="fa" :class="isRepeat ? 'fa-repeat-1' : 'fa-repeat'"></i>
+      </button>
+    </div>
+
+    <!-- Mini fila -->
+    <div class="mini-queue" v-if="continueListening.length > 1">
+      <div class="queue-label">
+        <i class="fa fa-list-ul"></i> A seguir
+      </div>
+      <div class="queue-tracks">
+        <div 
+          v-for="(track, idx) in continueListening.slice(1, 3)" 
+          :key="'queue-'+track.id"
+          class="queue-item"
+          @click="playContinueListening(idx + 1)"
+        >
+          <img :src="track.cover" @error="handleImageError" alt="" />
+          <div class="queue-info">
+            <span class="queue-title">{{ track.title }}</span>
+            <span class="queue-artist">{{ track.artist }}</span>
+          </div>
+          <span class="queue-progress" v-if="track.progress > 0">{{ Math.round(track.progress) }}%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-image">
+    <div class="cover-glow" :class="{ 'playing': isPlaying }"></div>
+    <div class="cover-container" :class="{ 'playing': isPlaying, 'paused': !isPlaying && currentTrack }">
+      <img 
+        :src="currentTrack?.cover || continueListening[0]?.cover" 
+        @error="handleImageError" 
+        alt="Album Cover"
+        class="cover-art"
+      />
+      <div class="cover-overlay" v-if="isPlaying">
+        <div class="playing-indicator">
+          <span v-for="n in 4" :key="n"></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="floating-notes" v-if="isPlaying">
+      <i class="fa fa-music note-1"></i>
+      <i class="fa fa-music note-2"></i>
+      <i class="fa fa-music note-3"></i>
+      <i class="fa fa-headphones note-4"></i>
+      <i class="fa fa-sliders note-5"></i>
+    </div>
+  </div>
+</div>
 
 <section id="feito-para-voce" class="section" v-if="madeForYou.length > 0">
   <div class="section-header">
@@ -642,6 +716,9 @@ export default {
       showLeft: false,
       showRight: true,
       showAllModal: false,
+isShuffle: false,
+isRepeat: false,
+likeAnimating: false,
       newReleases: [],
       spotifyTop10: [],
       spotifyNewReleases: [],
@@ -823,6 +900,30 @@ window.addEventListener('storage', (e) => {
   },
 
   methods: {
+    toggleShuffle() {
+  this.isShuffle = !this.isShuffle
+  this.showToast('Shuffle', this.isShuffle ? 'Aleatório ativado' : 'Ordem normal', 'info', 'fa fa-random')
+},
+
+toggleRepeat() {
+  this.isRepeat = !this.isRepeat
+  this.showToast('Repeat', this.isRepeat ? 'Repetir ativado' : 'Repetir desativado', 'info', 'fa fa-repeat')
+},
+
+playPrevInQueue() {
+  window.dispatchEvent(new CustomEvent('player-prev-track'))
+  this.showToast('Fila', 'Música anterior', 'info', 'fa fa-step-backward')
+},
+
+// Modifique o toggleLike existente para:
+toggleLike() {
+  this.isLiked = !this.isLiked
+  this.likeAnimating = true
+  setTimeout(() => this.likeAnimating = false, 600)
+  const title = this.isLiked ? 'Adicionado aos Favoritos' : 'Removido dos Favoritos'
+  this.showToast(title, this.currentTrack?.title || 'Música', this.isLiked ? 'success' : 'info', 'fa fa-heart')
+},
+
     getGenreAliases(genero) {
   const aliases = {
     'sertanejo': ['sertanejo'],
@@ -2802,142 +2903,6 @@ this.followedArtists = cantores
   font-size: 12px;
   color: rgba(255,255,255,0.5);
   margin-top: 4px;
-}
-
-.hero-banner {
-  border-radius: 24px;
-  padding: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 48px;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  min-height: 400px;
-}
-
-.hero-banner.continue-listening {
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-}
-
-.hero-ambient {
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 600px;
-  height: 600px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 50%;
-  filter: blur(60px);
-  animation: pulse 4s ease-in-out infinite;
-}
-
-.hero-content {
-  position: relative;
-  z-index: 1;
-  max-width: 60%;
-  flex: 1;
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(0,0,0,0.3);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 20px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.badge-live {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 12px;
-  color: #1db954;
-  font-size: 10px;
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  background: #1db954;
-  border-radius: 50%;
-  animation: livePulse 1.5s ease-in-out infinite;
-}
-
-.hero-title {
-  font-size: 56px;
-  font-weight: 900;
-  margin: 0 0 12px 0;
-  line-height: 1.1;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  background: linear-gradient(to right, #fff, rgba(255,255,255,0.8));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.hero-artist {
-  font-size: 24px;
-  color: rgba(255,255,255,0.9);
-  margin: 0 0 16px 0;
-  font-weight: 600;
-}
-
-.hero-description {
-  font-size: 16px;
-  color: rgba(255,255,255,0.8);
-  margin: 0 0 24px 0;
-  line-height: 1.6;
-}
-
-.highlight {
-  font-weight: 700;
-  color: #fff;
-  display: block;
-  margin-top: 8px;
-}
-
-.hero-progress {
-  margin-bottom: 24px;
-  max-width: 400px;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #1db954;
-  border-radius: 2px;
-  transition: width 0.1s linear;
-}
-
-.progress-time {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: rgba(255,255,255,0.6);
-}
-
-.hero-actions {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 24px;
 }
 
 .btn-primary {
@@ -5387,6 +5352,805 @@ this.followedArtists = cantores
 .btn-follow-artist:hover {
   border-color: #1db954;
   color: #1db954;
+}
+
+/* ===== HERO BANNER MELHORADO ===== */
+.hero-banner {
+  border-radius: 24px;
+  padding: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 48px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 420px;
+  animation: heroSlideIn 0.6s ease-out;
+}
+
+@keyframes heroSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hero-banner.continue-listening {
+  background: linear-gradient(135deg, rgba(30, 60, 114, 0.9) 0%, rgba(42, 82, 152, 0.85) 50%, rgba(20, 40, 80, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.hero-ambient {
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(29, 185, 84, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: ambientPulse 6s ease-in-out infinite;
+}
+
+@keyframes ambientPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.6; }
+  50% { transform: scale(1.1) rotate(5deg); opacity: 1; }
+}
+
+.hero-glass {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
+  pointer-events: none;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 55%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: fit-content;
+  transition: all 0.3s ease;
+}
+
+.badge-icon {
+  font-size: 14px;
+  color: #1db954;
+  transition: all 0.3s ease;
+}
+
+.hero-badge:hover .badge-icon {
+  transform: scale(1.2);
+}
+
+.badge-text {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.badge-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  color: #1db954;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(29, 185, 84, 0.15);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: #1db954;
+  border-radius: 50%;
+  animation: livePulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(29, 185, 84, 0.6);
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.live-text {
+  letter-spacing: 1px;
+}
+
+.badge-source {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.hero-title {
+  font-size: 52px;
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(to right, #fff 0%, rgba(255, 255, 255, 0.85) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+
+.hero-artist {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-artist i {
+  font-size: 14px;
+  color: #1db954;
+  opacity: 0.8;
+}
+
+.hero-description {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-description.playing-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.equalizer-mini {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 20px;
+}
+
+.equalizer-mini span {
+  width: 3px;
+  background: #1db954;
+  border-radius: 2px;
+  animation: eqMini 0.8s ease-in-out infinite;
+  height: 16px;
+}
+
+.equalizer-mini span:nth-child(1) { animation-delay: 0s; height: 8px; }
+.equalizer-mini span:nth-child(2) { animation-delay: 0.2s; height: 16px; }
+.equalizer-mini span:nth-child(3) { animation-delay: 0.4s; height: 12px; }
+.equalizer-mini span:nth-child(4) { animation-delay: 0.1s; height: 10px; }
+
+@keyframes eqMini {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+
+.highlight {
+  font-weight: 700;
+  color: #fff;
+  background: rgba(29, 185, 84, 0.2);
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* Progress Bar Melhorada */
+.hero-progress {
+  margin: 8px 0;
+  max-width: 420px;
+  width: 100%;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.progress-bar:hover {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.progress-bar.active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1db954 0%, #1ed760 50%, #1db954 100%);
+  border-radius: 3px;
+  transition: width 0.3s linear;
+  position: relative;
+  box-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
+}
+
+.progress-glow {
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: #1db954;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(29, 185, 84, 0.8), 0 0 24px rgba(29, 185, 84, 0.4);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(29, 185, 84, 0.8), 0 0 24px rgba(29, 185, 84, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(29, 185, 84, 1), 0 0 40px rgba(29, 185, 84, 0.6); }
+}
+
+.progress-wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.progress-wave span {
+  flex: 1;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  animation: waveBar 1.2s ease-in-out infinite;
+  border-radius: 1px;
+}
+
+@keyframes waveBar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.progress-time {
+  display: flex;
+  justify-content: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.time-current {
+  color: #1db954;
+  font-weight: 600;
+}
+
+.time-separator {
+  opacity: 0.4;
+}
+
+/* Actions Melhoradas */
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.btn-control {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.btn-control:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  color: #fff;
+}
+
+.btn-control.active {
+  background: rgba(29, 185, 84, 0.2);
+  border-color: #1db954;
+  color: #1db954;
+}
+
+.btn-play-main {
+  padding: 18px 36px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 50px;
+  min-width: 180px;
+  justify-content: center;
+}
+
+.play-icon {
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.btn-play-main:hover .play-icon {
+  transform: scale(1.15);
+}
+
+/* Like Button */
+.hero-like {
+  margin-top: 4px;
+}
+
+.btn-like-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 10px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
+.btn-like-hero:hover {
+  border-color: rgba(236, 72, 153, 0.5);
+  color: rgba(236, 72, 153, 0.8);
+  background: rgba(236, 72, 153, 0.1);
+}
+
+.btn-like-hero.active {
+  background: rgba(236, 72, 153, 0.15);
+  border-color: #ec4899;
+  color: #ec4899;
+}
+
+.btn-like-hero.animating i {
+  animation: heartBeat 0.6s ease-in-out;
+}
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(1); }
+  75% { transform: scale(1.2); }
+}
+
+.like-text {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+/* Mini Queue */
+.mini-queue {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.queue-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queue-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.queue-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateX(6px);
+}
+
+.queue-item img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.queue-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.queue-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-artist {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-progress {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1db954;
+  background: rgba(29, 185, 84, 0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* Cover Art Melhorada */
+.hero-image {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 320px;
+}
+
+.cover-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(29, 185, 84, 0.3) 0%, transparent 70%);
+  filter: blur(40px);
+  animation: coverGlow 3s ease-in-out infinite;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.cover-glow.playing {
+  opacity: 1;
+}
+
+@keyframes coverGlow {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+.cover-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(0, 0, 0, 0.3);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: coverFloat 4s ease-in-out infinite;
+}
+
+.cover-container.playing {
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 2px rgba(29, 185, 84, 0.3),
+    0 0 60px rgba(29, 185, 84, 0.2);
+  animation: coverFloat 4s ease-in-out infinite, coverPulse 2s ease-in-out infinite;
+}
+
+.cover-container.paused {
+  animation: coverFloat 4s ease-in-out infinite;
+}
+
+@keyframes coverFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes coverPulse {
+  0%, 100% { box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 2px rgba(29,185,84,0.3), 0 0 60px rgba(29,185,84,0.2); }
+  50% { box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 3px rgba(29,185,84,0.5), 0 0 80px rgba(29,185,84,0.4); }
+}
+
+.cover-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.cover-container:hover .cover-art {
+  transform: scale(1.05);
+}
+
+.cover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 20px;
+}
+
+.playing-indicator {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 24px;
+  padding: 6px 12px;
+  background: rgba(29, 185, 84, 0.9);
+  border-radius: 8px;
+}
+
+.playing-indicator span {
+  width: 3px;
+  background: #000;
+  border-radius: 2px;
+  animation: playingIndicator 0.6s ease-in-out infinite;
+}
+
+.playing-indicator span:nth-child(1) { animation-delay: 0s; height: 8px; }
+.playing-indicator span:nth-child(2) { animation-delay: 0.15s; height: 16px; }
+.playing-indicator span:nth-child(3) { animation-delay: 0.3s; height: 12px; }
+.playing-indicator span:nth-child(4) { animation-delay: 0.45s; height: 10px; }
+
+@keyframes playingIndicator {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.3); }
+}
+
+/* Floating Notes Melhoradas */
+.floating-notes {
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+
+.floating-notes i {
+  position: absolute;
+  animation: noteFloat 4s ease-in-out infinite;
+  opacity: 0;
+}
+
+.note-1 { left: 0; top: 0; animation-delay: 0s; font-size: 20px; }
+.note-2 { left: 40px; top: 20px; animation-delay: 0.8s; font-size: 16px; }
+.note-3 { left: 80px; top: -10px; animation-delay: 1.6s; font-size: 22px; }
+.note-4 { left: 20px; top: 60px; animation-delay: 2.4s; font-size: 18px; }
+.note-5 { left: 60px; top: 50px; animation-delay: 3.2s; font-size: 14px; }
+
+@keyframes noteFloat {
+  0% { transform: translateY(0) rotate(0deg) scale(0); opacity: 0; }
+  15% { opacity: 1; transform: translateY(-10px) rotate(5deg) scale(1); }
+  100% { transform: translateY(-80px) rotate(25deg) scale(0.5); opacity: 0; }
+}
+
+/* ===== RESPONSIVIDADE DO HERO ===== */
+@media (max-width: 1024px) {
+  .hero-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 40px 32px;
+    min-height: auto;
+    gap: 32px;
+  }
+
+  .hero-content {
+    max-width: 100%;
+    order: 2;
+    align-items: center;
+  }
+
+  .hero-title {
+    font-size: 36px;
+  }
+
+  .hero-artist {
+    font-size: 18px;
+    justify-content: center;
+  }
+
+  .hero-description {
+    justify-content: center;
+  }
+
+  .hero-progress {
+    max-width: 100%;
+  }
+
+  .hero-actions {
+    justify-content: center;
+  }
+
+  .hero-like {
+    justify-content: center;
+    display: flex;
+  }
+
+  .mini-queue {
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .hero-image {
+    order: 1;
+    flex: 0 0 auto;
+  }
+
+  .cover-container {
+    width: 220px;
+    height: 220px;
+  }
+
+  .cover-glow {
+    width: 240px;
+    height: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-banner {
+    padding: 28px 20px;
+    margin-bottom: 32px;
+  }
+
+  .hero-title {
+    font-size: 28px;
+  }
+
+  .hero-artist {
+    font-size: 16px;
+  }
+
+  .hero-badge {
+    padding: 8px 14px;
+    font-size: 10px;
+  }
+
+  .btn-play-main {
+    padding: 14px 28px;
+    font-size: 14px;
+    min-width: 150px;
+  }
+
+  .btn-control {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+
+  .cover-container {
+    width: 180px;
+    height: 180px;
+  }
+
+  .cover-glow {
+    width: 200px;
+    height: 200px;
+  }
+
+  .queue-item {
+    padding: 8px 12px;
+  }
+
+  .queue-item img {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-banner {
+    padding: 24px 16px;
+    border-radius: 20px;
+  }
+
+  .hero-title {
+    font-size: 24px;
+  }
+
+  .hero-actions {
+    gap: 8px;
+  }
+
+  .btn-play-main {
+    padding: 12px 24px;
+    min-width: auto;
+    flex: 1;
+  }
+
+  .btn-control {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cover-container {
+    width: 160px;
+    height: 160px;
+  }
+
+  .mini-queue {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {

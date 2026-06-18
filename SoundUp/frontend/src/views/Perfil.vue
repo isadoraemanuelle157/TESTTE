@@ -125,25 +125,7 @@
          
           <div class="user-details">
            <div class="user-badges">
-<span 
-  class="badge badge-pro" 
-  v-if="isProBadgeEquipped || isPro"
->
 
-  <div 
-    class="badge-pro-sun"
-    :class="{ 'badge-pro-equipped': hasProBadgeEquipped }"
-  >
-    <div class="sun-core"></div>
-    <div 
-      v-for="n in 8" 
-      :key="n" 
-      class="sun-ray"
-      :style="{ '--rotation': `${(n - 1) * 45}deg` }"
-    ></div>
-  </div>
-  PRO
-</span>
               <span class="badge badge-new" v-if="isNewMember">NOVO</span>
               <span class="badge badge-verified" v-if="usuario.verificado">
                 <i class="fa fa-check-circle"></i> Verificado
