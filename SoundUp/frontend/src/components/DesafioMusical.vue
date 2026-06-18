@@ -2107,8 +2107,8 @@ async claimDailyReward(day) {
  
   // Se não estiver logado, mostra alerta
   const token = localStorage.getItem('token');
-  if (!token) {
-    alert('Faça login para resgatar conquistas!');
+if (!token) {
+    this.showNotification('Faça login para resgatar conquistas!', 'warning');
     return;
   }
  
@@ -2120,10 +2120,10 @@ async claimDailyReward(day) {
     const achievementsRes = await gameApi.getAchievements();
     this.serverAchievements = achievementsRes.data.achievements;
    
-    alert(`🏆 +${res.data.moedasGanhas} moedas!`);
+     this.showNotification(`🏆 +${res.data.moedasGanhas} moedas!`, 'success');
   } catch (error) {
     console.error('Erro ao resgatar conquista:', error);
-    alert(error.response?.data?.error || 'Erro ao resgatar conquista');
+     this.showNotification(error.response?.data?.error || 'Erro ao resgatar conquista', 'error');
   }
 },
    
