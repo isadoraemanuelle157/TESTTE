@@ -1652,282 +1652,95 @@ const reportUser = async (denuncianteId, denunciadoId, motivo, chat = null) => {
   return denuncia
 }
 
+// 📌 ADICIONAR em usuarioService.js:
 const buscarRecomendacoesCompletas = async (userId, tipo = 'tudo', limit = 50) => {
-  const mongoose = require('mongoose')
+  const user = await Usuario.findById(userId)
+  if (!user) throw new Error('Usuário não encontrado')
+
+  // Buscar preferências do usuário
+  const generos = await user.getGenerosCompletos()
+  const artistas = await user.getArtistasCompletos()
+  const vibes = await user.getVibesCompletas()
+
+  const preferences = {
+    generos: generos.map(g => g.nome),
+    artistas: artistas.map(a => a.nome),
+    vibes: vibes.map(v => v.nome)
+  }
+
+  // Buscar músicas baseadas nos gêneros favoritos (do Spotify/Deezer)
+  const musicas = []
+  const albuns = []
+  const playlists = []
   
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new Error('ID inválido')
-  }
-
-  const usuario = await Usuario.findById(userId)
-    .populate('generos.locais', 'nome icon color')
-    .populate('artistasFavoritos.locais', 'nome foto generos')
-    .populate('vibesFavoritas.locais', 'nome emoji descricao gradient tags')
-    .lean()
-
-  if (!usuario) throw new Error('Usuário não encontrado')
-
-  const generosNomes = [
-    ...(usuario.generos?.locais || []).map(g => g.nome),
-    ...(usuario.generos?.externos || []).map(g => g.nome)
-  ].filter(Boolean)
-
-  const artistasNomes = [
-    ...(usuario.artistasFavoritos?.locais || []).map(a => a.nome),
-    ...(usuario.artistasFavoritos?.externos || []).map(a => a.nome)
-  ].filter(Boolean)
-
-  const vibesNomes = [
-    ...(usuario.vibesFavoritas?.locais || []).map(v => v.nome),
-    ...(usuario.vibesFavoritas?.externas || []).map(v => v.nome)
-  ].filter(Boolean)
-
-  // ✅ GARANTIR QUE SEMPRE TEMOS DADOS — usar preferências ou defaults
-  const generosFallback = generosNomes.length > 0 ? generosNomes : ['Pop', 'Rock', 'Funk']
-  const artistasFallback = artistasNomes.length > 0 ? artistasNomes : ['The Weeknd', 'Anitta', 'Marília Mendonça']
-  const vibesFallback = vibesNomes.length > 0 ? vibesNomes : ['Festa', 'Chill', 'Treino']
-
-  const resultado = {
-    tudo: [],
-    musicas: [],
-    albuns: [],
-    artistas: [],
-    playlists: []
-  }
-
-  let seedCounter = Date.now()
-
-  // ============================================
-  // 🎵 MÚSICAS — SEMPRE 15 MÚSICAS DIFERENTES
-  // ============================================
-  if (tipo === 'tudo' || tipo === 'musicas') {
-    // Tentar API primeiro
-    let tracksAPI = []
+  // Para cada gênero favorito, buscar tracks populares
+  for (const genero of generos.slice(0, 3)) {
     try {
-      if (generosNomes.length > 0) {
-        const tracksGenero = await buscarTracksPorGenero(generosFallback[0], 8)
-        tracksAPI.push(...tracksGenero)
-      }
-      if (artistasNomes.length > 0) {
-        for (const artista of artistasFallback.slice(0, 2)) {
-          const tracksArtista = await buscarTracksPorArtista(artista, 4)
-          tracksAPI.push(...tracksArtista)
-        }
-      }
-      if (vibesNomes.length > 0) {
-        const searchTerms = VIBE_SEARCH_MAP[vibesFallback[0]] || [vibesFallback[0].toLowerCase()]
-        const tracksVibe = await buscarTracksPorVibe(searchTerms, 8)
-        tracksAPI.push(...tracksVibe)
+      const searchQuery = genero.nome.toLowerCase()
+      // Buscar do Spotify usando o token do app (não precisa de user token)
+      const spotifyTracks = await spotifyService.searchTracksByGenre(searchQuery, 10)
+      musicas.push(...spotifyTracks.map(t => ({
+        id: t.id,
+        title: t.name,
+        artist: t.artists?.[0]?.name,
+        cover: t.album?.images?.[0]?.url,
+        url: t.preview_url,
+        duration: Math.floor(t.duration_ms / 1000),
+        source: 'spotify',
+        razao: `Baseado em ${genero.nome}`,
+        categoria: 'musicas'
+      })))
+    } catch (e) {
+      console.warn(`Erro ao buscar tracks para ${genero.nome}:`, e.message)
+    }
+  }
+
+  // Para cada artista favorito, buscar top tracks
+  for (const artista of artistas.slice(0, 3)) {
+    try {
+      if (artista.source === 'spotify' && artista.id) {
+        const topTracks = await spotifyService.getArtistTopTracks(artista.id, 5)
+        musicas.push(...topTracks.map(t => ({
+          id: t.id,
+          title: t.name,
+          artist: t.artists?.[0]?.name,
+          cover: t.album?.images?.[0]?.url,
+          url: t.preview_url,
+          duration: Math.floor(t.duration_ms / 1000),
+          source: 'spotify',
+          razao: `Porque você curte ${artista.nome}`,
+          categoria: 'musicas'
+        })))
       }
     } catch (e) {
-      console.warn('⚠️ API falhou para músicas, usando mock:', e.message)
+      console.warn(`Erro ao buscar tracks de ${artista.nome}:`, e.message)
     }
-
-    // ✅ FALLBACK MOCK: Gerar 15 músicas diferentes baseadas nos gostos do usuário
-   const mockTracks = gerarMockTracks('musicas', seedCounter++, generosFallback[0], artistasFallback[0], vibesFallback[0])
-
-    // Combinar API + Mock, remover duplicados, garantir 15
-    const combinado = [...tracksAPI, ...mockTracks]
-    const seen = new Set()
-    const unicos = combinado.filter(t => {
-      const key = `${t.source || 'unknown'}_${t.id}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    // Se ainda faltar, gerar mais mocks com seeds diferentes
-   while (unicos.length < 15) {
-  const extraSeed = seedCounter++
-  const extraMock = gerarMockTracks('musicas', extraSeed, 
-    generosFallback[unicos.length % generosFallback.length] || 'pop',
-    artistasFallback[unicos.length % artistasFallback.length] || '',
-    vibesFallback[unicos.length % vibesFallback.length] || ''
-  )
-      for (const t of extraMock) {
-        const key = `${t.source || 'unknown'}_${t.id}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          unicos.push(t)
-          if (unicos.length >= 15) break
-        }
-      }
-    }
-
-    resultado.musicas = unicos.slice(0, 15).map((t, i) => ({
-      ...t,
-      categoria: 'musicas',
-      razao: t.razao || `Recomendado para você (${i + 1})`
-    }))
   }
 
-  // ============================================
-  // 💿 ÁLBUNS — SEMPRE 15 ÁLBUNS DIFERENTES
-  // ============================================
-  if (tipo === 'tudo' || tipo === 'albuns') {
-    let albunsAPI = []
-    try {
-      albunsAPI = await buscarAlbunsPorGenero(generosFallback[0], 15)
-    } catch (e) {
-      console.warn('⚠️ API falhou para álbuns, usando mock:', e.message)
-    }
-
-    // ✅ FALLBACK MOCK: Criar álbuns baseados nos gêneros/artistas
-    const mockAlbuns = gerarMockAlbuns(generosFallback, artistasFallback, seedCounter++)
-    
-    const combinado = [...albunsAPI, ...mockAlbuns]
-    const seen = new Set()
-    const unicos = combinado.filter(a => {
-      const key = `${a.source || 'unknown'}_${a.id}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    while (unicos.length < 15) {
-      const extraMock = gerarMockAlbuns(generosFallback, artistasFallback, seedCounter++)
-      for (const a of extraMock) {
-        const key = `${a.source || 'unknown'}_${a.id}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          unicos.push(a)
-          if (unicos.length >= 15) break
-        }
-      }
-    }
-
-    resultado.albuns = unicos.slice(0, 15).map(a => ({
-      ...a,
-      categoria: 'albuns',
-      razao: a.razao || `Álbuns de ${generosFallback[0]}`
-    }))
-  }
-
-  // ============================================
-  // 🎤 ARTISTAS — SEMPRE 15 ARTISTAS DIFERENTES
-  // ============================================
-  if (tipo === 'tudo' || tipo === 'artistas') {
-    let artistasAPI = []
-    try {
-      for (const artista of artistasFallback.slice(0, 3)) {
-        const encontrados = await buscarArtistasPorNome(artista, 5)
-        artistasAPI.push(...encontrados)
-      }
-    } catch (e) {
-      console.warn('⚠️ API falhou para artistas, usando mock:', e.message)
-    }
-
-    // ✅ FALLBACK MOCK
-    const mockArtistas = gerarMockArtistas(artistasFallback, generosFallback, seedCounter++)
-    
-    const combinado = [...artistasAPI, ...mockArtistas]
-    const seen = new Set()
-    const unicos = combinado.filter(a => {
-      const key = `${a.source || 'unknown'}_${a.id}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    while (unicos.length < 15) {
-      const extraMock = gerarMockArtistas(artistasFallback, generosFallback, seedCounter++)
-      for (const a of extraMock) {
-        const key = `${a.source || 'unknown'}_${a.id}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          unicos.push(a)
-          if (unicos.length >= 15) break
-        }
-      }
-    }
-
-    resultado.artistas = unicos.slice(0, 15).map(a => ({
-      ...a,
+  // Montar resposta por tipo
+  const result = {
+    preferences,
+    tudo: [
+      ...musicas.slice(0, 5),
+      ...artistas.slice(0, 3).map(a => ({ ...a, type: 'artistas', razao: 'Você curte este artista' })),
+      ...playlists.slice(0, 3)
+    ],
+    musicas: musicas.slice(0, limit),
+    albuns: albuns.slice(0, limit),
+    artistas: artistas.slice(0, limit).map(a => ({
+      id: a.id,
+      title: a.nome || a.name,
+      cover: a.foto || a.imagem || a.images?.[0]?.url,
       categoria: 'artistas',
-      razao: a.razao || 'Artistas relacionados aos seus gostos'
-    }))
+      razao: 'Você curte este artista',
+      followers: a.followers || 0,
+      popularity: a.popularity || 80,
+      genres: a.generos || [a.genre]
+    })),
+    playlists: playlists.slice(0, limit)
   }
 
-  // ============================================
-  // 📋 PLAYLISTS — SEMPRE 15 PLAYLISTS DIFERENTES
-  // ============================================
-  if (tipo === 'tudo' || tipo === 'playlists') {
-    let playlistsAPI = []
-    try {
-      const searchTerms = vibesFallback[0] ? (VIBE_SEARCH_MAP[vibesFallback[0]] || [vibesFallback[0].toLowerCase()]) : ['pop']
-      playlistsAPI = await buscarPlaylistsPorVibe(searchTerms, 15)
-    } catch (e) {
-      console.warn('⚠️ API falhou para playlists, usando mock:', e.message)
-    }
-
-    // ✅ FALLBACK MOCK
-    const mockPlaylists = gerarMockPlaylists(vibesFallback, generosFallback, seedCounter++)
-    
-    const combinado = [...playlistsAPI, ...mockPlaylists]
-    const seen = new Set()
-    const unicos = combinado.filter(p => {
-      const key = `${p.source || 'unknown'}_${p.id}`
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-
-    while (unicos.length < 15) {
-      const extraMock = gerarMockPlaylists(vibesFallback, generosFallback, seedCounter++)
-      for (const p of extraMock) {
-        const key = `${p.source || 'unknown'}_${p.id}`
-        if (!seen.has(key)) {
-          seen.add(key)
-          unicos.push(p)
-          if (unicos.length >= 15) break
-        }
-      }
-    }
-
-    resultado.playlists = unicos.slice(0, 15).map(p => ({
-      ...p,
-      categoria: 'playlists',
-      razao: p.razao || `Playlist para ${vibesFallback[0] || 'você'}`
-    }))
-  }
-
-  // ============================================
-  // 🎯 ABA "TUDO" — MIX DE TODAS AS CATEGORIAS
-  // ============================================
-  if (tipo === 'tudo') {
-    const maxPorCategoria = 4 // 4 de cada = ~16 itens misturados
-    
-    const tudo = [
-      ...resultado.musicas.slice(0, maxPorCategoria).map(m => ({ ...m, type: 'musicas' })),
-      ...resultado.albuns.slice(0, maxPorCategoria).map(a => ({ ...a, type: 'albuns' })),
-      ...resultado.artistas.slice(0, maxPorCategoria).map(a => ({ ...a, type: 'artistas' })),
-      ...resultado.playlists.slice(0, maxPorCategoria).map(p => ({ ...p, type: 'playlists' }))
-    ].sort(() => Math.random() - 0.5)
-
-    // Se ainda tiver pouco, adicionar mais músicas
-    if (tudo.length < 15) {
-      const maisMusicas = resultado.musicas
-        .slice(maxPorCategoria, maxPorCategoria + (15 - tudo.length))
-        .map(m => ({ ...m, type: 'musicas' }))
-      tudo.push(...maisMusicas)
-    }
-
-    resultado.tudo = tudo.slice(0, 16)
-  }
-
-  return {
-    tudo: resultado.tudo,
-    musicas: resultado.musicas,
-    albuns: resultado.albuns,
-    artistas: resultado.artistas,
-    playlists: resultado.playlists,
-    total: resultado[tipo === 'tudo' ? 'tudo' : tipo].length,
-    preferences: { 
-      generos: generosNomes, 
-      artistas: artistasNomes, 
-      vibes: vibesNomes 
-    }
-  }
+  return result
 }
 
 async function buscarAlbunsPorGenero(genero, limit = 10) {

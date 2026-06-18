@@ -2449,33 +2449,52 @@ window.dispatchEvent(new CustomEvent('play-song', {
       }
     },
 
-    async searchSpotifyAndLocal(query) {
-      this.isLoading = true
-      try {
-        const token = localStorage.getItem('token')
-       
-        let spotifyRes = { tracks: { items: [] }, artists: { items: [] }, albums: { items: [] } }
-       
-        try {
-          const res = await fetch(
-            `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album&limit=20&market=BR`,
-            {
-              headers: { Authorization: `Bearer ${token}` }
-            }
-          )
-         
-          if (res.ok) {
-            const contentType = res.headers.get('content-type')
-            if (contentType && contentType.includes('application/json')) {
-              spotifyRes = await res.json()
-            }
-          } else {
-            const errorText = await res.text()
-            console.warn(`[SPOTIFY] Erro ${res.status}:`, errorText.substring(0, 200))
-          }
-        } catch (spotifyErr) {
-          console.warn('[SPOTIFY] Falha na requisição:', spotifyErr.message)
+async searchSpotifyAndLocal(query) {
+  this.isLoading = true
+  try {
+    const token = localStorage.getItem('token')
+   
+    let spotifyRes = { tracks: { items: [] }, artists: { items: [] }, albums: { items: [] } }
+   
+    try {
+      const res = await fetch(
+        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album&limit=20&market=BR`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          // ============================================
+          // ADICIONAR signal para timeout de 8 segundos:
+          // ============================================
+          signal: AbortSignal.timeout(8000)
         }
+      )
+     
+      if (res.ok) {
+        const contentType = res.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          spotifyRes = await res.json()
+        }
+      } else if (res.status === 429) {   // ✅ CORRIGIDO: removido o } extra
+        const retryAfter = res.headers.get('retry-after')
+        const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 0
+        
+        if (retryAfterSeconds > 1800) {
+          console.warn(`[SPOTIFY] Ban de ${Math.round(retryAfterSeconds / 3600)}h detectado. Usando apenas locais/Deezer.`)
+          this.showToast(`Spotify indisponível (${Math.round(retryAfterSeconds / 3600)}h). Resultados locais.`, 'warning')
+        } else {
+          console.warn('[SPOTIFY] Rate limit 429 na busca, usando fallback local')
+          this.showToast('Spotify temporariamente indisponível. Mostrando resultados locais.', 'info')
+        }
+      }
+    } catch (spotifyErr) {   // ✅ catch fecha o try que envolve o fetch
+      // ============================================
+      // ADICIONAR: Tratamento de erro de rede/timeout
+      // ============================================
+      if (spotifyErr.name === 'TimeoutError' || spotifyErr.name === 'AbortError') {
+        console.warn('[SPOTIFY] Timeout na busca, usando fallback')
+      } else {
+        console.warn('[SPOTIFY] Falha na requisição:', spotifyErr.message)
+      }
+    }
 
         // Banco local (público) + usuários (com auth)
         const [localMusicas, localCantores, localAlbuns, localGeneros, localUsuarios] = await Promise.all([
@@ -3481,6 +3500,11 @@ if (matchedExploreGenres.length > 0) {
 
     // ===== ATUALIZADO: searchAndGo com redirecionamento para local =====
     async searchAndGo(term) {
+        if (this._searchAndGoLock) {
+    console.log('[SEARCH] Ignorando clique duplo em searchAndGo')
+    return
+  }
+  this._searchAndGoLock = true
       try {
         // ✅ SE FOR LOCAL: vai direto pra playlist do local
         if (this.localizacoes.includes(term)) {

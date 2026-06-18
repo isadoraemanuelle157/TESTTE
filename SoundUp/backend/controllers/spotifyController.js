@@ -14,11 +14,11 @@ const Usuario = require('../models/Usuario')
 
 // ================= CACHE CONFIG =================
 const CACHE_TTL = {
-  search: 1000 * 60 * 15,        // 15 min
+  search: 1000 * 60 * 60 * 2,      // 15 min
   artist: 1000 * 60 * 60,        // 1 hora
   album: 1000 * 60 * 60,         // 1 hora
   playlist: 1000 * 60 * 30,      // 30 min
-popular: 1000 * 60 * 60 * 24,
+popular: 1000 * 60 * 60 * 24 * 7,
   vibes: 1000 * 60 * 60 * 6      // 6 horas
 }
 // ================= FALLBACK DATA (dados estáticos) =================
@@ -113,25 +113,40 @@ const FALLBACK_VIBES = [
 ]
 
 // ================= SEARCH =================
+// ✅ CORRIGIDO — usa userToken quando disponível
 exports.search = async (req, res) => {
   try {
     const { q, type = 'track,artist,album', market = 'BR' } = req.query
     if (!q) return res.status(400).json({ error: 'Query obrigatória' })
 
-    const cacheKey = `spotify_search_${q}_${type}`
+  const cacheKey = `spotify_search_${q.toLowerCase().trim()}_${type}`
     const cached = getCache(cacheKey)
     if (cached) return res.json(cached)
+
+    // 🔴 NOVO: Tenta usar token do usuário primeiro
+    const { getUserSpotifyToken } = require('../utils/spotifyRequest')
+    const userToken = await getUserSpotifyToken(req)
 
     const response = await spotifyRequest({
       method: 'GET',
       url: `${SPOTIFY_API_URL}/search`,
       params: { q, type, limit: 10, market }
-    })
+    }, 3, userToken)  // ← PASSA userToken (ou null se não tiver)
 
     setCache(cacheKey, response.data)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Spotify search:', error.message)
+    
+    // 🔴 NOVO: Se for ban hard, retorna erro específico pro frontend
+    if (error.isHardBan) {
+      return res.status(429).json({ 
+        error: 'SPOTIFY_RATE_LIMIT',
+        banHours: error.banDurationHours,
+        message: `Spotify indisponível por ${error.banDurationHours}h. Use resultados locais/Deezer.`
+      })
+    }
+    
     res.status(500).json({ error: 'Erro Spotify Search', details: error.message })
   }
 }
@@ -240,17 +255,15 @@ async function atualizarCacheArtistas(cacheKey, market, limit) {
   try {
     console.log('🔄 Atualizando cache em background:', cacheKey)
     
-    const generos = [
-      'brazilian funk', 'sertanejo', 'pagode', 'samba', 'mpb',
-      'brazilian rock', 'pop', 'hip hop', 'rap', 'gospel'
-    ]
+const generos = [
+  'sertanejo', 'pagode', 'mpb', 'pop', 'rap', 'gospel'
+]
     
     let searchResults = []
     let spotifyFailed = false
-    const batchSize = 3
-
-    for (let i = 0; i < generos.length; i += batchSize) {
-      const batch = generos.slice(i, i + batchSize)
+const batchSize = 1  // REDUZA para 1
+for (let i = 0; i < generos.length; i += batchSize) {
+  const batch = generos.slice(i, i + batchSize) 
       
       const results = await Promise.allSettled(
         batch.map(async (genero) => {
@@ -258,7 +271,7 @@ async function atualizarCacheArtistas(cacheKey, market, limit) {
             const response = await spotifyRequest({
               method: 'GET',
               url: `${SPOTIFY_API_URL}/search`,
-              params: { q: `genre:"${genero}"`, type: 'artist', limit: 3, market }
+       params: { q: `genre:"${genero}"`, type: 'artist', limit: 1, market }
             })
             const artists = response.data?.artists?.items || []
             if (artists.length === 0) return null
