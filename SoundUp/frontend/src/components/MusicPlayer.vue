@@ -326,6 +326,8 @@ export default {
       currentIndex: 0,
       isPlaying: false,
       isLiked: false,
+      spotifyPremium: false,      // ← ADICIONAR
+spotifySdkReady: false,
       isFavorited: false,
       isMuted: false,
       isDragging: false,
@@ -419,6 +421,9 @@ currentTrackSource() {
     this.checkLoginStatus()
     this.checkLikeStatus()
     this.checkFavoriteStatus()
+    if (this.spotifyConnected && this.isLogged) {
+  this.initSpotifyPlayer()
+}
    
     this.$nextTick(() => {
       const audio = this.$refs.audioPlayer
@@ -447,6 +452,9 @@ currentTrackSource() {
     window.removeEventListener('favoritas-updated', this.checkFavoriteStatus)
     window.removeEventListener('curtidas-updated', this.checkLikeStatus)
     this.stopSyncInterval()
+    if (this.spotifyPlayer) {
+  this.spotifyPlayer.disconnect()
+}
   },
 
   // ═══════════════════════════════════════════════════════
@@ -511,103 +519,178 @@ currentTrackSource() {
       this.$router?.push('/playlist').catch(() => {})
     },
 
-    async initSpotifyPlayer() {
-      if (!this.isLogged || !this.spotifyConnected) return
-      if (this.spotifyPlayer) return
-      try {
-        const { initSpotifyPlayer } = await import('@/utils/spotifyPlayer.js')
-        const { player, deviceId } = await initSpotifyPlayer(async () => {
-          const res = await fetch('http://localhost:3002/spotify/refresh', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          })
-          const data = await res.json()
-          if (!data.success) throw new Error('Falha no refresh token')
-          return data.access_token
-        })
-        this.spotifyPlayer = player
-        this.spotifyDeviceId = deviceId
-        player.addListener('player_state_changed', (state) => {
-          if (!state) return
-          this.syncSpotifyState(state)
-        })
-      } catch (e) {
-        console.error('[SPOTIFY] Erro ao inicializar:', e)
-        this.showToast('Erro ao conectar player Spotify', 'error')
-      }
-    },
+   async initSpotifyPlayer() {
+  if (!this.isLogged || !this.spotifyConnected) return
+  if (this.spotifyPlayer) return
 
-    async playSpotifyFullTrack() {
-      if (!this.spotifyPlayer || !this.spotifyDeviceId) {
-        this.showToast('Spotify não conectado', 'error')
-        return
+  // Carrega o script do Spotify Web Playback SDK
+  if (!window.Spotify) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://sdk.scdn.co/spotify-player.js'
+      script.async = true
+      script.onload = () => {
+        window.onSpotifyWebPlaybackSDKReady = () => resolve()
       }
-      try {
-        const tokenRes = await fetch('http://localhost:3002/spotify/refresh', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
-        const tokenData = await tokenRes.json()
-        if (!tokenData.success) {
-          this.showToast('Token Spotify expirado. Reconecte.', 'error')
-          return
-        }
-        const searchQuery = `${this.currentTrack.title} ${this.currentTrack.artist}`
-        const searchRes = await fetch(
-          `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(searchQuery)}&type=track`,
-          { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-        )
-        const searchData = await searchRes.json()
-        if (searchData.tracks?.items?.[0]) {
-          const spotifyTrack = searchData.tracks.items[0]
-          await this.spotifyPlayer._options.getOAuthToken(async (token) => {
-            await fetch('https://api.spotify.com/v1/me/player', {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                device_ids: [this.spotifyDeviceId],
-                play: false
-              })
-            })
-            await fetch(
-              `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
-              {
-                method: 'PUT',
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  uris: [`spotify:track:${spotifyTrack.id}`]
-                })
-              }
-            )
-          })
-          this.spotifyMode = true
-          this.isPlaying = true
-          this.duration = this.currentTrack.duration || 30
-          this.currentTrack = {
-            ...this.currentTrack,
-            id: spotifyTrack.id,
-            title: spotifyTrack.name,
-            artist: spotifyTrack.artists.map(a => a.name).join(', '),
-            cover: spotifyTrack.album?.images?.[0]?.url || this.currentTrack.cover,
-            duration: spotifyTrack.duration_ms / 1000
-          }
-          console.log('✅ Tocando via Spotify SDK:', spotifyTrack.name)
-        } else {
-          this.showToast('Música não encontrada no Spotify', 'warning')
-          setTimeout(() => this.nextTrack(), 1500)
-        }
-      } catch (e) {
-        console.error('[SPOTIFY] Erro ao tocar full track:', e)
-        this.showToast('Erro ao tocar no Spotify', 'error')
-        this.spotifyMode = false
+      script.onerror = reject
+      document.head.appendChild(script)
+      
+      // Timeout de 10s
+      setTimeout(() => reject(new Error('Timeout Spotify SDK')), 10000)
+    })
+  }
+
+  try {
+    const tokenRes = await fetch('http://localhost:3002/spotify/refresh', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+    const tokenData = await tokenRes.json()
+    
+    if (!tokenData.success) {
+      console.warn('[SPOTIFY] Token não renovado')
+      return
+    }
+
+    this.spotifyPlayer = new window.Spotify.Player({
+      name: 'SoundUp Music',
+      getOAuthToken: cb => cb(tokenData.access_token),
+      volume: this.volume
+    })
+
+    this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+      console.log('[SPOTIFY] Device pronto:', device_id)
+      this.spotifyDeviceId = device_id
+      this.spotifySdkReady = true
+    })
+
+    this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+      console.log('[SPOTIFY] Device offline:', device_id)
+      this.spotifySdkReady = false
+    })
+
+    this.spotifyPlayer.addListener('player_state_changed', (state) => {
+      if (!state) return
+      this.syncSpotifyState(state)
+    })
+
+    this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+      console.error('[SPOTIFY] Init error:', message)
+    })
+
+    this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
+      console.error('[SPOTIFY] Auth error:', message)
+      this.spotifySdkReady = false
+    })
+
+    this.spotifyPlayer.addListener('account_error', ({ message }) => {
+      console.error('[SPOTIFY] Account error:', message)
+      this.spotifyPremium = false
+      this.showToast('Spotify Premium necessário para streaming completo', 'warning')
+    })
+
+    await this.spotifyPlayer.connect()
+    
+  } catch (e) {
+    console.error('[SPOTIFY] Erro ao inicializar player:', e)
+    this.showToast('Erro ao conectar player Spotify', 'error')
+  }
+},
+
+async playSpotifyFullTrack() {
+  if (!this.spotifyPlayer || !this.spotifyDeviceId || !this.spotifySdkReady) {
+    this.showToast('Spotify não conectado. Inicializando...', 'warning')
+    await this.initSpotifyPlayer()
+    if (!this.spotifySdkReady) {
+      this.showToast('Não foi possível conectar ao Spotify', 'error')
+      return
+    }
+  }
+
+  try {
+    const token = localStorage.getItem('token')
+    
+    // 1️⃣ Busca a música no Spotify usando o token do usuário (full search)
+    const searchQuery = `${this.currentTrack.title} ${this.currentTrack.artist}`
+    const searchRes = await fetch(
+      `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    const searchData = await searchRes.json()
+
+    if (!searchData.tracks?.items?.[0]) {
+      this.showToast('Música não encontrada no Spotify', 'warning')
+      setTimeout(() => this.nextTrack(), 1500)
+      return
+    }
+
+    const spotifyTrack = searchData.tracks.items[0]
+    const spotifyUri = `spotify:track:${spotifyTrack.id}`
+
+    // 2️⃣ Transfere o playback para o Web SDK e toca
+    const transferRes = await fetch('http://localhost:3002/spotify/transfer-playback', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        device_id: this.spotifyDeviceId,
+        uris: [spotifyUri],
+        position_ms: 0
+      })
+    })
+
+    if (!transferRes.ok) {
+      const err = await transferRes.json()
+      throw new Error(err.error || 'Erro ao transferir playback')
+    }
+
+    // 3️⃣ Atualiza estado local
+    this.spotifyMode = true
+    this.isPlaying = true
+    this.currentTrack = {
+      ...this.currentTrack,
+      id: spotifyTrack.id,
+      title: spotifyTrack.name,
+      artist: spotifyTrack.artists.map(a => a.name).join(', '),
+      cover: spotifyTrack.album?.images?.[0]?.url || this.currentTrack.cover,
+      duration: spotifyTrack.duration_ms / 1000,
+      uri: spotifyUri
+    }
+    this.duration = this.currentTrack.duration
+    
+    console.log('✅ Tocando via Spotify Web SDK:', spotifyTrack.name)
+
+  } catch (e) {
+    console.error('[SPOTIFY] Erro ao tocar full track:', e)
+    this.showToast('Erro ao tocar no Spotify. Tentando preview...', 'warning')
+    this.spotifyMode = false
+    // Fallback: tenta tocar o preview normal
+    setTimeout(() => this.attemptPlay(), 500)
+  }
+},
+
+syncSpotifyState(state) {
+  this.isPlaying = !state.paused
+  this.currentTime = state.position / 1000
+  this.duration = state.duration / 1000
+  
+  if (state.track_window?.current_track) {
+    const track = state.track_window.current_track
+    // Só atualiza se for uma música diferente
+    if (track.id !== this.currentTrack?.id) {
+      this.currentTrack = {
+        ...this.currentTrack,
+        id: track.id,
+        title: track.name,
+        artist: track.artists.map(a => a.name).join(', '),
+        cover: track.album.images?.[0]?.url || this.currentTrack?.cover,
+        duration: track.duration_ms / 1000
       }
-    },
+    }
+  }
+},
 
     checkLoginStatus() {
       const token = localStorage.getItem('token')

@@ -850,3 +850,111 @@ exports.getAlbumTracks = async (req, res) => {
     res.status(500).json({ error: 'Erro ao buscar tracks do álbum', details: error.message })
   }
 }
+
+// 📌 ADICIONAR em spotifyController.js ou criar spotifyService.js:
+
+exports.searchTracksByGenre = async (genre, limit = 10) => {
+  try {
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: { 
+        q: `genre:"${genre}"`, 
+        type: 'track', 
+        limit, 
+        market: 'BR' 
+      }
+    })
+    return response.data?.tracks?.items || []
+  } catch (error) {
+    console.error('❌ searchTracksByGenre:', error.message)
+    return []
+  }
+}
+
+exports.getArtistTopTracks = async (artistId, limit = 5) => {
+  try {
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/artists/${artistId}/top-tracks`,
+      params: { market: 'BR' }
+    })
+    return (response.data?.tracks || []).slice(0, limit)
+  } catch (error) {
+    console.error('❌ getArtistTopTracks:', error.message)
+    return []
+  }
+}
+
+// ================= SPOTIFY WEB PLAYBACK SDK: TRANSFERIR PLAYBACK =================
+exports.transferPlayback = async (req, res) => {
+  try {
+    const { device_id, uris, position_ms = 0 } = req.body
+    
+    if (!device_id) {
+      return res.status(400).json({ error: 'device_id obrigatório' })
+    }
+    if (!uris || !Array.isArray(uris) || uris.length === 0) {
+      return res.status(400).json({ error: 'uris obrigatório (array)' })
+    }
+
+    // ✅ USA O TOKEN DO USUÁRIO (Premium necessário)
+    const userToken = req.spotifyUserToken
+    
+    if (!userToken) {
+      return res.status(403).json({ 
+        error: 'SPOTIFY_NOT_CONNECTED',
+        message: 'Conecte sua conta do Spotify Premium'
+      })
+    }
+
+    // 1️⃣ Transfere o playback para o device do Web SDK
+    await axios.put(
+      `${SPOTIFY_API_URL}/me/player`,
+      {
+        device_ids: [device_id],
+        play: false // Não toca ainda, só transfere
+      },
+      {
+        headers: { Authorization: `Bearer ${userToken}` }
+      }
+    )
+
+    // 2️⃣ Inicia a reprodução das URIs especificadas
+    await axios.put(
+      `${SPOTIFY_API_URL}/me/player/play?device_id=${device_id}`,
+      {
+        uris: uris,
+        position_ms: position_ms
+      },
+      {
+        headers: { Authorization: `Bearer ${userToken}` }
+      }
+    )
+
+    console.log('✅ Playback transferido para device:', device_id)
+    res.json({ success: true, message: 'Playback iniciado' })
+
+  } catch (error) {
+    console.error('❌ Transfer playback error:', error.response?.data || error.message)
+    
+    if (error.response?.status === 403) {
+      return res.status(403).json({ 
+        error: 'SPOTIFY_PREMIUM_REQUIRED',
+        message: 'Spotify Premium necessário para streaming completo'
+      })
+    }
+    
+    if (error.response?.status === 404) {
+      return res.status(404).json({ 
+        error: 'DEVICE_NOT_FOUND',
+        message: 'Device não encontrado. Recarregue a página.'
+      })
+    }
+    
+    res.status(500).json({ 
+      error: 'Erro ao transferir playback', 
+      details: error.response?.data?.error?.message || error.message 
+    })
+  }
+}

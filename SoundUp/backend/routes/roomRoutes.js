@@ -17,10 +17,13 @@ router.post('/:id/moderadores', requireAuth, roomController.adicionarModerador)
 router.delete('/:id/moderadores', requireAuth, roomController.removerModerador)
 router.put('/:id/permissoes', requireAuth, roomController.atualizarPermissoes)
 
-// ========== ROTAS DE LISTENERS ==========
+// ========== ROTAS DE LISTENERS (apenas 1 vez!) ==========
 router.post('/:id/listeners', optionalAuth, roomController.adicionarListener)
 router.get('/:id/listeners', roomController.listarListeners)
 router.delete('/:id/listeners', optionalAuth, roomController.removerListener)
+
+// ✅ ROTA BEACON — usa optionalAuth para ter req.user disponível
+router.post('/:id/listeners/beacon', optionalAuth, roomController.removerListenerBeacon)
 
 // ========== ROTAS DE SINCRONIZAÇÃO E FILA ==========
 router.post('/:id/sync', optionalAuth, roomController.sincronizarReproducao)

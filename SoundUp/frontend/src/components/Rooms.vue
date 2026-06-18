@@ -358,7 +358,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -874,12 +874,38 @@ const goBack = () => {
 }
 
 // ============================================
+// ATUALIZAÇÃO PERIÓDICA DA LISTA
+// ============================================
+let roomsRefreshInterval = null
+
+const startRoomsRefresh = () => {
+  // Atualiza a lista a cada 10 segundos para refletir mudanças de listeners
+  roomsRefreshInterval = setInterval(() => {
+    fetchAllRooms()
+  }, 10000)
+}
+
+const stopRoomsRefresh = () => {
+  if (roomsRefreshInterval) {
+    clearInterval(roomsRefreshInterval)
+    roomsRefreshInterval = null
+  }
+}
+
+// ============================================
 // LIFECYCLE
 // ============================================
 onMounted(async () => {
   checkAuth() // sincroniza o estado de login
   await fetchAllRooms() // agora já sabe se está logado e busca /api/rooms/my também
+  startRoomsRefresh()   // ← INICIAR POLLING
 })
+
+
+onUnmounted(() => {
+  stopRoomsRefresh()
+})
+
 </script>
 
 <style scoped>

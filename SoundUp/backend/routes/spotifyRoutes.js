@@ -35,4 +35,9 @@ router.get('/callback', spotifyController.callback)
 router.post('/refresh', requireAuth, spotifyController.refreshUserToken)
 router.get('/status', requireAuth, spotifyController.getSpotifyStatus)
 
+// ============================================
+// 🎵 SPOTIFY WEB PLAYBACK SDK
+// ============================================
+router.put('/transfer-playback', requireAuth, requireSpotifyAuth, spotifyController.transferPlayback)
+
 module.exports = router

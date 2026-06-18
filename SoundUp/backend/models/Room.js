@@ -20,10 +20,10 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // ✅ REMOVIDO select: false — passwordHash precisa ser acessível para verificação
   passwordHash: {
     type: String,
-    default: null,
-    select: false
+    default: null
   },
   source: {
     type: String,
@@ -75,7 +75,8 @@ const roomSchema = new mongoose.Schema({
   }],
   listeners: {
     type: Number,
-    default: 0
+    default: 0,
+    min: 0  // ✅ Garante que nunca fique negativo no schema
   },
   currentTrack: {
     id: String,
@@ -98,8 +99,7 @@ const roomSchema = new mongoose.Schema({
   // ========== LISTENERS ATIVOS ==========
   activeListeners: [{
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Usuario',
+      type: mongoose.Schema.Types.Mixed,  // ✅ Mixed permite ObjectId ou String (guest IDs)
       required: true
     },
     name: String,
@@ -132,6 +132,7 @@ const roomSchema = new mongoose.Schema({
 
 roomSchema.index({ createdBy: 1 })
 roomSchema.index({ isPublic: 1 })
+roomSchema.index({ 'activeListeners.userId': 1 })  // ✅ Índice para busca rápida de listeners
 
 roomSchema.pre('save', function(next) {
   if (this.isPublic) {
@@ -139,6 +140,10 @@ roomSchema.pre('save', function(next) {
     this.hasPassword = false
   } else {
     this.hasPassword = !!this.passwordHash
+  }
+  // ✅ Garante listeners nunca negativo
+  if (this.listeners < 0) {
+    this.listeners = 0
   }
   next()
 })
@@ -149,6 +154,14 @@ roomSchema.pre('findOneAndUpdate', function(next) {
     this.set({ passwordHash: null, hasPassword: false })
   } else if ((update.isPublic === false || update.$set?.isPublic === false) && !update.passwordHash && !update.$set?.passwordHash) {
     this.set({ hasPassword: false })
+  }
+  // ✅ Garante listeners nunca negativo em updates
+  if (update.$inc?.listeners < 0 || update.$set?.listeners < 0) {
+    const currentListeners = this.listeners || 0
+    if (currentListeners + (update.$inc?.listeners || 0) < 0) {
+      delete update.$inc.listeners
+      this.set({ listeners: 0 })
+    }
   }
   next()
 })

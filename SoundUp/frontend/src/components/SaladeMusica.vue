@@ -727,9 +727,13 @@
     </Teleport>
   </div>
 </template>
+
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+let beforeUnloadHandler = null
+const hasLeftManually = ref(false)
 
 const route = useRoute()
 const router = useRouter()
@@ -815,24 +819,66 @@ const apiFetch = async (path, options = {}) => {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {})
   }
-  return fetch(`${API_URL}${path}`, { ...options, headers })
+
+  try {
+    const response = await fetch(`${API_URL}${path}`, { ...options, headers })
+
+    // ✅ CORREÇÃO 7: Trata erros de autenticação
+    if (response.status === 401) {
+      showToast('error', 'Sessão Expirada', 'Faça login novamente para continuar', 5000)
+      localStorage.removeItem('token')
+      localStorage.removeItem('usuario')
+      isLoggedIn.value = false
+      setTimeout(() => {
+        router.push('/login')
+      }, 2000)
+      throw new Error('Unauthorized')
+    }
+
+    if (response.status === 403) {
+      showToast('error', 'Acesso Negado', 'Você não tem permissão para esta ação', 4000)
+      throw new Error('Forbidden')
+    }
+
+    if (response.status === 404) {
+      showToast('error', 'Não Encontrado', 'Recurso não encontrado no servidor', 4000)
+      throw new Error('Not Found')
+    }
+
+    if (response.status === 500) {
+      showToast('error', 'Erro do Servidor', 'O servidor encontrou um erro. Tente novamente.', 4000)
+      throw new Error('Server Error')
+    }
+
+    return response
+  } catch (error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      showToast('error', 'Erro de Conexão', 'Verifique sua internet e tente novamente', 4000)
+    }
+    throw error
+  }
 }
 
-const normalizeRoom = (data = {}) => ({
-  ...data,
-  id: data.id || data._id,
-  createdBy: data.createdBy?.id || data.createdBy?._id || data.createdBy,
-  invitedUsers: Array.isArray(data.invitedUsers)
-    ? data.invitedUsers.map(u => u.id || u._id || u)
-    : []
-})
+// ✅ CORREÇÃO 6: Usar data.toObject() se existir
+const normalizeRoom = (data = {}) => {
+  const raw = data && typeof data.toObject === 'function' ? data.toObject() : data
+  return {
+    ...raw,
+    id: raw.id || raw._id,
+    createdBy: raw.createdBy?.id || raw.createdBy?._id || raw.createdBy,
+    invitedUsers: Array.isArray(raw.invitedUsers)
+      ? raw.invitedUsers.map(u => u.id || u._id || u)
+      : []
+  }
+}
 
 const joinPassword = ref('')
 const accessError = ref('')
 
 // Room State
+// ✅ CORREÇÃO 7: name: '' ao invés de 'Sessao Chill Vibes'
 const room = ref({
-  name: 'Sessao Chill Vibes',
+  name: '',
   id: '',
   createdAt: new Date()
 })
@@ -1297,32 +1343,37 @@ const shareVia = (platform) => {
   }
 }
 
-// ========== LEAVE ROOM ==========
 const leaveRoom = async () => {
-    activeListeners.value = activeListeners.value.filter(
-    l => l.id !== currentUser.value.id
+  hasLeftManually.value = true
+  stopAllPolling()   // ← ANTES de tudo
+
+  activeListeners.value = activeListeners.value.filter(
+    l => String(l.id) !== String(currentUser.value.id)
   )
 
   if (room.value.id && currentUser.value.id) {
     try {
-      await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+      const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
         method: 'DELETE',
         body: JSON.stringify({
           userIdToRemove: currentUser.value.id,
           requesterId: currentUser.value.id
         })
       })
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}))
+        if (data.activeListeners) activeListeners.value = data.activeListeners
+        if (data.listeners !== undefined) room.value.listeners = data.listeners
+      }
     } catch (e) {
-      console.warn('Erro ao remover listener:', e)
+      console.warn('Erro ao remover listener ao sair:', e)
     }
   }
 
-  stopAllPolling()
-  showToast('info', 'Ate logo!', `Voce saiu da sala ${room.value.name}. Volte sempre!`, 3000)
-
-  setTimeout(() => {
-    router.push('/rooms')
-  }, 800)
+  hasJoined.value = false
+  isJoining.value = false
+  showToast('info', 'Até logo!', `Você saiu da sala ${room.value.name}. Volte sempre!`, 3000)
+  setTimeout(() => router.push('/rooms'), 800)
 }
 
 const confirmLeaveRoom = () => {
@@ -1331,27 +1382,6 @@ const confirmLeaveRoom = () => {
 
 const leaveRoomConfirmed = async () => {
   showLeaveModal.value = false
-  
-  // ✅ Remove da lista de listeners localmente ANTES de sair
-  activeListeners.value = activeListeners.value.filter(
-    l => l.id !== currentUser.value.id
-  )
-  
-  // ✅ Notifica backend para remover
-  if (room.value.id && currentUser.value.id) {
-    try {
-      await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
-        method: 'DELETE',
-        body: JSON.stringify({
-          userIdToRemove: currentUser.value.id,
-          requesterId: currentUser.value.id
-        })
-      })
-    } catch (e) {
-      console.warn('Erro ao remover listener ao sair:', e)
-    }
-  }
-  
   await leaveRoom()
 }
 
@@ -1361,7 +1391,7 @@ const checkIfAlreadyInRoom = async (roomIdFromUrl) => {
     const listenersRes = await apiFetch(`/api/rooms/${roomIdFromUrl}/listeners`)
     if (listenersRes.ok) {
       const listeners = await listenersRes.json()
-      const alreadyInRoom = listeners.some(l => 
+      const alreadyInRoom = listeners.some(l =>
         String(l.id) === String(currentUser.value.id) ||
         String(l.userId?._id || l.userId) === String(currentUser.value.id)
       )
@@ -1388,13 +1418,13 @@ const checkRoomAccess = async () => {
 
   room.value.id = roomIdFromUrl
 
-  // ✅ ADICIONAR: Verificar se já está na sala (F5)
   const alreadyInRoom = await checkIfAlreadyInRoom(roomIdFromUrl)
-  
+
   if (alreadyInRoom) {
-    // Já está na sala, só reconecta sem mostrar modal
     showJoinModal.value = false
     hasJoined.value = true
+    // ✅ CORREÇÃO 8: Carrega dados da sala antes de continuar
+    await loadRoomData(roomIdFromUrl)
     await determineUserRole()
     startAllPolling()
     return
@@ -1405,11 +1435,10 @@ const checkRoomAccess = async () => {
   isRoomOwner.value = isOwner
 
   if (isLoggedIn.value && currentUser.value.name && currentUser.value.name !== 'Voce') {
-  joinUserName.value = currentUser.value.name
-} else if (!isLoggedIn.value) {
-  // Gera nome aleatório para visitante se não tiver
-  joinUserName.value = 'Visitante ' + Math.floor(Math.random() * 1000)
-}
+    joinUserName.value = currentUser.value.name
+  } else if (!isLoggedIn.value) {
+    joinUserName.value = 'Visitante ' + Math.floor(Math.random() * 1000)
+  }
 
   try {
     await loadRoomData(roomIdFromUrl)
@@ -1417,18 +1446,26 @@ const checkRoomAccess = async () => {
     console.error('Erro ao carregar dados da sala:', error)
   }
 
-  // Se veio de convite e NÃO é dono, mostra modal de join direto
   if (fromInvite && !isOwner) {
     showJoinModal.value = true
     return
   }
 
+  // ✅ CORREÇÃO 4: bloco único do isOwner
   if (isOwner) {
     showJoinModal.value = false
+    hasJoined.value = true
     currentUserRole.value = 'owner'
     await addSelfToListeners()
     await determineUserRole()
     startAllPolling()
+
+    if (!room.value.isPublic && room.value.hasPassword) {
+      const savedPassword = localStorage.getItem(`room_${roomIdFromUrl}_password`)
+      if (savedPassword) {
+        sessionStorage.setItem(`room_${roomIdFromUrl}_password`, savedPassword)
+      }
+    }
 
     messages.value.push({
       id: Date.now(),
@@ -1440,13 +1477,19 @@ const checkRoomAccess = async () => {
     })
     return
   }
-  if (isOwner && currentUser.value.name && currentUser.value.name !== 'Voce') {
+
+  if (!room.value.isPublic) {
+    showJoinModal.value = true
+    return
+  }
+
+  // ✅ SALA PÚBLICA — entra automaticamente
   showJoinModal.value = false
-  currentUserRole.value = 'owner'
-  await addSelfToListeners()
+  hasJoined.value = true
   await determineUserRole()
+  await addSelfToListeners()
   startAllPolling()
-  
+
   messages.value.push({
     id: Date.now(),
     userId: 'system',
@@ -1455,89 +1498,30 @@ const checkRoomAccess = async () => {
     text: `${currentUser.value.name} entrou na sala!`,
     timestamp: Date.now()
   })
-  return
-}
-
-  try {
-    const listenersRes = await apiFetch(`/api/rooms/${roomIdFromUrl}/listeners`)
-    if (listenersRes.ok) {
-      const listeners = await listenersRes.json()
-      const alreadyInRoom = listeners.some(l => 
-        String(l.id) === String(currentUser.value.id) ||
-        String(l.userId?._id || l.userId) === String(currentUser.value.id)
-      )
-      
-if (alreadyInRoom) {
-  showJoinModal.value = false
-  hasJoined.value = true
-  await determineUserRole()
-  
-  // ✅ NOVO: Se sala privada, recuperar senha do sessionStorage
-  const savedPassword = sessionStorage.getItem(`room_${roomIdFromUrl}_password`)
-  if (savedPassword && !room.value.isPublic) {
-    joinPassword.value = savedPassword
-  }
-  
-// Após entrar com sucesso, salvar senha no sessionStorage para F5
-if (!room.value.isPublic && joinPassword.value) {
-  sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
-}
-
-  startAllPolling()
-  return
-}
-    }
-  } catch (e) {
-    console.warn('Erro ao verificar listeners:', e)
-  }
-
-  const savedRoom = localStorage.getItem(`room_${roomIdFromUrl}_data`)
-  if (savedRoom) {
-    try {
-      const data = JSON.parse(savedRoom)
-      room.value.isPublic = data.isPublic !== false
-      roomSource.value = data.source || 'deezer'
-    } catch (e) {
-      console.error('Erro ao parse localStorage:', e)
-    }
-  }
-
-if (!room.value.isPublic) {
-    sessionStorage.setItem(`room_${room.value.id}_password`, senha)
-  }
-  
-  currentUser.value.name = joinUserName.value.trim()
-
-  if (!isLoggedIn.value) {
-    showJoinModal.value = true
-    return
-  }
-
-  showJoinModal.value = false
-  await determineUserRole()
-  await addSelfToListeners()
-  startAllPolling()
-}
 
 const joinRoom = async () => {
+  // ✅ CORREÇÃO 9: Carrega dados da sala antes de tudo
+  await loadRoomData(room.value.id)
+
+  // ✅ No joinRoom(), dentro do if (isRoomOwner.value) { ... }:
+  if (isRoomOwner.value) {
+    currentUser.value.name = joinUserName.value.trim()
+    showJoinModal.value = false
+    hasJoined.value = true
+    currentUserRole.value = 'owner'
+    await addSelfToListeners()
+    await determineUserRole()
+    startAllPolling()
+    showToast('success', 'Bem-vindo!', `Você entrou como dono da sala`)
+    sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
+    isJoining.value = false
+    return
+  }
   accessError.value = ''
   isJoining.value = true
 
   if (!joinUserName.value.trim()) {
     accessError.value = 'Digite seu nome'
-    isJoining.value = false
-    return
-  }
-
-  if (isRoomOwner.value) {
-    currentUser.value.name = joinUserName.value.trim()
-    showJoinModal.value = false
-    currentUserRole.value = 'owner'
-    await addSelfToListeners()
-    await determineUserRole()
-    startAllPolling()
-    showToast('success', 'Bem-vindo!', `Voce entrou como dono da sala`)
-    sessionStorage.setItem(`room_${room.value.id}_password`, joinPassword.value)
     isJoining.value = false
     return
   }
@@ -1625,6 +1609,7 @@ const joinRoom = async () => {
     return
   }
 
+   // ✅ Sala pública — entra direto
   currentUser.value.name = joinUserName.value.trim()
   showJoinModal.value = false
 
@@ -1642,37 +1627,34 @@ const joinRoom = async () => {
   })
 
   showToast('success', 'Bem-vindo!', `Voce entrou na sala ${room.value.name}`)
-  sessionStorage.setItem(`room_${room.value.id}_password`)
   isJoining.value = false
 }
-
+}
 // ========== GERENCIAR LISTENERS ==========
 const checkIfKicked = () => {
   if (isJoining.value) return
   if (showJoinModal.value) return
   if (!room.value.id) return
+  if (hasLeftManually.value) return   // ← ignora se saiu manualmente
 
-  const stillInRoom = activeListeners.value.some(l => l.id === currentUser.value.id)
-
+  const stillInRoom = activeListeners.value.some(l =>
+    String(l.id) === String(currentUser.value.id)
+  )
   if (!stillInRoom && room.value.id && currentUser.value.id) {
-    showToast('error', 'Voce foi Expulso', 'Um moderador removeu voce da sala.', 0)
     stopAllPolling()
-    setTimeout(() => {
-      router.push('/rooms')
-    }, 3000)
+    showToast('error', 'Você foi Expulso', 'Um moderador removeu você da sala.', 0)
+    setTimeout(() => router.push('/rooms'), 3000)
   }
 }
-
 const fetchActiveListeners = async () => {
   if (!room.value.id) return
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`)
     if (response.ok) {
       const listeners = await response.json()
-      activeListeners.value = listeners
-      if (hasJoined.value && !showJoinModal.value) {
-        checkIfKicked()
-      }
+      activeListeners.value = listeners   // ← sempre sobrescreve com backend
+      room.value.listeners = listeners.length
+      if (hasJoined.value && !showJoinModal.value) checkIfKicked()
     }
   } catch (error) {
     console.error('Erro ao buscar listeners:', error)
@@ -1682,32 +1664,17 @@ const fetchActiveListeners = async () => {
 const addSelfToListeners = async () => {
   if (!room.value.id) return
   isJoining.value = true
-
-  const selfListener = {
-    id: currentUser.value.id,
-    name: currentUser.value.name,
-    avatar: currentUser.value.avatar,
-    role: isRoomOwner.value ? 'owner' : currentUserRole.value
-  }
-
-  const alreadyPresent = activeListeners.value.some(l => l.id === currentUser.value.id)
-  if (!alreadyPresent) {
-    activeListeners.value.push(selfListener)
-  }
-
   try {
     const userData = {
       name: currentUser.value.name,
       avatar: currentUser.value.avatar,
-      guestId: isLoggedIn.value ? undefined : currentUser.value.id
+      guestId: isLoggedIn.value ? undefined : currentUser.value.id,
+      role: isRoomOwner.value ? 'owner' : 'participant'
     }
-
     await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
-      method: 'POST',
-      body: JSON.stringify(userData)
+      method: 'POST', body: JSON.stringify(userData)
     })
-
-    await fetchActiveListeners()
+    await fetchActiveListeners()   // ← busca do backend, não adiciona local
     hasJoined.value = true
   } catch (error) {
     console.error('Erro ao adicionar listener:', error)
@@ -1716,7 +1683,6 @@ const addSelfToListeners = async () => {
     isJoining.value = false
   }
 }
-
 const openKickModal = (userId, userName) => {
   userToKick.value = { id: userId, name: userName }
   showKickModal.value = true
@@ -1729,11 +1695,17 @@ const kickUserConfirmed = async () => {
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'DELETE',
-      body: JSON.stringify({ userIdToRemove: userId })
+      body: JSON.stringify({
+        userIdToRemove: userId,
+        requesterId: currentUser.value.id
+      })
     })
 
     if (response.ok) {
       activeListeners.value = activeListeners.value.filter(l => l.id !== userId)
+     
+      // ✅ Atualiza a contagem local
+      room.value.listeners = activeListeners.value.length
 
       messages.value.push({
         id: Date.now(),
@@ -1746,14 +1718,11 @@ const kickUserConfirmed = async () => {
 
       showKickModal.value = false
       userToKick.value = null
-      showToast('success', 'Usuario Expulso', `${userName} foi removido da sala`)
-    } else {
-      const error = await response.json()
-      showToast('error', 'Erro', error.error || 'Erro ao expulsar usuario')
+      showToast('success', 'Usuário Expulso', `${userName} foi removido da sala`)
     }
   } catch (error) {
     console.error('Erro ao expulsar:', error)
-    showToast('error', 'Erro', 'Erro ao expulsar usuario')
+    showToast('error', 'Erro', 'Erro ao expulsar usuário')
   }
 }
 
@@ -1913,20 +1882,31 @@ const stopAllPolling = () => {
   if (queueInterval) { clearInterval(queueInterval); queueInterval = null }
 }
 
-// ========== LIFECYCLE ==========
+// ========== LIFECYCLE — CORRIGIDO ==========
 let saveRoomStateInterval = null
 
 onMounted(async () => {
+  beforeUnloadHandler = (event) => {
+    if (room.value.id && currentUser.value.id && hasJoined.value && !hasLeftManually.value) {
+      const payload = JSON.stringify({
+        userIdToRemove: currentUser.value.id,
+        requesterId: currentUser.value.id
+      })
+      navigator.sendBeacon?.(
+        `${API_URL}/api/rooms/${room.value.id}/listeners/beacon`,
+        new Blob([payload], { type: 'application/json' })
+      )
+    }
+  }
+  window.addEventListener('beforeunload', beforeUnloadHandler)
   checkAuth()
   await checkRoomAccess()
   fetchDeezerChart()
-
   saveRoomStateInterval = setInterval(saveRoomState, 5000)
-   if (room.value.id) {
+  if (room.value.id) {
     sessionStorage.removeItem(`room_${room.value.id}_password`)
   }
 })
-
 
 const checkAuth = () => {
   const token = localStorage.getItem('token')
@@ -2003,29 +1983,36 @@ const loadRoomData = async (roomId) => {
 onUnmounted(() => {
   clearTimeout(searchTimeout)
   stopAllPolling()
-
   if (saveRoomStateInterval) {
     clearInterval(saveRoomStateInterval)
     saveRoomStateInterval = null
   }
-
-  if (room.value.id && currentUser.value.id) {
-    apiFetch(`/api/rooms/${room.value.id}/listeners`, {
-      method: 'DELETE',
-      body: JSON.stringify({
-        userIdToRemove: currentUser.value.id,
-        requesterId: currentUser.value.id
-      })
-    }).catch(() => {})
+  if (beforeUnloadHandler) {
+    window.removeEventListener('beforeunload', beforeUnloadHandler)
+    beforeUnloadHandler = null
   }
-
+  if (room.value.id && currentUser.value.id && hasJoined.value && !hasLeftManually.value) {
+    const payload = JSON.stringify({
+      userIdToRemove: currentUser.value.id,
+      requesterId: currentUser.value.id
+    })
+    const beaconUrl = `${API_URL}/api/rooms/${room.value.id}/listeners/beacon`
+    const success = navigator.sendBeacon?.(beaconUrl, new Blob([payload], { type: 'application/json' }))
+    if (!success) {
+      fetch(`${API_URL}/api/rooms/${room.value.id}/listeners/beacon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(() => {})
+    }
+  }
   if (toastTimeout) clearTimeout(toastTimeout)
-
   hasJoined.value = false
   isJoining.value = false
 })
-
 </script>
+
 <style scoped>
 :root {
   --primary: #1db954;

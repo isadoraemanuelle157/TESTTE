@@ -206,6 +206,7 @@ async function getUserSpotifyToken(req) {
   const userId = req.user?.id || req.user?._id
   if (!userId) return null
   
+  const Usuario = require('../models/Usuario')
   const user = await Usuario.findById(userId)
   if (!user || !user.spotifyAccessToken) return null
   

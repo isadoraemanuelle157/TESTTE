@@ -1741,11 +1741,10 @@ async loadSequencia() {
          
           return
         }
-        this.loadMockMadeForYou()
-      } catch (error) {
-        console.error('Erro loadMadeForYou:', error)
-        this.loadMockMadeForYou()
-      }
+         this.loadMockMadeForYou()  // ← Só cai aqui se backend retornar vazio
+  } catch (error) {
+    this.loadMockMadeForYou()  // ← Só cai aqui em erro de rede
+  }
     },
 
   loadMockMadeForYou() {

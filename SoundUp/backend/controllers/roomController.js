@@ -76,6 +76,7 @@ const buscarPorId = async (req, res) => {
   }
 }
 
+// ========== ENTRAR — CORRIGIDO ==========
 const entrar = async (req, res) => {
   try {
     const room = await roomService.entrar(
@@ -85,6 +86,7 @@ const entrar = async (req, res) => {
     )
     res.json(room)
   } catch (error) {
+    // ✅ Sempre retorna 403 para erros de acesso/senha
     res.status(403).json({ error: error.message })
   }
 }
@@ -109,7 +111,6 @@ const deletar = async (req, res) => {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
-    // ✅ ADICIONAR: passar role para o service
     await roomService.deletar(req.params.id, req.user.id, req.user.role)
     res.json({ message: 'Sala deletada com sucesso' })
   } catch (error) {
@@ -128,20 +129,19 @@ const convidar = async (req, res) => {
     }
     const room = await roomService.convidar(roomId, req.user.id, userId)
     
-    // ✅ ADICIONAR: Criar notificação para o convidado
+    // ✅ Criar notificação para o convidado
     const notificacaoService = require('../services/notificacaoService')
-// ✅ CORRIGIDO - inclui referenciaId e roomName no meta:
-await notificacaoService.criar({
-  usuarioDestino: userId,
-  usuarioOrigem: req.user.id,
-  tipo: 'sala_musica_convite',
-  mensagem: `${req.user.nome || 'Alguém'} te convidou para a sala "${room.name}"`,
-  meta: { 
-    roomId: roomId,           // para compatibilidade
-    referenciaId: roomId,     // usado no frontend
-    roomName: room.name       // nome da sala para o modal
-  }
-})
+    await notificacaoService.criar({
+      usuarioDestino: userId,
+      usuarioOrigem: req.user.id,
+      tipo: 'sala_musica_convite',
+      mensagem: `${req.user.nome || 'Alguém'} te convidou para a sala "${room.name}"`,
+      meta: { 
+        roomId: roomId,
+        referenciaId: roomId,
+        roomName: room.name
+      }
+    })
     
     res.json({ message: 'Convite enviado', room })
   } catch (error) {
@@ -359,7 +359,7 @@ const listarTodas = async (req, res) => {
   }
 }
 
-// ========== LISTENERS ==========
+// ========== LISTENERS — CORRIGIDO ==========
 const adicionarListener = async (req, res) => {
   try {
     const roomId = req.params.id
@@ -372,57 +372,97 @@ const adicionarListener = async (req, res) => {
 
     const room = await roomService.adicionarListener(roomId, userData)
 
-    await roomService.enviarMensagem(roomId, {
-      userId: 'system',
-      userName: 'Sistema',
-      avatar: 'https://via.placeholder.com/150',
-      text: `${userData.name} entrou na sala!`,
-      timestamp: new Date()
-    })
+    const isInRoom = room.activeListeners.some(l =>
+      String(l.userId?._id || l.userId) === String(userData.userId)
+    )
+
+    if (isInRoom) {
+      await roomService.enviarMensagem(roomId, {
+        userId: 'system', userName: 'Sistema',
+        avatar: 'https://via.placeholder.com/150',
+        text: `${userData.name} entrou na sala!`,
+        timestamp: new Date()
+      })
+    }
 
     res.json(room)
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 }
-
 const removerListener = async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ error: 'Usuário não autenticado' })
-    }
-
+    const requesterId = req.user?.id || req.body?.requesterId
     const { userIdToRemove } = req.body
-    if (!userIdToRemove) {
-      return res.status(400).json({ error: 'userIdToRemove é obrigatório' })
-    }
+    if (!userIdToRemove) return res.status(400).json({ error: 'userIdToRemove é obrigatório' })
+    if (!requesterId) return res.status(401).json({ error: 'Autenticação necessária' })
 
-    const room = await roomService.removerListener(
-      req.params.id,
-      userIdToRemove,
-      req.user.id
+    const Room = require('../models/Room')
+    const roomBefore = await Room.findById(req.params.id)
+      .populate('activeListeners.userId', 'nome username avatar')
+
+    const listenerToRemove = roomBefore?.activeListeners?.find(l =>
+      String(l.userId?._id || l.userId) === String(userIdToRemove)
+    )
+    const userName = listenerToRemove?.name || listenerToRemove?.userId?.nome || 'Um usuário'
+
+    const room = await roomService.removerListener(req.params.id, userIdToRemove, requesterId)
+
+    const wasRemoved = !room.activeListeners.some(l =>
+      String(l.userId?._id || l.userId) === String(userIdToRemove)
     )
 
-    await roomService.enviarMensagem(req.params.id, {
-      userId: 'system',
-      userName: 'Sistema',
-      avatar: 'https://via.placeholder.com/150',
-      text: `Um usuário foi removido da sala.`,
-      timestamp: new Date()
+    if (wasRemoved) {
+      await roomService.enviarMensagem(req.params.id, {
+        userId: 'system', userName: 'Sistema',
+        avatar: 'https://via.placeholder.com/150',
+        text: `${userName} saiu da sala.`,
+        timestamp: new Date()
+      })
+    }
+
+    const formattedListeners = room.activeListeners.map(listener => {
+      const uid = String(listener.userId?._id || listener.userId)
+      const isOwner = String(room.createdBy?._id || room.createdBy) === uid
+      const isModerator = room.moderators?.some(m => String(m._id || m) === uid)
+      return {
+        id: uid,
+        name: listener.name || listener.userId?.nome || 'Usuário',
+        avatar: listener.avatar || listener.userId?.avatar || 'https://via.placeholder.com/150',
+        role: isOwner ? 'owner' : (isModerator ? 'moderator' : 'participant'),
+        joinedAt: listener.joinedAt
+      }
     })
 
-    res.json({ message: 'Usuário removido da sala', room })
+    res.json({
+      message: 'Usuário removido da sala',
+      listeners: room.listeners || 0,
+      activeListeners: formattedListeners
+    })
   } catch (error) {
     res.status(403).json({ error: error.message })
   }
 }
-
 const listarListeners = async (req, res) => {
   try {
     const listeners = await roomService.listarListeners(req.params.id)
     res.json(listeners)
   } catch (error) {
     res.status(400).json({ error: error.message })
+  }
+}
+
+const removerListenerBeacon = async (req, res) => {
+  try {
+    const requesterId = req.user?.id || req.body?.requesterId
+    const { userIdToRemove } = req.body
+    if (!userIdToRemove || !requesterId) return res.status(200).send()
+
+    await roomService.removerListener(req.params.id, userIdToRemove, requesterId)
+    res.status(200).send()
+  } catch (error) {
+    console.error('Erro no beacon:', error)
+    res.status(200).send()
   }
 }
 
@@ -445,18 +485,15 @@ module.exports = {
   adicionarListener,
   removerListener,
   listarListeners,
-  // Sincronização
+  removerListenerBeacon,  // ← ADICIONAR AQUI
   sincronizarReproducao,
   obterSyncState,
-  // Track
   atualizarTrack,
   obterTrackAtual,
-  // Fila
   adicionarNaFila,
   listarFila,
   removerDaFila,
   proximaMusica,
-  // Mensagens
   enviarMensagem,
   listarMensagens
 }
