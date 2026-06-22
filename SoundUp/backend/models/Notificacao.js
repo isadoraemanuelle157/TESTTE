@@ -23,7 +23,8 @@ const notificacaoSchema = new mongoose.Schema({
       'contact_reply',
       'matchmusical',
       'matchmusical_mensagem',
-       'sala_musica_convite'
+       'sala_musica_convite',
+       'nova_mensagem'
     ],
     required: true
   },

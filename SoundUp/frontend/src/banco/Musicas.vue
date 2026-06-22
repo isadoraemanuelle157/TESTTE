@@ -875,7 +875,12 @@ async salvarMusica() {
       
       // 🔥 CONVERTE PARA NÚMERO ANTES DE ENVIAR
       ano: this.form.ano ? parseInt(this.form.ano) : null,
-
+duracao: this.form.duracao && this.form.duracao.includes(':') 
+  ? (() => {
+      const [m, s] = this.form.duracao.split(':').map(Number)
+      return (m * 60) + s
+    })()
+  : parseInt(this.form.duracao) || 0,
       generos: this.form.generos || [],
       albuns: this.form.album ? [this.form.album] : [],
       cantores: this.form.cantores || []

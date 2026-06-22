@@ -112,6 +112,15 @@
     </div>
          
           <div class="profile-actions">
+            <!-- Botão de Mensagem (só aparece se perfil NÃO é privado ou se já segue) -->
+<button 
+  v-if="!isOwnProfile && podeEnviarMensagem"
+  class="btn-mensagem"
+  @click="iniciarConversa"
+>
+  <i class="fa fa-comment"></i>
+  Mensagem
+</button>
           <button 
   v-if="!isOwnProfile"
   class="btn-follow"
@@ -791,7 +800,6 @@ export default {
       isFollowing: false,
       isOwnProfile: false,
        isAvatarGoldEquipped: false,
-    isOwnProfile: false,
       activeTab: 'overview',
       showContextMenu: false,
       notFound: false,
@@ -928,6 +936,14 @@ isLockedPrivateProfile() {
     this.usuario?.acessoLiberado !== true
   )
 },
+
+podeEnviarMensagem() {
+    // Se perfil é privado E usuário não segue E não é o dono → não mostra
+    if (this.isLockedPrivateProfile && !this.isFollowing) return false;
+    // Se está bloqueado → não mostra
+    if (this.isBlockedProfile) return false;
+    return true;
+  },
 
 followButtonText() {
   if (this.solicitacaoPendente) return 'Solicitação enviada'
@@ -1097,6 +1113,26 @@ beforeUnmount() {
 },
 
   methods: {
+async iniciarConversa() {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.showToast('Faça login para enviar mensagens', 'info');
+        return;
+      }
+      
+      // Redireciona para a página de mensagens com o destinatário pré-selecionado
+      // Em vez de criar mensagem vazia, passa o userId como parâmetro de query
+      this.$router.push({
+        path: '/mensagens',
+        query: { novo: this.userId }  // ← A página de mensagens lida com isso
+      });
+    } catch (err) {
+      console.error('Erro ao iniciar conversa:', err);
+      this.showToast('Erro ao iniciar conversa', 'error');
+    }
+  },
+
      handleAvatarGoldChanged(e) {
     if (this.isOwnProfile) {
       this.isAvatarGoldEquipped = e.detail?.equipped || false;
@@ -4451,6 +4487,25 @@ isMusicaEmPlaylist(musica, playlistId) {
   height: calc(100% - 4px);
   margin: 2px;
   object-fit: cover;
+}
+
+.btn-mensagem {
+  padding: 10px 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-mensagem:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(236, 72, 153, 0.5);
 }
 /* Responsivo */
 @media (max-width: 768px) {

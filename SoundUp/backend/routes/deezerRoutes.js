@@ -166,4 +166,46 @@ router.get('/artist/:id', async (req, res) => {
   }
 })
 
+// Gêneros do artista (via álbuns)
+router.get('/artist/:id/genres', async (req, res) => {
+  try {
+    // Busca álbuns do artista
+    const albumsRes = await axios.get(
+      `${DEEZER_API_URL}/artist/${req.params.id}/albums?limit=50`,
+      { timeout: 5000 }
+    )
+    
+    const albums = albumsRes.data?.data || []
+    const generoIds = new Set()
+    
+    // Coleta genre_ids únicos
+    for (const album of albums) {
+      if (album.genre_id && album.genre_id > 0) {
+        generoIds.add(album.genre_id)
+      }
+    }
+    
+    // Busca nome de cada gênero
+    const generos = []
+    for (const genreId of generoIds) {
+      try {
+        const genreRes = await axios.get(
+          `${DEEZER_API_URL}/genre/${genreId}`,
+          { timeout: 3000 }
+        )
+        if (genreRes.data?.name) {
+          generos.push(genreRes.data.name)
+        }
+      } catch (e) {
+        // ignora
+      }
+    }
+    
+    res.json({ genres: generos })
+  } catch (error) {
+    console.error('❌ Deezer artist genres error:', error.message)
+    res.status(500).json({ error: 'Erro ao buscar gêneros do artista' })
+  }
+})
+
 module.exports = router

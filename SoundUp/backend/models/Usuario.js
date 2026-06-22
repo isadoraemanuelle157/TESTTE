@@ -53,6 +53,10 @@ const usuarioSchema = new mongoose.Schema({
 
   perfilPrivado: { type: Boolean, default: false },
   mostrarAtividade: { type: Boolean, default: true },
+  ultimaAtividade: {
+  type: Date,
+  default: Date.now
+},
 
   // ===== GÊNEROS: Mix de ObjectId (banco) + externos =====
   generos: {
@@ -301,7 +305,10 @@ usuarioSchema.methods.updateOnboarding = async function(generos, artistas, vibes
 
 usuarioSchema.methods.isSpotifyTokenValid = function() {
   if (!this.spotifyAccessToken || !this.spotifyTokenExpiresAt) return false
-  return new Date() < this.spotifyTokenExpiresAt
+  // Considera inválido se faltar menos de 60s para expirar
+  // (evita race condition entre checagem e uso)
+  const margemMs = 60 * 1000
+  return new Date(Date.now() + margemMs) < this.spotifyTokenExpiresAt
 }
 
 // ✅ NOVO: Método para atualizar tokens do Spotify

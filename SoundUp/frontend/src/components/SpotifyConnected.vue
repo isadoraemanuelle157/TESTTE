@@ -51,24 +51,21 @@ export default {
     const success = urlParams.get('success')
     const error = urlParams.get('error')
     
-    if (success === 'true') {
-      this.success = true
-      // Atualiza status no localStorage para outras abas saberem
-      localStorage.setItem('spotify_connected', 'true')
-      localStorage.setItem('spotify_connected_at', Date.now().toString())
-      
-      // Dispara evento para atualizar Search.vue se estiver aberto em outra aba
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'spotify_connected',
-        newValue: 'true'
-      }))
-      
-      // Redireciona automaticamente após 3 segundos
-      setTimeout(() => {
-        this.goToSearch()
-      }, 3000)
-      
-    } else if (error) {
+// SpotifyConnected.vue - mounted()
+if (success === 'true') {
+  this.success = true
+  localStorage.setItem('spotify_connected', 'true')
+  localStorage.setItem('spotify_connected_at', Date.now().toString())
+  
+  // 🔥 NOVO: dispara evento global para Search.vue atualizar
+  window.dispatchEvent(new CustomEvent('spotify-connected', {
+    detail: { connected: true }
+  }))
+  
+  setTimeout(() => {
+    this.goToSearch()
+  }, 3000)
+} else if (error) {
       this.error = true
       this.errorMessage = decodeURIComponent(error)
     } else {
@@ -77,15 +74,19 @@ export default {
     }
   },
   
-  methods: {
-    goToSearch() {
-      this.$router.push('/search')
-    },
-    
-    retry() {
-      this.$router.push('/search')
-    }
+// SpotifyConnected.vue
+methods: {
+  goToSearch() {
+    this.$router.push({ 
+      path: '/search', 
+      query: { spotify_connected: 'true' } 
+    })
+  },
+  
+  retry() {
+    this.$router.push('/search')
   }
+}
 }
 </script>
 

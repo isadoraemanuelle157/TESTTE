@@ -239,6 +239,7 @@ function isTokenValid() {
 }
 
 async function getUserSpotifyToken(req) {
+  if (!req || !req.user) return null
   if (req.spotifyUserToken) return req.spotifyUserToken
  
   const userId = req.user?.id || req.user?._id

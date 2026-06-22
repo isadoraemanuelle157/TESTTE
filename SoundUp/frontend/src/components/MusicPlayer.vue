@@ -326,8 +326,10 @@ export default {
       currentIndex: 0,
       isPlaying: false,
       isLiked: false,
-      spotifyPremium: false,      // ← ADICIONAR
+      spotifyPremium: false, 
+      spotifyToken: null,        // ← ADICIONAR
 spotifySdkReady: false,
+spotifyConnected: false,
       isFavorited: false,
       isMuted: false,
       isDragging: false,
@@ -361,7 +363,6 @@ spotifySdkReady: false,
       _syncInterval: null
     }
   },
-
   computed: {
     currentTrack() {
       if (!this.hasTrack || this.queue.length === 0) return null
@@ -421,9 +422,9 @@ currentTrackSource() {
     this.checkLoginStatus()
     this.checkLikeStatus()
     this.checkFavoriteStatus()
-    if (this.spotifyConnected && this.isLogged) {
-  this.initSpotifyPlayer()
-}
+  if (this.isLogged) {
+    this.checkSpotifyStatus()
+  }
    
     this.$nextTick(() => {
       const audio = this.$refs.audioPlayer
@@ -514,29 +515,46 @@ currentTrackSource() {
     console.error('❌ Erro ao registrar histórico:', err)
   }
 },
+
     goToCreatePlaylist() {
       this.closePlaylistModal()
       this.$router?.push('/playlist').catch(() => {})
     },
 
-   async initSpotifyPlayer() {
+ async initSpotifyPlayer() {
   if (!this.isLogged || !this.spotifyConnected) return
   if (this.spotifyPlayer) return
 
-  // Carrega o script do Spotify Web Playback SDK
-  if (!window.Spotify) {
-    await new Promise((resolve, reject) => {
-      const script = document.createElement('script')
-      script.src = 'https://sdk.scdn.co/spotify-player.js'
-      script.async = true
-      script.onload = () => {
-        window.onSpotifyWebPlaybackSDKReady = () => resolve()
-      }
-      script.onerror = reject
-      document.head.appendChild(script)
+  // ✅ CORREÇÃO: Aguarda o SDK que JÁ está no index.html
+if (!window.Spotify) {
+  await new Promise((resolve, reject) => {
+    // Se o SDK já disparou o evento, resolve imediatamente
+    if (window.SpotifySDKReady && window.Spotify) {
+      resolve()
+      return
+    }
+    
+    // Verifica se o script existe no DOM
+    const existingScript = document.querySelector('script[src*="spotify-player"]')
+    if (!existingScript) {
+      console.warn('⚠️ Script do Spotify SDK não encontrado no DOM')
+      reject(new Error('Spotify SDK não carregado no index.html'))
+      return
+    }
       
-      // Timeout de 10s
-      setTimeout(() => reject(new Error('Timeout Spotify SDK')), 10000)
+      // Senão, espera o evento customizado do index.html
+      const handler = () => {
+        window.removeEventListener('spotify-sdk-ready', handler)
+        resolve()
+      }
+      window.addEventListener('spotify-sdk-ready', handler)
+      
+      // Timeout de segurança
+      setTimeout(() => {
+        window.removeEventListener('spotify-sdk-ready', handler)
+        if (window.Spotify) resolve()
+        else reject(new Error('Spotify SDK não carregado'))
+      }, 10000)
     })
   }
 
@@ -574,14 +592,18 @@ currentTrackSource() {
       this.syncSpotifyState(state)
     })
 
-    this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
-      console.error('[SPOTIFY] Init error:', message)
-    })
-
-    this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
-      console.error('[SPOTIFY] Auth error:', message)
-      this.spotifySdkReady = false
-    })
+this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+  console.error('[SPOTIFY] Init error:', message)
+  localStorage.removeItem('spotify_connected')
+  this.spotifyConnected = false
+  if (this.spotifyPlayer) {
+    this.spotifyPlayer.disconnect()
+    this.spotifyPlayer = null
+  }
+  window.dispatchEvent(new CustomEvent('spotify-disconnected', {
+    detail: { reason: 'init_error' }
+  }))
+})
 
     this.spotifyPlayer.addListener('account_error', ({ message }) => {
       console.error('[SPOTIFY] Account error:', message)
@@ -601,16 +623,23 @@ async playSpotifyFullTrack() {
   if (!this.spotifyPlayer || !this.spotifyDeviceId || !this.spotifySdkReady) {
     this.showToast('Spotify não conectado. Inicializando...', 'warning')
     await this.initSpotifyPlayer()
-    if (!this.spotifySdkReady) {
+    
+    let attempts = 0
+    while (!this.spotifyDeviceId && attempts < 20) {
+      await new Promise(r => setTimeout(r, 500))
+      attempts++
+    }
+    if (!this.spotifyDeviceId) {
       this.showToast('Não foi possível conectar ao Spotify', 'error')
       return
     }
   }
 
+  // ✅ MOVIDO PARA FORA DO if — try agora está no nível correto
   try {
     const token = localStorage.getItem('token')
     
-    // 1️⃣ Busca a música no Spotify usando o token do usuário (full search)
+    // 1️⃣ Busca a música no Spotify
     const searchQuery = `${this.currentTrack.title} ${this.currentTrack.artist}`
     const searchRes = await fetch(
       `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`,
@@ -627,38 +656,45 @@ async playSpotifyFullTrack() {
     const spotifyTrack = searchData.tracks.items[0]
     const spotifyUri = `spotify:track:${spotifyTrack.id}`
 
-    // 2️⃣ Transfere o playback para o Web SDK e toca
-    const transferRes = await fetch('http://localhost:3002/spotify/transfer-playback', {
+    // 2️⃣ Ativa o device no Spotify Connect
+    await fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Authorization': `Bearer ${await this.fetchUserSpotifyToken()}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        device_id: this.spotifyDeviceId,
-        uris: [spotifyUri],
-        position_ms: 0
+        device_ids: [this.spotifyDeviceId],
+        play: false
       })
     })
 
-    if (!transferRes.ok) {
-      const err = await transferRes.json()
-      throw new Error(err.error || 'Erro ao transferir playback')
-    }
+    // 3️⃣ Inicia a reprodução
+    await fetch(
+      `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
+      {
+        method: 'PUT',
+        headers: {
+      'Authorization': `Bearer ${await this.fetchUserSpotifyToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          uris: [spotifyUri],
+          position_ms: 0
+        })
+      }
+    )
 
-    // 3️⃣ Atualiza estado local
+    // 4️⃣ Atualiza estado local
     this.spotifyMode = true
     this.isPlaying = true
+    this.duration = spotifyTrack.duration_ms / 1000
+    
+    // 🔥 CORREÇÃO: linha que estava solta com erro de sintaxe
     this.currentTrack = {
       ...this.currentTrack,
-      id: spotifyTrack.id,
-      title: spotifyTrack.name,
-      artist: spotifyTrack.artists.map(a => a.name).join(', '),
-      cover: spotifyTrack.album?.images?.[0]?.url || this.currentTrack.cover,
-      duration: spotifyTrack.duration_ms / 1000,
       uri: spotifyUri
     }
-    this.duration = this.currentTrack.duration
     
     console.log('✅ Tocando via Spotify Web SDK:', spotifyTrack.name)
 
@@ -689,6 +725,21 @@ syncSpotifyState(state) {
         duration: track.duration_ms / 1000
       }
     }
+  }
+},
+
+async checkSpotifyStatus() {
+  if (!this.isLogged) return
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('http://localhost:3002/spotify/status', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    this.spotifyConnected = data.connected && data.tokenValid
+  } catch (err) {
+    console.error('Erro ao verificar Spotify:', err)
+    this.spotifyConnected = false
   }
 },
 
@@ -1213,37 +1264,57 @@ const normalizedSong = song ? {
     // ✅ AQUI ESTÁ O MÉTODO QUE ESTAVA FORA - AGORA DENTRO DE methods
     // ═══════════════════════════════════════════════════════
     async loadAndPlay() {
-      const audio = this.$refs.audioPlayer
-      if (!audio) {
-        console.error('❌ Elemento de áudio não encontrado!')
+  const audio = this.$refs.audioPlayer
+  if (!audio) {
+    console.error('❌ Elemento de áudio não encontrado!')
+    return
+  }
+  const url = this.currentTrack?.url || this.currentTrack?.preview
+  const isSpotifyFull = this.currentTrack?.source === 'spotify' &&
+    (!url || url === 'null' || url === 'undefined' || url === '')
+  
+  if (isSpotifyFull || this.currentTrack?._fullTrack) {
+    console.log('🎵 Detectado Spotify Full Track, tentando SDK...')
+    
+    // ✅ VERIFICA SE ESTÁ CONECTADO ANTES DE TENTAR
+    if (!this.spotifyConnected) {
+      console.warn('⚠️ Spotify não conectado. Tocando preview se disponível...')
+      // Tenta tocar o preview normal se existir
+      if (url && url !== 'null' && url !== 'undefined') {
+        this.spotifyMode = false
+        this.attemptPlay()
         return
       }
-      const url = this.currentTrack?.url || this.currentTrack?.preview
-      const isSpotifyFull = this.currentTrack?.source === 'spotify' &&
-        (!url || url === 'null' || url === 'undefined' || url === '')
-      if (isSpotifyFull || this.currentTrack?._fullTrack) {
-        console.log('🎵 Detectado Spotify Full Track, tentando SDK...')
-        if (!this.spotifyPlayer) await this.initSpotifyPlayer()
-        if (this.spotifyPlayer && this.spotifyDeviceId) {
-          await this.playSpotifyFullTrack()
-          return
-        } else {
-          console.warn('⚠️ Spotify SDK não disponível, pulando...')
-          this.showToast('Spotify não conectado para tocar música completa', 'warning')
-          setTimeout(() => this.nextTrack(), 1500)
-          return
-        }
+      this.showToast('Conecte o Spotify para ouvir músicas completas', 'warning')
+      setTimeout(() => this.nextTrack(), 1500)
+      return
+    }
+    
+    if (!this.spotifyPlayer) await this.initSpotifyPlayer()
+    
+    // ✅ AGUARDA O DEVICE FICAR PRONTO
+    let attempts = 0
+    while (!this.spotifyDeviceId && attempts < 10) {
+      await new Promise(r => setTimeout(r, 500))
+      attempts++
+    }
+    
+    if (this.spotifyPlayer && this.spotifyDeviceId && this.spotifySdkReady) {
+      await this.playSpotifyFullTrack()
+      return
+    } else {
+      console.warn('⚠️ Spotify SDK não inicializou corretamente')
+      this.showToast('Erro ao conectar player Spotify. Tocando preview...', 'warning')
+      if (url && url !== 'null' && url !== 'undefined') {
+        this.spotifyMode = false
+        this.attemptPlay()
+        return
       }
-      console.log('🔄 Carregando áudio:', url)
-      if (this.playPromise) {
-        try { await this.playPromise } catch (e) {}
-      }
-      audio.pause()
-      this.isPlaying = false
-      if (audio.src !== url) audio.src = url
-      audio.load()
-      setTimeout(() => { this.attemptPlay() }, 100)
-    },
+      setTimeout(() => this.nextTrack(), 1500)
+      return
+    }
+  }
+},
 
     async attemptPlay() {
       const audio = this.$refs.audioPlayer
@@ -1594,10 +1665,8 @@ const normalizedSong = song ? {
       this._trackStartTime = null
       this._totalListenedTime = 0
     }
-
-  }  // ← FECHAMENTO ÚNICO E CORRETO DO methods
-
-}  // ← FECHAMENTO DO export default
+  }  
+  }
 </script>
 
 <style scoped>

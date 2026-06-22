@@ -35,19 +35,28 @@ export async function initSpotifyPlayer(getTokenFn) {
     return { player: playerInstance, deviceId }
   }
 
-  const player = new window.Spotify.Player({
-    name: 'SoundUp Music',
-    getOAuthToken: async (cb) => {
-      try {
-        const token = await getTokenFn()
-        cb(token)
-      } catch (e) {
-        console.error('[SPOTIFY] Token error:', e)
-        cb('')
+ const player = new window.Spotify.Player({
+  name: 'SoundUp Music',
+  getOAuthToken: async (cb) => {
+    try {
+      const token = await getTokenFn()
+      
+      // 🔥 VALIDA antes de devolver
+      if (!token || typeof token !== 'string' || token.length < 20) {
+        console.error('[SPOTIFY] Token inválido recebido, abortando')
+        cb('')  // devolve vazio para o SDK parar de tentar
+        return
       }
-    },
-    volume: 0.5
-  })
+      
+      cb(token)
+    } catch (e) {
+      console.error('[SPOTIFY] Token error:', e)
+      cb('')
+    }
+  },
+  volume: 0.5
+})
+
 
   // Event listeners...
   player.addListener('ready', ({ device_id }) => {
@@ -139,13 +148,24 @@ export async function playOnDevice(trackUri, positionMs = 0) {
 }
 
 async function fetchUserSpotifyToken() {
-  const res = await fetch('http://localhost:3002/spotify/refresh', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`
+  try {
+    const res = await fetch('http://localhost:3002/spotify/refresh', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    if (!res.ok) {
+      throw new Error(`Refresh falhou: ${res.status}`)
     }
-  })
-  const data = await res.json()
-  if (!data.success) throw new Error('Token inválido')
-  return data.access_token
+    const data = await res.json()
+    if (!data.success || !data.access_token) {
+      throw new Error('Token inválido retornado')
+    }
+    return data.access_token
+  } catch (err) {
+    console.error('[SPOTIFY] fetchUserSpotifyToken falhou:', err.message)
+    throw err
+  }
 }
+

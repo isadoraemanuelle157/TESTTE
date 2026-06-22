@@ -1,6 +1,9 @@
 const express = require('express')
 const cors = require('cors')
 const axios = require('axios')
+const multer = require('multer')
+const path = require('path')
+const fs = require('fs')
 
 const app = express()
 
@@ -39,6 +42,35 @@ app.use(express.urlencoded({
 }))
 
 // ============================================
+// 📁 UPLOAD DE ARQUIVOS (PARA MENSAGENS DM)
+// ============================================
+const uploadsDir = path.join(__dirname, 'uploads', 'mensagens')
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true })
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9)
+    cb(null, unique + path.extname(file.originalname))
+  }
+})
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/', 'audio/', 'video/', 'application/pdf']
+    const ok = allowed.some(type => file.mimetype.startsWith(type))
+    cb(ok ? null : new Error('Tipo de arquivo não permitido'), ok)
+  }
+})
+
+// Servir arquivos estáticos
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+
+// ============================================
 // 📦 SAFE REQUIRE
 // ============================================
 function safeRequire(path) {
@@ -57,8 +89,6 @@ const { requireAuth, optionalAuth } = require('./middleware/auth')
 const { spotifyRequest, isTokenValid } = require('./utils/spotifyRequest')
 const cache = require('./utils/cache')
 const { checkChatLimit } = require('./middleware/chatLimit')
-const path = require('path')
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 
 const rooms = new Map()
 
@@ -86,6 +116,7 @@ const contatoRoutes = safeRequire('./routes/contatoRoutes')
 const chatRoutes = safeRequire('./routes/chatRoutes')
 const karaokeRoutes = safeRequire('./routes/karaokeRoutes')
 const roomRoutes = require('./routes/roomRoutes')
+const mensagemRoutes = safeRequire('./routes/mensagemRoutes');
 
 // ============================================
 // 📌 ROTAS APP
@@ -114,7 +145,24 @@ app.use('/suporte', suporteRoutes)
 app.use('/contato', contatoRoutes)
 app.use('/api/karaoke', karaokeRoutes)
 app.use('/api/rooms', roomRoutes)
+app.use('/mensagens', requireAuth, mensagemRoutes);
 
+// ============================================
+// 📤 ROTA DE UPLOAD DE ARQUIVOS (PARA DM)
+// ============================================
+app.post('/upload', requireAuth, upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' })
+    }
+    res.json({
+      url: `http://localhost:3002/uploads/mensagens/${req.file.filename}`
+    })
+  } catch (err) {
+    console.error('❌ Erro no upload:', err)
+    res.status(500).json({ error: 'Erro ao fazer upload' })
+  }
+})
 
 app.post('/chat/message', checkChatLimit, async (req, res) => {
   try {
@@ -478,4 +526,14 @@ app.listen(PORT, () => {
   console.log('POST /game/achievements/claim')
   console.log('GET  /game/stats')
   console.log('GET  /game/activities/live')
+
+  console.log('')
+  console.log('💬 Mensagens:')
+  console.log('POST /mensagens/enviar')
+  console.log('GET  /mensagens/conversas')
+  console.log('GET  /mensagens/:conversaId')
+  console.log('GET  /mensagens/nao-lidas/total')
+  console.log('')
+  console.log('📤 Upload:')
+  console.log('POST /upload')
 })

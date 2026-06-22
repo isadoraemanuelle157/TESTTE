@@ -548,6 +548,10 @@ const handleAvatarGoldChanged = (e) => {
       icon: 'fa fa-comment', 
       color: 'linear-gradient(135deg, #f59e0b, #d97706)' 
     },
+      nova_mensagem: { 
+      icon: 'fa fa-comment', 
+      color: 'linear-gradient(135deg, #ec4899, #8b5cf6)' 
+    },
      sala_musica_convite: { 
       icon: 'fa fa-headphones', 
       color: 'linear-gradient(135deg, #1db954, #1ed760)' 
@@ -606,7 +610,11 @@ const handleAvatarGoldChanged = (e) => {
 
     notifications.value = notificacoesUnicas.map(n => {
       const visual = getNotifVisual(n.tipo)
-      const nome = n.usuarioOrigem?.nome || 'Alguém'
+     const nome = n.usuarioOrigem?.nome 
+  || n.usuarioOrigem?.username 
+  || n.meta?.remetenteNome 
+  || n.meta?.nomeRemetente 
+  || 'Alguém'
 
       let mensagemFormatada = n.mensagem
 
@@ -622,6 +630,14 @@ if (n.tipo === 'new_follower') {
       if (n.tipo === 'follow_reject') {
         mensagemFormatada = `${nome} recusou sua solicitação`
       }
+      // Adicione no mapeamento:
+if (n.tipo === 'nova_mensagem') {
+  // Se a mensagem já veio com o nome do remetente, usa ela
+  // Senão, monta com o nome extraído
+  mensagemFormatada = n.mensagem?.includes('Nova mensagem de') 
+    ? n.mensagem 
+    : (n.mensagem || `💬 Nova mensagem de ${nome}`);
+}
       // ✅ NOVO: Formatar mensagens de suporte
       if (n.tipo === 'support_message') {
         mensagemFormatada = n.mensagem || `${nome} enviou uma mensagem de suporte`
@@ -747,6 +763,16 @@ const redirectByNotificationType = (notif) => {
     // Vai para a página de contato
     router.push('/contato')
     return
+  }
+
+    if (tipo === 'nova_mensagem') {
+    const conversaId = notif.meta?.conversaId;
+    if (conversaId) {
+      router.push(`/mensagens?conversa=${conversaId}`);
+    } else {
+      router.push('/mensagens');
+    }
+    return;
   }
   
   if (tipo === 'follow_request' || tipo === 'follow_accept' || tipo === 'follow_reject' || tipo === 'new_follower') {

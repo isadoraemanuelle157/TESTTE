@@ -42,6 +42,7 @@ import LocalPlaylist from '@/views/LocalPlaylist.vue'
 import RoomCreation from '@/components/RoomCreation.vue'
 import DecadasPlaylist from '@/views/DecadasPlaylist.vue'
 import Rooms from '@/components/Rooms.vue'
+import MensagensView from '@/views/MensagensView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -163,6 +164,12 @@ const router = createRouter({
       path: '/matchmusical',
       name: 'matchmusical',
       component: MatchMusical,
+    },
+  {
+      path: '/mensagens',
+      name: 'Mensagens',
+      component: MensagensView,
+      meta: { requiresAuth: true },
     },
     {
       path: '/registrar',

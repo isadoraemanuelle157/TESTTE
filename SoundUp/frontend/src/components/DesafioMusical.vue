@@ -1309,12 +1309,23 @@ canClaimDaily() {
 async mounted() {
   window.addEventListener('scroll', this.handleScroll)
   this.animateCards()
-  const savedTheme = localStorage.getItem('soundup_theme');
-  if (savedTheme) {
-    this.themeDark = savedTheme === 'dark';
-    document.body.classList.toggle('theme-dark', this.themeDark);
-    this.customIconsActive = localStorage.getItem('soundup_custom_icons') === 'true';
-  }
+ const savedTheme = localStorage.getItem('soundup_theme');
+// ⚡ SÓ aplica tema se tiver comprado o item
+if (savedTheme && this.hasThemeItem) {
+  this.themeDark = savedTheme === 'dark';
+  document.body.classList.toggle('theme-dark', this.themeDark);
+} else {
+  this.themeDark = false;
+  document.body.classList.remove('theme-dark');
+  localStorage.removeItem('soundup_theme');
+}
+
+// ⚡ SÓ ativa ícones customizados se tiver comprado
+const savedIcons = localStorage.getItem('soundup_custom_icons') === 'true';
+this.customIconsActive = savedIcons && this.hasEmojiPack;
+if (!this.hasEmojiPack) {
+  localStorage.removeItem('soundup_custom_icons');
+}
  
   await this.loadServerData();
 },

@@ -1276,8 +1276,6 @@ const typeMap = {
       this.currentTopCategory = initialCategory
       await this.loadInitialData(initialCategory)
     }
-   
-    await this.initSpotifyPlayer()
 
     this.checkLoginStatus()
     this.loadLikedTracks()
@@ -1289,6 +1287,7 @@ const typeMap = {
     this.loadLocalizacoes()
     this.loadRecentCategories()
     this.checkSpotifyStatus()
+  
      const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
   if (savedGoldState !== null) {
     this.isAvatarGoldEquipped = savedGoldState === 'true';
@@ -1300,16 +1299,36 @@ const typeMap = {
     const userData = JSON.parse(storedUser);
     this.currentUserId = userData.id || userData._id;
   }
+
+   window.addEventListener('spotify-connected', this.handleSpotifyConnected)
+  
+  // 🔥 NOVO: Listener para storage (caso abra em outra aba)
+  window.addEventListener('storage', this.handleStorageChange)
+  
+  // 🔥 NOVO: Revalida status quando a janela ganha foco
+  window.addEventListener('focus', this.handleWindowFocus)
+
+   if (this.$route.query.spotify_connected === 'true') {
+    await this.checkSpotifyStatus()
+    this.showToast('Spotify conectado com sucesso!', 'success')
+    // Limpa a query da URL
+    this.$router.replace({ query: {} })
+  }
   
   // Listener para mudanças no avatar dourado
   window.addEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
   },
 
-  beforeUnmount() {
-    document.removeEventListener('click', this.handleClickOutside)
-    if (this.searchTimeout) clearTimeout(this.searchTimeout)
-     window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged);
-  },
+beforeUnmount() {
+  document.removeEventListener('click', this.handleClickOutside)
+  if (this.searchTimeout) clearTimeout(this.searchTimeout)
+  window.removeEventListener('avatar-gold-changed', this.handleAvatarGoldChanged)
+  
+  // 🔥 NOVO:
+  window.removeEventListener('spotify-connected', this.handleSpotifyConnected)
+  window.removeEventListener('storage', this.handleStorageChange)
+  window.removeEventListener('focus', this.handleWindowFocus)
+},
 
   watch: {
     '$route.query.q': {
@@ -1321,10 +1340,48 @@ const typeMap = {
           this.searchAndGo(newValue)
         }
       }
+    },
+      '$route.path': {
+    immediate: true,
+    handler(newPath) {
+      if (newPath === '/search' || newPath === '/') {
+        this.checkSpotifyStatus()
+      }
     }
+  }
   },
 
   methods: {
+    // 🔥 NOVO: Handler para evento spotify-connected
+async handleSpotifyConnected() {
+  console.log('[SEARCH] Evento spotify-connected recebido')
+  await this.checkSpotifyStatus()
+  if (this.spotifyConnected) {
+    this.showToast('Spotify conectado com sucesso!', 'success')
+    // Recarrega top tracks com Spotify ativo
+    await this.loadTopTracksByCategory(this.currentTopCategory)
+  }
+},
+
+// 🔥 NOVO: Handler para mudança no localStorage (outra aba)
+async handleStorageChange(e) {
+  if (e.key === 'spotify_connected' && e.newValue === 'true') {
+    console.log('[SEARCH] LocalStorage atualizado - Spotify conectado em outra aba')
+    await this.checkSpotifyStatus()
+    if (this.spotifyConnected) {
+      await this.loadTopTracksByCategory(this.currentTopCategory)
+    }
+  }
+},
+
+// 🔥 NOVO: Revalida quando a aba ganha foco (caso usuário volte da aba do Spotify)
+async handleWindowFocus() {
+  if (this.isLogged && !this.spotifyConnected) {
+    console.log('[SEARCH] Janela ganhou foco - revalidando status do Spotify')
+    await this.checkSpotifyStatus()
+  }
+},
+
      handleAvatarGoldChanged(e) {
     this.isAvatarGoldEquipped = e.detail?.equipped || false;
   },
@@ -1412,92 +1469,6 @@ const typeMap = {
       })
     },
 
-    async initSpotifyPlayer() {
-      if (!this.isLogged || !this.spotifyConnected) return
-
-      try {
-        const tokenRes = await fetch('http://localhost:3002/spotify/status', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
-        const status = await tokenRes.json()
-       
-        if (!status.connected || !status.tokenValid) return
-
-        if (!window.Spotify) {
-          await new Promise((resolve, reject) => {
-            if (window.SpotifySDKReady) {
-              resolve()
-              return
-            }
-           
-            const handler = () => {
-              window.removeEventListener('spotify-sdk-ready', handler)
-              resolve()
-            }
-            window.addEventListener('spotify-sdk-ready', handler)
-           
-            setTimeout(() => {
-              window.removeEventListener('spotify-sdk-ready', handler)
-              if (window.Spotify) resolve()
-              else reject(new Error('Spotify SDK não carregado'))
-            }, 10000)
-          })
-        }
-
-        const refreshRes = await fetch('http://localhost:3002/spotify/refresh', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
-        const refreshData = await refreshRes.json()
-       
-        if (!refreshData.success) {
-          console.warn('[SPOTIFY] Não foi possível refresh token')
-          return
-        }
-
-        this.spotifyPlayer = new window.Spotify.Player({
-          name: 'SoundUp Music',
-          getOAuthToken: cb => cb(refreshData.access_token || this.spotifyToken),
-          volume: this.volume / 100
-        })
-
-        this.spotifyPlayer.addListener('ready', ({ device_id }) => {
-          console.log('[SPOTIFY] Player pronto:', device_id)
-          this.spotifyDeviceId = device_id
-          this.isSpotifyPremium = true
-        })
-
-        this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
-          console.log('[SPOTIFY] Device offline:', device_id)
-        })
-
-        this.spotifyPlayer.addListener('player_state_changed', (state) => {
-          if (!state) return
-          this.syncSpotifyState(state)
-        })
-
-        this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
-          console.error('[SPOTIFY] Init error:', message)
-        })
-
-        this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
-          console.error('[SPOTIFY] Auth error:', message)
-          this.isSpotifyPremium = false
-        })
-
-        this.spotifyPlayer.addListener('account_error', ({ message }) => {
-          console.error('[SPOTIFY] Account error:', message)
-          this.isSpotifyPremium = false
-          this.showToast('Spotify Premium necessário para streaming completo', 'warning')
-        })
-
-        await this.spotifyPlayer.connect()
-       
-      } catch (e) {
-        console.error('[SPOTIFY] Erro ao inicializar player:', e)
-      }
-    },
-
     syncSpotifyState(state) {
       this.isPlaying = !state.paused
       this.currentTime = state.position / 1000
@@ -1517,20 +1488,57 @@ const typeMap = {
       }
     },
 
-    async checkSpotifyStatus() {
-      if (!this.isLogged) return
-      try {
-        const token = localStorage.getItem('token')
-        const res = await fetch('http://localhost:3002/spotify/status', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const data = await res.json()
-        this.spotifyConnected = data.connected
-        this.spotifyTokenValid = data.tokenValid
-      } catch (err) {
-        console.error('Erro ao verificar Spotify:', err)
-      }
-    },
+  async checkSpotifyStatus() {
+  if (!this.isLogged) {
+    this.spotifyConnected = false
+    return
+  }
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch('http://localhost:3002/spotify/status', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+
+    if (!res.ok) {
+      console.warn('[SPOTIFY STATUS] Resposta não OK:', res.status)
+      return
+    }
+
+    const data = await res.json()
+    const wasConnected = this.spotifyConnected
+
+    // 🚨 Se o backend disse que o refresh_token foi revogado, força desconectar
+    if (data.revoked) {
+      this.spotifyConnected = false
+      localStorage.removeItem('spotify_connected')
+      console.warn('[SPOTIFY STATUS] Refresh token revogado → reconectar necessário')
+      this.showToast('Sua sessão do Spotify expirou. Conecte novamente.', 'info')
+      return
+    }
+
+    this.spotifyConnected = !!(data.connected && data.tokenValid)
+
+    console.log('[SPOTIFY STATUS]', {
+      connected: data.connected,
+      tokenValid: data.tokenValid,
+      refreshed: data.refreshed || false,
+      finalState: this.spotifyConnected
+    })
+
+    // Sincroniza com localStorage para outras abas
+    if (this.spotifyConnected) {
+      localStorage.setItem('spotify_connected', 'true')
+    } else {
+      localStorage.removeItem('spotify_connected')
+    }
+
+    if (!wasConnected && this.spotifyConnected) {
+      await this.loadTopTracksByCategory(this.currentTopCategory)
+    }
+  } catch (err) {
+    console.error('[SPOTIFY STATUS] Erro:', err)
+  }
+},
    
     async connectSpotify() {
       try {
@@ -1618,8 +1626,9 @@ const typeMap = {
       this.$router.push('/login')
     },
 
-    async playTrack(track, context = 'search', index = 0) {
-      if (track._fullTrack && this.spotifyPlayer && this.spotifyDeviceId) {
+async playTrack(track, context = 'search', index = 0) {
+  // ✅ SÓ USA SPOTIFY FULL SE ESTIVER CONECTADO E COM DEVICE PRONTO
+  if (track._fullTrack && this.spotifyConnected && this.spotifyPlayer && this.spotifyDeviceId) {
         try {
           const token = localStorage.getItem('token')
           const res = await fetch(
@@ -2351,23 +2360,40 @@ window.dispatchEvent(new CustomEvent('play-song', {
       ])
     },
 
-    async loadTopTracksByCategory(category = 'Brasil') {
+ async loadTopTracksByCategory(category = 'Brasil') {
+  try {
+    this.currentTopCategory = category || 'Brasil'
+
+    // 🔥 SÓ tenta Spotify Full se REALMENTE estiver conectado E com token válido
+    if (this.isLogged && this.spotifyConnected && this.spotifyTokenValid !== false) {
+      const token = localStorage.getItem('token')
+     
       try {
-        this.currentTopCategory = category || 'Brasil'
+        const res = await fetch(
+          `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(8000)
+          }
+        )
 
-        if (this.isLogged && this.spotifyConnected) {
-          const token = localStorage.getItem('token')
-         
-          const res = await fetch(
-            `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
-            {
-              headers: { Authorization: `Bearer ${token}` }
-            }
-          )
-
-          if (res.ok) {
-            const data = await res.json()
-            this.chartTracks = data.tracks?.items?.map(t => ({
+        // ✅ Trata 401 (token expirado) e 403 (não conectado)
+        if (res.status === 401 || res.status === 403) {
+          console.warn('[SPOTIFY] Token inválido/expirado, caindo para Deezer')
+          this.spotifyConnected = false
+          this.spotifyTokenValid = false
+          localStorage.removeItem('spotify_connected')
+          // continua para fallback Deezer abaixo
+        } else if (res.status === 429) {
+          console.warn('[SPOTIFY] Rate limit, usando Deezer')
+          // continua para fallback Deezer abaixo
+        } else if (res.status === 500) {
+          console.warn('[SPOTIFY] Erro 500 no backend, usando Deezer')
+          // continua para fallback Deezer abaixo
+        } else if (res.ok) {
+          const data = await res.json()
+          if (data.tracks?.items?.length > 0) {
+            this.chartTracks = data.tracks.items.map(t => ({
               id: t.id,
               title: t.name,
               artist: { name: t.artists.map(a => a.name).join(', ') },
@@ -2375,45 +2401,50 @@ window.dispatchEvent(new CustomEvent('play-song', {
               preview: t.preview_url,
               _fullTrack: true,
               source: 'spotify_full'
-            })) || []
+            }))
             return
           }
         }
-
-        if (category === 'Brasil') {
-          const res = await fetch(
-            `http://localhost:3002/deezer/chart/0/tracks?limit=10`
-          )
-          const data = await res.json()
-
-          this.chartTracks = data.data?.map(t => ({
-            id: t.id,
-            title: t.title,
-            artist: { name: t.artist.name },
-            album: { cover_medium: t.album.cover_medium },
-            preview: t.preview,
-            source: 'deezer'
-          })) || []
-        } else {
-          const res = await fetch(
-            `http://localhost:3002/deezer/search?q=${encodeURIComponent(category)}&limit=10`
-          )
-          const data = await res.json()
-
-          this.chartTracks = data.data?.map(t => ({
-            id: t.id,
-            title: t.title,
-            artist: { name: t.artist.name },
-            album: { cover_medium: t.album.cover_medium },
-            preview: t.preview,
-            source: 'deezer'
-          })) || []
-        }
-
-      } catch (error) {
-        this.chartTracks = []
+      } catch (spotifyErr) {
+        console.warn('[SPOTIFY] Falha na busca full:', spotifyErr.message)
+        // continua para fallback Deezer
       }
-    },
+    }
+
+    // ===== FALLBACK DEEZER =====
+    if (category === 'Brasil') {
+      const res = await fetch(`http://localhost:3002/deezer/chart/0/tracks?limit=10`)
+      const data = await res.json()
+
+      this.chartTracks = data.data?.map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: { name: t.artist.name },
+        album: { cover_medium: t.album.cover_medium },
+        preview: t.preview,
+        source: 'deezer'
+      })) || []
+    } else {
+      const res = await fetch(
+        `http://localhost:3002/deezer/search?q=${encodeURIComponent(category)}&limit=10`
+      )
+      const data = await res.json()
+
+      this.chartTracks = data.data?.map(t => ({
+        id: t.id,
+        title: t.title,
+        artist: { name: t.artist.name },
+        album: { cover_medium: t.album.cover_medium },
+        preview: t.preview,
+        source: 'deezer'
+      })) || []
+    }
+
+  } catch (error) {
+    console.error('[loadTopTracksByCategory] Erro geral:', error)
+    this.chartTracks = []
+  }
+},
 
     async loadPopularArtists() {
       try {

@@ -76,16 +76,7 @@
 
             <h1 class="artist-name">{{ getArtistName() }}</h1>
 
-            <p class="genres">
-              <span
-                v-for="(genero, idx) in getArtistGenres()"
-                :key="idx"
-                class="genre-tag"
-              >
-                {{ genero }}
-                <span v-if="idx < getArtistGenres().length - 1" class="genre-separator">•</span>
-              </span>
-            </p>
+
 
             <p class="bio" v-if="getArtistBio()">{{ getArtistBio() }}</p>
 
@@ -164,7 +155,6 @@
       <section v-show="activeTab === 'musicas'" class="section musicas-section">
         <div class="section-header">
           <h2>Populares</h2>
-          <button class="btn-ver-todos" @click="verTodasMusicas">Ver todos</button>
         </div>
 
         <div v-if="!musicasCarregadas" class="loading-musicas">
@@ -228,17 +218,6 @@
 
             <div class="track-duration">{{ formatarDuracao(getTrackDuration(musica)) }}</div>
 
-            <button class="track-like" @click.stop="toggleLike(musica)">
-              <svg :class="{ 'liked': isTrackLiked(getTrackId(musica)) }" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-              </svg>
-            </button>
-
-            <button class="track-more" @click.stop="showTrackMenu(musica)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-              </svg>
-            </button>
           </div>
         </div>
       </section>
@@ -248,15 +227,7 @@
         <div class="section-header">
           <h2>Discografia</h2>
           <div class="album-filters">
-            <button
-              v-for="filter in albumFilters"
-              :key="filter.value"
-              class="filter-btn"
-              :class="{ 'active': activeAlbumFilter === filter.value }"
-              @click="activeAlbumFilter = filter.value"
-            >
-              {{ filter.label }}
-            </button>
+
           </div>
         </div>
 
@@ -293,11 +264,6 @@
                 <button class="album-play-btn" @click.stop="playAlbum(album)">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M8 5v14l11-7z"/>
-                  </svg>
-                </button>
-                <button class="album-like-btn" @click.stop="toggleAlbumLike(getAlbumId(album))">
-                  <svg :class="{ 'liked': likedAlbums.includes(getAlbumId(album)) }" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                   </svg>
                 </button>
               </div>
@@ -355,7 +321,8 @@
               <h3>Artistas Similares</h3>
               <div class="related-artists-list">
                 <div v-for="(artista, idx) in artistasRelacionados" :key="idx" class="related-artist-item">
-                  <img :src="getRelatedArtistImage(artista)" :alt="getRelatedArtistName(artista)" class="related-artist-image" />
+                  <img :src="getRelatedArtistImage(artista)" :alt="getRelatedArtistName(artista)"
+                   class="related-artist-image" />
                   <div class="related-artist-info">
                     <div class="related-artist-name">{{ getRelatedArtistName(artista) }}</div>
                     <div class="related-artist-genre">{{ getRelatedArtistGenre(artista) }}</div>
@@ -665,9 +632,18 @@ export default {
       if (this.cantor.generos && Array.isArray(this.cantor.generos)) {
         return this.cantor.generos.map(g => g.nome || g).filter(Boolean)
       }
-      if (this.source === 'deezer') {
-        return ['Música']
-      }
+ if (this.source === 'deezer') {
+  // 🔥 Prioriza gêneros já processados no carregamento
+  if (this.cantor.genres && Array.isArray(this.cantor.genres) && this.cantor.genres.length > 0) {
+    return this.cantor.genres
+  }
+  if (this.cantor.generos && Array.isArray(this.cantor.generos)) {
+    const generos = this.cantor.generos.map(g => g.nome || g).filter(Boolean)
+    if (generos.length > 0) return generos
+  }
+  // Fallback só se realmente não achou nada
+  return ['Música']
+}
       return []
     },
 
@@ -753,13 +729,18 @@ export default {
       return this.getArtistName()
     },
 
-    getTrackDuration(musica) {
-      if (!musica) return 0
-      if (musica.duracao) return musica.duracao
-      if (musica.duration_ms) return Math.floor(musica.duration_ms / 1000)
-      if (musica.duration) return musica.duration
-      return 0
-    },
+getTrackDuration(musica) {
+  if (!musica) return 0
+  // 🔥 CORREÇÃO: Converte string "3:45" para segundos
+  if (typeof musica.duracao === 'string' && musica.duracao.includes(':')) {
+    const [mins, secs] = musica.duracao.split(':').map(Number)
+    return (mins * 60) + secs
+  }
+  if (typeof musica.duracao === 'number') return musica.duracao
+  if (musica.duration_ms) return Math.floor(musica.duration_ms / 1000)
+  if (musica.duration) return musica.duration
+  return 0
+},
 
     getTrackPlays(musica) {
       if (!musica) return Math.floor(Math.random() * 5000000)
@@ -769,10 +750,14 @@ export default {
       return Math.floor(Math.random() * 5000000)
     },
 
-    getTrackPreviewUrl(musica) {
-      if (!musica) return ''
-      return musica.preview || musica.preview_url || musica.previewUrl || ''
-    },
+getTrackPreviewUrl(musica) {
+  if (!musica) return ''
+  // 🔥 Prioriza link do banco de dados (YouTube/Spotify)
+  if (musica.link) return musica.link
+  if (musica.url) return musica.url
+  if (musica.audioUrl) return musica.audioUrl
+  return musica.preview || musica.preview_url || musica.previewUrl || ''
+},
 
     // ========== HELPERS DE ÁLBUM ==========
 
@@ -1024,6 +1009,29 @@ export default {
 
         albuns = await this.carregarTracksAlbunsEmLotes(albuns, 'deezer')
 
+     // 🔥 BUSCA GÊNEROS REAIS DOS ÁLBUNS DO ARTISTA
+const generosUnicos = new Set()
+for (const album of (albumsData.data || [])) {
+  if (album.genre_id) {
+    try {
+      const genreRes = await fetch(`https://corsproxy.io/?https://api.deezer.com/genre/${album.genre_id}`)
+      if (genreRes.ok) {
+        const genreData = await genreRes.json()
+        if (genreData.name) {
+          generosUnicos.add(genreData.name)
+        }
+      }
+    } catch (e) {
+      // ignora erro de gênero individual
+    }
+  }
+}
+
+const artistGenres = Array.from(generosUnicos)
+const generosFormatados = artistGenres.length > 0 
+  ? artistGenres.map(g => ({ nome: g }))
+  : [{ nome: 'Música' }]
+
         this.cantor = {
           _id: artistData.id,
           id: artistData.id,
@@ -1040,8 +1048,8 @@ export default {
           nb_fan: artistData.nb_fan,
           popularity: artistData.nb_fan ? Math.min(Math.floor(artistData.nb_fan / 10000), 100) : 50,
           bio: `${artistData.name} é um artista popular no Deezer com ${this.formatarSeguidores(artistData.nb_fan)} fãs.`,
-          generos: [{ nome: 'Música' }],
-          genres: ['Música'],
+          generos: generosFormatados,
+  genres: artistGenres.length > 0 ? artistGenres : ['Música'],
           musicas,
           albuns
         }
@@ -1376,6 +1384,7 @@ export default {
       this.currentTrackId = musicaId
       this.isPlaying = true
 
+      const duration = this.getTrackDuration(musica)
       const songData = {
         id: musicaId,
         _id: musicaId,
@@ -2944,7 +2953,6 @@ export default {
   padding: 8px;
   border-radius: 8px;
   transition: var(--transition);
-  cursor: pointer;
 }
 
 .related-artist-item:hover {

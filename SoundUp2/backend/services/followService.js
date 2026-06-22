@@ -1,0 +1,263 @@
+const Follow = require('../models/Follow')
+const Usuario = require('../models/Usuario')
+const Cantor = require('../models/Cantor')
+const Notificacao = require('../models/Notificacao') 
+const notificacaoService = require('./notificacaoService')
+
+// SEGUIR
+const seguir = async (seguidor_id, seguindo_id, tipo) => {
+  const tipoFormatado = tipo.toLowerCase()
+  const tipoRef = tipoFormatado === 'cantor' ? 'Cantor' : 'Usuario'
+
+  const seguidorIdStr = String(seguidor_id)
+  const seguindoIdStr = String(seguindo_id)
+
+  if (seguidorIdStr === seguindoIdStr) {
+    throw new Error('Não pode seguir a si mesmo')
+  }
+  
+  if (tipoFormatado === 'cantor') {
+    const existe = await Follow.findOne({ seguidor_id, seguindo_id, tipo: tipoFormatado })
+    if (existe) return { follow: existe, direto: true, solicitado: false }
+
+    const follow = await Follow.create({
+      seguidor_id,
+      seguindo_id,
+      tipo: tipoFormatado,
+      tipoRef
+    })
+
+    await Usuario.findByIdAndUpdate(seguidor_id, {
+      $addToSet: { seguindo: seguindo_id }
+    })
+
+    await Cantor.findByIdAndUpdate(seguindo_id, {
+      $addToSet: { seguidores: seguidor_id }
+    })
+
+    return { follow, direto: true, solicitado: false }
+  }
+
+  const usuario = await Usuario.findById(seguindo_id)
+  if (!usuario) throw new Error('Usuário não encontrado')
+
+  const jaSegue = await Follow.findOne({
+    seguidor_id,
+    seguindo_id,
+    tipo: 'usuario'
+  })
+
+  if (jaSegue) {
+    return { follow: jaSegue, direto: true, solicitado: false }
+  }
+
+  // PERFIL PRIVADO => SOLICITAÇÃO
+  if (usuario.perfilPrivado) {
+    const jaSolicitou = usuario.solicitacoesSeguir?.find(
+      s => String(s.usuario) === String(seguidor_id) && s.status === 'pendente'
+    )
+
+    if (jaSolicitou) {
+      throw new Error('Solicitação já enviada')
+    }
+
+    usuario.solicitacoesSeguir.push({
+      usuario: seguidor_id,
+      status: 'pendente'
+    })
+
+    await usuario.save()
+
+// Para perfil PRIVADO (solicitação):
+await notificacaoService.criar({
+  usuarioDestino: seguindo_id,
+  usuarioOrigem: seguidor_id,
+  tipo: 'follow_request',      // ← mantém
+  mensagem: 'quer seguir você e pediu acesso ao seu perfil privado'
+})
+
+    return {
+      solicitado: true,
+      direto: false
+    }
+  }
+
+  // ✅ PERFIL PÚBLICO => Cria follow + NOTIFICAÇÃO
+  const follow = await Follow.create({
+    seguidor_id,
+    seguindo_id,
+    tipo: 'usuario',
+    tipoRef
+  })
+
+await notificacaoService.criar({
+  usuarioDestino: seguindo_id,
+  usuarioOrigem: seguidor_id,
+  tipo: 'new_follower',        // ← NOVO TIPO para seguir direto
+  mensagem: 'começou a seguir você'
+})
+
+  return { follow, direto: true, solicitado: false }
+}
+
+const desseguir = async (seguidor_id, seguindo_id, tipo) => {
+  const deleted = await Follow.findOneAndDelete({
+    seguidor_id,
+    seguindo_id,
+    tipo: tipo.toLowerCase()
+  })
+
+  if (tipo.toLowerCase() === 'cantor') {
+    await Usuario.findByIdAndUpdate(seguidor_id, {
+      $pull: { seguindo: seguindo_id }
+    })
+    await Cantor.findByIdAndUpdate(seguindo_id, {
+      $pull: { seguidores: seguidor_id }
+    })
+  } else if (tipo.toLowerCase() === 'usuario') {
+    await Usuario.findByIdAndUpdate(seguidor_id, {
+      $pull: { seguindoUsuarios: seguindo_id }
+    })
+  }
+
+  return deleted
+}
+
+const getSeguidores = async (seguindo_id, tipo) => {
+  return Follow.find({ seguindo_id, tipo })
+    .populate('seguidor_id', 'nome username avatar')
+}
+
+const getSeguindo = async (seguidor_id, tipo = null) => {
+  const filtro = { seguidor_id }
+
+  if (tipo) filtro.tipo = tipo.toLowerCase()
+
+  return Follow.find(filtro)
+    .populate('seguindo_id', 'nome username avatar foto generos')
+    .sort({ createdAt: -1 })
+}
+
+const contarSeguidores = async (seguindo_id, tipo) => {
+  return Follow.countDocuments({ seguindo_id, tipo })
+}
+
+const verificar = async (seguidor_id, seguindo_id, tipo) => {
+  const existe = await Follow.findOne({ seguidor_id, seguindo_id, tipo })
+  return !!existe
+}
+
+const aceitarSolicitacao = async (usuarioLogadoId, solicitanteId, notifId = null) => {
+  const user = await Usuario.findById(usuarioLogadoId)
+  if (!user) throw new Error('Usuário não encontrado')
+
+  const solicitacao = user.solicitacoesSeguir.find(
+    s => String(s.usuario) === String(solicitanteId) && s.status === 'pendente'
+  )
+
+  if (!solicitacao) throw new Error('Solicitação não encontrada')
+
+  solicitacao.status = 'aceito'
+
+  let follow = await Follow.findOne({
+    seguidor_id: solicitanteId,
+    seguindo_id: usuarioLogadoId,
+    tipo: 'usuario'
+  })
+
+  if (!follow) {
+    follow = await Follow.create({
+      seguidor_id: solicitanteId,
+      seguindo_id: usuarioLogadoId,
+      tipo: 'usuario',
+      tipoRef: 'Usuario'
+    })
+  }
+
+  await user.save()
+
+  // ✅ CORREÇÃO: Se tiver notifId, usa ele. Senão, tenta pelo par usuarios.
+  if (notifId) {
+    await Notificacao.findByIdAndUpdate(
+      notifId,
+      { aceita: true, lida: true }
+    )
+  } else {
+    // Fallback: tenta encontrar pela combinação de usuários
+    await Notificacao.findOneAndUpdate(
+      {
+        usuarioDestino: usuarioLogadoId,
+        usuarioOrigem: solicitanteId,
+        tipo: 'follow_request'
+        // Removido aceita: false da query — pode não existir no documento
+      },
+      { aceita: true, lida: true },
+      { sort: { createdAt: -1 } }
+    )
+  }
+
+  await notificacaoService.criar({
+    usuarioDestino: solicitanteId,
+    usuarioOrigem: usuarioLogadoId,
+    tipo: 'follow_accept',
+    mensagem: 'aceitou sua solicitação e liberou acesso ao perfil'
+  })
+
+  return follow
+}
+
+// ✅ CORRIGIDO: Agora retorna o follow com o _id do Cantor criado/importado
+const seguirArtistaExterno = async (seguidor_id, artistData) => {
+  const { id, name, picture, pictureMedium, pictureBig, source, nbFan } = artistData
+  
+  // Procura se já existe por externalId + source
+  let cantor = await Cantor.findOne({ 
+    'externo.externalId': String(id),
+    source: source
+  })
+  
+  if (!cantor) {
+    // Cria novo cantor importado
+    cantor = await Cantor.create({
+      nome: name,
+      foto: picture || pictureMedium || '',
+      source: source,  // 'deezer' ou 'spotify'
+      externo: {
+        externalId: String(id),
+        pictureMedium: pictureMedium || picture || '',
+        pictureBig: pictureBig || picture || '',
+        nbFan: nbFan || 0
+      },
+      generos: [],
+      seguidoresBase: 0
+    })
+  }
+  
+  // ✅ CORRIGIDO: Agora usa o _id (ObjectId) do Cantor criado/importado
+  return seguir(seguidor_id, cantor._id.toString(), 'cantor')
+}
+
+const getSeguidoresPublicos = async (seguindo_id) => {
+  return Follow.find({ seguindo_id, tipo: 'usuario' })
+    .populate('seguidor_id', 'nome username avatar')
+    .sort({ createdAt: -1 })
+}
+
+const getSeguindoPublicos = async (seguidor_id) => {
+  return Follow.find({ seguidor_id, tipo: 'usuario' })
+    .populate('seguindo_id', 'nome username avatar foto')
+    .sort({ createdAt: -1 })
+}
+
+module.exports = {
+  seguir,
+  seguirArtistaExterno,
+  desseguir,
+  getSeguidores,
+  getSeguindo,
+  getSeguidoresPublicos,
+  getSeguindoPublicos,
+  contarSeguidores,
+  verificar,
+  aceitarSolicitacao
+}

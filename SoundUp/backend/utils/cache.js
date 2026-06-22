@@ -1,26 +1,24 @@
 const cache = new Map()
 
+// ✅ DEPOIS (versão melhorada):
+function setCache(key, data, ttl = null) {
+  const entry = { data }
+  if (ttl) {
+    entry.expiresAt = Date.now() + ttl
+  }
+  // Se não passar ttl, não seta expiresAt = nunca expira
+  cache.set(key, entry)
+}
+
 function getCache(key) {
   const item = cache.get(key)
-
   if (!item) return null
-
-  // expirado
-  if (Date.now() > item.expiresAt) {
+  // Só verifica expiração se expiresAt existir
+  if (item.expiresAt && Date.now() > item.expiresAt) {
     cache.delete(key)
     return null
   }
-
   return item.data
-}
-
-function setCache(key, data, ttl = 1000 * 60 * 30) {
-  // 30 minutos
-
-  cache.set(key, {
-    data,
-    expiresAt: Date.now() + ttl
-  })
 }
 
 function deleteCache(key) {

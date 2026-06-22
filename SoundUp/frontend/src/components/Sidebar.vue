@@ -71,6 +71,14 @@
   </router-link>
 </li>
 
+<li v-if="isLoggedIn">
+  <router-link to="/mensagens" class="nav-link" @click="$emit('close')">
+    <i class="fa fa-comment"></i>
+    <span v-if="unreadTotal > 0" class="sidebar-badge">{{ unreadTotal }}</span>
+    <span>Mensagens</span>
+  </router-link>
+</li>
+
             <li v-if="isLoggedIn">
               <router-link to="/curtidas" class="nav-link" @click="$emit('close')">
                 <i class="fa fa-heart"></i>
@@ -184,6 +192,8 @@
 </template>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: "Sidebar",
   
@@ -200,6 +210,9 @@ export default {
     return {
       isLoggedIn: false,
       isAdmin: false,
+       unreadTotal: 0,
+       modoExcluir: false,
+    unreadPolling: null,
       currentUser: {
         firstName: 'Usuário',
         avatar: 'https://i.pravatar.cc/150?img=11',
@@ -215,12 +228,16 @@ export default {
     window.addEventListener('user-logged-in', this.handleLogin)
     window.addEventListener('user-logged-out', this.handleLogout)
     window.addEventListener('storage', this.checkAuthStatus)
-  },
+ // Carregar não lidas
+  this.carregarNaoLidas();
+  this.unreadPolling = setInterval(() => this.carregarNaoLidas(), 10000);
+},
 
   beforeDestroy() {
     window.removeEventListener('user-logged-in', this.handleLogin)
     window.removeEventListener('user-logged-out', this.handleLogout)
     window.removeEventListener('storage', this.checkAuthStatus)
+      if (this.unreadPolling) clearInterval(this.unreadPolling);
   },
 
   methods: {
@@ -249,6 +266,19 @@ checkAdminRole() {
     this.isAdmin = payload.role === 'admin'
   } catch (e) {
     this.isAdmin = false
+  }
+},
+
+async carregarNaoLidas() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const res = await axios.get('http://localhost:3002/mensagens/nao-lidas/total', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    this.unreadTotal = res.data.total;
+  } catch (err) {
+    console.error('Erro ao carregar não lidas:', err);
   }
 },
 
@@ -733,6 +763,20 @@ handleLogout() {
   transition: all 0.3s ease;
 }
 
+.sidebar-badge {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  margin-left: auto;
+}
 /* ========== LOGOUT ITEM (NOVO) ========== */
 .logout-item {
   margin-top: 16px;

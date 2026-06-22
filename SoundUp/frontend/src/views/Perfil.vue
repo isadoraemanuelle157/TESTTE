@@ -1394,7 +1394,21 @@
       <span v-if="equippingGold"><i class="fa fa-spinner fa-spin"></i></span>
       <span v-else>{{ isAvatarGoldEquipped ? 'Dourado Ativo' : 'Equipar Dourado' }}</span>
     </button>
-
+<button 
+  v-else
+  type="button"
+  class="btn-equip-gold locked"
+  disabled
+  @click="showToast({
+    title: 'Item bloqueado',
+    message: 'Compre o Avatar Dourado na loja para desbloquear',
+    type: 'warning',
+    icon: 'fa fa-lock'
+  })"
+>
+  <i class="fa fa-lock"></i>
+  <span>Bloqueado</span>
+</button>
     <!-- BOTÃO EQUIPAR BADGE PRO -->
 <button 
   v-if="hasProBadgeInInventory"
@@ -1407,6 +1421,22 @@
   <i :class="isProBadgeEquipped ? 'fa fa-sun-o' : 'fa fa-circle-o'"></i>
   <span v-if="equippingProBadge"><i class="fa fa-spinner fa-spin"></i></span>
   <span v-else>{{ isProBadgeEquipped ? 'PRO Ativo' : 'Equipar PRO' }}</span>
+</button>
+
+<button 
+  v-else
+  type="button"
+  class="btn-equip-pro locked"
+  disabled
+  @click="showToast({
+    title: 'Item bloqueado',
+    message: 'Compre o Badge PRO na loja para desbloquear',
+    type: 'warning',
+    icon: 'fa fa-lock'
+  })"
+>
+  <i class="fa fa-lock"></i>
+  <span>Bloqueado</span>
 </button>
     
     <button class="btn-close" @click="closeAvatarSelector">
@@ -1775,12 +1805,12 @@ hasGoldenAvatar() {
     }
     
     // Modo online — verificado via API no mounted
-    return this.hasGoldenAvatarItem;
+   return this.hasGoldenAvatarItem === true; 
   },
 
  hasProBadge() {
     // Verifica se o badge PRO está EQUIPADO (ativo no perfil)
-    return this.isProBadgeEquipped;
+    return this.isProBadgeEquipped === true;
   },
   
   hasProBadgeInInventory() {
@@ -1793,7 +1823,7 @@ hasGoldenAvatar() {
     }
     
     // Modo online
-    return this.hasProBadgeItem;
+  return this.hasProBadgeItem === true; 
   },
 
 usuarioGenerosList() {
@@ -2086,13 +2116,25 @@ mounted() {
     this.carregarUsuarioLogado()
     this.generateArtisticAvatars()
     this.generateFunAvatars()
-   const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped')
-  if (savedGoldState !== null) {
-    this.isAvatarGoldEquipped = savedGoldState === 'true'
-  }
-  
-  // Depois verifica com o backend (mas não sobrescreve se já tem valor salvo)
-  this.checkGoldenAvatarStatus()
+ const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
+if (savedGoldState !== null && this.hasGoldenAvatarInInventory) {
+  this.isAvatarGoldEquipped = savedGoldState === 'true';
+} else {
+  this.isAvatarGoldEquipped = false;
+  localStorage.removeItem('soundup_avatar_gold_equipped');
+}
+
+// ⚡ Só equipa badge PRO se tiver comprado
+const savedProState = localStorage.getItem('soundup_badge_pro_equipped');
+if (savedProState !== null && this.hasProBadgeInInventory) {
+  this.isProBadgeEquipped = savedProState === 'true';
+} else {
+  this.isProBadgeEquipped = false;
+  localStorage.removeItem('soundup_badge_pro_equipped');
+}
+
+this.checkGoldenAvatarStatus();
+this.checkProBadgeStatus();
   }
     this.onInventoryUpdated = () => {
     // Força reavaliação da computed property hasGoldenAvatar
@@ -2266,7 +2308,7 @@ mounted() {
       // Modo offline
       const inventory = JSON.parse(localStorage.getItem('soundup_inventory') || '[]');
       const goldItem = inventory.find(i => i.itemId === 'avatar_gold');
-      this.hasGoldenAvatarItem = !!goldItem;
+       this.hasGoldenAvatarItem = !!goldItem;
       // 🔥 Usa o estado salvo se existir, senão usa do inventário
       this.isAvatarGoldEquipped = savedEquipped !== null 
         ? savedEquipped === 'true' 
@@ -8814,7 +8856,34 @@ html, body {
     width: 100%;
     justify-content: space-between;
   }
- 
+ /* Botões de equipar bloqueados */
+/* Botão dourado bloqueado */
+.btn-equip-gold.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+}
+
+.btn-equip-gold.locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Botão PRO bloqueado */
+.btn-equip-pro.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #94a3b8 !important;
+}
+
+.btn-equip-pro.locked:hover {
+  transform: none;
+  box-shadow: none;
+}
   .row-album,
   .row-date {
     display: none;
