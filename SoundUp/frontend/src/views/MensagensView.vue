@@ -140,35 +140,49 @@
   </button>
 
   <!-- Conteúdo existente... -->
-  <div v-if="msg.tipo === 'texto'" class="msg-texto">
-    {{ msg.conteudo }}
-  </div>
-          
-          <!-- Imagem -->
-          <div v-else-if="msg.tipo === 'imagem'" class="msg-imagem">
-            <img :src="msg.conteudo" @click="abrirImagem(msg.conteudo)" />
-          </div>
-          
-          <!-- Áudio -->
-          <div v-else-if="msg.tipo === 'audio'" class="msg-audio">
-            <audio :src="msg.conteudo" controls></audio>
-            <span v-if="msg.metadata?.duracaoAudio" class="audio-duracao">
-              {{ formatDuracao(msg.metadata.duracaoAudio) }}
-            </span>
-          </div>
-          
-          <!-- Arquivo -->
-          <div v-else-if="msg.tipo === 'arquivo'" class="msg-arquivo">
-            <a :href="msg.conteudo" target="_blank" download>
-              <i class="fa fa-file"></i>
-              <span>{{ msg.metadata?.nomeArquivo || 'Arquivo' }}</span>
-            </a>
-          </div>
-          
-          <!-- Emoji -->
-          <div v-else-if="msg.tipo === 'emoji'" class="msg-emoji">
-            {{ msg.conteudo }}
-          </div>
+ <div class="msg-conteudo">
+  <!-- Texto -->
+  <template v-if="msg.tipo === 'texto'">
+    <div class="msg-texto">{{ msg.conteudo }}</div>
+  </template>
+  
+  <!-- Imagem -->
+  <template v-else-if="msg.tipo === 'imagem'">
+    <div class="msg-imagem">
+      <img :src="msg.conteudo" @click="abrirImagem(msg.conteudo)" />
+    </div>
+  </template>
+  
+  <!-- Áudio -->
+  <template v-else-if="msg.tipo === 'audio'">
+    <div class="msg-audio">
+      <audio :src="msg.conteudo" controls></audio>
+      <span v-if="msg.metadata?.duracaoAudio" class="audio-duracao">
+        {{ formatDuracao(msg.metadata.duracaoAudio) }}
+      </span>
+    </div>
+  </template>
+  
+  <!-- Arquivo -->
+  <template v-else-if="msg.tipo === 'arquivo'">
+    <div class="msg-arquivo">
+      <a :href="msg.conteudo" target="_blank" download>
+        <i class="fa fa-file"></i>
+        <span>{{ msg.metadata?.nomeArquivo || 'Arquivo' }}</span>
+      </a>
+    </div>
+  </template>
+  
+  <!-- Emoji -->
+  <template v-else-if="msg.tipo === 'emoji'">
+    <div class="msg-emoji">{{ msg.conteudo }}</div>
+  </template>
+  
+  <!-- Fallback para tipo desconhecido -->
+  <template v-else>
+    <div class="msg-texto">{{ msg.conteudo }}</div>
+  </template>
+</div>
           
           <div class="msg-meta">
             <span class="msg-hora">{{ formatHora(msg.createdAt) }}</span>
@@ -899,17 +913,25 @@ async verificarEstadoConversa(conversaId, participante) {
       }
     },
     
-    async carregarMensagens(conversaId) {
-      try {
-        const res = await axios.get(
-          `http://localhost:3002/mensagens/${conversaId}`,
-          this.getAuthConfig()
-        );
-        this.mensagens = res.data;
-      } catch (err) {
-        this.showToast('Erro ao carregar mensagens', 'error');
-      }
-    },
+async carregarMensagens(conversaId) {
+  try {
+    const res = await axios.get(
+      `http://localhost:3002/mensagens/${conversaId}`,
+      this.getAuthConfig()
+    );
+    this.mensagens = res.data;
+    
+    // 🔍 DEBUG: Verifique o que está vindo do backend
+    console.log('Mensagens carregadas:', this.mensagens.map(m => ({
+      tipo: m.tipo,
+      conteudo: m.conteudo,
+      remetente: m.remetente?.nome
+    })));
+    
+  } catch (err) {
+    this.showToast('Erro ao carregar mensagens', 'error');
+  }
+},
     
  async enviarMensagem() {
   // ✅ BLOQUEADO: impede envio

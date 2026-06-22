@@ -86,7 +86,7 @@ export default {
           console.log('[App] 🔄 Recarregando componente | Key:', this.routerKey)
         }
 
-        const noFooterPages = ['/login', '/registrar', '/registrar2', '/recuperar-senha', '/karaoke', '/desafiomusical', '/matchmusical', '/chatiamusica','/rooms','/rooms/create','/room']
+        const noFooterPages = ['/login', '/registrar', '/registrar2', '/mensagens', '/recuperar-senha', '/karaoke', '/desafiomusical', '/matchmusical', '/chatiamusica','/rooms','/rooms/create','/room']
         this.showFooter = !noFooterPages.includes(newPath)
         console.log('[App] Rota:', newPath, '| Footer visível:', this.showFooter)
 
