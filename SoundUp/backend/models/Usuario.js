@@ -314,9 +314,13 @@ usuarioSchema.methods.isSpotifyTokenValid = function() {
 // ✅ NOVO: Método para atualizar tokens do Spotify
 usuarioSchema.methods.updateSpotifyTokens = async function(accessToken, refreshToken, expiresIn) {
   this.spotifyAccessToken = accessToken
-  this.spotifyRefreshToken = refreshToken
+  this.spotifyRefreshToken = refreshToken || this.spotifyRefreshToken
   this.spotifyTokenExpiresAt = new Date(Date.now() + expiresIn * 1000)
-  this.spotifyConnected = true
   await this.save()
+}
+
+usuarioSchema.methods.isSpotifyTokenValid = function() {
+  if (!this.spotifyAccessToken || !this.spotifyTokenExpiresAt) return false
+  return new Date() < new Date(this.spotifyTokenExpiresAt.getTime() - 60000) // 1 min buffer
 }
 module.exports = mongoose.model('Usuario', usuarioSchema)

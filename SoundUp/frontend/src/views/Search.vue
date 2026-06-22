@@ -889,9 +889,6 @@ export default {
       isLoading: false,
       spotifyConnected: false,
       spotifyTokenValid: false,
-      spotifyPlayer: null,
-      spotifyDeviceId: null,
-      isSpotifyPremium: false,
       isAvatarGoldEquipped: false,
     currentUserId: null,
       spotifyToken: null,
@@ -1626,65 +1623,38 @@ async handleWindowFocus() {
       this.$router.push('/login')
     },
 
+// SUBSTITUIR o bloco inteiro do playTrack em Search.vue:
+
 async playTrack(track, context = 'search', index = 0) {
-  // ✅ SÓ USA SPOTIFY FULL SE ESTIVER CONECTADO E COM DEVICE PRONTO
-  if (track._fullTrack && this.spotifyConnected && this.spotifyPlayer && this.spotifyDeviceId) {
-        try {
-          const token = localStorage.getItem('token')
-          const res = await fetch(
-            `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(track.title)}&type=track`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
-          const data = await res.json()
-         
-          if (data.tracks?.items?.[0]) {
-            const spotifyTrack = data.tracks.items[0]
-           
-            await fetch(
-              `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
-              {
-                method: 'PUT',
-                headers: {
-                  'Authorization': `Bearer ${this.spotifyToken || await this.getSpotifyToken()}`,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  uris: [`spotify:track:${spotifyTrack.id}`]
-                })
-              }
-            )
-            return
-          }
-        } catch (e) {
-          console.error('[SPOTIFY] Erro ao tocar:', e)
-        }
-      }
+  // ✅ SEMPRE dispara evento global - o MusicPlayer.vue decide como tocar
+  const playerSong = this.convertToPlayerFormat(track)
+  
+  let playlist = []
+  if (context === 'top10') {
+    playlist = this.chartTracks.slice(0, 10).map(t => this.convertToPlayerFormat(t))
+  } else {
+    playlist = [playerSong]
+  }
 
-      const playerSong = this.convertToPlayerFormat(track)
-      let playlist = []
-      if (context === 'top10') {
-        playlist = this.chartTracks.slice(0, 10).map(t => this.convertToPlayerFormat(t))
-      } else {
-        playlist = [playerSong]
-      }
-// 🔥 NOVO: Registrar no histórico antes de tocar
-this.registrarHistoricoLocal({
-  id: track.id,
-  title: track.title || this.getResultTitle(track),
-  artist: track.artist?.name || 'Desconhecido',
-  cover: this.getBestImage(track),
-  source: track.source || 'deezer'
-})
+  // 🔥 REGISTRA HISTÓRICO
+  this.registrarHistoricoLocal({
+    id: track.id,
+    title: track.title || this.getResultTitle(track),
+    artist: track.artist?.name || 'Desconhecido',
+    cover: this.getBestImage(track),
+    source: track.source || 'deezer'
+  })
 
-window.dispatchEvent(new CustomEvent('play-song', {
-        detail: {
-          song: playerSong,
-          playlist: playlist,
-          index: index,
-          context: context
-        }
-      }))
-    },
+  // ✅ DISPARA EVENTO GLOBAL - MusicPlayer.vue vai lidar com Spotify/Deezer
+  window.dispatchEvent(new CustomEvent('play-song', {
+    detail: {
+      song: playerSong,
+      playlist: playlist,
+      index: index,
+      context: context
+    }
+  }))
+},
 
     async getSpotifyToken() {
       try {
@@ -2369,16 +2339,19 @@ window.dispatchEvent(new CustomEvent('play-song', {
       const token = localStorage.getItem('token')
      
       try {
-        const res = await fetch(
-          `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(category)}&type=track&limit=10&market=BR`,
+const safeCategory = category
+  .replace(/:/g, ' ')
+  .trim()
+
+const res = await fetch(
+  `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(safeCategory)}&type=track&limit=10&market=BR`,
           {
             headers: { Authorization: `Bearer ${token}` },
             signal: AbortSignal.timeout(8000)
           }
         )
 
-        // ✅ Trata 401 (token expirado) e 403 (não conectado)
-        if (res.status === 401 || res.status === 403) {
+ if (res.status === 401 || res.status === 403) {
           console.warn('[SPOTIFY] Token inválido/expirado, caindo para Deezer')
           this.spotifyConnected = false
           this.spotifyTokenValid = false
@@ -2487,11 +2460,15 @@ async searchSpotifyAndLocal(query) {
    
     let spotifyRes = { tracks: { items: [] }, artists: { items: [] }, albums: { items: [] } }
    
-    try {
-      const res = await fetch(
-        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(query)}&type=track,artist,album&limit=20&market=BR`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+try {
+const safeQuery = query
+  .replace(/:/g, ' ')   // Remove ":" que o Spotify usa como operador de busca
+  .trim()
+
+const res = await fetch(
+  `${this.SPOTIFY_API}/search?q=${encodeURIComponent(safeQuery)}&type=track,artist,album&limit=20&market=BR`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
           // ============================================
           // ADICIONAR signal para timeout de 8 segundos:
           // ============================================

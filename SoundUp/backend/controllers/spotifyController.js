@@ -116,8 +116,14 @@ const FALLBACK_VIBES = [
 // ✅ CORRIGIDO — usa userToken quando disponível
 exports.search = async (req, res) => {
   try {
-    const { q, type = 'track,artist,album', market = 'BR' } = req.query
-    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+let { q, type = 'track,artist,album', market = 'BR' } = req.query
+if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+
+// ✅ Sanitiza caracteres problemáticos para o Spotify Search API
+q = q
+  .replace(/[:\[\]]/g, ' ')   // Remove :, [, ] que são operadores/reservados
+  .replace(/\s+/g, ' ')        // Normaliza espaços múltiplos
+  .trim()
 
     // ✅ ROTA PÚBLICA: não exige token do usuário, usa app token
     const cacheKey = `spotify_search_${q.toLowerCase().trim()}_${type}`
@@ -128,11 +134,27 @@ exports.search = async (req, res) => {
     const { getUserSpotifyToken } = require('../utils/spotifyRequest')
     const userToken = await getUserSpotifyToken(req)
 
-    const response = await spotifyRequest({
+// ✅ CÓDIGO CORRIGIDO:
+let response
+try {
+  response = await spotifyRequest({
+    method: 'GET',
+    url: `${SPOTIFY_API_URL}/search`,
+    params: { q, type, limit: 10, market }
+  }, 3, userToken)
+} catch (err) {
+  // Se falhou com userToken, tenta sem (app token)
+  if (userToken && (err.isUserTokenExpired || err.response?.status === 400)) {
+    console.log('🔄 Fallback para app token na busca...')
+    response = await spotifyRequest({
       method: 'GET',
       url: `${SPOTIFY_API_URL}/search`,
       params: { q, type, limit: 10, market }
-    }, 3, userToken)  // ← PASSA userToken (ou null se não tiver)
+    }, 3, null)  // ← null = força app token
+  } else {
+    throw err
+  }
+}
 
     setCache(cacheKey, response.data)
     res.json(response.data)
@@ -746,6 +768,7 @@ exports.callback = async (req, res) => {
   }
 }
 // ================= OAUTH: REFRESH TOKEN MANUAL =================
+// No spotifyController.js, verifique o refreshUserToken:
 exports.refreshUserToken = async (req, res) => {
   try {
     const userId = req.user?.id || req.user?._id
@@ -763,19 +786,26 @@ exports.refreshUserToken = async (req, res) => {
       }).toString(),
       {
         headers: {
-          'Authorization': 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
+          Authorization: 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       }
     )
     
+    // ✅ SALVA NOVAMENTE no banco
     await user.updateSpotifyTokens(
       response.data.access_token,
-      user.spotifyRefreshToken,
+      response.data.refresh_token || user.spotifyRefreshToken,
       response.data.expires_in
     )
     
-    res.json({ success: true, expires_in: response.data.expires_in })
+    // ✅ RETORNA O TOKEN
+    res.json({ 
+      success: true, 
+      access_token: response.data.access_token,
+      expires_in: response.data.expires_in 
+    })
+    
   } catch (error) {
     console.error('❌ Refresh error:', error.response?.data || error.message)
     res.status(500).json({ error: 'Erro ao renovar token' })
@@ -785,8 +815,13 @@ exports.refreshUserToken = async (req, res) => {
 // ================= BUSCA COM STREAMING URL =================
 exports.searchFullTracks = async (req, res) => {
   try {
-    const { q, type = 'track', market = 'BR' } = req.query
-    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+let { q, type = 'track', market = 'BR' } = req.query
+if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+
+q = q
+  .replace(/[:\[\]]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
 
     const userToken = req.spotifyUserToken
     
@@ -806,7 +841,7 @@ exports.searchFullTracks = async (req, res) => {
       }, 3, userToken)
     } catch (err) {
       // 🔥 NOVO: Trata erros do Spotify SEM cair em 500
-      if (err.isUserTokenExpired || err.response?.status === 401) {
+      if (err.isUserTokenExpired || err.response?.status === 401 || err.response?.status === 400) {
         return res.status(401).json({ 
           error: 'SPOTIFY_TOKEN_EXPIRED',
           needsReconnect: true,
@@ -820,7 +855,7 @@ exports.searchFullTracks = async (req, res) => {
           message: 'Spotify temporariamente indisponível'
         })
       }
-      throw err  // outros erros sobem
+      throw err
     }
 
     const data = response.data

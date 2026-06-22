@@ -5,58 +5,60 @@ let deviceId = null
 let isReady = false
 
 export async function initSpotifyPlayer(getTokenFn) {
-  // ✅ CORREÇÃO: Aguarda o SDK estar disponível (já carregado no index.html)
+  // Aguarda SDK
   if (!window.Spotify) {
-    await new Promise((resolve) => {
-      // Se o SDK já disparou o evento, resolve imediatamente
+    await new Promise((resolve, reject) => {
       if (window.SpotifySDKReady && window.Spotify) {
         resolve()
         return
       }
-      
-      // Senão, espera o evento customizado
       const handler = () => {
         window.removeEventListener('spotify-sdk-ready', handler)
         resolve()
       }
       window.addEventListener('spotify-sdk-ready', handler)
-      
-      // Timeout de segurança (10 segundos)
       setTimeout(() => {
         window.removeEventListener('spotify-sdk-ready', handler)
         if (window.Spotify) resolve()
         else reject(new Error('Spotify SDK timeout'))
-      }, 10000)
+      }, 15000) // aumentado para 15s
     })
   }
 
-  // Reutiliza player existente
   if (playerInstance) {
     return { player: playerInstance, deviceId }
   }
 
- const player = new window.Spotify.Player({
-  name: 'SoundUp Music',
-  getOAuthToken: async (cb) => {
-    try {
-      const token = await getTokenFn()
-      
-      // 🔥 VALIDA antes de devolver
-      if (!token || typeof token !== 'string' || token.length < 20) {
-        console.error('[SPOTIFY] Token inválido recebido, abortando')
-        cb('')  // devolve vazio para o SDK parar de tentar
-        return
+  const player = new window.Spotify.Player({
+    name: 'SoundUp Music',
+    getOAuthToken: async (cb) => {
+      try {
+        const token = await getTokenFn()
+        if (!token || typeof token !== 'string' || token.length < 20) {
+          console.error('[SPOTIFY] Token inválido, tentando refresh...')
+          // Tenta refresh uma vez
+          const refreshRes = await fetch('http://localhost:3002/spotify/refresh', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          })
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json()
+            if (refreshData.access_token) {
+              cb(refreshData.access_token)
+              return
+            }
+          }
+          cb('') // último recurso
+          return
+        }
+        cb(token)
+      } catch (e) {
+        console.error('[SPOTIFY] Token error:', e)
+        cb('')
       }
-      
-      cb(token)
-    } catch (e) {
-      console.error('[SPOTIFY] Token error:', e)
-      cb('')
-    }
-  },
-  volume: 0.5
-})
-
+    },
+    volume: 0.5
+  })
 
   // Event listeners...
   player.addListener('ready', ({ device_id }) => {
@@ -87,17 +89,24 @@ export async function initSpotifyPlayer(getTokenFn) {
     console.error('[SPOTIFY] Playback error:', message)
   })
 
-  const connected = await player.connect()
+player.addListener('player_state_changed', (state) => {
+    if (!state) return
+    // Dispara evento global para MusicPlayer.vue
+    window.dispatchEvent(new CustomEvent('spotify-state-changed', {
+      detail: state
+    }))
+  })
 
+  const connected = await player.connect()
   if (!connected) {
     throw new Error('Spotify connect failed')
   }
 
-  // Aguarda device_id
+  // Aguarda device_id com timeout maior
   await new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error('Spotify device timeout'))
-    }, 10000)
+    }, 15000)
 
     const interval = setInterval(() => {
       if (deviceId) {
@@ -109,7 +118,6 @@ export async function initSpotifyPlayer(getTokenFn) {
   })
 
   playerInstance = player
-
   return { player, deviceId }
 }
 

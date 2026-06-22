@@ -10,15 +10,22 @@
     
     <!-- ✅ 1. PRIMEIRO: Definir a callback global -->
     <script>
-      window.onSpotifyWebPlaybackSDKReady = function() {
-        console.log('[SPOTIFY] SDK Ready (global callback)')
-        window.SpotifySDKReady = true
-        window.dispatchEvent(new Event('spotify-sdk-ready'))
-      }
-    </script>
-    
-    <!-- ✅ 2. DEPOIS: Carregar o script do SDK -->
-    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+  window.onSpotifyWebPlaybackSDKReady = function() {
+    console.log('[SPOTIFY] SDK Ready (global callback)')
+    window.SpotifySDKReady = true
+    window.dispatchEvent(new Event('spotify-sdk-ready'))
+  }
+  
+  // Fallback: se o SDK já carregou antes do callback ser definido
+  if (window.Spotify) {
+    console.log('[SPOTIFY] SDK já carregado')
+    window.SpotifySDKReady = true
+    window.dispatchEvent(new Event('spotify-sdk-ready'))
+  }
+</script>
+
+<!-- 2. DEPOIS: Carregar o script do SDK com async -->
+<script src="https://sdk.scdn.co/spotify-player.js" async></script>
   </head>
   <body>
     <div id="app"></div>

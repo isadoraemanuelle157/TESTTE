@@ -1,319 +1,358 @@
 <template>
-  <div class="music-player" v-if="currentTrack">
-    <!-- Lado esquerdo: Info da música -->
-       <!-- Lado esquerdo: Info da música -->
-    <div class="player-left">
-      <div class="cover-container">
+  
+<!-- 🔥 PLAYER MINIMIZADO (quando fechado) -->
+    <transition name="minimize-pop">
+      <div
+        v-if="currentTrack && isMinimized"
+        class="player-minimized"
+        @click="expandPlayer"
+        title="Expandir player"
+      >
         <img
           :src="currentTrack.cover"
-          class="player-cover"
+          class="minimized-cover"
           :class="{ 'spinning': isPlaying }"
           @error="handleImageError"
         />
-        <div class="playing-indicator" v-show="isPlaying">
+        <div class="minimized-info">
+          <span class="minimized-title">{{ currentTrack.title }}</span>
+          <span class="minimized-artist">{{ currentTrack.artist }}</span>
+        </div>
+        <div class="minimized-indicator" v-if="isPlaying">
           <span></span><span></span><span></span>
         </div>
-      </div>
-
-      <div class="track-info">
-        <span class="track-title">{{ currentTrack.title }}</span>
-        <span class="track-artist">{{ currentTrack.artist }}</span>
-      </div>
-
-      <!-- 🔥 BOTÕES DE AÇÃO -->
-      <div class="track-actions">
-        <!-- Curtir (Coração) -->
-        <button
-          @click="toggleLike"
-          class="action-btn like-btn"
-          :class="{ liked: isLiked }"
-          :disabled="likeLoading"
-          title="Curtir"
-        >
-          <i :class="isLiked ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-        </button>
-
-        <!-- Favoritar (Estrela) -->
-        <button
-          @click="toggleFavorite"
-          class="action-btn favorite-btn"
-          :class="{ favorited: isFavorited }"
-          :disabled="favoriteLoading"
-          title="Favoritar"
-        >
-          <i :class="isFavorited ? 'fa fa-star' : 'fa fa-star-o'"></i>
-        </button>
-
-        <!-- Adicionar à Playlist (+) -->
-        <button
-          @click="openPlaylistModal"
-          class="action-btn add-btn"
-          title="Adicionar à playlist"
-        >
-          <i class="fa fa-plus"></i>
+        <button class="minimized-expand-btn" @click.stop="expandPlayer">
+          <i class="fa fa-chevron-up"></i>
         </button>
       </div>
-    </div>
+    </transition>
+<div class="music-player" v-if="currentTrack && !isMinimized">
+    <!-- 🔥 BOTÃO MINIMIZAR/EXPANDIR -->
+    <button
+      v-if="!isMinimized"
+      @click="minimizePlayer"
+      class="minimize-btn"
+      title="Minimizar player"
+    >
+      <i class="fa fa-chevron-down"></i>
+    </button>
 
-    <!-- Centro: Controles principais -->
-       <!-- Centro: Controles principais -->
-    <div class="player-center">
-      <div class="controls">
-        <!-- 🔥 NOVO: Botão Aleatório (modo de reprodução) -->
-        <button
-          @click="toggleShuffle"
-          class="control-btn shuffle-btn"
-          :class="{ active: isShuffled }"
-          title="Aleatório"
-        >
-          <i class="fa fa-random"></i>
-        </button>
+    
 
-        <button
-          @click="prevTrack"
-          class="control-btn"
-          :disabled="currentIndex <= 0 && !isShuffled"
-          title="Anterior"
-        >
-          <i class="fa fa-step-backward"></i>
-        </button>
-
-        <button
-          class="play-btn main-play-btn"
-          @click="togglePlay"
-          :class="{ 'playing': isPlaying }"
-          :title="isPlaying ? 'Pausar' : 'Tocar'"
-        >
-          <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
-        </button>
-
-        <button
-          @click="nextTrack"
-          class="control-btn"
-          title="Próxima"
-        >
-          <i class="fa fa-step-forward"></i>
-        </button>
-
-        <!-- 🔥 NOVO: Botão Fila -->
-        <button
-          @click="toggleQueue"
-          class="control-btn queue-toggle-btn"
-          :class="{ active: showQueue }"
-          title="Fila de reprodução"
-        >
-          <i class="fa fa-list-ul"></i>
-          <span v-if="queue.length > 0" class="queue-badge">{{ queue.length }}</span>
-        </button>
-      </div>
-
-      <div class="progress-container">
-        <span class="time current">{{ formatTime(currentTime) }}</span>
-
-        <div
-          class="progress-bar-wrapper"
-          @click="seekTo"
-          ref="progressBar"
-        >
-          <div class="progress-bg"></div>
-          <div
-            class="progress-fill"
-            :style="{ width: progressPercent + '%' }"
-          ></div>
-          <div
-            class="progress-handle"
-            :style="{ left: progressPercent + '%' }"
-          ></div>
-          <input
-            type="range"
-            min="0"
-            :max="duration || 100"
-            :value="currentTime"
-            @input="onSeekInput"
-            @change="onSeekChange"
-            class="progress-input"
+    <!-- CONTEÚDO ORIGINAL DO PLAYER (só aparece quando NÃO minimizado) -->
+    <div v-show="!isMinimized" class="player-content">
+      <!-- Lado esquerdo: Info da música -->
+      <div class="player-left">
+        <div class="cover-container">
+          <img
+            :src="currentTrack.cover"
+            class="player-cover"
+            :class="{ 'spinning': isPlaying }"
+            @error="handleImageError"
           />
-        </div>
-
-        <span class="time total">{{ formatTime(duration) }}</span>
-      </div>
-    </div>
-
-    <!-- Direita: Volume -->
-    <div class="player-right">
-      <button
-        @click="toggleMute"
-        class="mute-btn"
-        title="Volume"
-      >
-        <i :class="volumeIcon"></i>
-      </button>
-
-      <div class="volume-section">
-        <div
-          class="volume-bar-wrapper"
-          @click="setVolume"
-          ref="volumeBar"
-        >
-          <div class="volume-bg"></div>
-          <div
-            class="volume-fill"
-            :style="{ width: (isMuted ? 0 : volume) * 100 + '%' }"
-          ></div>
-          <div
-            class="volume-handle"
-            :style="{ left: (isMuted ? 0 : volume) * 100 + '%' }"
-          ></div>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            :value="volume"
-            @input="onVolumeInput"
-            class="volume-input"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- ÁUDIO - ELEMENTO CRÍTICO -->
-    <audio
-      ref="audioPlayer"
-      :src="currentTrack.url"
-      @play="onAudioPlay"
-      @pause="onAudioPause"
-      @ended="onAudioEnded"
-      @timeupdate="onTimeUpdate"
-      @loadedmetadata="onLoadedMetadata"
-      @canplay="onCanPlay"
-      @error="onAudioError"
-      preload="auto"
-      crossorigin="anonymous"
-    ></audio>
-
-        <!-- 🔥 NOVO: Modal da Fila de Reprodução -->
-    <transition name="queue-slide">
-      <div v-if="showQueue" class="queue-modal">
-        <div class="queue-header">
-          <h3>Fila de Reprodução</h3>
-          <div class="queue-actions">
-            <button
-              @click="shuffleQueue"
-              class="queue-action-btn"
-              title="Embaralhar fila"
-            >
-              <i class="fa fa-random"></i> Embaralhar
-            </button>
-            <button
-              @click="toggleQueue"
-              class="queue-close-btn"
-              title="Fechar"
-            >
-              <i class="fa fa-times"></i>
-            </button>
+          <div class="playing-indicator" v-show="isPlaying">
+            <span></span><span></span><span></span>
           </div>
         </div>
-       
-        <div class="queue-list">
-          <div
-            v-for="(track, index) in displayQueue"
-            :key="track.id + index"
-            class="queue-item"
-            :class="{ 'current': track.isCurrent }"
-            @click="playFromQueue(index)"
+
+        <div class="track-info">
+          <span class="track-title">{{ currentTrack.title }}</span>
+          <span class="track-artist">{{ currentTrack.artist }}</span>
+        </div>
+
+        <!-- 🔥 BOTÕES DE AÇÃO -->
+        <div class="track-actions">
+          <!-- Curtir (Coração) -->
+          <button
+            @click="toggleLike"
+            class="action-btn like-btn"
+            :class="{ liked: isLiked }"
+            :disabled="likeLoading"
+            title="Curtir"
           >
-            <img
-              :src="track.cover"
-              class="queue-item-cover"
-              @error="handleImageError"
+            <i :class="isLiked ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
+          </button>
+
+          <!-- Favoritar (Estrela) -->
+          <button
+            @click="toggleFavorite"
+            class="action-btn favorite-btn"
+            :class="{ favorited: isFavorited }"
+            :disabled="favoriteLoading"
+            title="Favoritar"
+          >
+            <i :class="isFavorited ? 'fa fa-star' : 'fa fa-star-o'"></i>
+          </button>
+
+          <!-- Adicionar à Playlist (+) -->
+          <button
+            @click="openPlaylistModal"
+            class="action-btn add-btn"
+            title="Adicionar à playlist"
+          >
+            <i class="fa fa-plus"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Centro: Controles principais -->
+      <div class="player-center">
+        <div class="controls">
+          <!-- 🔥 NOVO: Botão Aleatório (modo de reprodução) -->
+          <button
+            @click="toggleShuffle"
+            class="control-btn shuffle-btn"
+            :class="{ active: isShuffled }"
+            title="Aleatório"
+          >
+            <i class="fa fa-random"></i>
+          </button>
+
+          <button
+            @click="prevTrack"
+            class="control-btn"
+            :disabled="currentIndex <= 0 && !isShuffled"
+            title="Anterior"
+          >
+            <i class="fa fa-step-backward"></i>
+          </button>
+
+          <button
+            class="play-btn main-play-btn"
+            @click="togglePlay"
+            :class="{ 'playing': isPlaying }"
+            :title="isPlaying ? 'Pausar' : 'Tocar'"
+          >
+            <i :class="isPlaying ? 'fa fa-pause' : 'fa fa-play'"></i>
+          </button>
+
+          <button
+            @click="nextTrack"
+            class="control-btn"
+            title="Próxima"
+          >
+            <i class="fa fa-step-forward"></i>
+          </button>
+
+          <!-- 🔥 NOVO: Botão Fila -->
+          <button
+            @click="toggleQueue"
+            class="control-btn queue-toggle-btn"
+            :class="{ active: showQueue }"
+            title="Fila de reprodução"
+          >
+            <i class="fa fa-list-ul"></i>
+            <span v-if="queue.length > 0" class="queue-badge">{{ queue.length }}</span>
+          </button>
+        </div>
+
+        <div class="progress-container">
+          <span class="time current">{{ formatTime(currentTime) }}</span>
+
+          <div
+            class="progress-bar-wrapper"
+            @click="seekTo"
+            ref="progressBar"
+          >
+            <div class="progress-bg"></div>
+            <div
+              class="progress-fill"
+              :style="{ width: progressPercent + '%' }"
+            ></div>
+            <div
+              class="progress-handle"
+              :style="{ left: progressPercent + '%' }"
+            ></div>
+            <input
+              type="range"
+              min="0"
+              :max="duration || 100"
+              :value="currentTime"
+              @input="onSeekInput"
+              @change="onSeekChange"
+              class="progress-input"
             />
-            <div class="queue-item-info">
-              <span class="queue-item-title">{{ track.title }}</span>
-              <span class="queue-item-artist">{{ track.artist }}</span>
-            </div>
-            <div class="queue-item-actions">
-              <span v-if="track.isCurrent" class="now-playing">
-                <span></span><span></span><span></span>
-              </span>
+          </div>
+
+          <span class="time total">{{ formatTime(duration) }}</span>
+        </div>
+      </div>
+
+      <!-- Direita: Volume -->
+      <div class="player-right">
+        <button
+          @click="toggleMute"
+          class="mute-btn"
+          title="Volume"
+        >
+          <i :class="volumeIcon"></i>
+        </button>
+
+        <div class="volume-section">
+          <div
+            class="volume-bar-wrapper"
+            @click="setVolume"
+            ref="volumeBar"
+          >
+            <div class="volume-bg"></div>
+            <div
+              class="volume-fill"
+              :style="{ width: (isMuted ? 0 : volume) * 100 + '%' }"
+            ></div>
+            <div
+              class="volume-handle"
+              :style="{ left: (isMuted ? 0 : volume) * 100 + '%' }"
+            ></div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              :value="volume"
+              @input="onVolumeInput"
+              class="volume-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- ÁUDIO - ELEMENTO CRÍTICO -->
+      <audio
+        ref="audioPlayer"
+        :src="currentTrack.url"
+        @play="onAudioPlay"
+        @pause="onAudioPause"
+        @ended="onAudioEnded"
+        @timeupdate="onTimeUpdate"
+        @loadedmetadata="onLoadedMetadata"
+        @canplay="onCanPlay"
+        @error="onAudioError"
+        preload="auto"
+        crossorigin="anonymous"
+      ></audio>
+
+      <!-- 🔥 NOVO: Modal da Fila de Reprodução -->
+      <transition name="queue-slide">
+        <div v-if="showQueue" class="queue-modal">
+          <div class="queue-header">
+            <h3>Fila de Reprodução</h3>
+            <div class="queue-actions">
               <button
-                @click.stop="removeFromQueue(index)"
-                class="queue-remove-btn"
-                title="Remover da fila"
+                @click="shuffleQueue"
+                class="queue-action-btn"
+                title="Embaralhar fila"
               >
-                <i class="fa fa-trash-o"></i>
+                <i class="fa fa-random"></i> Embaralhar
+              </button>
+              <button
+                @click="toggleQueue"
+                class="queue-close-btn"
+                title="Fechar"
+              >
+                <i class="fa fa-times"></i>
               </button>
             </div>
           </div>
-         
-          <div v-if="queue.length === 0" class="queue-empty">
-            <i class="fa fa-music"></i>
-            <p>Nenhuma música na fila</p>
-          </div>
-        </div>
-      </div>
-    </transition>
 
-        <!-- 🔥 MODAL: Adicionar à Playlist -->
-    <transition name="modal-fade">
-      <div v-if="showPlaylistModal" class="playlist-modal-overlay" @click="closePlaylistModal">
-        <div class="playlist-modal" @click.stop>
-          <div class="modal-header">
-            <h3>Adicionar à Playlist</h3>
-            <button class="modal-close" @click="closePlaylistModal">
-              <i class="fa fa-times"></i>
-            </button>
-          </div>
-         
-          <div class="modal-body">
-            <!-- Loading -->
-            <div v-if="playlistModalLoading" class="modal-loading">
-              <div class="spinner-small"></div>
-              <span>Carregando playlists...</span>
-            </div>
-           
-            <!-- Lista de Playlists -->
-            <div v-else-if="userPlaylists.length > 0" class="playlists-list">
-              <div
-                v-for="playlist in userPlaylists"
-                :key="playlist.id"
-                class="playlist-option"
-                @click="addToPlaylist(playlist.id)"
-              >
-                <img
-                  :src="playlist.capa || fallbackImage"
-                  class="playlist-option-cover"
-                  @error="handleImageError"
-                />
-                <div class="playlist-option-info">
-                  <span class="playlist-option-name">{{ playlist.nome }}</span>
-                  <span class="playlist-option-count">
-                    {{ playlist.totalMusicas }} {{ playlist.totalMusicas === 1 ? 'música' : 'músicas' }}
-                  </span>
-                </div>
+          <div class="queue-list">
+            <div
+              v-for="(track, index) in displayQueue"
+              :key="track.id + index"
+              class="queue-item"
+              :class="{ 'current': track.isCurrent }"
+              @click="playFromQueue(index)"
+            >
+              <img
+                :src="track.cover"
+                class="queue-item-cover"
+                @error="handleImageError"
+              />
+              <div class="queue-item-info">
+                <span class="queue-item-title">{{ track.title }}</span>
+                <span class="queue-item-artist">{{ track.artist }}</span>
+              </div>
+              <div class="queue-item-actions">
+                <span v-if="track.isCurrent" class="now-playing">
+                  <span></span><span></span><span></span>
+                </span>
                 <button
-                  class="playlist-option-add"
-                  :disabled="addToPlaylistLoading"
+                  @click.stop="removeFromQueue(index)"
+                  class="queue-remove-btn"
+                  title="Remover da fila"
                 >
-                  <i class="fa fa-plus"></i>
+                  <i class="fa fa-trash-o"></i>
                 </button>
               </div>
             </div>
-           
-            <!-- Sem playlists -->
-            <div v-else class="modal-empty">
+
+            <div v-if="queue.length === 0" class="queue-empty">
               <i class="fa fa-music"></i>
-              <p>Você não tem playlists ainda</p>
-              <button class="btn-create-playlist" @click="goToCreatePlaylist">
-                Criar Playlist
-              </button>
+              <p>Nenhuma música na fila</p>
             </div>
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+
+      <!-- 🔥 MODAL: Adicionar à Playlist -->
+      <transition name="modal-fade">
+        <div v-if="showPlaylistModal" class="playlist-modal-overlay" @click="closePlaylistModal">
+          <div class="playlist-modal" @click.stop>
+            <div class="modal-header">
+              <h3>Adicionar à Playlist</h3>
+              <button class="modal-close" @click="closePlaylistModal">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+
+            <div class="modal-body">
+              <!-- Loading -->
+              <div v-if="playlistModalLoading" class="modal-loading">
+                <div class="spinner-small"></div>
+                <span>Carregando playlists...</span>
+              </div>
+
+              <!-- Lista de Playlists -->
+              <div v-else-if="userPlaylists.length > 0" class="playlists-list">
+                <div
+                  v-for="playlist in userPlaylists"
+                  :key="playlist.id"
+                  class="playlist-option"
+                  @click="addToPlaylist(playlist.id)"
+                >
+                  <img
+                    :src="playlist.capa || fallbackImage"
+                    class="playlist-option-cover"
+                    @error="handleImageError"
+                  />
+                  <div class="playlist-option-info">
+                    <span class="playlist-option-name">{{ playlist.nome }}</span>
+                    <span class="playlist-option-count">
+                      {{ playlist.totalMusicas }} {{ playlist.totalMusicas === 1 ? 'música' : 'músicas' }}
+                    </span>
+                  </div>
+                  <button
+                    class="playlist-option-add"
+                    :disabled="addToPlaylistLoading"
+                  >
+                    <i class="fa fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Sem playlists -->
+              <div v-else class="modal-empty">
+                <i class="fa fa-music"></i>
+                <p>Você não tem playlists ainda</p>
+                <button class="btn-create-playlist" @click="goToCreatePlaylist">
+                  Criar Playlist
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
   </div>
- 
 </template>
 
 <script>
@@ -326,10 +365,10 @@ export default {
       currentIndex: 0,
       isPlaying: false,
       isLiked: false,
-      spotifyPremium: false, 
-      spotifyToken: null,        // ← ADICIONAR
-spotifySdkReady: false,
-spotifyConnected: false,
+      spotifyPremium: false,
+      spotifyToken: null,
+      spotifySdkReady: false,
+      spotifyConnected: false,
       isFavorited: false,
       isMuted: false,
       isDragging: false,
@@ -357,6 +396,7 @@ spotifyConnected: false,
       repeatMode: false,
       hasTrack: false,
       playPromise: null,
+      isMinimized: false,
       _trackStartTime: null,
       _totalListenedTime: 0,
       _lastSyncTime: 0,
@@ -384,37 +424,24 @@ spotifyConnected: false,
         isCurrent: index === this.currentIndex
       }))
     },
-isExternalTrack() {
-  if (!this.currentTrack) return false
-
-  // Se tiver source explícito
-  const source = (this.currentTrack.source || '').toLowerCase()
-
-  if (source && source !== 'local') {
-    return true
-  }
-
-  // Detecta IDs externos automaticamente
-  const id = String(this.currentTrack.id || '')
-
-  // Mongo ObjectId = 24 caracteres hexadecimais
-  const isMongoId = /^[a-f\d]{24}$/i.test(id)
-
-  return !isMongoId
-},
-currentTrackSource() {
-  if (!this.currentTrack) return 'local'
-
-  const source = (this.currentTrack.source || '').toLowerCase()
-
-  if (source) return source
-
-  // fallback automático
-  const id = String(this.currentTrack.id || '')
-  const isMongoId = /^[a-f\d]{24}$/i.test(id)
-
-  return isMongoId ? 'local' : 'spotify'
-}
+    isExternalTrack() {
+      if (!this.currentTrack) return false
+      const source = (this.currentTrack.source || '').toLowerCase()
+      if (source && source !== 'local') {
+        return true
+      }
+      const id = String(this.currentTrack.id || '')
+      const isMongoId = /^[a-f\d]{24}$/i.test(id)
+      return !isMongoId
+    },
+    currentTrackSource() {
+      if (!this.currentTrack) return 'local'
+      const source = (this.currentTrack.source || '').toLowerCase()
+      if (source) return source
+      const id = String(this.currentTrack.id || '')
+      const isMongoId = /^[a-f\d]{24}$/i.test(id)
+      return isMongoId ? 'local' : 'spotify'
+    }
   },
 
   mounted() {
@@ -422,15 +449,15 @@ currentTrackSource() {
     this.checkLoginStatus()
     this.checkLikeStatus()
     this.checkFavoriteStatus()
-  if (this.isLogged) {
-    this.checkSpotifyStatus()
-  }
-   
+    if (this.isLogged) {
+      this.checkSpotifyStatus()
+    }
+
     this.$nextTick(() => {
       const audio = this.$refs.audioPlayer
       if (audio) audio.volume = this.volume
     })
-   
+
     window.addEventListener('play-song', this.handlePlaySong)
     window.addEventListener('playlist-playback-started', this.handlePlaylistPlayback)
     window.addEventListener('player-toggle-play', this.handleTogglePlayCommand)
@@ -439,9 +466,29 @@ currentTrackSource() {
     window.addEventListener('player-paused', this.handleExternalPause)
     window.addEventListener('favoritas-updated', this.checkFavoriteStatus)
     window.addEventListener('curtidas-updated', this.checkLikeStatus)
-   
+
     this.startSyncInterval()
+
+    // 🔥 RESTAURAR ESTADO MINIMIZADO
+    const savedMinimized = localStorage.getItem('musicplayer_minimized')
+    if (savedMinimized === 'true') {
+      this.isMinimized = true
+    }
+    if (this.isLogged && this.spotifyConnected) {
+    this.initSpotifyPlayer()
+  }
   },
+
+  watch: {
+  // ... watch existentes ...
+  
+  spotifyConnected(newVal) {
+    if (newVal && this.isLogged && !this.spotifyPlayer) {
+      console.log('[PLAYER] Spotify conectado detectado, inicializando player...')
+      this.initSpotifyPlayer()
+    }
+  }
+},
 
   beforeDestroy() {
     window.removeEventListener('play-song', this.handlePlaySong)
@@ -454,213 +501,235 @@ currentTrackSource() {
     window.removeEventListener('curtidas-updated', this.checkLikeStatus)
     this.stopSyncInterval()
     if (this.spotifyPlayer) {
-  this.spotifyPlayer.disconnect()
-}
+      this.spotifyPlayer.disconnect()
+    }
   },
 
-  // ═══════════════════════════════════════════════════════
-  // ✅ METHODS: TODOS os métodos devem estar AQUI DENTRO
-  // ═══════════════════════════════════════════════════════
   methods: {
- async registrarHistorico(track, extraData = {}) {
-  if (!track) {
-    console.warn('⚠️ registrarHistorico chamado sem track')
-    return
-  }
-  
-  try {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      console.warn('⚠️ Sem token, histórico não registrado')
-      return
-    }
-    
-    // 🔥 GARANTIR que musicaId não está vazio
-    const musicaId = String(track.id || track._id || track.musicaId || '')
-    if (!musicaId || musicaId === 'undefined' || musicaId === 'null') {
-      console.error('❌ ID da música inválido:', track)
-      return
-    }
-    
-    const body = {
-      musicaId: musicaId,
-      titulo: track.title || track.nome || track.titulo || 'Sem título',
-      artista: track.artist || track.artista || 'Desconhecido',
-      capa: track.cover || track.capa || track.foto || '',
-      source: (track.source || 'local').toLowerCase(),
-      tipo: track.type || 'musica',
-      ...extraData
-    }
-    
-    console.log('📤 Enviando histórico:', body)  // 🔥 LOG para debug
-    
-    const res = await fetch('http://localhost:3002/historico/reproducao', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(body)
-    })
-    
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error('❌ Erro ao registrar histórico:', res.status, errText)
-    } else {
-      const data = await res.json()
-      console.log('✅ Histórico registrado:', data)  // 🔥 LOG de sucesso
-    }
-    
-  } catch (err) {
-    console.error('❌ Erro ao registrar histórico:', err)
-  }
-},
+    minimizePlayer() {
+      this.isMinimized = true
+      localStorage.setItem('musicplayer_minimized', 'true')
+      this.showToast('Player minimizado', 'info')
+    },
+
+    expandPlayer() {
+      this.isMinimized = false
+      localStorage.setItem('musicplayer_minimized', 'false')
+    },
+
+    async registrarHistorico(track, extraData = {}) {
+      if (!track) {
+        console.warn('⚠️ registrarHistorico chamado sem track')
+        return
+      }
+
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          console.warn('⚠️ Sem token, histórico não registrado')
+          return
+        }
+
+        const musicaId = String(track.id || track._id || track.musicaId || '')
+        if (!musicaId || musicaId === 'undefined' || musicaId === 'null') {
+          console.error('❌ ID da música inválido:', track)
+          return
+        }
+
+        const body = {
+          musicaId: musicaId,
+          titulo: track.title || track.nome || track.titulo || 'Sem título',
+          artista: track.artist || track.artista || 'Desconhecido',
+          capa: track.cover || track.capa || track.foto || '',
+          source: (track.source || 'local').toLowerCase(),
+          tipo: track.type || 'musica',
+          ...extraData
+        }
+
+        console.log('📤 Enviando histórico:', body)
+
+        const res = await fetch('http://localhost:3002/historico/reproducao', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        })
+
+        if (!res.ok) {
+          const errText = await res.text()
+          console.error('❌ Erro ao registrar histórico:', res.status, errText)
+        } else {
+          const data = await res.json()
+          console.log('✅ Histórico registrado:', data)
+        }
+
+      } catch (err) {
+        console.error('❌ Erro ao registrar histórico:', err)
+      }
+    },
 
     goToCreatePlaylist() {
       this.closePlaylistModal()
       this.$router?.push('/playlist').catch(() => {})
     },
 
- async initSpotifyPlayer() {
-  if (!this.isLogged || !this.spotifyConnected) return
-  if (this.spotifyPlayer) return
+    async initSpotifyPlayer() {
+      if (!this.isLogged || !this.spotifyConnected) return
+      if (this.spotifyPlayer) return
 
-  // ✅ CORREÇÃO: Aguarda o SDK que JÁ está no index.html
-if (!window.Spotify) {
-  await new Promise((resolve, reject) => {
-    // Se o SDK já disparou o evento, resolve imediatamente
-    if (window.SpotifySDKReady && window.Spotify) {
-      resolve()
-      return
-    }
-    
-    // Verifica se o script existe no DOM
-    const existingScript = document.querySelector('script[src*="spotify-player"]')
-    if (!existingScript) {
-      console.warn('⚠️ Script do Spotify SDK não encontrado no DOM')
-      reject(new Error('Spotify SDK não carregado no index.html'))
-      return
-    }
-      
-      // Senão, espera o evento customizado do index.html
-      const handler = () => {
-        window.removeEventListener('spotify-sdk-ready', handler)
-        resolve()
+      if (!window.Spotify) {
+        await new Promise((resolve, reject) => {
+          if (window.SpotifySDKReady && window.Spotify) {
+            resolve()
+            return
+          }
+
+          const existingScript = document.querySelector('script[src*="spotify-player"]')
+          if (!existingScript) {
+            console.warn('⚠️ Script do Spotify SDK não encontrado no DOM')
+            reject(new Error('Spotify SDK não carregado no index.html'))
+            return
+          }
+
+          const handler = () => {
+            window.removeEventListener('spotify-sdk-ready', handler)
+            resolve()
+          }
+          window.addEventListener('spotify-sdk-ready', handler)
+
+          setTimeout(() => {
+            window.removeEventListener('spotify-sdk-ready', handler)
+            if (window.Spotify) resolve()
+            else reject(new Error('Spotify SDK não carregado'))
+          }, 10000)
+        })
       }
-      window.addEventListener('spotify-sdk-ready', handler)
-      
-      // Timeout de segurança
-      setTimeout(() => {
-        window.removeEventListener('spotify-sdk-ready', handler)
-        if (window.Spotify) resolve()
-        else reject(new Error('Spotify SDK não carregado'))
-      }, 10000)
-    })
-  }
 
-  try {
-    const tokenRes = await fetch('http://localhost:3002/spotify/refresh', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-    })
-    const tokenData = await tokenRes.json()
-    
-    if (!tokenData.success) {
-      console.warn('[SPOTIFY] Token não renovado')
-      return
-    }
+      try {
+        const tokenRes = await fetch('http://localhost:3002/spotify/refresh', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
+        const tokenData = await tokenRes.json()
 
-    this.spotifyPlayer = new window.Spotify.Player({
-      name: 'SoundUp Music',
-      getOAuthToken: cb => cb(tokenData.access_token),
-      volume: this.volume
-    })
+        if (!tokenData.success) {
+          console.warn('[SPOTIFY] Token não renovado')
+          return
+        }
 
-    this.spotifyPlayer.addListener('ready', ({ device_id }) => {
-      console.log('[SPOTIFY] Device pronto:', device_id)
-      this.spotifyDeviceId = device_id
-      this.spotifySdkReady = true
-    })
+        this.spotifyPlayer = new window.Spotify.Player({
+          name: 'SoundUp Music',
+          getOAuthToken: cb => cb(tokenData.access_token),
+          volume: this.volume
+        })
 
-    this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
-      console.log('[SPOTIFY] Device offline:', device_id)
-      this.spotifySdkReady = false
-    })
+        this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+          console.log('[SPOTIFY] Device pronto:', device_id)
+          this.spotifyDeviceId = device_id
+          this.spotifySdkReady = true
+        })
 
-    this.spotifyPlayer.addListener('player_state_changed', (state) => {
-      if (!state) return
-      this.syncSpotifyState(state)
-    })
+        this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+          console.log('[SPOTIFY] Device offline:', device_id)
+          this.spotifySdkReady = false
+        })
 
-this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
-  console.error('[SPOTIFY] Init error:', message)
-  localStorage.removeItem('spotify_connected')
-  this.spotifyConnected = false
-  if (this.spotifyPlayer) {
-    this.spotifyPlayer.disconnect()
-    this.spotifyPlayer = null
-  }
-  window.dispatchEvent(new CustomEvent('spotify-disconnected', {
-    detail: { reason: 'init_error' }
-  }))
-})
+        this.spotifyPlayer.addListener('player_state_changed', (state) => {
+          if (!state) return
+          this.syncSpotifyState(state)
+        })
 
-    this.spotifyPlayer.addListener('account_error', ({ message }) => {
-      console.error('[SPOTIFY] Account error:', message)
-      this.spotifyPremium = false
-      this.showToast('Spotify Premium necessário para streaming completo', 'warning')
-    })
+        this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+          console.error('[SPOTIFY] Init error:', message)
+          localStorage.removeItem('spotify_connected')
+          this.spotifyConnected = false
+          if (this.spotifyPlayer) {
+            this.spotifyPlayer.disconnect()
+            this.spotifyPlayer = null
+          }
+          window.dispatchEvent(new CustomEvent('spotify-disconnected', {
+            detail: { reason: 'init_error' }
+          }))
+        })
 
-    await this.spotifyPlayer.connect()
-    
-  } catch (e) {
-    console.error('[SPOTIFY] Erro ao inicializar player:', e)
-    this.showToast('Erro ao conectar player Spotify', 'error')
-  }
-},
+        this.spotifyPlayer.addListener('account_error', ({ message }) => {
+          console.error('[SPOTIFY] Account error:', message)
+          this.spotifyPremium = false
+          this.showToast('Spotify Premium necessário para streaming completo', 'warning')
+        })
+
+        await this.spotifyPlayer.connect()
+
+      } catch (e) {
+        console.error('[SPOTIFY] Erro ao inicializar player:', e)
+        this.showToast('Erro ao conectar player Spotify', 'error')
+      }
+    },
+
+  // SUBSTITUIR o método playSpotifyFullTrack() inteiro:
 
 async playSpotifyFullTrack() {
-  if (!this.spotifyPlayer || !this.spotifyDeviceId || !this.spotifySdkReady) {
-    this.showToast('Spotify não conectado. Inicializando...', 'warning')
-    await this.initSpotifyPlayer()
-    
-    let attempts = 0
-    while (!this.spotifyDeviceId && attempts < 20) {
-      await new Promise(r => setTimeout(r, 500))
-      attempts++
-    }
-    if (!this.spotifyDeviceId) {
-      this.showToast('Não foi possível conectar ao Spotify', 'error')
-      return
-    }
+  if (!this.spotifyPlayer || !this.spotifyDeviceId) {
+    console.error('[SPOTIFY] Player não inicializado')
+    return
   }
 
-  // ✅ MOVIDO PARA FORA DO if — try agora está no nível correto
   try {
-    const token = localStorage.getItem('token')
+    const token = await this.fetchUserSpotifyToken()
     
-    // 1️⃣ Busca a música no Spotify
+    // 1️⃣ VERIFICA SE É PREMIUM
+    try {
+      const meRes = await fetch('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const meData = await meRes.json()
+      if (meData.product !== 'premium') {
+        this.showToast('Spotify Premium é necessário para streaming completo', 'warning')
+        this.spotifyMode = false
+        // Tenta preview
+        if (this.currentTrack?.preview && this.currentTrack.preview !== 'null') {
+          this.attemptPlay()
+        }
+        return
+      }
+    } catch (e) {
+      console.warn('⚠️ Não foi possível verificar Premium:', e.message)
+    }
+
+    // 2️⃣ BUSCA A MÚSICA NO SPOTIFY
     const searchQuery = `${this.currentTrack.title} ${this.currentTrack.artist}`
     const searchRes = await fetch(
       `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
     )
+    
+    if (!searchRes.ok) {
+      throw new Error('Busca Spotify falhou')
+    }
+    
     const searchData = await searchRes.json()
 
     if (!searchData.tracks?.items?.[0]) {
       this.showToast('Música não encontrada no Spotify', 'warning')
-      setTimeout(() => this.nextTrack(), 1500)
+      this.spotifyMode = false
+      if (this.currentTrack?.preview && this.currentTrack.preview !== 'null') {
+        this.attemptPlay()
+      } else {
+        setTimeout(() => this.nextTrack(), 1500)
+      }
       return
     }
 
     const spotifyTrack = searchData.tracks.items[0]
     const spotifyUri = `spotify:track:${spotifyTrack.id}`
 
-    // 2️⃣ Ativa o device no Spotify Connect
+    // 3️⃣ TRANSFERE PLAYBACK PARA O DEVICE
     await fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${await this.fetchUserSpotifyToken()}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -669,13 +738,16 @@ async playSpotifyFullTrack() {
       })
     })
 
-    // 3️⃣ Inicia a reprodução
-    await fetch(
+    // Aguarda device ativar
+    await new Promise(r => setTimeout(r, 800))
+
+    // 4️⃣ INICIA A REPRODUÇÃO
+    const playRes = await fetch(
       `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
       {
         method: 'PUT',
         headers: {
-      'Authorization': `Bearer ${await this.fetchUserSpotifyToken()}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -685,64 +757,88 @@ async playSpotifyFullTrack() {
       }
     )
 
-    // 4️⃣ Atualiza estado local
+    if (!playRes.ok && playRes.status !== 204) {
+      const errText = await playRes.text()
+      throw new Error(`Play failed: ${playRes.status} - ${errText}`)
+    }
+
+    // ✅ SUCESSO!
     this.spotifyMode = true
     this.isPlaying = true
     this.duration = spotifyTrack.duration_ms / 1000
     
-    // 🔥 CORREÇÃO: linha que estava solta com erro de sintaxe
+    // Atualiza info da track com dados do Spotify
     this.currentTrack = {
       ...this.currentTrack,
-      uri: spotifyUri
+      id: spotifyTrack.id,
+      title: spotifyTrack.name,
+      artist: spotifyTrack.artists.map(a => a.name).join(', '),
+      cover: spotifyTrack.album?.images?.[0]?.url || this.currentTrack.cover,
+      duration: spotifyTrack.duration_ms / 1000,
+      uri: spotifyUri,
+      spotifyId: spotifyTrack.id
     }
-    
+
     console.log('✅ Tocando via Spotify Web SDK:', spotifyTrack.name)
 
   } catch (e) {
     console.error('[SPOTIFY] Erro ao tocar full track:', e)
-    this.showToast('Erro ao tocar no Spotify. Tentando preview...', 'warning')
+    this.showToast('Erro ao tocar no Spotify', 'error')
     this.spotifyMode = false
-    // Fallback: tenta tocar o preview normal
-    setTimeout(() => this.attemptPlay(), 500)
-  }
-},
-
-syncSpotifyState(state) {
-  this.isPlaying = !state.paused
-  this.currentTime = state.position / 1000
-  this.duration = state.duration / 1000
-  
-  if (state.track_window?.current_track) {
-    const track = state.track_window.current_track
-    // Só atualiza se for uma música diferente
-    if (track.id !== this.currentTrack?.id) {
-      this.currentTrack = {
-        ...this.currentTrack,
-        id: track.id,
-        title: track.name,
-        artist: track.artists.map(a => a.name).join(', '),
-        cover: track.album.images?.[0]?.url || this.currentTrack?.cover,
-        duration: track.duration_ms / 1000
-      }
+    
+    // Fallback para preview
+    if (this.currentTrack?.preview && this.currentTrack.preview !== 'null') {
+      this.attemptPlay()
+    } else {
+      setTimeout(() => this.nextTrack(), 1500)
     }
   }
 },
 
-async checkSpotifyStatus() {
-  if (!this.isLogged) return
-  try {
-    const token = localStorage.getItem('token')
-    const res = await fetch('http://localhost:3002/spotify/status', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    const data = await res.json()
-    this.spotifyConnected = data.connected && data.tokenValid
-  } catch (err) {
-    console.error('Erro ao verificar Spotify:', err)
-    this.spotifyConnected = false
-  }
-},
+    syncSpotifyState(state) {
+      this.isPlaying = !state.paused
+      this.currentTime = state.position / 1000
+      this.duration = state.duration / 1000
 
+      if (state.track_window?.current_track) {
+        const track = state.track_window.current_track
+        if (track.id !== this.currentTrack?.id) {
+          this.currentTrack = {
+            ...this.currentTrack,
+            id: track.id,
+            title: track.name,
+            artist: track.artists.map(a => a.name).join(', '),
+            cover: track.album.images?.[0]?.url || this.currentTrack?.cover,
+            duration: track.duration_ms / 1000
+          }
+        }
+      }
+    },
+
+    async checkSpotifyStatus() {
+      if (!this.isLogged) return
+      try {
+        const token = localStorage.getItem('token')
+        const res = await fetch('http://localhost:3002/spotify/status', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        this.spotifyConnected = data.connected && data.tokenValid
+      } catch (err) {
+        console.error('Erro ao verificar Spotify:', err)
+        this.spotifyConnected = false
+      }
+    },
+
+
+    async fetchUserSpotifyToken() {
+      const res = await fetch('http://localhost:3002/spotify/refresh', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      })
+      const data = await res.json()
+      return data.access_token
+    },
     checkLoginStatus() {
       const token = localStorage.getItem('token')
       this.isLogged = !!token
@@ -924,10 +1020,9 @@ async checkSpotifyStatus() {
         const playlists = Array.isArray(data) ? data : []
         if (playlists.length === 0) {
           this.showToast('Você não tem nenhuma playlist. Crie uma primeiro!', 'warning')
-           setTimeout(() => {
-        this.showPlaylistModal = false
-      }, 4000)
-         
+          setTimeout(() => {
+            this.showPlaylistModal = false
+          }, 4000)
           return
         }
         this.userPlaylists = playlists.map(p => ({
@@ -1079,7 +1174,7 @@ async checkSpotifyStatus() {
       this._trackStartTime = Date.now()
       this._totalListenedTime = 0
       this.loadAndPlay()
-    this.registrarHistorico(this.currentTrack)
+      this.registrarHistorico(this.currentTrack)
       if (this.isShuffled) this.generateShuffledOrder()
     },
 
@@ -1191,50 +1286,49 @@ async checkSpotifyStatus() {
       if (this.currentTrack && this._trackStartTime && !append) {
         this.notifyTrackEnded(false)
       }
-const normalizedSong = song ? {
-    id: song.id || song._id || song.musicaId || '',
-    title: song.title || song.nome || song.titulo || 'Sem título',
-    artist: song.artist || song.artista || 'Desconhecido',
-    cover: song.cover || song.capa || song.foto || '',
-    url: song.url || song.preview || song.previewUrl || song.link || '',
-    duration: song.duration || song.duracao || 30,
-    source: song.source || 'local',
-    type: song.type || 'musica',
-    album: song.album || '',
-    genero: song.genero || song.generos?.[0] || null
-  } : null
+      const normalizedSong = song ? {
+        id: song.id || song._id || song.musicaId || '',
+        title: song.title || song.nome || song.titulo || 'Sem título',
+        artist: song.artist || song.artista || 'Desconhecido',
+        cover: song.cover || song.capa || song.foto || '',
+        url: song.url || song.preview || song.previewUrl || song.link || '',
+        duration: song.duration || song.duracao || 30,
+        source: song.source || 'local',
+        type: song.type || 'musica',
+        album: song.album || '',
+        genero: song.genero || song.generos?.[0] || null
+      } : null
 
-  if (playlist && Array.isArray(playlist) && playlist.length > 0) {
-    // 🔥 Normalizar TODAS as músicas da playlist
-    const normalizedPlaylist = playlist.map(track => ({
-      id: track.id || track._id || track.musicaId || '',
-      title: track.title || track.nome || track.titulo || 'Sem título',
-      artist: track.artist || track.artista || 'Desconhecido',
-      cover: track.cover || track.capa || track.foto || '',
-      url: track.url || track.preview || track.previewUrl || track.link || '',
-      duration: track.duration || track.duracao || 30,
-      source: track.source || 'local',
-      type: track.type || 'musica',
-      album: track.album || '',
-      genero: track.genero || track.generos?.[0] || null
-    }))
+      if (playlist && Array.isArray(playlist) && playlist.length > 0) {
+        const normalizedPlaylist = playlist.map(track => ({
+          id: track.id || track._id || track.musicaId || '',
+          title: track.title || track.nome || track.titulo || 'Sem título',
+          artist: track.artist || track.artista || 'Desconhecido',
+          cover: track.cover || track.capa || track.foto || '',
+          url: track.url || track.preview || track.previewUrl || track.link || '',
+          duration: track.duration || track.duracao || 30,
+          source: track.source || 'local',
+          type: track.type || 'musica',
+          album: track.album || '',
+          genero: track.genero || track.generos?.[0] || null
+        }))
 
-    if (append) {
-      this.queue = [...this.queue, ...normalizedPlaylist]
-    } else {
-      this.queue = [...normalizedPlaylist]
-      this.currentIndex = (index !== undefined) ? index : 0
-    }
-  } else if (normalizedSong) {
-    if (append) {
-      this.queue.push(normalizedSong)
-      this.showToast('Adicionado à fila', 'success')
-      return
-    } else {
-      this.queue = [normalizedSong]
-      this.currentIndex = 0
-    }
-  }
+        if (append) {
+          this.queue = [...this.queue, ...normalizedPlaylist]
+        } else {
+          this.queue = [...normalizedPlaylist]
+          this.currentIndex = (index !== undefined) ? index : 0
+        }
+      } else if (normalizedSong) {
+        if (append) {
+          this.queue.push(normalizedSong)
+          this.showToast('Adicionado à fila', 'success')
+          return
+        } else {
+          this.queue = [normalizedSong]
+          this.currentIndex = 0
+        }
+      }
       this.hasTrack = true
       this._trackStartTime = Date.now()
       this._totalListenedTime = 0
@@ -1255,65 +1349,77 @@ const normalizedSong = song ? {
       this.$nextTick(() => {
         this.checkLikeStatus()
         this.checkFavoriteStatus()
-        // 🔥 REGISTRAR HISTÓRICO — só registra quando realmente começa a tocar
       })
-
     },
 
-    // ═══════════════════════════════════════════════════════
-    // ✅ AQUI ESTÁ O MÉTODO QUE ESTAVA FORA - AGORA DENTRO DE methods
-    // ═══════════════════════════════════════════════════════
-    async loadAndPlay() {
+ // SUBSTITUIR o método loadAndPlay() inteiro:
+
+async loadAndPlay() {
+  // Se estiver em modo Spotify, não usa audio element
+  if (this.spotifyMode && this.spotifyPlayer) {
+    // Já está tocando via Spotify, só retorna
+    return
+  }
+
   const audio = this.$refs.audioPlayer
   if (!audio) {
     console.error('❌ Elemento de áudio não encontrado!')
     return
   }
-  const url = this.currentTrack?.url || this.currentTrack?.preview
-  const isSpotifyFull = this.currentTrack?.source === 'spotify' &&
-    (!url || url === 'null' || url === 'undefined' || url === '')
+
+  const track = this.currentTrack
+  if (!track) return
+
+  // ✅ DETECTA SE É SPOTIFY FULL TRACK
+  const isSpotifyFull = track.source === 'spotify' && 
+    (!track.url || track.url === 'null' || track.url === 'undefined' || track.url === '')
   
-  if (isSpotifyFull || this.currentTrack?._fullTrack) {
-    console.log('🎵 Detectado Spotify Full Track, tentando SDK...')
+  const shouldUseSpotify = isSpotifyFull || track._fullTrack || track.source === 'spotify_full'
+
+  if (shouldUseSpotify) {
+    console.log('🎵 Detectado Spotify Full Track')
     
-    // ✅ VERIFICA SE ESTÁ CONECTADO ANTES DE TENTAR
     if (!this.spotifyConnected) {
-      console.warn('⚠️ Spotify não conectado. Tocando preview se disponível...')
-      // Tenta tocar o preview normal se existir
-      if (url && url !== 'null' && url !== 'undefined') {
+      this.showToast('Conecte o Spotify para ouvir músicas completas', 'warning')
+      // Tenta tocar preview se existir
+      if (track.preview && track.preview !== 'null') {
         this.spotifyMode = false
         this.attemptPlay()
-        return
+      } else {
+        setTimeout(() => this.nextTrack(), 2000)
       }
-      this.showToast('Conecte o Spotify para ouvir músicas completas', 'warning')
-      setTimeout(() => this.nextTrack(), 1500)
       return
     }
-    
-    if (!this.spotifyPlayer) await this.initSpotifyPlayer()
-    
-    // ✅ AGUARDA O DEVICE FICAR PRONTO
+
+    // Inicializa player se necessário
+    if (!this.spotifyPlayer) {
+      await this.initSpotifyPlayer()
+    }
+
+    // Aguarda device ficar pronto
     let attempts = 0
-    while (!this.spotifyDeviceId && attempts < 10) {
+    while (!this.spotifyDeviceId && attempts < 20) {
       await new Promise(r => setTimeout(r, 500))
       attempts++
     }
-    
-    if (this.spotifyPlayer && this.spotifyDeviceId && this.spotifySdkReady) {
-      await this.playSpotifyFullTrack()
-      return
-    } else {
-      console.warn('⚠️ Spotify SDK não inicializou corretamente')
-      this.showToast('Erro ao conectar player Spotify. Tocando preview...', 'warning')
-      if (url && url !== 'null' && url !== 'undefined') {
-        this.spotifyMode = false
+
+    if (!this.spotifyDeviceId) {
+      this.showToast('Erro ao conectar player Spotify', 'error')
+      this.spotifyMode = false
+      if (track.preview && track.preview !== 'null') {
         this.attemptPlay()
-        return
       }
-      setTimeout(() => this.nextTrack(), 1500)
       return
     }
+
+    // ✅ TOCA VIA SPOTIFY SDK
+    await this.playSpotifyFullTrack()
+    return
   }
+
+  // Fallback: toca preview normal (Deezer/local)
+  this.spotifyMode = false
+  this.attemptPlay()
 },
 
     async attemptPlay() {
@@ -1324,24 +1430,23 @@ const normalizedSong = song ? {
         console.log('⏳ Áudio não pronto, aguardando canplay...')
         return
       }
-       try {
-    this.isLoading = true
-    this.playPromise = audio.play()
-    await this.playPromise
-    console.log('✅ Tocando com sucesso!')
-    this.isPlaying = true
-    this.isLoading = false
-    if (!this._trackStartTime) this._trackStartTime = Date.now()
-    
-    // 🔥 REGISTRAR HISTÓRICO AO COMEÇAR A TOCAR
-    if (this.currentTrack) {
-      this.registrarHistorico(this.currentTrack, {
-        tempoOuvido: 0,
-        reproduzidaAteOFim: false
-      })
-    }
-    
-  } catch (err) {
+      try {
+        this.isLoading = true
+        this.playPromise = audio.play()
+        await this.playPromise
+        console.log('✅ Tocando com sucesso!')
+        this.isPlaying = true
+        this.isLoading = false
+        if (!this._trackStartTime) this._trackStartTime = Date.now()
+
+        if (this.currentTrack) {
+          this.registrarHistorico(this.currentTrack, {
+            tempoOuvido: 0,
+            reproduzidaAteOFim: false
+          })
+        }
+
+      } catch (err) {
         console.error('❌ Erro ao tocar:', err.name, err.message)
         this.isPlaying = false
         this.isLoading = false
@@ -1466,14 +1571,13 @@ const normalizedSong = song ? {
           timestamp: Date.now()
         }
       }))
-        // 🔥 REGISTRAR HISTÓRICO ao finalizar música
       if (this.currentTrack && listenedDuration > 10000) {
         this.registrarHistorico(this.currentTrack, {
           tempoOuvido: listenedDuration,
           reproduzidaAteOFim: naturallyEnded
         })
       }
-      
+
       this._trackStartTime = null
       this._totalListenedTime = 0
     },
@@ -1527,7 +1631,7 @@ const normalizedSong = song ? {
         this._trackStartTime = Date.now()
         this._totalListenedTime = 0
         this.loadAndPlay()
-  this.registrarHistorico(this.currentTrack)
+        this.registrarHistorico(this.currentTrack)
         this.$nextTick(() => {
           this.checkLikeStatus()
           this.checkFavoriteStatus()
@@ -1549,7 +1653,6 @@ const normalizedSong = song ? {
           this._totalListenedTime = 0
           this.loadAndPlay()
           this.registrarHistorico(this.currentTrack)
-
           return
         } else {
           this.generateShuffledOrder()
@@ -1557,7 +1660,7 @@ const normalizedSong = song ? {
           this._trackStartTime = Date.now()
           this._totalListenedTime = 0
           this.loadAndPlay()
-           this.registrarHistorico(this.currentTrack)
+          this.registrarHistorico(this.currentTrack)
           return
         }
       }
@@ -1572,7 +1675,7 @@ const normalizedSong = song ? {
         this._totalListenedTime = 0
         this.loadAndPlay()
       }
-   this.registrarHistorico(this.currentTrack)
+      this.registrarHistorico(this.currentTrack)
     },
 
     toggleMute() {
@@ -1665,8 +1768,8 @@ const normalizedSong = song ? {
       this._trackStartTime = null
       this._totalListenedTime = 0
     }
-  }  
   }
+}
 </script>
 
 <style scoped>
@@ -2682,6 +2785,202 @@ const normalizedSong = song ? {
   .time {
     font-size: 10px;
     min-width: 30px;
+  }
+}
+/* ═══════════════════════════════════════════════════════
+   🔥 BOTÃO MINIMIZAR
+   ═══════════════════════════════════════════════════════ */
+
+.minimize-btn {
+  position: absolute;
+  top: -28px;
+  right: 20px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 28px;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  z-index: 1000;
+  box-shadow: 0 -4px 15px rgba(37, 99, 235, 0.3);
+}
+
+.minimize-btn:hover {
+  transform: translateY(-2px);
+  height: 32px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+/* ═══════════════════════════════════════════════════════
+   🔥 PLAYER MINIMIZADO
+   ═══════════════════════════════════════════════════════ */
+
+.minimize-pop-enter-active,
+.minimize-pop-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.minimize-pop-enter-from,
+.minimize-pop-leave-to {
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+}
+
+.player-minimized {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 50px;
+  padding: 8px 16px 8px 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(37, 99, 235, 0.1);
+  cursor: pointer;
+  z-index: 999;
+  transition: all 0.3s ease;
+  max-width: 320px;
+  animation: popIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.player-minimized:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(37, 99, 235, 0.2);
+  border-color: rgba(37, 99, 235, 0.5);
+}
+
+.minimized-cover {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.minimized-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.minimized-title {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.minimized-artist {
+  color: #94a3b8;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.minimized-indicator {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  padding: 0 4px;
+}
+
+.minimized-indicator span {
+  width: 2px;
+  background: #1db954;
+  border-radius: 1px;
+  animation: sound 0.5s ease-in-out infinite;
+}
+
+.minimized-indicator span:nth-child(1) { height: 6px; animation-delay: 0s; }
+.minimized-indicator span:nth-child(2) { height: 12px; animation-delay: 0.1s; }
+.minimized-indicator span:nth-child(3) { height: 8px; animation-delay: 0.2s; }
+
+.minimized-expand-btn {
+  background: rgba(37, 99, 235, 0.15);
+  border: none;
+  color: #2563eb;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.minimized-expand-btn:hover {
+  background: #2563eb;
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Ajuste no .music-player para posicionamento relativo */
+.music-player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  /* ... resto das propriedades existentes ... */
+}
+
+/* Wrapper do conteúdo quando expandido */
+.player-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsivo do minimizado */
+@media (max-width: 480px) {
+  .player-minimized {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    padding: 6px 12px 6px 6px;
+  }
+
+  .minimized-cover {
+    width: 36px;
+    height: 36px;
+  }
+
+  .minimized-title {
+    font-size: 12px;
+  }
+
+  .minimized-artist {
+    font-size: 10px;
   }
 }
 </style>
