@@ -989,15 +989,23 @@ beforeUnmount() {
 
   methods: {
     // ===================== AUTH / PROVIDER =====================
-    detectAuthProvider() {
-      const token =
-        localStorage.getItem('token') ||
-        localStorage.getItem('authToken') ||
-        localStorage.getItem('access_token')
+detectAuthProvider() {
+  // Token do app (seu backend)
+  const appToken =
+    localStorage.getItem('token') ||
+    localStorage.getItem('authToken') ||
+    localStorage.getItem('access_token')
+  
+  // Token do Spotify (conexão com Spotify)
+  const spotifyToken = localStorage.getItem('spotify_access_token')
 
-      this.isAuthenticated = !!token
-      this.musicProvider = this.isAuthenticated ? 'spotify' : 'deezer'
-    },
+  this.isAuthenticated = !!appToken
+  // ✅ Só usa Spotify se tiver ambos: login no app + Spotify conectado
+  this.musicProvider = (appToken && spotifyToken) ? 'spotify' : 'deezer'
+  
+  // ✅ Guarda se tem Spotify Premium
+  this.isSpotifyPremium = !!spotifyToken
+},
 
     getAuthHeaders() {
       const token =
@@ -1210,11 +1218,16 @@ formatDate(isoString) {
     },
 
     // ===================== SONG SELECTION =====================
- // ============ ADICIONAR dentro de selectTrackAndStart ============
 async selectTrackAndStart(track) {
+  // ✅ 1. ESCONDE A SELEÇÃO IMEDIATAMENTE (feedback visual instantâneo)
+  this.showSongSelection = false
+  this.searchQuery = ''
+  this.displayLimit = 12
+  
+  // ✅ 2. Carrega dados da música em background
   await this.setSongData(track)
- 
-  // Se é Spotify e usuário tem Premium, toca música completa como backing
+  
+  // ✅ 3. Inicia o playback (Spotify ou preview)
   if (track.source === 'spotify' && this.isSpotifyPremium && this.spotifyPlayer) {
     try {
       await this.spotifyPlayer._options.getOAuthToken(async (token) => {
@@ -1229,27 +1242,16 @@ async selectTrackAndStart(track) {
           })
         })
       })
-     
-      // Atualiza duração real
       this.duration = track.duration || 180
       this.currentSong.previewDuration = track.duration || 180
-     
-      // Inicia karaoke sync
       this.startKaraokeSync()
-     
     } catch (e) {
       console.error('Erro ao tocar no Spotify:', e)
-      // Fallback para preview
       this.audioPreviewUrl = track.preview || track.preview_url || ''
     }
   } else {
-    // Fallback Deezer
     this.audioPreviewUrl = track.preview || track.preview_url || ''
   }
- 
-  this.showSongSelection = false
-  this.searchQuery = ''
-  this.displayLimit = 12
 },
 
 // ========== ADICIONAR startKaraokeSync ==========
@@ -2144,13 +2146,17 @@ syncLyricsWithAudio() {
 },
 
 onAudioTimeUpdate() {
+  // ✅ Se está usando Spotify Premium, NÃO usa o audio element
+  if (this.isSpotifyPremium && this.currentSong.spotifyId) {
+    return  // O startKaraokeSync já cuida da sincronização
+  }
+  
   const audio = this.$refs.audioPlayer
   if (!audio) return
 
   this.currentTime = audio.currentTime
   this.duration = this.currentSong.previewDuration || 30
   this.progressPercent = (this.currentTime / this.duration) * 100
-
   this.syncLyricsWithAudio()
  
   // ✅ NOVO: Auto-salva a cada 10 segundos se estiver com microfone e pontuando
@@ -2166,12 +2172,19 @@ onAudioTimeUpdate() {
         audio.playbackRate = this.playbackRate
       }
     },
-
-  handleAudioEnded() {
+handleAudioEnded() {
+  // ✅ Se Spotify Premium, o player_state_changed já cuida
+  if (this.isSpotifyPremium && this.currentSong.spotifyId) {
+    this.isPlaying = false
+    if (this.withMicrophone) {
+      this.saveGameToHistory()
+    }
+    return
+  }
+  
   const audio = this.$refs.audioPlayer
   if (audio) {
     this.isPlaying = false
-    // ✅ Sempre salva quando a música termina, mesmo se não estiver "pausada"
     if (this.withMicrophone) {
       this.saveGameToHistory()
     }
