@@ -1699,7 +1699,7 @@ const buscarRecomendacoesCompletas = async (userId, tipo = 'tudo', limit = 50) =
   for (const artista of artistas.slice(0, 3)) {
     try {
       if (artista.source === 'spotify' && artista.id) {
-        const topTracks = await spotifyService.getArtistTopTracks(artista.id, 5)
+       const topTracks = await spotifyService.fetchArtistTopTracks(artista.id, 5)
         musicas.push(...topTracks.map(t => ({
           id: t.id,
           title: t.name,

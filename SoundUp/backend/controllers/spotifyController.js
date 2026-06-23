@@ -996,7 +996,7 @@ exports.searchTracksByGenre = async (genre, limit = 10) => {
   }
 }
 
-exports.getArtistTopTracks = async (artistId, limit = 5) => {
+exports.fetchArtistTopTracks = async (artistId, limit = 5) => {
   try {
     const response = await spotifyRequest({
       method: 'GET',
@@ -1005,7 +1005,7 @@ exports.getArtistTopTracks = async (artistId, limit = 5) => {
     })
     return (response.data?.tracks || []).slice(0, limit)
   } catch (error) {
-    console.error('❌ getArtistTopTracks:', error.message)
+    console.error('❌ fetchArtistTopTracks:', error.message)
     return []
   }
 }

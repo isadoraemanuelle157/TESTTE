@@ -1485,11 +1485,13 @@ async handleWindowFocus() {
       }
     },
 
-  async checkSpotifyStatus() {
+async checkSpotifyStatus() {
   if (!this.isLogged) {
     this.spotifyConnected = false
+    this.spotifyTokenValid = false
     return
   }
+
   try {
     const token = localStorage.getItem('token')
     const res = await fetch('http://localhost:3002/spotify/status', {
@@ -1497,43 +1499,33 @@ async handleWindowFocus() {
     })
 
     if (!res.ok) {
-      console.warn('[SPOTIFY STATUS] Resposta não OK:', res.status)
+      this.spotifyConnected = false
+      this.spotifyTokenValid = false
       return
     }
 
     const data = await res.json()
-    const wasConnected = this.spotifyConnected
 
-    // 🚨 Se o backend disse que o refresh_token foi revogado, força desconectar
     if (data.revoked) {
       this.spotifyConnected = false
+      this.spotifyTokenValid = false
       localStorage.removeItem('spotify_connected')
-      console.warn('[SPOTIFY STATUS] Refresh token revogado → reconectar necessário')
       this.showToast('Sua sessão do Spotify expirou. Conecte novamente.', 'info')
       return
     }
 
-    this.spotifyConnected = !!(data.connected && data.tokenValid)
+    this.spotifyConnected = !!data.connected
+    this.spotifyTokenValid = !!data.tokenValid
 
-    console.log('[SPOTIFY STATUS]', {
-      connected: data.connected,
-      tokenValid: data.tokenValid,
-      refreshed: data.refreshed || false,
-      finalState: this.spotifyConnected
-    })
-
-    // Sincroniza com localStorage para outras abas
-    if (this.spotifyConnected) {
+    if (this.spotifyConnected && this.spotifyTokenValid) {
       localStorage.setItem('spotify_connected', 'true')
     } else {
       localStorage.removeItem('spotify_connected')
     }
-
-    if (!wasConnected && this.spotifyConnected) {
-      await this.loadTopTracksByCategory(this.currentTopCategory)
-    }
   } catch (err) {
     console.error('[SPOTIFY STATUS] Erro:', err)
+    this.spotifyConnected = false
+    this.spotifyTokenValid = false
   }
 },
    
@@ -2335,7 +2327,7 @@ async playTrack(track, context = 'search', index = 0) {
     this.currentTopCategory = category || 'Brasil'
 
     // 🔥 SÓ tenta Spotify Full se REALMENTE estiver conectado E com token válido
-    if (this.isLogged && this.spotifyConnected && this.spotifyTokenValid !== false) {
+  if (this.isLogged && this.spotifyConnected && this.spotifyTokenValid) {
       const token = localStorage.getItem('token')
      
       try {
@@ -3581,27 +3573,27 @@ if (matchedExploreGenres.length > 0) {
       }
     },
 
-    convertToPlayerFormat(track) {
-      let url = track.preview || track.link || track.url || ''
-     
-      const isSpotifyFull = track.source === 'spotify' && (!url || url === 'null')
-      if (isSpotifyFull) {
-        url = ''
-      }
-     
-      return {
-        id: track.id,
-        title: track.title || this.getResultTitle(track),
-        artist: track.artist?.name || 'Artista desconhecido',
-        cover: this.getBestImage(track) || track.album?.cover_medium,
-        url: url,
-        preview: track.preview || track.link || '',
-        duration: track.duration || 30,
-        type: track.type || 'search',
-        source: track.source || 'deezer',
-        _fullTrack: isSpotifyFull || track._fullTrack || false
-      }
-    },
+  convertToPlayerFormat(track) {
+  const rawPreview = track.preview || track.link || track.url || ''
+  const isSpotifyLike = track.source === 'spotify' || track.source === 'spotify_full'
+  const hasPreview = !!(rawPreview && rawPreview !== 'null' && rawPreview !== 'undefined')
+  const isSpotifyFull = isSpotifyLike && (track._fullTrack || !hasPreview)
+
+  return {
+    id: track.id,
+    spotifyId: isSpotifyLike ? track.id : null,
+    uri: isSpotifyLike ? `spotify:track:${track.id}` : null,
+    title: track.title || this.getResultTitle(track),
+    artist: track.artist?.name || track.artist || 'Artista desconhecido',
+    cover: this.getBestImage(track) || track.album?.cover_medium || '',
+    url: isSpotifyFull ? '' : rawPreview,
+    preview: rawPreview,
+    duration: track.duration || 30,
+    type: track.type || 'search',
+    source: isSpotifyFull ? 'spotify_full' : (track.source || 'deezer'),
+    _fullTrack: isSpotifyFull
+  }
+},
 
     // ===== TOAST =====
     showToast(message, type = "success") {

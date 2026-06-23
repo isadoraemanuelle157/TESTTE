@@ -1,4 +1,4 @@
-<<template>
+<template>
   <div class="spotify-connected-page">
     <div class="connected-card" v-if="success">
       <div class="success-icon">

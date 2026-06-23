@@ -506,6 +506,62 @@ export default {
   },
 
   methods: {
+    updateCurrentTrack(patch = {}) {
+  if (!this.queue.length || this.currentIndex < 0 || this.currentIndex >= this.queue.length) return
+
+  const updated = {
+    ...this.queue[this.currentIndex],
+    ...patch
+  }
+
+  this.queue.splice(this.currentIndex, 1, updated)
+},
+
+async waitForSpotifyDevice(timeout = 15000) {
+  const start = Date.now()
+
+  while (!this.spotifyDeviceId) {
+    if (Date.now() - start > timeout) {
+      throw new Error('Timeout aguardando device do Spotify')
+    }
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+},
+
+async activateSpotifyElement() {
+  if (this.spotifyPlayer && typeof this.spotifyPlayer.activateElement === 'function') {
+    try {
+      await this.spotifyPlayer.activateElement()
+    } catch (err) {
+      console.warn('[SPOTIFY] activateElement falhou:', err?.message || err)
+    }
+  }
+},
+
+async transferPlaybackToSdk(spotifyUri, positionMs = 0) {
+  const token = localStorage.getItem('token')
+
+  const res = await fetch('http://localhost:3002/spotify/transfer-playback', {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      device_id: this.spotifyDeviceId,
+      uris: [spotifyUri],
+      position_ms: positionMs
+    })
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || err.error || 'Erro ao transferir playback')
+  }
+
+  return res.json().catch(() => ({}))
+},
+
     minimizePlayer() {
       this.isMinimized = true
       localStorage.setItem('musicplayer_minimized', 'true')
@@ -575,218 +631,143 @@ export default {
       this.$router?.push('/playlist').catch(() => {})
     },
 
-    async initSpotifyPlayer() {
-      if (!this.isLogged || !this.spotifyConnected) return
-      if (this.spotifyPlayer) return
+async initSpotifyPlayer() {
+  if (!this.isLogged || !this.spotifyConnected) return
+  if (this.spotifyPlayer && this.spotifyDeviceId) return
+  if (this._spotifyInitPromise) return this._spotifyInitPromise
 
-      if (!window.Spotify) {
-        await new Promise((resolve, reject) => {
-          if (window.SpotifySDKReady && window.Spotify) {
-            resolve()
-            return
-          }
-
-          const existingScript = document.querySelector('script[src*="spotify-player"]')
-          if (!existingScript) {
-            console.warn('⚠️ Script do Spotify SDK não encontrado no DOM')
-            reject(new Error('Spotify SDK não carregado no index.html'))
-            return
-          }
-
-          const handler = () => {
-            window.removeEventListener('spotify-sdk-ready', handler)
-            resolve()
-          }
-          window.addEventListener('spotify-sdk-ready', handler)
-
-          setTimeout(() => {
-            window.removeEventListener('spotify-sdk-ready', handler)
-            if (window.Spotify) resolve()
-            else reject(new Error('Spotify SDK não carregado'))
-          }, 10000)
-        })
-      }
-
-      try {
-        const tokenRes = await fetch('http://localhost:3002/spotify/refresh', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
-        const tokenData = await tokenRes.json()
-
-        if (!tokenData.success) {
-          console.warn('[SPOTIFY] Token não renovado')
+  this._spotifyInitPromise = (async () => {
+    if (!window.Spotify) {
+      await new Promise((resolve, reject) => {
+        if (window.SpotifySDKReady && window.Spotify) {
+          resolve()
           return
         }
 
-        this.spotifyPlayer = new window.Spotify.Player({
-          name: 'SoundUp Music',
-          getOAuthToken: cb => cb(tokenData.access_token),
-          volume: this.volume
-        })
-
-        this.spotifyPlayer.addListener('ready', ({ device_id }) => {
-          console.log('[SPOTIFY] Device pronto:', device_id)
-          this.spotifyDeviceId = device_id
-          this.spotifySdkReady = true
-        })
-
-        this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
-          console.log('[SPOTIFY] Device offline:', device_id)
-          this.spotifySdkReady = false
-        })
-
-        this.spotifyPlayer.addListener('player_state_changed', (state) => {
-          if (!state) return
-          this.syncSpotifyState(state)
-        })
-
-        this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
-          console.error('[SPOTIFY] Init error:', message)
-          localStorage.removeItem('spotify_connected')
-          this.spotifyConnected = false
-          if (this.spotifyPlayer) {
-            this.spotifyPlayer.disconnect()
-            this.spotifyPlayer = null
-          }
-          window.dispatchEvent(new CustomEvent('spotify-disconnected', {
-            detail: { reason: 'init_error' }
-          }))
-        })
-
-        this.spotifyPlayer.addListener('account_error', ({ message }) => {
-          console.error('[SPOTIFY] Account error:', message)
-          this.spotifyPremium = false
-          this.showToast('Spotify Premium necessário para streaming completo', 'warning')
-        })
-
-        await this.spotifyPlayer.connect()
-
-      } catch (e) {
-        console.error('[SPOTIFY] Erro ao inicializar player:', e)
-        this.showToast('Erro ao conectar player Spotify', 'error')
-      }
-    },
-
-  // SUBSTITUIR o método playSpotifyFullTrack() inteiro:
-
-async playSpotifyFullTrack() {
-  if (!this.spotifyPlayer || !this.spotifyDeviceId) {
-    console.error('[SPOTIFY] Player não inicializado')
-    return
-  }
-
-  try {
-    const token = await this.fetchUserSpotifyToken()
-    
-    // 1️⃣ VERIFICA SE É PREMIUM
-    try {
-      const meRes = await fetch('https://api.spotify.com/v1/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const meData = await meRes.json()
-      if (meData.product !== 'premium') {
-        this.showToast('Spotify Premium é necessário para streaming completo', 'warning')
-        this.spotifyMode = false
-        // Tenta preview
-        if (this.currentTrack?.preview && this.currentTrack.preview !== 'null') {
-          this.attemptPlay()
+        const onReady = () => {
+          window.removeEventListener('spotify-sdk-ready', onReady)
+          resolve()
         }
-        return
-      }
-    } catch (e) {
-      console.warn('⚠️ Não foi possível verificar Premium:', e.message)
+
+        window.addEventListener('spotify-sdk-ready', onReady)
+
+        setTimeout(() => {
+          window.removeEventListener('spotify-sdk-ready', onReady)
+          if (window.Spotify) resolve()
+          else reject(new Error('Spotify SDK não carregado'))
+        }, 15000)
+      })
     }
 
-    // 2️⃣ BUSCA A MÚSICA NO SPOTIFY
-    const searchQuery = `${this.currentTrack.title} ${this.currentTrack.artist}`
-    const searchRes = await fetch(
-      `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(searchQuery)}&type=track&limit=1`,
-      { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
-    )
-    
-    if (!searchRes.ok) {
-      throw new Error('Busca Spotify falhou')
-    }
-    
-    const searchData = await searchRes.json()
+    let readyResolved = false
 
-    if (!searchData.tracks?.items?.[0]) {
-      this.showToast('Música não encontrada no Spotify', 'warning')
-      this.spotifyMode = false
-      if (this.currentTrack?.preview && this.currentTrack.preview !== 'null') {
-        this.attemptPlay()
-      } else {
-        setTimeout(() => this.nextTrack(), 1500)
-      }
-      return
-    }
-
-    const spotifyTrack = searchData.tracks.items[0]
-    const spotifyUri = `spotify:track:${spotifyTrack.id}`
-
-    // 3️⃣ TRANSFERE PLAYBACK PARA O DEVICE
-    await fetch('https://api.spotify.com/v1/me/player', {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+    this.spotifyPlayer = new window.Spotify.Player({
+      name: 'SoundUp Music',
+      getOAuthToken: async (cb) => {
+        try {
+          const token = await this.fetchUserSpotifyToken()
+          cb(token || '')
+        } catch (err) {
+          console.error('[SPOTIFY] Erro ao obter token:', err)
+          cb('')
+        }
       },
-      body: JSON.stringify({
-        device_ids: [this.spotifyDeviceId],
-        play: false
+      volume: this.volume
+    })
+
+    const readyPromise = new Promise((resolve, reject) => {
+      this.spotifyPlayer.addListener('ready', ({ device_id }) => {
+        console.log('[SPOTIFY] Device pronto:', device_id)
+        this.spotifyDeviceId = device_id
+        this.spotifySdkReady = true
+        readyResolved = true
+        resolve(device_id)
+      })
+
+      this.spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+        console.warn('[SPOTIFY] Device offline:', device_id)
+        if (this.spotifyDeviceId === device_id) {
+          this.spotifyDeviceId = null
+        }
+        this.spotifySdkReady = false
+      })
+
+      this.spotifyPlayer.addListener('player_state_changed', (state) => {
+        if (!state) return
+        this.syncSpotifyState(state)
+      })
+
+      this.spotifyPlayer.addListener('initialization_error', ({ message }) => {
+        console.error('[SPOTIFY] Init error:', message)
+        if (!readyResolved) reject(new Error(message))
+      })
+
+      this.spotifyPlayer.addListener('authentication_error', ({ message }) => {
+        console.error('[SPOTIFY] Auth error:', message)
+        if (!readyResolved) reject(new Error(message))
+      })
+
+      this.spotifyPlayer.addListener('account_error', ({ message }) => {
+        console.error('[SPOTIFY] Account error:', message)
+        this.showToast('Spotify Premium necessário para streaming completo', 'warning')
+      })
+
+      this.spotifyPlayer.addListener('playback_error', ({ message }) => {
+        console.error('[SPOTIFY] Playback error:', message)
       })
     })
 
-    // Aguarda device ativar
-    await new Promise(r => setTimeout(r, 800))
+    const connected = await this.spotifyPlayer.connect()
 
-    // 4️⃣ INICIA A REPRODUÇÃO
-    const playRes = await fetch(
-      `https://api.spotify.com/v1/me/player/play?device_id=${this.spotifyDeviceId}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          uris: [spotifyUri],
-          position_ms: 0
-        })
-      }
-    )
-
-    if (!playRes.ok && playRes.status !== 204) {
-      const errText = await playRes.text()
-      throw new Error(`Play failed: ${playRes.status} - ${errText}`)
+    if (!connected) {
+      throw new Error('spotifyPlayer.connect() retornou false')
     }
 
-    // ✅ SUCESSO!
+    await readyPromise
+  })()
+
+  try {
+    await this._spotifyInitPromise
+  } finally {
+    this._spotifyInitPromise = null
+  }
+},
+
+async playSpotifyFullTrack() {
+  try {
+    await this.initSpotifyPlayer()
+    await this.waitForSpotifyDevice()
+    await this.activateSpotifyElement()
+
+    const track = this.currentTrack
+    if (!track) return
+
+    const spotifyId = track.spotifyId || track.id
+    if (!spotifyId) {
+      throw new Error('Track do Spotify sem id')
+    }
+
+    const spotifyUri = track.uri || `spotify:track:${spotifyId}`
+
+    await this.transferPlaybackToSdk(spotifyUri, Math.floor((this.currentTime || 0) * 1000))
+
     this.spotifyMode = true
     this.isPlaying = true
-    this.duration = spotifyTrack.duration_ms / 1000
-    
-    // Atualiza info da track com dados do Spotify
-    this.currentTrack = {
-      ...this.currentTrack,
-      id: spotifyTrack.id,
-      title: spotifyTrack.name,
-      artist: spotifyTrack.artists.map(a => a.name).join(', '),
-      cover: spotifyTrack.album?.images?.[0]?.url || this.currentTrack.cover,
-      duration: spotifyTrack.duration_ms / 1000,
+
+    this.updateCurrentTrack({
+      spotifyId,
       uri: spotifyUri,
-      spotifyId: spotifyTrack.id
-    }
+      source: 'spotify_full',
+      url: '',
+      preview: track.preview || ''
+    })
 
-    console.log('✅ Tocando via Spotify Web SDK:', spotifyTrack.name)
-
+    console.log('✅ Tocando via Spotify Web Playback SDK:', spotifyUri)
   } catch (e) {
     console.error('[SPOTIFY] Erro ao tocar full track:', e)
-    this.showToast('Erro ao tocar no Spotify', 'error')
+    this.showToast(e.message || 'Erro ao tocar no Spotify', 'error')
     this.spotifyMode = false
-    
-    // Fallback para preview
+
     if (this.currentTrack?.preview && this.currentTrack.preview !== 'null') {
       this.attemptPlay()
     } else {
@@ -795,25 +776,43 @@ async playSpotifyFullTrack() {
   }
 },
 
-    syncSpotifyState(state) {
-      this.isPlaying = !state.paused
-      this.currentTime = state.position / 1000
-      this.duration = state.duration / 1000
+syncSpotifyState(state) {
+  const prevTime = this.currentTime
+  const prevDuration = this.duration
+  const wasPlaying = this.isPlaying
 
-      if (state.track_window?.current_track) {
-        const track = state.track_window.current_track
-        if (track.id !== this.currentTrack?.id) {
-          this.currentTrack = {
-            ...this.currentTrack,
-            id: track.id,
-            title: track.name,
-            artist: track.artists.map(a => a.name).join(', '),
-            cover: track.album.images?.[0]?.url || this.currentTrack?.cover,
-            duration: track.duration_ms / 1000
-          }
-        }
-      }
-    },
+  this.spotifyMode = true
+  this.isPlaying = !state.paused
+  this.currentTime = (state.position || 0) / 1000
+  this.duration = (state.duration || 0) / 1000
+
+  const sdkTrack = state.track_window?.current_track
+  if (sdkTrack) {
+    this.updateCurrentTrack({
+      id: sdkTrack.id,
+      spotifyId: sdkTrack.id,
+      uri: `spotify:track:${sdkTrack.id}`,
+      title: sdkTrack.name,
+      artist: sdkTrack.artists.map(a => a.name).join(', '),
+      cover: sdkTrack.album?.images?.[0]?.url || this.currentTrack?.cover,
+      duration: (sdkTrack.duration_ms || 0) / 1000,
+      source: 'spotify_full',
+      url: ''
+    })
+  }
+
+  const terminou =
+    wasPlaying &&
+    state.paused &&
+    state.position === 0 &&
+    prevDuration > 0 &&
+    prevTime >= Math.max(prevDuration - 2, 0)
+
+  if (terminou) {
+    this.notifyTrackEnded(true)
+    this.nextTrack()
+  }
+},
 
     async checkSpotifyStatus() {
       if (!this.isLogged) return
@@ -1352,74 +1351,48 @@ async playSpotifyFullTrack() {
       })
     },
 
- // SUBSTITUIR o método loadAndPlay() inteiro:
-
 async loadAndPlay() {
-  // Se estiver em modo Spotify, não usa audio element
-  if (this.spotifyMode && this.spotifyPlayer) {
-    // Já está tocando via Spotify, só retorna
-    return
-  }
-
-  const audio = this.$refs.audioPlayer
-  if (!audio) {
-    console.error('❌ Elemento de áudio não encontrado!')
-    return
-  }
-
   const track = this.currentTrack
   if (!track) return
 
-  // ✅ DETECTA SE É SPOTIFY FULL TRACK
-  const isSpotifyFull = track.source === 'spotify' && 
-    (!track.url || track.url === 'null' || track.url === 'undefined' || track.url === '')
-  
-  const shouldUseSpotify = isSpotifyFull || track._fullTrack || track.source === 'spotify_full'
+  const audio = this.$refs.audioPlayer
 
-  if (shouldUseSpotify) {
-    console.log('🎵 Detectado Spotify Full Track')
-    
-    if (!this.spotifyConnected) {
-      this.showToast('Conecte o Spotify para ouvir músicas completas', 'warning')
-      // Tenta tocar preview se existir
-      if (track.preview && track.preview !== 'null') {
-        this.spotifyMode = false
-        this.attemptPlay()
-      } else {
-        setTimeout(() => this.nextTrack(), 2000)
-      }
-      return
-    }
+  const isSpotifyTrack =
+    track.source === 'spotify_full' ||
+    track.source === 'spotify' ||
+    !!track._fullTrack
 
-    // Inicializa player se necessário
-    if (!this.spotifyPlayer) {
-      await this.initSpotifyPlayer()
-    }
+  const hasPreview = !!(track.url && track.url !== 'null' && track.url !== 'undefined')
 
-    // Aguarda device ficar pronto
-    let attempts = 0
-    while (!this.spotifyDeviceId && attempts < 20) {
-      await new Promise(r => setTimeout(r, 500))
-      attempts++
-    }
-
-    if (!this.spotifyDeviceId) {
-      this.showToast('Erro ao conectar player Spotify', 'error')
-      this.spotifyMode = false
-      if (track.preview && track.preview !== 'null') {
-        this.attemptPlay()
-      }
-      return
-    }
-
-    // ✅ TOCA VIA SPOTIFY SDK
+  if (isSpotifyTrack && this.spotifyConnected) {
     await this.playSpotifyFullTrack()
     return
   }
 
-  // Fallback: toca preview normal (Deezer/local)
+  if (isSpotifyTrack && !this.spotifyConnected && !hasPreview) {
+    this.showToast('Conecte o Spotify para ouvir músicas completas', 'warning')
+    setTimeout(() => this.nextTrack(), 1500)
+    return
+  }
+
   this.spotifyMode = false
-  this.attemptPlay()
+
+  if (!audio) {
+    console.error('❌ Elemento de áudio não encontrado')
+    return
+  }
+
+  audio.pause()
+  audio.load()
+
+  this.currentTime = 0
+  this.duration = 0
+  this.canPlay = false
+
+  this.$nextTick(() => {
+    audio.load()
+    this.attemptPlay()
+  })
 },
 
     async attemptPlay() {
@@ -1460,54 +1433,57 @@ async loadAndPlay() {
       }
     },
 
-    async togglePlay() {
-      if (this.spotifyMode && this.spotifyPlayer) {
-        const state = await this.spotifyPlayer.getCurrentState()
-        if (state && !state.paused) {
-          await this.spotifyPlayer.pause()
-          this.isPlaying = false
-        } else {
-          await this.spotifyPlayer.resume()
-          this.isPlaying = true
-        }
+async togglePlay() {
+  if (!this.currentTrack) return
+
+  if (this.spotifyMode && this.spotifyPlayer) {
+    try {
+      await this.activateSpotifyElement()
+
+      const state = await this.spotifyPlayer.getCurrentState()
+
+      if (!state) {
+        await this.playSpotifyFullTrack()
         return
       }
-      const audio = this.$refs.audioPlayer
-      if (!audio || !this.currentTrack) return
-      console.log('🎮 Toggle play. Estado atual:', this.isPlaying, 'Paused:', audio.paused)
-      if (this.playPromise) {
-        console.log('⏳ Aguardando promise pendente...')
-        try { await this.playPromise } catch (e) {}
-      }
-      if (this.isPlaying) {
-        console.log('⏸️ Pausando...')
-        audio.pause()
+
+      if (!state.paused) {
+        await this.spotifyPlayer.pause()
         this.isPlaying = false
-        if (this._trackStartTime) {
-          const sessionTime = Date.now() - this._trackStartTime
-          this._totalListenedTime += sessionTime
-          this._trackStartTime = null
-          window.dispatchEvent(new CustomEvent('player-paused', {
-            detail: { source: 'musicplayer' }
-          }))
-        }
       } else {
-        console.log('▶️ Iniciando reprodução...')
-        if (audio.ended) audio.currentTime = 0
-        try {
-          this.playPromise = audio.play()
-          await this.playPromise
-          this.isPlaying = true
-          if (!this._trackStartTime) this._trackStartTime = Date.now()
-          console.log('✅ Reprodução iniciada!')
-        } catch (err) {
-          console.error('❌ Erro ao tocar:', err)
-          this.isPlaying = false
-        } finally {
-          this.playPromise = null
-        }
+        await this.spotifyPlayer.resume()
+        this.isPlaying = true
       }
-    },
+    } catch (err) {
+      console.error('❌ Erro no togglePlay do Spotify:', err)
+      this.showToast('Erro ao controlar reprodução do Spotify', 'error')
+    }
+    return
+  }
+
+  const audio = this.$refs.audioPlayer
+  if (!audio) return
+
+  if (this.playPromise) {
+    try { await this.playPromise } catch (e) {}
+  }
+
+  if (this.isPlaying) {
+    audio.pause()
+    this.isPlaying = false
+  } else {
+    try {
+      this.playPromise = audio.play()
+      await this.playPromise
+      this.isPlaying = true
+    } catch (err) {
+      console.error('❌ Erro ao tocar áudio local:', err)
+      this.isPlaying = false
+    } finally {
+      this.playPromise = null
+    }
+  }
+},
 
     onAudioPlay() {
       console.log('🔊 Evento: play disparado')
@@ -1604,10 +1580,6 @@ async loadAndPlay() {
     },
 
     async prevTrack() {
-      if (this.spotifyMode && this.spotifyPlayer) {
-        await this.spotifyPlayer.previousTrack()
-        return
-      }
       const audio = this.$refs.audioPlayer
       if (this.currentTime > 3) {
         audio.currentTime = 0
@@ -1640,10 +1612,6 @@ async loadAndPlay() {
     },
 
     async nextTrack() {
-      if (this.spotifyMode && this.spotifyPlayer) {
-        await this.spotifyPlayer.nextTrack()
-        return
-      }
       if (this.currentTrack) this.notifyTrackEnded(false)
       if (this.isShuffled && this.shuffledIndices.length > 0) {
         const currentShufflePos = this.shuffledIndices.indexOf(this.currentIndex)
@@ -1678,34 +1646,52 @@ async loadAndPlay() {
       this.registrarHistorico(this.currentTrack)
     },
 
-    toggleMute() {
-      const audio = this.$refs.audioPlayer
-      if (this.isMuted) {
-        this.volume = this.previousVolume || 0.7
-        this.isMuted = false
-        if (audio) audio.volume = this.volume
-      } else {
-        this.previousVolume = this.volume
-        this.volume = 0
-        this.isMuted = true
-        if (audio) audio.volume = 0
-      }
-    },
+async toggleMute() {
+  const audio = this.$refs.audioPlayer
+
+  if (this.isMuted) {
+    this.volume = this.previousVolume || 0.7
+    this.isMuted = false
+
+    if (this.spotifyMode && this.spotifyPlayer) {
+      await this.spotifyPlayer.setVolume(this.volume)
+    } else if (audio) {
+      audio.volume = this.volume
+    }
+  } else {
+    this.previousVolume = this.volume
+    this.volume = 0
+    this.isMuted = true
+
+    if (this.spotifyMode && this.spotifyPlayer) {
+      await this.spotifyPlayer.setVolume(0)
+    } else if (audio) {
+      audio.volume = 0
+    }
+  }
+},
 
     onSeekInput(e) {
       this.isDragging = true
       this.currentTime = parseFloat(e.target.value)
     },
 
-    onSeekChange(e) {
-      this.isDragging = false
-      const time = parseFloat(e.target.value)
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.currentTime = time
-        this.currentTime = time
-      }
-    },
+async onSeekChange(e) {
+  this.isDragging = false
+  const time = parseFloat(e.target.value)
+
+  if (this.spotifyMode && this.spotifyPlayer) {
+    await this.spotifyPlayer.seek(Math.floor(time * 1000))
+    this.currentTime = time
+    return
+  }
+
+  const audio = this.$refs.audioPlayer
+  if (audio) {
+    audio.currentTime = time
+    this.currentTime = time
+  }
+},
 
     async seekTo(e) {
       if (this.spotifyMode && this.spotifyPlayer) {
@@ -1725,23 +1711,36 @@ async loadAndPlay() {
       }
     },
 
-    onVolumeInput(e) {
-      const vol = parseFloat(e.target.value)
-      this.volume = vol
-      this.isMuted = (vol === 0)
-      const audio = this.$refs.audioPlayer
-      if (audio) audio.volume = vol
-    },
+async onVolumeInput(e) {
+  const vol = parseFloat(e.target.value)
+  this.volume = vol
+  this.isMuted = vol === 0
 
-    setVolume(e) {
-      const rect = this.$refs.volumeBar.getBoundingClientRect()
-      const percent = (e.clientX - rect.left) / rect.width
-      const vol = Math.max(0, Math.min(1, percent))
-      this.volume = vol
-      this.isMuted = (vol === 0)
-      const audio = this.$refs.audioPlayer
-      if (audio) audio.volume = vol
-    },
+  const audio = this.$refs.audioPlayer
+
+  if (this.spotifyMode && this.spotifyPlayer) {
+    await this.spotifyPlayer.setVolume(vol)
+  } else if (audio) {
+    audio.volume = vol
+  }
+},
+
+async setVolume(e) {
+  const rect = this.$refs.volumeBar.getBoundingClientRect()
+  const percent = (e.clientX - rect.left) / rect.width
+  const vol = Math.max(0, Math.min(1, percent))
+
+  this.volume = vol
+  this.isMuted = vol === 0
+
+  const audio = this.$refs.audioPlayer
+
+  if (this.spotifyMode && this.spotifyPlayer) {
+    await this.spotifyPlayer.setVolume(vol)
+  } else if (audio) {
+    audio.volume = vol
+  }
+},
 
     formatTime(seconds) {
       if (!seconds || isNaN(seconds)) return "0:00"
@@ -1754,20 +1753,32 @@ async loadAndPlay() {
       e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMTgxODE4Ii8+PHRleHQgeD0iMzAiIHk9IjM1IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMxZGI5NTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPuKJoTwvdGV4dD48L3N2Zz4='
     },
 
-    stop() {
-      if (this.currentTrack) this.notifyTrackEnded(false)
-      const audio = this.$refs.audioPlayer
-      if (audio) {
-        audio.pause()
-        audio.currentTime = 0
-      }
-      this.isPlaying = false
-      this.hasTrack = false
-      this.queue = []
-      this.currentIndex = 0
-      this._trackStartTime = null
-      this._totalListenedTime = 0
+async stop() {
+  if (this.currentTrack) this.notifyTrackEnded(false)
+
+  if (this.spotifyMode && this.spotifyPlayer) {
+    try {
+      await this.spotifyPlayer.pause()
+      await this.spotifyPlayer.seek(0)
+    } catch (err) {
+      console.warn('⚠️ Erro ao parar Spotify:', err)
     }
+  }
+
+  const audio = this.$refs.audioPlayer
+  if (audio) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+
+  this.isPlaying = false
+  this.spotifyMode = false
+  this.hasTrack = false
+  this.queue = []
+  this.currentIndex = 0
+  this._trackStartTime = null
+  this._totalListenedTime = 0
+}
   }
 }
 </script>
