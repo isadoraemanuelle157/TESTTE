@@ -1,5 +1,5 @@
 const axios = require('axios')
-const { spotifyRequest, getUserSpotifyToken, refreshUserSpotifyToken } = require('../utils/spotifyRequest')
+const { spotifyRequest } = require('../utils/spotifyRequest')
 const { 
   SPOTIFY_API_URL, 
   SPOTIFY_CLIENT_ID, 
@@ -7,8 +7,7 @@ const {
   SPOTIFY_ACCOUNTS_URL,
   SPOTIFY_REDIRECT_URI,
   SPOTIFY_SCOPES,
-  FRONTEND_URL,
-  DEEZER_API_URL  // ← ADICIONAR AQUI
+  FRONTEND_URL  // ← ADICIONAR AQUI
 } = require('../config/spotify')
 const { getCache, setCache } = require('../utils/cache')
 const Usuario = require('../models/Usuario')
@@ -113,68 +112,82 @@ const FALLBACK_VIBES = [
   { id: 'spotify_gospel', name: 'Gospel', emoji: '🙏', description: 'Fé e inspiração', gradient: 'linear-gradient(135deg,#FFD700,#FF8C00)', tags: ['gospel', 'louvor', 'fé'] }
 ]
 
-// ================= SEARCH =================
 exports.search = async (req, res) => {
   try {
     let { q, type = 'track,artist,album', market = 'BR' } = req.query
     if (!q) return res.status(400).json({ error: 'Query obrigatória' })
 
-    // ✅ Sanitiza caracteres problemáticos para o Spotify Search API
     q = q
-      .replace(/[:\[\]]/g, ' ')   // Remove :, [, ] que são operadores/reservados
-      .replace(/\s+/g, ' ')        // Normaliza espaços múltiplos
+      .replace(/[:\[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
 
-    // ✅ ROTA PÚBLICA: não exige token do usuário, usa app token
-    const cacheKey = `spotify_search_${q.toLowerCase().trim()}_${type}`
+    // ✅ CACHE
+    const cacheKey = `spotify_search_${q.toLowerCase().trim()}_${type}_${market}`
     const cached = getCache(cacheKey)
-    if (cached) return res.json(cached)
-    // 🔴 Para search pública, usa app token (não precisa de user token)
-    // User token só é necessário para streaming completo (full tracks)
+    if (cached) {
+      console.log('📦 Cache hit search:', q)
+      return res.json(cached)
+    }
+
+    // 🔴 PEGA TOKEN DO USUÁRIO (com refresh automático)
+    const { getUserSpotifyToken } = require('../utils/spotifyRequest')
+    let userToken = await getUserSpotifyToken(req)
+
     let response
     try {
       response = await spotifyRequest({
         method: 'GET',
         url: `${SPOTIFY_API_URL}/search`,
         params: { q, type, limit: 10, market }
-      }, 3, null)  // null = app token
+      }, 3, userToken)
     } catch (err) {
-      // ❌ NÃO faz fallback para app token — Spotify bloqueou catálogo para dev apps
-      if (err.isUserTokenExpired || err.response?.status === 401) {
-        console.log('🔄 Token expirado, tentando renovar...')
-        try {
-          const { refreshUserSpotifyToken } = require('../utils/spotifyRequest')
-          const usuario = await Usuario.findById(req.user.id)
-          if (usuario && usuario.spotifyRefreshToken) {
-            await refreshUserSpotifyToken(usuario)
+      // ✅ SE FALHOU COM USER TOKEN, TENTA REFRESH UMA VEZ
+      if (userToken && (err.isUserTokenExpired || err.response?.status === 401)) {
+        console.log('🔄 Token expirado na busca, tentando refresh...')
+        
+        const Usuario = require('../models/Usuario')
+        const user = await Usuario.findById(req.user?.id || req.user?._id)
+        
+        if (user && user.spotifyRefreshToken) {
+          try {
+            const { refreshUserSpotifyToken } = require('../utils/spotifyRequest')
+            await refreshUserSpotifyToken(user)
+            
+            // 🔄 TENTA NOVAMENTE COM TOKEN NOVO
+            userToken = user.spotifyAccessToken
             response = await spotifyRequest({
               method: 'GET',
               url: `${SPOTIFY_API_URL}/search`,
               params: { q, type, limit: 10, market }
-            }, 3, usuario.spotifyAccessToken)
-          } else {
-            throw err
+            }, 3, userToken)
+            
+            console.log('✅ Busca Spotify bem-sucedida após refresh')
+          } catch (refreshErr) {
+            console.log('🔄 Refresh falhou, caindo para app token...')
+            userToken = null
           }
-        } catch (refreshErr) {
-          console.error('❌ Falha ao renovar token:', refreshErr.message)
-          return res.status(401).json({
-            error: 'SPOTIFY_TOKEN_EXPIRED',
-            needsReconnect: true,
-            message: 'Seu token Spotify expirou. Por favor, reconecte sua conta Spotify.'
-          })
+        } else {
+          userToken = null
         }
-      } else if (err.isHardBan || err.isRateLimit) {
-        throw err
-      } else {
-        throw err
+      }
+      
+      // ✅ SE AINDA NÃO TEM RESPONSE, USA APP TOKEN
+      if (!response) {
+        response = await spotifyRequest({
+          method: 'GET',
+          url: `${SPOTIFY_API_URL}/search`,
+          params: { q, type, limit: 10, market }
+        }, 3, null)
       }
     }
-    setCache(cacheKey, response.data)
+
+    setCache(cacheKey, response.data, CACHE_TTL.search)
     res.json(response.data)
-   } catch (error) {
+    
+  } catch (error) {
     console.error('❌ Spotify search:', error.message)
     
-    // Se for ban hard, retorna erro específico pro frontend
     if (error.isHardBan) {
       return res.status(429).json({ 
         error: 'SPOTIFY_RATE_LIMIT',
@@ -182,53 +195,26 @@ exports.search = async (req, res) => {
         message: `Spotify indisponível por ${error.banDurationHours}h. Use resultados locais/Deezer.`
       })
     }
-
-    // 🔄 Fallback para Deezer quando Spotify não disponível (403 = sem Premium, 401 = token expirado)
-    if (error.isUserTokenForbidden || error.isUserTokenExpired || error.response?.status === 401 || error.response?.status === 403) {
-      console.log('🔄 Fallback para Deezer...')
-      try {
-        const deezerRes = await axios.get('https://api.deezer.com/search', {
-          params: { q, limit: 10 },
-          timeout: 8000
-        })
-        const tracks = deezerRes.data.data.map(t => ({
-          id: t.id,
-          name: t.title,
-          artist: t.artist.name,
-          album: t.album.title,
-          cover: t.album.cover_medium,
-          preview: t.preview,
-          duration_ms: t.duration * 1000,
-          source: 'deezer'
-        }))
-        return res.json({ 
-          tracks: { items: tracks },
-          source: 'deezer',
-          message: error.isUserTokenForbidden 
-            ? 'Spotify Premium necessário. Mostrando resultados do Deezer.' 
-            : 'Spotify indisponível. Mostrando resultados do Deezer.'
-        })
-           } catch (deezerErr) {
-        console.error('❌ Deezer também falhou:', deezerErr.message)
-      }
-    }
-
-    res.status(500).json({ error: 'Erro na busca', details: error.message })
+    
+    res.status(500).json({ error: 'Erro Spotify Search', details: error.message })
   }
 }
-
-// ================= ARTIST =================
-    
-
-// ================= ARTIST =================
 exports.getArtist = async (req, res) => {
   try {
-    console.log('🔍 getArtist chamado com ID:', req.params.id)
+    const { id } = req.params
+    const cacheKey = `spotify_artist_${id}`
+    
+    // ✅ CHECK CACHE
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await spotifyRequest({
       method: 'GET',
-      url: `${SPOTIFY_API_URL}/artists/${req.params.id}`
+      url: `${SPOTIFY_API_URL}/artists/${id}`
     })
-    console.log('✅ getArtist sucesso')
+
+    // ✅ SAVE CACHE
+    setCache(cacheKey, response.data, CACHE_TTL.artist) // 1 hora
     res.json(response.data)
   } catch (error) {
     console.error('❌ Artist error:', error.message)
@@ -236,14 +222,14 @@ exports.getArtist = async (req, res) => {
   }
 }
 
-// ================= ARTIST TOP TRACKS =================
 exports.getArtistTopTracks = async (req, res) => {
   try {
     const { id } = req.params
-    // Se não passar market, não envia (Spotify usa o mercado do token)
     const market = req.query.market || 'US'
+    const cacheKey = `spotify_artist_top_${id}_${market}`
     
-    console.log('🔍 getArtistTopTracks:', { id, market })
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
 
     const response = await spotifyRequest({
       method: 'GET',
@@ -251,23 +237,22 @@ exports.getArtistTopTracks = async (req, res) => {
       params: { market }
     })
 
-    console.log('✅ getArtistTopTracks sucesso')
+    setCache(cacheKey, response.data, CACHE_TTL.artist) // 1 hora
     res.json(response.data)
   } catch (error) {
-    console.error('❌ Artist top tracks error:', error.response?.data?.error?.message || error.message)
-    // Retorna array vazio em vez de erro 500 para não quebrar o frontend
     res.status(200).json({ tracks: [] })
   }
 }
 
-// ================= ARTIST ALBUMS =================
 exports.getArtistAlbums = async (req, res) => {
   try {
     const { id } = req.params
     const limit = parseInt(req.query.limit) || 20
     const offset = parseInt(req.query.offset) || 0
+    const cacheKey = `spotify_artist_albums_${id}_${limit}_${offset}`
     
-    console.log('🔍 getArtistAlbums:', { id, limit, offset })
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
 
     const response = await spotifyRequest({
       method: 'GET',
@@ -279,6 +264,7 @@ exports.getArtistAlbums = async (req, res) => {
       }
     })
 
+     setCache(cacheKey, response.data, CACHE_TTL.album)
     console.log('✅ getArtistAlbums sucesso, items:', response.data.items?.length || 0)
     res.json(response.data)
   } catch (error) {
@@ -287,17 +273,20 @@ exports.getArtistAlbums = async (req, res) => {
   }
 }
 
-// ================= RELATED ARTISTS =================
 exports.getRelatedArtists = async (req, res) => {
   try {
     const { id } = req.params
-    console.log('🔍 getRelatedArtists:', id)
+    const cacheKey = `spotify_related_${id}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
 
     const response = await spotifyRequest({
       method: 'GET',
       url: `${SPOTIFY_API_URL}/artists/${id}/related-artists`
     })
 
+      setCache(cacheKey, response.data, CACHE_TTL.artist)
     console.log('✅ getRelatedArtists sucesso')
     res.json(response.data)
   } catch (error) {
@@ -308,10 +297,17 @@ exports.getRelatedArtists = async (req, res) => {
 // ================= ALBUM =================
 exports.getAlbum = async (req, res) => {
   try {
+    const { id } = req.params
+    const cacheKey = `spotify_album_${id}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
     const response = await spotifyRequest({
       method: 'GET',
       url: `${SPOTIFY_API_URL}/albums/${req.params.id}`
     })
+
+     setCache(cacheKey, response.data, CACHE_TTL.album)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Album error:', error.message)
@@ -744,7 +740,14 @@ exports.callback = async (req, res) => {
       console.error('❌ appToken está NULO')
       return res.redirect(`${FRONTEND_URL}/spotify-connected?error=${encodeURIComponent('Token do app não encontrado. Faça login novamente.')}`)
     }
-
+ // ✅ INVALIDAR CACHE seletivo
+const { cache } = require('../utils/cache')
+for (const key of cache.keys()) {
+  if (key.includes('spotify_search_')) {
+    cache.delete(key)
+    console.log('🗑️ Cache invalidado:', key)
+  }
+}
     // Troca code por tokens do Spotify
     let tokenResponse
     try {
@@ -799,6 +802,7 @@ exports.callback = async (req, res) => {
 
     console.log('✅ Usuário encontrado:', user.email || user.nome)
 
+    
     user.spotifyAccessToken = access_token
     user.spotifyRefreshToken = refresh_token
     user.spotifyTokenExpiresAt = new Date(Date.now() + expires_in * 1000)
@@ -861,14 +865,16 @@ exports.refreshUserToken = async (req, res) => {
 // ================= BUSCA COM STREAMING URL =================
 exports.searchFullTracks = async (req, res) => {
   try {
-let { q, type = 'track', market = 'BR' } = req.query
-if (!q) return res.status(400).json({ error: 'Query obrigatória' })
+    let { q, type = 'track', market = 'BR' } = req.query
+    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
 
-q = q
-  .replace(/[:\[\]]/g, ' ')
-  .replace(/\s+/g, ' ')
-  .trim()
+    q = q
+      .replace(/[:\[\]]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
 
+    // ✅ O MIDDLEWARE JÁ VERIFICOU E REFRESHOU SE NECESSÁRIO
+    // Usa o token que o middleware garantiu como válido
     const userToken = req.spotifyUserToken
     
     if (!userToken) {
@@ -878,31 +884,12 @@ q = q
       })
     }
 
-    let response
-    try {
-      response = await spotifyRequest({
-        method: 'GET',
-        url: `${SPOTIFY_API_URL}/search`,
-        params: { q, type, limit: 20, market }
-      }, 3, userToken)
-    } catch (err) {
-      // 🔥 NOVO: Trata erros do Spotify SEM cair em 500
-      if (err.isUserTokenExpired || err.response?.status === 401 || err.response?.status === 400) {
-        return res.status(401).json({ 
-          error: 'SPOTIFY_TOKEN_EXPIRED',
-          needsReconnect: true,
-          message: 'Token Spotify expirou. Reconecte sua conta.'
-        })
-      }
-      if (err.isHardBan || err.isRateLimit || err.response?.status === 429) {
-        return res.status(429).json({ 
-          error: 'SPOTIFY_RATE_LIMIT',
-          banHours: err.banDurationHours || null,
-          message: 'Spotify temporariamente indisponível'
-        })
-      }
-      throw err
-    }
+    // ✅ TENTA COM O TOKEN GARANTIDO PELO MIDDLEWARE
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/search`,
+      params: { q, type, limit: 20, market }
+    }, 3, userToken)
 
     const data = response.data
     if (data.tracks?.items) {
@@ -914,39 +901,81 @@ q = q
     }
 
     res.json(data)
+
   } catch (error) {
     console.error('❌ Full tracks search:', error.message)
+    
+    // 🔥 SE O TOKEN EXPIROU DURANTE A REQUISIÇÃO, TENTA REFRESH UMA VEZ
+    if (error.isUserTokenExpired || error.response?.status === 401) {
+      try {
+        const userId = req.user?.id || req.user?._id
+        const user = await Usuario.findById(userId)
+        
+        if (user && user.spotifyRefreshToken) {
+          const { refreshUserSpotifyToken } = require('../utils/spotifyRequest')
+          await refreshUserSpotifyToken(user)
+          
+          // 🔄 TENTA NOVAMENTE COM TOKEN NOVO
+          const response = await spotifyRequest({
+            method: 'GET',
+            url: `${SPOTIFY_API_URL}/search`,
+            params: { q: req.query.q, type: req.query.type || 'track', limit: 20, market: req.query.market || 'BR' }
+          }, 3, user.spotifyAccessToken)
+          
+          const data = response.data
+          if (data.tracks?.items) {
+            data.tracks.items = data.tracks.items.map(track => ({
+              ...track,
+              _fullTrack: true,
+              _source: 'spotify_full'
+            }))
+          }
+          
+          return res.json(data)
+        }
+      } catch (refreshErr) {
+        console.error('❌ Refresh falhou em searchFullTracks:', refreshErr.message)
+      }
+      
+      return res.status(401).json({ 
+        error: 'SPOTIFY_TOKEN_EXPIRED',
+        needsReconnect: true,
+        message: 'Token Spotify expirou. Reconecte sua conta.'
+      })
+    }
+    
+    if (error.isHardBan || error.isRateLimit || error.response?.status === 429) {
+      return res.status(429).json({ 
+        error: 'SPOTIFY_RATE_LIMIT',
+        banHours: error.banDurationHours || null,
+        message: 'Spotify temporariamente indisponível'
+      })
+    }
+    
     res.status(500).json({ error: 'Erro na busca', details: error.message })
   }
 }
 
-// ================= VERIFICAR STATUS DO SPOTIFY =================
 exports.getSpotifyStatus = async (req, res) => {
   try {
     const userId = req.user?.id || req.user?._id
-    // ⚠️ Precisamos do refreshToken e accessToken também, não só do expires
     const user = await Usuario.findById(userId).select(
       'spotifyConnected spotifyAccessToken spotifyRefreshToken spotifyTokenExpiresAt'
     )
 
-    if (!user) {
+    if (!user || !user.spotifyConnected || !user.spotifyRefreshToken) {
       return res.json({ connected: false, tokenValid: false })
     }
 
-    // Se nunca conectou, retorna falso
-    if (!user.spotifyConnected || !user.spotifyRefreshToken) {
-      return res.json({
-        connected: !!user.spotifyConnected,
-        tokenValid: false
-      })
-    }
+    // ✅ VERIFICA SE TOKEN AINDA É VÁLIDO (com margem de 5 min)
+    const tokenValid = user.spotifyTokenExpiresAt && 
+      (new Date(user.spotifyTokenExpiresAt).getTime() - Date.now() > 5 * 60 * 1000)
 
-    // Se o token ainda é válido, ótimo
-    if (user.isSpotifyTokenValid()) {
+    if (tokenValid) {
       return res.json({ connected: true, tokenValid: true })
     }
 
-    // 🔁 Token expirado, mas temos refreshToken → tenta renovar
+    // 🔁 TOKEN EXPIRADO — TENTA REFRESH AUTOMÁTICO
     try {
       const response = await axios.post(
         'https://accounts.spotify.com/api/token',
@@ -972,13 +1001,13 @@ exports.getSpotifyStatus = async (req, res) => {
         response.data.expires_in
       )
 
-      console.log('🔄 [STATUS] Token Spotify renovado automaticamente para user', userId)
+      console.log('🔄 Token Spotify renovado automaticamente')
       return res.json({ connected: true, tokenValid: true, refreshed: true })
 
     } catch (refreshErr) {
-      console.error('❌ [STATUS] Falha ao renovar token:', refreshErr.response?.data || refreshErr.message)
-
-      // Se o refresh token foi revogado, marca como desconectado
+      console.error('❌ Falha ao renovar token:', refreshErr.message)
+      
+      // Se refresh token foi revogado
       if (refreshErr.response?.status === 400 || refreshErr.response?.status === 401) {
         user.spotifyConnected = false
         user.spotifyAccessToken = null
@@ -988,12 +1017,10 @@ exports.getSpotifyStatus = async (req, res) => {
         return res.json({ connected: false, tokenValid: false, revoked: true })
       }
 
-      // Erro transitório (rede, 5xx) → mantém conectado mas avisa token inválido
       return res.json({ connected: true, tokenValid: false })
     }
 
   } catch (error) {
-    console.error('❌ getSpotifyStatus error:', error.message)
     res.status(500).json({ error: 'Erro ao verificar status' })
   }
 }

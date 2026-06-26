@@ -27,9 +27,9 @@
               <i class="fa fa-music"></i>
             </div>
 
-            <div class="play-overlay">
+                        <div class="play-overlay">
               <button class="btn-play-card" @click.stop="goToPlaylistAndPlay(playlist)">
-                <i class="fa fa-play"></i>
+                <i :class="isPlaylistPlayingCard(playlist) ? 'fa fa-pause' : 'fa fa-play'"></i>
               </button>
             </div>
           </div>
@@ -427,7 +427,7 @@ export default {
       showDeleteModal: false,
       playlistToDelete: null,
       isDeleting: false,
-        isLogged: false, 
+        isLogged: false,
 
       showRemoveSongModal: false,
       songToRemove: null,
@@ -589,7 +589,18 @@ export default {
         this.playerIsPlaying
     },
 
-   playSong(index) {
+     isPlaylistPlayingCard(playlist) {
+      if (!this.playerCurrentTrack || !playlist?.songs?.length) return false
+
+      const isFromThisPlaylist = playlist.songs.some(s =>
+        String(s.id) === String(this.playerCurrentTrack.id) &&
+        (s.source || 'local') === (this.playerCurrentTrack.source || 'local')
+      )
+
+      return isFromThisPlaylist && this.playerIsPlaying
+    },
+
+playSong(index) {
   if (!this.currentPlaylist?.songs[index]) {
     console.error('❌ Índice inválido:', index)
     return
@@ -609,16 +620,24 @@ export default {
     source: selected.source
   })
 
-  const selectedUrl = selected.preview || selected.url || selected.link || ''
+ // ✅ CORRETO:
+const selectedUrl = selected.preview || selected.url || selected.link || selected.preview_url || ''
 
-  if (!selectedUrl) {
-    console.error('❌ SEM URL DE ÁUDIO:', selected)
-    this.showToast({
-      message: `Nenhuma prévia disponível para "${selected.title}"`,
-      type: 'warning'
-    })
-    return
-  }
+// 🔥 NOVO: Se é Spotify full track, permite continuar mesmo sem preview
+const isSpotifyFullTrack = selected.source === 'spotify' && selected.spotifyId && !selectedUrl
+
+if (!selectedUrl && !isSpotifyFullTrack) {
+  console.error('❌ SEM URL DE ÁUDIO:', selected)
+  this.showToast({
+    message: `Nenhuma prévia disponível para "${selected.title}"`,
+    type: 'warning'
+  })
+  return
+}
+
+if (isSpotifyFullTrack) {
+  console.log('🎵 Spotify full track detectada:', selected.title)
+}
 
   console.log('✅ URL do áudio:', selectedUrl.substring(0, 60) + '...')
 
@@ -627,18 +646,35 @@ export default {
     return
   }
 
-  const queue = this.currentPlaylist.songs
-    .map(s => ({
+ // 🔥 CORREÇÃO: Mapeia a fila garantindo que TODAS as fontes de URL sejam verificadas
+const queue = this.currentPlaylist.songs
+  .map(s => {
+    // 🔥 CORREÇÃO: Verifica TODAS as possíveis fontes de URL
+    const trackUrl = s.preview || s.url || s.link || s.preview_url || ''
+   
+    // 🔥 NOVO: Se é Spotify e não tem preview, marca como full track
+    const isSpotifyFullTrack = s.source === 'spotify' && !trackUrl
+   
+    return {
       id: s.id,
       title: s.title,
       artist: s.artist,
       album: s.album,
       cover: s.cover || '/default-cover.png',
-      url: s.preview || s.url || s.link || '',
+      url: trackUrl,
+      // 🔥 NOVO: Preserva dados para full track
+      spotifyId: s.spotifyId || (s.source === 'spotify' ? s.id : null),
+      isFullTrack: isSpotifyFullTrack,
       duration: this.parseDurationToSeconds(s.duration),
       source: s.source || 'local'
-    }))
-    .filter(s => s.url)
+    }
+  })
+  .filter(s => {
+    // 🔥 CORREÇÃO: Spotify full tracks SEM preview são válidos (tocam via SDK)
+    if (s.source === 'spotify' && s.isFullTrack) return true
+    // Outras precisam de URL válida
+    return s.url && s.url !== 'null' && s.url !== 'undefined' && s.url !== ''
+  })
 
   console.log('🎵 Queue filtrada (com URL):', queue.length, 'de', this.currentPlaylist.songs.length)
 
@@ -664,20 +700,21 @@ export default {
     return
   }
 
-  console.log('🎵 Disparando evento play-song:', {
-    song: queue[selectedQueueIndex].title,
-    queueLength: queue.length,
-    index: selectedQueueIndex
-  })
+console.log('🎵 Disparando evento play-song:', {
+  song: queue[selectedQueueIndex].title,
+  queueLength: queue.length,
+  index: selectedQueueIndex,
+  isFullTrack: queue[selectedQueueIndex].isFullTrack
+})
 
-  window.dispatchEvent(new CustomEvent('play-song', {
-    detail: {
-      song: queue[selectedQueueIndex],
-      playlist: queue,
-      index: selectedQueueIndex,
-      context: 'playlist'
-    }
-  }))
+window.dispatchEvent(new CustomEvent('play-song', {
+  detail: {
+    song: queue[selectedQueueIndex],
+    playlist: queue,
+    index: selectedQueueIndex,
+    context: 'playlist'
+  }
+}))
 },
 
     playAll() {
@@ -706,7 +743,11 @@ export default {
       this.playSong(firstPlayableIndex)
     },
 
-    goToPlaylistAndPlay(playlist) {
+      goToPlaylistAndPlay(playlist) {
+      if (this.isPlaylistPlayingCard(playlist)) {
+        window.dispatchEvent(new CustomEvent('player-toggle-play'))
+        return
+      }
       this.navigateToPlaylist(playlist, true)
     },
 
@@ -868,17 +909,25 @@ export default {
     console.log('📦 Playlist do backend:', p.nome, '- músicas:', p.musicas?.length)
 
     // Mapear músicas garantindo que o campo link seja preservado
-    const mappedSongs = Array.isArray(p.musicas)
-      ? p.musicas.map(m => {
-          // Se a música veio do backend com campo link, garantir que está no objeto
-          const song = this.normalizeSong(m)
-          if (m.link && !song.preview) {
-            song.preview = m.link
-          }
-          return song
-        }).filter(Boolean)
-      : []
-
+  const mappedSongs = Array.isArray(p.musicas)
+  ? p.musicas.map(m => {
+      const song = this.normalizeSong(m)
+      // 🔥 CORREÇÃO: Se veio do backend com campo link, garantir que está no objeto
+      if (m.link && !song.preview) {
+        song.preview = m.link
+      }
+      // 🔥 NOVO: Se veio com preview_url (Spotify), garantir
+      if (m.preview_url && !song.preview) {
+        song.preview = m.preview_url
+      }
+      // 🔥 NOVO: Preservar spotifyId para full tracks
+      if (m.spotifyId) {
+        song.spotifyId = m.spotifyId
+      }
+      return song
+    }).filter(Boolean)
+  : []
+ 
     console.log('🎵 Músicas mapeadas:', mappedSongs.map(s => ({
       title: s.title,
       hasPreview: !!s.preview,
@@ -886,8 +935,8 @@ export default {
     })))
 
 // 🔥 NOVO: Calcular total de músicas considerando local + externa
-const totalMusicas = p.totalMusicas || 
-                     p.quantidadeMusicas || 
+const totalMusicas = p.totalMusicas ||
+                     p.quantidadeMusicas ||
                      (Array.isArray(p.musicas) ? p.musicas.length : 0) +
                      (Array.isArray(p.musicasExternas) ? p.musicasExternas.length : 0)
 
@@ -1108,51 +1157,52 @@ return {
       isFromDB: true
     }))
 
-    // ============================================
-    // COM LOGIN: Busca SPOTIFY
-    // ============================================
-    if (this.isLogged) {
-      try {
-        const resSpotify = await fetch(
-          `${this.SPOTIFY_PROXY}/search?q=${encodeURIComponent(this.searchQuery)}&type=track&limit=10&market=BR`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        )
-
-        // Se token expirou, trata como não logado
-        if (resSpotify.status === 401) {
-          console.log('⚠️ Token expirado na busca de playlist, usando Deezer')
-          this.isLogged = false
-          // Continua para o fallback Deezer abaixo
-        } else {
-          const spotifyData = await resSpotify.json()
-
-          if (spotifyData?.tracks?.items) {
-            const spotifyResults = spotifyData.tracks.items.map(track => ({
-              id: track.id,
-              title: track.name,
-              artist: track.artists?.map(a => a.name).join(', ') || 'Desconhecido',
-              album: track.album?.name || 'Sem álbum',
-              duration: this.formatDuration(Math.floor((track.duration_ms || 0) / 1000)),
-              cover: track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || '',
-              preview: track.preview_url || '',
-              source: 'spotify',
-              isFromDB: false
-            }))
-
-            this.searchResults = [...formattedDb, ...spotifyResults]
-            this.isSearching = false
-            return  // Sai aqui se Spotify deu certo
-          }
+   // ============================================
+// COM LOGIN: Busca SPOTIFY
+// ============================================
+if (this.isLogged) {
+  try {
+    const resSpotify = await fetch(
+      `${this.SPOTIFY_PROXY}/search?q=${encodeURIComponent(this.searchQuery)}&type=track&limit=10&market=BR`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
         }
-      } catch (e) {
-        console.warn('Spotify error:', e.message)
-        // Continua para fallback Deezer
+      }
+    )
+
+    if (resSpotify.status === 401) {
+      console.log('⚠️ Token expirado na busca de playlist, usando Deezer')
+      this.isLogged = false
+    } else {
+      const spotifyData = await resSpotify.json()
+
+      if (spotifyData?.tracks?.items) {
+        const spotifyResults = spotifyData.tracks.items.map(track => ({
+          id: track.id,
+          title: track.name,
+          artist: track.artists?.map(a => a.name).join(', ') || 'Desconhecido',
+          album: track.album?.name || 'Sem álbum',
+          duration: this.formatDuration(Math.floor((track.duration_ms || 0) / 1000)),
+          cover: track.album?.images?.[2]?.url || track.album?.images?.[0]?.url || '',
+          // 🔥 CORREÇÃO: preview_url pode ser null no Spotify!
+          // Se não tiver preview_url, marca como full track (precisa Spotify Premium)
+          preview: track.preview_url || '',
+          preview_url: track.preview_url || '', // 🔥 NOVO: preservar original
+          isFullTrack: !track.preview_url, // 🔥 NOVO: flag para full track
+          source: 'spotify',
+          isFromDB: false
+        }))
+
+        this.searchResults = [...formattedDb, ...spotifyResults]
+        this.isSearching = false
+        return
       }
     }
+  } catch (e) {
+    console.warn('Spotify error:', e.message)
+  }
+}
 
     // ============================================
     // SEM LOGIN ou fallback: Busca DEEZER
@@ -1213,25 +1263,26 @@ return {
       )
     },
 
-     normalizeSong(song) {
-      if (!song) return null
+   normalizeSong(song) {
+  if (!song) return null
 
-      const normalized = {
-        id: String(song._id || song.id || song.musicaId),
-        title: song.title || song.nome || song.titulo || 'Sem título',
-        artist: song.artist || song.artista || song?.dadosMusica?.artista ||
-          (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
-        album: song.album || song.albuns?.[0]?.nome || song?.dadosMusica?.album || 'Sem álbum',
-        duration: this.formatDuration(this.parseDuration(song.duration || song.duracao || song?.dadosMusica?.duration)),
-        cover: song.cover || song.foto || song?.dadosMusica?.capa || '/default-cover.png',
-        // 🔥 CORREÇÃO: Garante preview_url também
-        preview: song.preview || song.link || song.url || song.preview_url || song?.dadosMusica?.previewUrl || song?.dadosMusica?.preview_url || '',
-        source: song.source || 'local'
-      }
+  const normalized = {
+    id: String(song._id || song.id || song.musicaId),
+    title: song.title || song.nome || song.titulo || 'Sem título',
+    artist: song.artist || song.artista || song?.dadosMusica?.artista ||
+      (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
+    album: song.album || song.albuns?.[0]?.nome || song?.dadosMusica?.album || 'Sem álbum',
+    duration: this.formatDuration(this.parseDuration(song.duration || song.duracao || song?.dadosMusica?.duration)),
+    cover: song.cover || song.foto || song?.dadosMusica?.capa || '/default-cover.png',
+    // 🔥 CORREÇÃO: Ordem correta de prioridade - preview_url é do Spotify API
+    preview: song.preview || song.link || song.url || song.preview_url || song?.dadosMusica?.previewUrl || song?.dadosMusica?.preview_url || '',
+    // 🔥 NOVO: Preservar spotifyId se existir
+    spotifyId: song.spotifyId || song?.dadosMusica?.spotifyId || null,
+    source: song.source || 'local'
+  }
 
-      return normalized
-    },
-
+  return normalized
+},
     parseDuration(durationStr) {
       if (!durationStr) return 30
 
@@ -1275,20 +1326,21 @@ return {
           source: song.source && song.source !== 'local' ? song.source : 'local'
         }
 
-             if (song.source && song.source !== 'local') {
-          const durationInSeconds = this.parseDuration(song.duration)
-          body.dadosMusica = {
-            titulo: song.title || 'Sem título',
-            artista: song.artist || 'Desconhecido',
-            capa: song.cover || '',
-            // 🔥 CORREÇÃO: Garante preview_url
-            previewUrl: song.preview || song.url || song.preview_url || '',
-            duration: Number.isFinite(durationInSeconds) ? durationInSeconds : 30,
-            ano: song.ano || null,
-            album: song.album || ''
-          }
-        }
-
+       if (song.source && song.source !== 'local') {
+  const durationInSeconds = this.parseDuration(song.duration)
+  body.dadosMusica = {
+    titulo: song.title || 'Sem título',
+    artista: song.artist || 'Desconhecido',
+    capa: song.cover || '',
+    // 🔥 CORREÇÃO: Garante preview_url (Spotify usa snake_case)
+    previewUrl: song.preview || song.preview_url || song.url || '',
+    // 🔥 NOVO: Salva o ID do Spotify para tocar full track depois
+    spotifyId: song.source === 'spotify' ? song.id : null,
+    duration: Number.isFinite(durationInSeconds) ? durationInSeconds : 30,
+    ano: song.ano || null,
+    album: song.album || ''
+  }
+}
         const res = await fetch(
           `http://localhost:3002/playlists/${this.currentPlaylist.id}/musicas/${song.id}`,
           {
@@ -1312,18 +1364,21 @@ return {
           throw new Error(errMessage)
         }
 
-        if (!this.isSongAdded(song)) {
-          this.currentPlaylist.songs.push({
-            id: song.id,
-            title: song.title,
-            artist: song.artist,
-            album: song.album,
-            duration: this.formatDuration(this.parseDuration(song.duration)),
-            cover: song.cover,
-            preview: song.preview,
-            source: song.source || 'local'
-          })
-        }
+    // ✅ CORRETO:
+if (!this.isSongAdded(song)) {
+  this.currentPlaylist.songs.push({
+    id: song.id,
+    title: song.title,
+    artist: song.artist,
+    album: song.album,
+    duration: this.formatDuration(this.parseDuration(song.duration)),
+    cover: song.cover,
+    preview: song.preview,
+    spotifyId: song.spotifyId || null,
+    isFullTrack: song.isFullTrack || false,
+    source: song.source || 'local'
+  })
+}
 
         window.dispatchEvent(new Event('playlist-updated'))
         this.showToast({ message: `"${song.title}" adicionada!`, type: 'success' })
@@ -2136,6 +2191,14 @@ showToast({ message, type = 'success', icon = 'fa fa-check', title = '', timer =
 
 .btn-play-card:hover {
   transform: scale(1.1);
+}
+
+.btn-play-card i.fa-pause {
+  font-size: 18px;
+}
+
+.btn-play-card i.fa-pause {
+  font-size: 18px;
 }
 
 .card-info {

@@ -808,7 +808,8 @@ exports.searchFullTracks = async (req, res) => {
       data.tracks.items = data.tracks.items.map(track => ({
         ...track,
         _fullTrack: true,
-        _source: 'spotify_full'
+        _source: 'spotify_full',
+         source: 'spotify'
       }))
     }
 

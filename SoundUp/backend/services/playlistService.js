@@ -58,20 +58,23 @@ const getPlaylists = async (userId) => {
     : 'Sem álbum',
   source: 'local'
 })),
-      ...(obj.musicasExternas || []).map(m => ({
-        _id: m._id,
-        id: m.musicaId,
-          externalId: m._id,
-        nome: m.dadosMusica?.titulo,
-        artista: m.dadosMusica?.artista,
-        foto: m.dadosMusica?.capa,
-        link: m.dadosMusica?.previewUrl,
-        duracao: m.dadosMusica?.duration,
-        ano: m.dadosMusica?.ano,
-        album: m.dadosMusica?.album,
-        source: m.source,
-        musicaId: m.musicaId
-      }))
+   // ✅ CORRETO:
+...(obj.musicasExternas || []).map(m => ({
+  _id: m._id,
+  id: m.musicaId,
+  externalId: m._id,
+  nome: m.dadosMusica?.titulo,
+  artista: m.dadosMusica?.artista,
+  foto: m.dadosMusica?.capa,
+  link: m.dadosMusica?.previewUrl || '',
+  preview_url: m.dadosMusica?.previewUrl || '',
+  spotifyId: m.dadosMusica?.spotifyId || null,
+  duracao: m.dadosMusica?.duration,
+  ano: m.dadosMusica?.ano,
+  album: m.dadosMusica?.album,
+  source: m.source,
+  musicaId: m.musicaId
+}))
     ]
 // 🔥 NOVO: Calcular total de músicas corretamente (local + externa)
 const totalMusicasLocal = Array.isArray(obj.musicas) ? obj.musicas.length : 0
@@ -217,17 +220,19 @@ const addMusica = async (playlistId, musicaId, dadosMusica = null, source = 'loc
           musicaId: musicaId,
           source: source
         },
-        $set: {
-          dadosMusica: {
-            titulo: dadosMusica.titulo,
-            artista: dadosMusica.artista,
-            capa: dadosMusica.capa || '',
-            previewUrl: dadosMusica.previewUrl || '',
-            duration: duration,
-            ano: dadosMusica.ano || null,
-            album: dadosMusica.album || ''
-          }
-        }
+       // ✅ CORRETO:
+$set: {
+  dadosMusica: {
+    titulo: dadosMusica.titulo,
+    artista: dadosMusica.artista,
+    capa: dadosMusica.capa || '',
+    previewUrl: dadosMusica.previewUrl || '',
+    spotifyId: dadosMusica.spotifyId || null,
+    duration: duration,
+    ano: dadosMusica.ano || null,
+    album: dadosMusica.album || ''
+  }
+}
       },
       {
         upsert: true,      // Cria se não existir

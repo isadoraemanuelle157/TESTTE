@@ -555,22 +555,8 @@
                 >
                   <i class="fa fa-heart-o"></i>
                 </button>
-                <button
-                  v-else-if="track.source === 'deezer'"
-                  class="btn-like-track disabled"
-                  @click.stop="showToast('Faça login com Spotify para curtir', 'info')"
-                  title="Deezer: login necessário"
-                >
-                  <i class="fa fa-heart-o"></i>
-                </button>
-                <button
-                  v-else
-                  class="btn-like-track"
-                  @click.stop="toggleLikeTrack(track)"
-                  :class="{ liked: isTrackLiked(track.id) }"
-                >
-                  <i :class="isTrackLiked(track.id) ? 'fa fa-heart' : 'fa fa-heart-o'"></i>
-                </button>
+
+
                
                 <button class="track-play">
                   <i class="fa fa-play"></i>
@@ -2322,33 +2308,79 @@ async playTrack(track, context = 'search', index = 0) {
       ])
     },
 
- async loadTopTracksByCategory(category = 'Brasil') {
+async loadTopTracksByCategory(category = 'Brasil') {
   try {
     this.currentTopCategory = category || 'Brasil'
 
-    // 🔥 SÓ tenta Spotify Full se REALMENTE estiver conectado E com token válido
-  if (this.isLogged && this.spotifyConnected && this.spotifyTokenValid) {
+    // SÓ tenta Spotify Full se REALMENTE estiver conectado E com token válido
+    if (this.isLogged && this.spotifyConnected && this.spotifyTokenValid) {
       const token = localStorage.getItem('token')
      
       try {
-const safeCategory = category
-  .replace(/:/g, ' ')
-  .trim()
+        const safeCategory = category.replace(/:/g, ' ').trim()
 
-const res = await fetch(
-  `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(safeCategory)}&type=track&limit=10&market=BR`,
+        const res = await fetch(
+          `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(safeCategory)}&type=track&limit=10&market=BR`,
           {
             headers: { Authorization: `Bearer ${token}` },
             signal: AbortSignal.timeout(8000)
           }
         )
 
- if (res.status === 401 || res.status === 403) {
-          console.warn('[SPOTIFY] Token inválido/expirado, caindo para Deezer')
-          this.spotifyConnected = false
-          this.spotifyTokenValid = false
-          localStorage.removeItem('spotify_connected')
-          // continua para fallback Deezer abaixo
+        // 🔥 NOVO: Se token expirou, tenta refresh e reexecuta
+        if (res.status === 401) {
+          const data = await res.json().catch(() => ({}))
+          
+          if (data.error === 'SPOTIFY_TOKEN_EXPIRED' && data.needsReconnect) {
+            console.log('[SPOTIFY] Token expirado, tentando refresh...')
+            
+            // Tenta refresh no backend
+            const refreshRes = await fetch('http://localhost:3002/spotify/refresh', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` }
+            })
+            
+            if (refreshRes.ok) {
+              console.log('[SPOTIFY] Token renovado, reexecutando busca...')
+              // Reexecuta a busca com token novo
+              const retryRes = await fetch(
+                `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(safeCategory)}&type=track&limit=10&market=BR`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                  signal: AbortSignal.timeout(8000)
+                }
+              )
+              
+              if (retryRes.ok) {
+                const retryData = await retryRes.json()
+                if (retryData.tracks?.items?.length > 0) {
+                  this.chartTracks = retryData.tracks.items.map(t => ({
+                    id: t.id,
+                    title: t.name,
+                    artist: { name: t.artists.map(a => a.name).join(', ') },
+                    album: { cover_medium: t.album.images?.[0]?.url },
+                    preview: t.preview_url,
+                    _fullTrack: true,
+                    source: 'spotify_full'
+                  }))
+                  return
+                }
+              }
+            }
+            
+            // Se refresh falhou, desconecta e cai para Deezer
+            console.warn('[SPOTIFY] Refresh falhou, caindo para Deezer')
+            this.spotifyConnected = false
+            this.spotifyTokenValid = false
+            localStorage.removeItem('spotify_connected')
+            this.showToast('Sua sessão do Spotify expirou. Conecte novamente.', 'info')
+            // continua para fallback Deezer abaixo
+          } else {
+            this.spotifyConnected = false
+            this.spotifyTokenValid = false
+            localStorage.removeItem('spotify_connected')
+            // continua para fallback Deezer
+          }
         } else if (res.status === 429) {
           console.warn('[SPOTIFY] Rate limit, usando Deezer')
           // continua para fallback Deezer abaixo
@@ -2434,6 +2466,7 @@ const res = await fetch(
 
       try {
         if (this.isLogged) {
+          
           await this.searchSpotifyAndLocal(query)
         } else {
           await this.searchDeezerAndLocal(query)
@@ -2452,18 +2485,15 @@ async searchSpotifyAndLocal(query) {
    
     let spotifyRes = { tracks: { items: [] }, artists: { items: [] }, albums: { items: [] } }
    
-try {
-const safeQuery = query
-  .replace(/:/g, ' ')   // Remove ":" que o Spotify usa como operador de busca
-  .trim()
+    try {
+      const safeQuery = query
+        .replace(/:/g, ' ')
+        .trim()
 
-const res = await fetch(
-  `${this.SPOTIFY_API}/search?q=${encodeURIComponent(safeQuery)}&type=track,artist,album&limit=20&market=BR`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-          // ============================================
-          // ADICIONAR signal para timeout de 8 segundos:
-          // ============================================
+      const res = await fetch(
+        `${this.SPOTIFY_API}/search?q=${encodeURIComponent(safeQuery)}&type=track,artist,album&limit=20&market=BR`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
           signal: AbortSignal.timeout(8000)
         }
       )
@@ -2473,22 +2503,48 @@ const res = await fetch(
         if (contentType && contentType.includes('application/json')) {
           spotifyRes = await res.json()
         }
-      } else if (res.status === 429) {   // ✅ CORRIGIDO: removido o } extra
+      } else if (res.status === 401) {
+        const data = await res.json().catch(() => ({}))
+        
+        if (data.error === 'SPOTIFY_TOKEN_EXPIRED' && data.needsReconnect) {
+          console.log('[SPOTIFY SEARCH] Token expirado, tentando refresh...')
+          
+          const refreshRes = await fetch('http://localhost:3002/spotify/refresh', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          
+          if (refreshRes.ok) {
+            console.log('[SPOTIFY SEARCH] Token renovado, reexecutando busca...')
+            const retryRes = await fetch(
+              `${this.SPOTIFY_API}/search?q=${encodeURIComponent(safeQuery)}&type=track,artist,album&limit=20&market=BR`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+                signal: AbortSignal.timeout(8000)
+              }
+            )
+            
+            if (retryRes.ok) {
+              const retryData = await retryRes.json()
+              spotifyRes = retryData
+            }
+          } else {
+            this.showToast('Spotify: sessão expirada. Conecte novamente.', 'info')
+          }
+        }
+      } else if (res.status === 429) {
         const retryAfter = res.headers.get('retry-after')
         const retryAfterSeconds = retryAfter ? parseInt(retryAfter, 10) : 0
         
         if (retryAfterSeconds > 1800) {
-          console.warn(`[SPOTIFY] Ban de ${Math.round(retryAfterSeconds / 3600)}h detectado. Usando apenas locais/Deezer.`)
+          console.warn(`[SPOTIFY] Ban de ${Math.round(retryAfterSeconds / 3600)}h detectado.`)
           this.showToast(`Spotify indisponível (${Math.round(retryAfterSeconds / 3600)}h). Resultados locais.`, 'warning')
         } else {
           console.warn('[SPOTIFY] Rate limit 429 na busca, usando fallback local')
           this.showToast('Spotify temporariamente indisponível. Mostrando resultados locais.', 'info')
         }
       }
-    } catch (spotifyErr) {   // ✅ catch fecha o try que envolve o fetch
-      // ============================================
-      // ADICIONAR: Tratamento de erro de rede/timeout
-      // ============================================
+    } catch (spotifyErr) {
       if (spotifyErr.name === 'TimeoutError' || spotifyErr.name === 'AbortError') {
         console.warn('[SPOTIFY] Timeout na busca, usando fallback')
       } else {

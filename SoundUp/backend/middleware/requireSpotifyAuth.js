@@ -32,47 +32,50 @@ module.exports = async function requireSpotifyAuth(req, res, next) {
       })
     }
 
-    // Token expirou? Tenta refresh
-    if (!user.isSpotifyTokenValid()) {
-      if (!user.spotifyRefreshToken) {
-        return res.status(403).json({
-          error: 'SPOTIFY_TOKEN_EXPIRED',
-          message: 'Token do Spotify expirado. Conecte novamente.',
-          connectUrl: '/spotify/auth'
-        })
-      }
+    // ✅ VERIFICAÇÃO DE TOKEN COM MARGEM DE SEGURANÇA (só declara UMA VEZ)
+    const TOKEN_MARGIN_MS = 5 * 60 * 1000 // 5 minutos
 
-      try {
-        const response = await axios.post(
-          'https://accounts.spotify.com/api/token',
-          new URLSearchParams({
-            grant_type: 'refresh_token',
-            refresh_token: user.spotifyRefreshToken
-          }).toString(),
-          {
-            headers: {
-              Authorization: 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
-              'Content-Type': 'application/x-www-form-urlencoded'
+    // Token expirou (ou vai expirar em breve)? Tenta refresh
+    if (!user.isSpotifyTokenValid()) {
+      if (user.spotifyRefreshToken) {
+        try {
+          const response = await axios.post(
+            'https://accounts.spotify.com/api/token',
+            new URLSearchParams({
+              grant_type: 'refresh_token',
+              refresh_token: user.spotifyRefreshToken
+            }).toString(),
+            {
+              headers: {
+                Authorization: 'Basic ' + Buffer.from(
+                  `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
+                ).toString('base64'),
+                'Content-Type': 'application/x-www-form-urlencoded'
+              }
             }
-          }
-        )
-        
-        await user.updateSpotifyTokens(
-          response.data.access_token,
-          user.spotifyRefreshToken,
-          response.data.expires_in
-        )
-      } catch (refreshErr) {
-        console.error('[SPOTIFY] Refresh falhou:', refreshErr.response?.data || refreshErr.message)
+          )
+          
+          await user.updateSpotifyTokens(
+            response.data.access_token,
+            response.data.refresh_token || user.spotifyRefreshToken,
+            response.data.expires_in
+          )
+          
+        } catch (refreshErr) {
+          return res.status(403).json({
+            error: 'SPOTIFY_TOKEN_EXPIRED',
+            message: 'Token do Spotify expirado. Conecte novamente.'
+          })
+        }
+      } else {
         return res.status(403).json({
           error: 'SPOTIFY_TOKEN_EXPIRED',
-          message: 'Token do Spotify expirado. Conecte novamente.',
-          connectUrl: '/spotify/auth'
+          message: 'Token do Spotify expirado. Conecte novamente.'
         })
       }
     }
 
-    // ✅ Token válido! Adiciona ao req para as rotas usarem
+    // ✅ SETA O TOKEN NO REQ
     req.spotifyUserToken = user.spotifyAccessToken
     req.userDoc = user
     
@@ -81,5 +84,16 @@ module.exports = async function requireSpotifyAuth(req, res, next) {
   } catch (err) {
     console.error('[SPOTIFY] Erro no middleware:', err)
     return res.status(500).json({ error: 'Erro interno ao verificar Spotify' })
+  }
+}
+
+// ✅ FUNÇÃO UTILITÁRIA FORA DO MIDDLEWARE
+function invalidateSpotifyCache(pattern) {
+  const { cache } = require('../utils/cache')
+  for (const key of cache.keys()) {
+    if (key.includes(pattern)) {
+      cache.delete(key)
+      console.log('🗑️ Cache invalidado:', key)
+    }
   }
 }

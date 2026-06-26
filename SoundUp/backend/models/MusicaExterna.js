@@ -13,15 +13,16 @@ const MusicaExternaSchema = new mongoose.Schema({
     required: true
   },
   // Dados cacheados da música
-  dadosMusica: {
-    titulo: { type: String, required: true },
-    artista: { type: String, required: true },
-    capa: { type: String, default: '' },
-    previewUrl: { type: String, default: '' },
-    duration: { type: Number, default: 30 },
-    ano: { type: Number, default: null },
-    album: { type: String, default: '' }
-  }
+ dadosMusica: {
+  titulo: { type: String, required: true },
+  artista: { type: String, required: true },
+  capa: { type: String, default: '' },
+  previewUrl: { type: String, default: '' },
+  spotifyId: { type: String, default: null },  // ← ADICIONAR ESTA LINHA
+  duration: { type: Number, default: 30 },
+  ano: { type: Number, default: null },
+  album: { type: String, default: '' }
+}
 }, { 
   timestamps: true 
 })

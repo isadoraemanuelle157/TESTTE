@@ -4,17 +4,25 @@ const axios = require('axios')
 
 const { DEEZER_API_URL } = require('../config/spotify')
 
+const { getCache, setCache } = require('../utils/cache')
+
+const DEEZER_CACHE_TTL = 1000 * 60 * 30 // 30 minutos para Deezer
+
 // ============================================
 // 🎧 DEEZER PROXY ROUTES (evita CORS no frontend)
 // ============================================
 
-// Busca geral
 router.get('/search', async (req, res) => {
   try {
     const { q, limit = 20 } = req.query
+    if (!q) return res.status(400).json({ error: 'Query obrigatória' })
 
-    if (!q) {
-      return res.status(400).json({ error: 'Query obrigatória' })
+    // ✅ CACHE
+    const cacheKey = `deezer_search_${q.toLowerCase().trim()}_${limit}`
+    const cached = getCache(cacheKey)
+    if (cached) {
+      console.log('📦 Cache hit Deezer search:', q)
+      return res.json(cached)
     }
 
     const response = await axios.get(`${DEEZER_API_URL}/search`, {
@@ -22,6 +30,8 @@ router.get('/search', async (req, res) => {
       timeout: 5000
     })
 
+    // ✅ SALVAR CACHE
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer search error:', error.message)
@@ -29,14 +39,20 @@ router.get('/search', async (req, res) => {
   }
 })
 
-// Chart de tracks (Top 10 Brasil)
 router.get('/chart/0/tracks', async (req, res) => {
   try {
     const { limit = 10 } = req.query
+    const cacheKey = `deezer_chart_tracks_${limit}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await axios.get(`${DEEZER_API_URL}/chart/0/tracks`, {
       params: { limit },
       timeout: 5000
     })
+
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer chart tracks error:', error.message)
@@ -44,14 +60,20 @@ router.get('/chart/0/tracks', async (req, res) => {
   }
 })
 
-// Chart de álbuns (Lançamentos)
 router.get('/chart/0/albums', async (req, res) => {
   try {
     const { limit = 10 } = req.query
+    const cacheKey = `deezer_chart_albums_${limit}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await axios.get(`${DEEZER_API_URL}/chart/0/albums`, {
       params: { limit },
       timeout: 5000
     })
+
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer chart albums error:', error.message)
@@ -59,12 +81,18 @@ router.get('/chart/0/albums', async (req, res) => {
   }
 })
 
-// Gêneros musicais
 router.get('/genre', async (req, res) => {
   try {
+    const cacheKey = 'deezer_genres'
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await axios.get(`${DEEZER_API_URL}/genre`, {
       timeout: 5000
     })
+
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL * 2) // 1 hora (gêneros mudam pouco)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer genre error:', error.message)
@@ -72,14 +100,20 @@ router.get('/genre', async (req, res) => {
   }
 })
 
-// Top tracks do artista
 router.get('/artist/:id/top', async (req, res) => {
   try {
     const { limit = 5 } = req.query
+    const cacheKey = `deezer_artist_top_${req.params.id}_${limit}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await axios.get(
       `${DEEZER_API_URL}/artist/${req.params.id}/top`,
       { params: { limit }, timeout: 5000 }
     )
+
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer artist top error:', error.message)
@@ -87,13 +121,19 @@ router.get('/artist/:id/top', async (req, res) => {
   }
 })
 
-// Tracks do álbum
 router.get('/album/:id/tracks', async (req, res) => {
   try {
+    const cacheKey = `deezer_album_tracks_${req.params.id}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await axios.get(
       `${DEEZER_API_URL}/album/${req.params.id}/tracks`,
       { timeout: 5000 }
     )
+
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer album tracks error:', error.message)
@@ -104,6 +144,10 @@ router.get('/album/:id/tracks', async (req, res) => {
 router.get('/chart/0/artists', async (req, res) => {
   try {
     const { limit = 10 } = req.query
+    const cacheKey = `deezer_chart_artists_${limit}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
     
     // Busca o chart de artistas
     const response = await axios.get(`${DEEZER_API_URL}/chart/0/artists`, {
@@ -145,6 +189,7 @@ router.get('/chart/0/artists', async (req, res) => {
         .map(r => r.value)
     }
 
+     setCache(cacheKey, chartData, DEEZER_CACHE_TTL)
     res.json(chartData)
   } catch (error) {
     console.error('❌ Deezer chart artists error:', error.message)
@@ -152,13 +197,19 @@ router.get('/chart/0/artists', async (req, res) => {
   }
 })
 
-// Detalhes do artista
 router.get('/artist/:id', async (req, res) => {
   try {
+    const cacheKey = `deezer_artist_${req.params.id}`
+    
+    const cached = getCache(cacheKey)
+    if (cached) return res.json(cached)
+
     const response = await axios.get(
       `${DEEZER_API_URL}/artist/${req.params.id}`,
       { timeout: 5000 }
     )
+
+    setCache(cacheKey, response.data, DEEZER_CACHE_TTL)
     res.json(response.data)
   } catch (error) {
     console.error('❌ Deezer artist error:', error.message)

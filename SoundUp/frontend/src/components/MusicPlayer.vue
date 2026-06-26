@@ -1,5 +1,5 @@
 <template>
-  
+ 
 <!-- 🔥 PLAYER MINIMIZADO (quando fechado) -->
     <transition name="minimize-pop">
       <div
@@ -37,7 +37,7 @@
       <i class="fa fa-chevron-down"></i>
     </button>
 
-    
+   
 
     <!-- CONTEÚDO ORIGINAL DO PLAYER (só aparece quando NÃO minimizado) -->
     <div v-show="!isMinimized" class="player-content">
@@ -361,6 +361,9 @@ export default {
 
   data() {
     return {
+            _lastSpotifyPlaying: false,
+      _lastSpotifyPosition: 0,
+            _spotifyPollInterval: null,
       queue: [],
       currentIndex: 0,
       isPlaying: false,
@@ -469,6 +472,19 @@ export default {
 
     this.startSyncInterval()
 
+        // 🔥 NOVO: Polling do estado do Spotify para atualizar tempo em tempo real
+    this._spotifyPollInterval = setInterval(() => {
+      if (this.spotifyMode && this.spotifyPlayer) {
+        this.spotifyPlayer.getCurrentState().then(state => {
+          if (state) {
+            this.currentTime = (state.position || 0) / 1000
+            this.duration = (state.duration || 0) / 1000
+            this.isPlaying = !state.paused
+          }
+        }).catch(() => {})
+      }
+    }, 1000)
+
     // 🔥 RESTAURAR ESTADO MINIMIZADO
     const savedMinimized = localStorage.getItem('musicplayer_minimized')
     if (savedMinimized === 'true') {
@@ -481,7 +497,7 @@ export default {
 
   watch: {
   // ... watch existentes ...
-  
+ 
   spotifyConnected(newVal) {
     if (newVal && this.isLogged && !this.spotifyPlayer) {
       console.log('[PLAYER] Spotify conectado detectado, inicializando player...')
@@ -499,6 +515,10 @@ export default {
     window.removeEventListener('player-paused', this.handleExternalPause)
     window.removeEventListener('favoritas-updated', this.checkFavoriteStatus)
     window.removeEventListener('curtidas-updated', this.checkLikeStatus)
+        if (this._spotifyPollInterval) {
+      clearInterval(this._spotifyPollInterval)
+      this._spotifyPollInterval = null
+    }
     this.stopSyncInterval()
     if (this.spotifyPlayer) {
       this.spotifyPlayer.disconnect()
@@ -751,8 +771,14 @@ async playSpotifyFullTrack() {
 
     await this.transferPlaybackToSdk(spotifyUri, Math.floor((this.currentTime || 0) * 1000))
 
-    this.spotifyMode = true
+        this.spotifyMode = true
     this.isPlaying = true
+
+    // 🔥 Seta duração inicial da track
+    this.duration = (track.duration || 0) / 1000
+    if (this.duration === 0 && track.duration_ms) {
+      this.duration = track.duration_ms / 1000
+    }
 
     this.updateCurrentTrack({
       spotifyId,
@@ -776,43 +802,56 @@ async playSpotifyFullTrack() {
   }
 },
 
-syncSpotifyState(state) {
-  const prevTime = this.currentTime
-  const prevDuration = this.duration
-  const wasPlaying = this.isPlaying
+    syncSpotifyState(state) {
+      if (!state) return
 
-  this.spotifyMode = true
-  this.isPlaying = !state.paused
-  this.currentTime = (state.position || 0) / 1000
-  this.duration = (state.duration || 0) / 1000
+      this.spotifyMode = true
+      this.isPlaying = !state.paused
 
-  const sdkTrack = state.track_window?.current_track
-  if (sdkTrack) {
-    this.updateCurrentTrack({
-      id: sdkTrack.id,
-      spotifyId: sdkTrack.id,
-      uri: `spotify:track:${sdkTrack.id}`,
-      title: sdkTrack.name,
-      artist: sdkTrack.artists.map(a => a.name).join(', '),
-      cover: sdkTrack.album?.images?.[0]?.url || this.currentTrack?.cover,
-      duration: (sdkTrack.duration_ms || 0) / 1000,
-      source: 'spotify_full',
-      url: ''
-    })
-  }
+      // 🔥 Só atualiza tempo se não estiver arrastando a barra
+      if (!this.isDragging) {
+        this.currentTime = (state.position || 0) / 1000
+      }
+      this.duration = (state.duration || 0) / 1000
 
-  const terminou =
-    wasPlaying &&
-    state.paused &&
-    state.position === 0 &&
-    prevDuration > 0 &&
-    prevTime >= Math.max(prevDuration - 2, 0)
+      const sdkTrack = state.track_window?.current_track
+      if (sdkTrack && sdkTrack.id) {
+        // Só atualiza metadados da track se for diferente
+        const currentId = this.currentTrack?.spotifyId || this.currentTrack?.id
+        if (sdkTrack.id !== currentId) {
+          this.updateCurrentTrack({
+            id: sdkTrack.id,
+            spotifyId: sdkTrack.id,
+            uri: `spotify:track:${sdkTrack.id}`,
+            title: sdkTrack.name,
+            artist: sdkTrack.artists.map(a => a.name).join(', '),
+            cover: sdkTrack.album?.images?.[0]?.url || this.currentTrack?.cover,
+            duration: (sdkTrack.duration_ms || 0) / 1000,
+            source: 'spotify_full',
+            url: ''
+          })
+        }
+      }
 
-  if (terminou) {
-    this.notifyTrackEnded(true)
-    this.nextTrack()
-  }
-},
+      // Detecta fim da música
+      const prevTime = this._lastSpotifyPosition || 0
+      const nowPosition = state.position || 0
+      const trackDuration = state.duration || 0
+
+      if (
+        this._lastSpotifyPlaying &&
+        state.paused &&
+        nowPosition === 0 &&
+        trackDuration > 0 &&
+        prevTime >= Math.max(trackDuration - 2000, 0)
+      ) {
+        this.notifyTrackEnded(true)
+        this.nextTrack()
+      }
+
+      this._lastSpotifyPlaying = !state.paused
+      this._lastSpotifyPosition = nowPosition
+    },
 
     async checkSpotifyStatus() {
       if (!this.isLogged) return
@@ -1240,16 +1279,17 @@ syncSpotifyState(state) {
       const progress = this.duration > 0 ? (this.currentTime / this.duration) * 100 : 0
       window.dispatchEvent(new CustomEvent('player-state-changed', {
         detail: {
-          track: {
-            id: this.currentTrack.id,
-            title: this.currentTrack.title,
-            artist: this.currentTrack.artist,
-            cover: this.currentTrack.cover,
-            url: this.currentTrack.url,
-            duration: this.currentTrack.duration,
-            emoji: this.currentTrack.emoji,
-            color: this.currentTrack.color
-          },
+                track: {
+        id: this.currentTrack.id,
+        title: this.currentTrack.title,
+        artist: this.currentTrack.artist,
+        cover: this.currentTrack.cover,
+        url: this.currentTrack.url,
+        duration: this.currentTrack.duration,
+        source: this.currentTrack.source || 'local',  // ← ADICIONAR ISSO
+        emoji: this.currentTrack.emoji,
+        color: this.currentTrack.color
+      },
           isPlaying: this.isPlaying,
           currentTime: this.currentTime,
           duration: this.duration,
@@ -1299,7 +1339,7 @@ syncSpotifyState(state) {
         title: song.title || song.nome || song.titulo || 'Sem título',
         artist: song.artist || song.artista || 'Desconhecido',
         cover: song.cover || song.capa || song.foto || '',
-      url: song.url || song.preview || song.previewUrl || song.preview_url || song.link || '',
+            url: song.url || song.preview || song.previewUrl || song.preview_url || song.link || song.uri || '',
         duration: song.duration || song.duracao || 30,
         source: song.source || 'local',
         type: song.type || 'musica',
@@ -1313,7 +1353,7 @@ syncSpotifyState(state) {
           title: track.title || track.nome || track.titulo || 'Sem título',
           artist: track.artist || track.artista || 'Desconhecido',
           cover: track.cover || track.capa || track.foto || '',
-          url: track.url || track.preview || track.previewUrl || track.link || '',
+                   url: track.url || track.preview || track.previewUrl || track.preview_url || track.link || track.uri || '',
           duration: track.duration || track.duracao || 30,
           source: track.source || 'local',
           type: track.type || 'musica',
@@ -1371,7 +1411,7 @@ async loadAndPlay() {
     track.source === 'spotify' ||
     !!track._fullTrack
 
-  const hasPreview = !!(track.url && track.url !== 'null' && track.url !== 'undefined')
+  const hasPreview = !!(track.url && track.url !== 'null' && track.url !== 'undefined' && track.url !== '')
 
   if (isSpotifyTrack && this.spotifyConnected) {
     await this.playSpotifyFullTrack()
@@ -1391,56 +1431,106 @@ async loadAndPlay() {
     return
   }
 
-  audio.pause()
-  audio.load()
+  // 🔥 CORREÇÃO: Força o src do audio element manualmente antes de carregar
+  // Isso garante que o áudio use a URL correta imediatamente
+  const audioUrl = track.url || ''
+  if (audioUrl && audioUrl !== 'null' && audioUrl !== 'undefined') {
+    audio.src = audioUrl
+  } else {
+    console.error('❌ URL de áudio inválida:', track)
+    this.showToast('URL de áudio inválida', 'error')
+    return
+  }
 
+  audio.pause()
   this.currentTime = 0
   this.duration = 0
   this.canPlay = false
+  this.isPlaying = false
 
+  // 🔥 CORREÇÃO: Aguarda o Vue atualizar o DOM, depois carrega e toca
   this.$nextTick(() => {
+    // Força recarregar o áudio com o novo src
     audio.load()
-    this.attemptPlay()
+   
+    // Aguarda o evento canplay antes de tentar tocar
+    const onCanPlayOnce = () => {
+      audio.removeEventListener('canplay', onCanPlayOnce)
+      this.attemptPlay()
+    }
+    audio.addEventListener('canplay', onCanPlayOnce)
+   
+    // Timeout de segurança: se canplay não disparar em 5s, tenta tocar mesmo assim
+    setTimeout(() => {
+      audio.removeEventListener('canplay', onCanPlayOnce)
+      if (!this.isPlaying && this.hasTrack) {
+        this.attemptPlay()
+      }
+    }, 5000)
   })
 },
 
     async attemptPlay() {
-      const audio = this.$refs.audioPlayer
-      if (!audio) return
-      console.log('▶️ Tentando tocar... Estado:', audio.readyState)
-      if (audio.readyState < 2) {
-        console.log('⏳ Áudio não pronto, aguardando canplay...')
-        return
-      }
-      try {
-        this.isLoading = true
-        this.playPromise = audio.play()
-        await this.playPromise
-        console.log('✅ Tocando com sucesso!')
-        this.isPlaying = true
-        this.isLoading = false
-        if (!this._trackStartTime) this._trackStartTime = Date.now()
+  const audio = this.$refs.audioPlayer
+  if (!audio) return
+ 
+  console.log('▶️ Tentando tocar... Estado:', audio.readyState, 'URL:', audio.src?.substring(0, 60))
+ 
+  // 🔥 CORREÇÃO: Se o áudio não tem src válido, não tenta tocar
+  if (!audio.src || audio.src === 'null' || audio.src === 'undefined' || audio.src === '') {
+    console.error('❌ Audio src inválido:', audio.src)
+    return
+  }
+ 
+  // Se o áudio ainda não está pronto (readyState < 2 = HAVE_CURRENT_DATA),
+  // aguarda o evento canplay em vez de retornar silenciosamente
+  if (audio.readyState < 2) {
+    console.log('⏳ Áudio não pronto (readyState:', audio.readyState, '), aguardando canplay...')
+   
+    const onCanPlay = () => {
+      audio.removeEventListener('canplay', onCanPlay)
+      this.attemptPlay()
+    }
+    audio.addEventListener('canplay', onCanPlay)
+   
+    // Força load caso o áudio não esteja carregando
+    audio.load()
+    return
+  }
+ 
+  try {
+    this.isLoading = true
+    this.playPromise = audio.play()
+    await this.playPromise
+    console.log('✅ Tocando com sucesso!')
+    this.isPlaying = true
+    this.isLoading = false
+    if (!this._trackStartTime) this._trackStartTime = Date.now()
 
-        if (this.currentTrack) {
-          this.registrarHistorico(this.currentTrack, {
-            tempoOuvido: 0,
-            reproduzidaAteOFim: false
-          })
-        }
+    if (this.currentTrack) {
+      this.registrarHistorico(this.currentTrack, {
+        tempoOuvido: 0,
+        reproduzidaAteOFim: false
+      })
+    }
 
-      } catch (err) {
-        console.error('❌ Erro ao tocar:', err.name, err.message)
-        this.isPlaying = false
-        this.isLoading = false
-        if (err.name === 'NotAllowedError') {
-          console.log('⚠️ Autoplay bloqueado - interação do usuário necessária')
-        } else if (err.name === 'NotSupportedError') {
-          console.error('❌ Formato de áudio não suportado')
-        }
-      } finally {
-        this.playPromise = null
-      }
-    },
+  } catch (err) {
+    console.error('❌ Erro ao tocar:', err.name, err.message)
+    this.isPlaying = false
+    this.isLoading = false
+    if (err.name === 'NotAllowedError') {
+      console.log('⚠️ Autoplay bloqueado - interação do usuário necessária')
+      this.showToast('Clique no botão play para iniciar o áudio', 'info')
+    } else if (err.name === 'NotSupportedError') {
+      console.error('❌ Formato de áudio não suportado:', audio.src)
+      this.showToast('Formato de áudio não suportado', 'error')
+    } else {
+      this.showToast('Erro ao reproduzir: ' + err.message, 'error')
+    }
+  } finally {
+    this.playPromise = null
+  }
+},
 
 async togglePlay() {
   if (!this.currentTrack) return
@@ -1459,9 +1549,16 @@ async togglePlay() {
       if (!state.paused) {
         await this.spotifyPlayer.pause()
         this.isPlaying = false
-      } else {
+            } else {
         await this.spotifyPlayer.resume()
         this.isPlaying = true
+        // 🔥 Força sync imediato do tempo
+        this.spotifyPlayer.getCurrentState().then(s => {
+          if (s) {
+            this.currentTime = (s.position || 0) / 1000
+            this.duration = (s.duration || 0) / 1000
+          }
+        })
       }
     } catch (err) {
       console.error('❌ Erro no togglePlay do Spotify:', err)
@@ -1504,15 +1601,12 @@ async togglePlay() {
       if (!this.playPromise) this.isPlaying = false
     },
 
-    onCanPlay() {
-      console.log('✅ Evento: canplay - áudio pronto')
-      this.canPlay = true
-      const audio = this.$refs.audioPlayer
-      if (audio && audio.paused && this.hasTrack) {
-        console.log('🔄 Auto-play após canplay')
-        this.attemptPlay()
-      }
-    },
+   onCanPlay() {
+  console.log('✅ Evento: canplay - áudio pronto, readyState:', this.$refs.audioPlayer?.readyState)
+  this.canPlay = true
+  // 🔥 CORREÇÃO: Não faz autoplay automático aqui para evitar conflito com loadAndPlay
+  // O loadAndPlay já gerencia o play corretamente
+},
 
     onAudioEnded() {
       console.log('⏹️ Evento: ended - Música terminou!')
@@ -1575,16 +1669,24 @@ async togglePlay() {
       this.isFavorited = false
     },
 
-    onTimeUpdate() {
+      onTimeUpdate() {
+      // 🔥 Só atualiza pelo áudio local se NÃO estiver em modo Spotify
+      if (this.spotifyMode) return
+
       const audio = this.$refs.audioPlayer
-      if (audio && !this.isDragging) this.currentTime = audio.currentTime
+      if (audio && !this.isDragging) {
+        this.currentTime = audio.currentTime
+      }
     },
 
-    onLoadedMetadata() {
+      onLoadedMetadata() {
+      // 🔥 Só atualiza pelo áudio local se NÃO estiver em modo Spotify
+      if (this.spotifyMode) return
+
       const audio = this.$refs.audioPlayer
       if (audio) {
         this.duration = audio.duration || this.currentTrack?.duration || 0
-        console.log('📊 Duração carregada:', this.duration)
+        console.log('📊 Duração carregada (local):', this.duration)
       }
     },
 

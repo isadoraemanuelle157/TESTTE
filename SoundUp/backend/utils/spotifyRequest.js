@@ -1,5 +1,6 @@
 const axios = require('axios')
 const { SPOTIFY_AUTH_URL, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = require('../config/spotify')
+const { getCache, setCache } = require('./cache')
 
 let spotifyToken = null
 let tokenExpiresAt = 0
@@ -105,12 +106,16 @@ async function getSpotifyToken(retries = 3) {
   }
 }
 
-// ✅ FUNÇÃO INTERNA (não exportada diretamente)
 async function _spotifyRequest(config, retries = 3, userToken = null) {
-  // Verifica cache primeiro
-  const cached = getCached(config)
-  if (cached) {
-    return { data: cached, fromCache: true, status: 200, headers: {} }
+  // Cache SÓ para requisições GET sem userToken (dados públicos)
+  const isCacheable = (!config.method || config.method === 'GET') && !userToken
+  
+  if (isCacheable) {
+    const cached = getCache(getCacheKey(config))
+    if (cached) {
+      console.log('💾 Cache hit:', config.url)
+      return { data: cached, fromCache: true, status: 200, headers: {} }
+    }
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -136,14 +141,37 @@ async function _spotifyRequest(config, retries = 3, userToken = null) {
 
       // Salva no cache
       setCached(config, response.data)
+    if (isCacheable && response.data) {
+        setCache(getCacheKey(config), response.data, CACHE_TTL)
+      }
+      
       return response
-
+      
     } catch (error) {
       const status = error.response?.status
 
-      // ❌ ERRO 400 — NÃO tenta app token (Spotify bloqueou catálogo para dev apps)
+      // ❌ ERRO 400 — Pode ser token expirado ou query inválida
       if (status === 400 && userToken) {
-        console.error('❌ Erro 400 com userToken — token expirado ou sem acesso. Reconecte o Spotify.')
+        // Verifica se é erro de token (mensagem típica do Spotify)
+        const errorMsg = error.response?.data?.error?.message || ''
+        const isTokenError = errorMsg.toLowerCase().includes('token') || 
+                            errorMsg.toLowerCase().includes('expired') ||
+                            errorMsg.toLowerCase().includes('invalid')
+        
+        if (isTokenError) {
+          console.error('❌ Erro 400 com userToken — token expirado. Marcando para refresh.')
+          error.isUserTokenExpired = true
+          throw error
+        }
+        
+        // Se não for erro de token, é query inválida
+        console.error('❌ Erro 400 com userToken — query inválida:', errorMsg)
+        throw error
+      }
+      
+      // ❌ ERRO 401 — Token expirado
+      if (status === 401 && userToken) {
+        console.error('❌ Erro 401 com userToken — token expirado. Marcando para refresh.')
         error.isUserTokenExpired = true
         throw error
       }
@@ -255,7 +283,7 @@ async function getUserSpotifyToken(req) {
   const user = await Usuario.findById(userId)
   if (!user || !user.spotifyAccessToken) return null
 
-  // Verifica se token expira em menos de 5 minutos (margem de segurança)
+  // ✅ VERIFICA SE TOKEN EXPIRA EM BREVE (margem de 5 min)
   const expiresSoon = user.spotifyTokenExpiresAt && 
     (new Date(user.spotifyTokenExpiresAt).getTime() - Date.now() < 5 * 60 * 1000)
 
@@ -263,7 +291,7 @@ async function getUserSpotifyToken(req) {
     if (user.spotifyRefreshToken) {
       try {
         await refreshUserSpotifyToken(user)
-        return user.spotifyAccessToken
+        return user.spotifyAccessToken  // ✅ RETORNA O NOVO TOKEN
       } catch (e) {
         console.error('❌ Falha ao renovar token no getUserSpotifyToken:', e.message)
         return null
@@ -274,6 +302,7 @@ async function getUserSpotifyToken(req) {
 
   return user.spotifyAccessToken
 }
+
 async function refreshUserSpotifyToken(user) {
   const response = await axios.post(
     'https://accounts.spotify.com/api/token',

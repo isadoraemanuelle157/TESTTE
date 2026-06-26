@@ -321,6 +321,8 @@ usuarioSchema.methods.updateSpotifyTokens = async function(accessToken, refreshT
 
 usuarioSchema.methods.isSpotifyTokenValid = function() {
   if (!this.spotifyAccessToken || !this.spotifyTokenExpiresAt) return false
-  return new Date() < new Date(this.spotifyTokenExpiresAt.getTime() - 60000) // 1 min buffer
+  // ✅ Margem de 5 minutos para evitar race condition
+  return new Date(Date.now() + 5 * 60 * 1000) < this.spotifyTokenExpiresAt
 }
+
 module.exports = mongoose.model('Usuario', usuarioSchema)
