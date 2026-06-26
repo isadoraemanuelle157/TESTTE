@@ -843,14 +843,15 @@ syncSpotifyState(state) {
       this.isLogged = !!token
     },
 
-    async checkLikeStatus() {
+       async checkLikeStatus() {
       if (!this.isLogged || !this.currentTrack) {
         this.isLiked = false
         return
       }
       try {
         const token = localStorage.getItem('token')
-        const trackId = this.currentTrack.id
+        // 🔥 CORREÇÃO: Usa spotifyId se disponível, senão id
+        const trackId = this.currentTrack.spotifyId || this.currentTrack.id
         const sourceParam = this.isExternalTrack ? `?source=${this.currentTrackSource}` : ''
         const res = await fetch(`http://localhost:3002/curtidas/${trackId}/is-curtida${sourceParam}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -864,7 +865,7 @@ syncSpotifyState(state) {
       }
     },
 
-    async toggleLike() {
+       async toggleLike() {
       if (!this.isLogged) {
         this.showToast('Faça login para curtir músicas', 'info')
         return
@@ -874,15 +875,17 @@ syncSpotifyState(state) {
       this.likeLoading = true
       try {
         const token = localStorage.getItem('token')
-        const trackId = this.currentTrack.id
+        // 🔥 CORREÇÃO: Usa spotifyId se disponível
+        const trackId = this.currentTrack.spotifyId || this.currentTrack.id
         const body = {}
         if (this.isExternalTrack) {
           body.source = this.currentTrackSource
+          // 🔥 CORREÇÃO: Garante dadosMusica com preview_url
           body.dadosMusica = {
             titulo: this.currentTrack.title,
             artista: this.currentTrack.artist,
             capa: this.currentTrack.cover || '',
-            previewUrl: this.currentTrack.url || this.currentTrack.preview || '',
+            previewUrl: this.currentTrack.url || this.currentTrack.preview || this.currentTrack.preview_url || '',
             duration: this.currentTrack.duration || 30,
             ano: this.currentTrack.ano || null,
             album: this.currentTrack.album || ''
@@ -915,14 +918,15 @@ syncSpotifyState(state) {
       }
     },
 
-    async checkFavoriteStatus() {
+        async checkFavoriteStatus() {
       if (!this.isLogged || !this.currentTrack) {
         this.isFavorited = false
         return
       }
       try {
         const token = localStorage.getItem('token')
-        const trackId = this.currentTrack.id
+        // 🔥 CORREÇÃO: Usa spotifyId se disponível, senão id
+        const trackId = this.currentTrack.spotifyId || this.currentTrack.id
         const params = new URLSearchParams()
         params.append('tipo', 'musica')
         if (this.isExternalTrack) {
@@ -940,7 +944,7 @@ syncSpotifyState(state) {
       }
     },
 
-    async toggleFavorite() {
+       async toggleFavorite() {
       if (!this.isLogged) {
         this.showToast('Faça login para favoritar músicas', 'info')
         return
@@ -950,7 +954,8 @@ syncSpotifyState(state) {
       this.favoriteLoading = true
       try {
         const token = localStorage.getItem('token')
-        const trackId = this.currentTrack.id
+        // 🔥 CORREÇÃO: Usa spotifyId se disponível
+        const trackId = this.currentTrack.spotifyId || this.currentTrack.id
         const body = {
           tipo: 'musica',
           acao: this.isFavorited ? 'remover' : 'toggle'
@@ -963,11 +968,12 @@ syncSpotifyState(state) {
           }
           body.source = this.currentTrackSource
           body.tipoItem = 'musica'
+          // 🔥 CORREÇÃO: Garante dadosMusica com preview_url
           body.dadosMusica = {
             titulo: this.currentTrack.title,
             artista: this.currentTrack.artist,
             capa: this.currentTrack.cover || '',
-            previewUrl: this.currentTrack.url || this.currentTrack.preview || '',
+            previewUrl: this.currentTrack.url || this.currentTrack.preview || this.currentTrack.preview_url || '',
             duration: this.currentTrack.duration || 30,
             ano: this.currentTrack.ano || null,
             album: this.currentTrack.album || ''
@@ -1044,21 +1050,23 @@ syncSpotifyState(state) {
       this.userPlaylists = []
     },
 
-    async addToPlaylist(playlistId) {
+      async addToPlaylist(playlistId) {
       if (!this.currentTrack || this.addToPlaylistLoading) return
       this.addToPlaylistLoading = true
       try {
         const token = localStorage.getItem('token')
-        const trackId = this.currentTrack.id
+        // 🔥 CORREÇÃO: Usa spotifyId se disponível
+        const trackId = this.currentTrack.spotifyId || this.currentTrack.id
         const body = {
           source: this.isExternalTrack ? this.currentTrackSource : 'local'
         }
         if (this.isExternalTrack) {
+          // 🔥 CORREÇÃO: Garante dadosMusica com preview_url
           body.dadosMusica = {
             titulo: this.currentTrack.title,
             artista: this.currentTrack.artist,
             capa: this.currentTrack.cover || '',
-            previewUrl: this.currentTrack.url || this.currentTrack.preview || '',
+            previewUrl: this.currentTrack.url || this.currentTrack.preview || this.currentTrack.preview_url || '',
             duration: this.currentTrack.duration || 30,
             ano: this.currentTrack.ano || null,
             album: this.currentTrack.album || ''
@@ -1075,6 +1083,7 @@ syncSpotifyState(state) {
             body: JSON.stringify(body)
           }
         )
+        // ... resto do método continua igual
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
           throw new Error(errData.error || 'Erro ao adicionar')
@@ -1290,7 +1299,7 @@ syncSpotifyState(state) {
         title: song.title || song.nome || song.titulo || 'Sem título',
         artist: song.artist || song.artista || 'Desconhecido',
         cover: song.cover || song.capa || song.foto || '',
-        url: song.url || song.preview || song.previewUrl || song.link || '',
+      url: song.url || song.preview || song.previewUrl || song.preview_url || song.link || '',
         duration: song.duration || song.duracao || 30,
         source: song.source || 'local',
         type: song.type || 'musica',

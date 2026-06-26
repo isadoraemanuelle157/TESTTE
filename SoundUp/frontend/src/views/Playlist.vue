@@ -1213,40 +1213,24 @@ return {
       )
     },
 
-   normalizeSong(song) {
-  if (!song) return null
+     normalizeSong(song) {
+      if (!song) return null
 
-  // 🔥 DEBUG: Log para ver o que está chegando
-  console.log('🎵 normalizeSong input:', {
-    id: song._id || song.id,
-    nome: song.nome || song.title,
-    link: song.link,
-    foto: song.foto,
-    source: song.source
-  })
+      const normalized = {
+        id: String(song._id || song.id || song.musicaId),
+        title: song.title || song.nome || song.titulo || 'Sem título',
+        artist: song.artist || song.artista || song?.dadosMusica?.artista ||
+          (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
+        album: song.album || song.albuns?.[0]?.nome || song?.dadosMusica?.album || 'Sem álbum',
+        duration: this.formatDuration(this.parseDuration(song.duration || song.duracao || song?.dadosMusica?.duration)),
+        cover: song.cover || song.foto || song?.dadosMusica?.capa || '/default-cover.png',
+        // 🔥 CORREÇÃO: Garante preview_url também
+        preview: song.preview || song.link || song.url || song.preview_url || song?.dadosMusica?.previewUrl || song?.dadosMusica?.preview_url || '',
+        source: song.source || 'local'
+      }
 
-  const normalized = {
-    id: String(song._id || song.id || song.musicaId),
-    title: song.title || song.nome || song.titulo || 'Sem título',
-    artist: song.artist || song.artista || song?.dadosMusica?.artista ||
-      (song.cantores?.map(c => c.nome).join(', ')) || 'Desconhecido',
-    album: song.album || song.albuns?.[0]?.nome || song?.dadosMusica?.album || 'Sem álbum',
-    duration: this.formatDuration(this.parseDuration(song.duration || song.duracao || song?.dadosMusica?.duration)),
-    cover: song.cover || song.foto || song?.dadosMusica?.capa || '/default-cover.png',
-    // 🔥 CORREÇÃO: Garantir que link das músicas locais seja preservado
-    preview: song.preview || song.link || song.url || song?.dadosMusica?.previewUrl || '',
-    source: song.source || 'local'
-  }
-
-  console.log('🎵 normalizeSong output:', {
-    id: normalized.id,
-    title: normalized.title,
-    preview: normalized.preview ? '✅ tem URL' : '❌ SEM URL',
-    source: normalized.source
-  })
-
-  return normalized
-},
+      return normalized
+    },
 
     parseDuration(durationStr) {
       if (!durationStr) return 30
@@ -1291,13 +1275,14 @@ return {
           source: song.source && song.source !== 'local' ? song.source : 'local'
         }
 
-        if (song.source && song.source !== 'local') {
+             if (song.source && song.source !== 'local') {
           const durationInSeconds = this.parseDuration(song.duration)
           body.dadosMusica = {
             titulo: song.title || 'Sem título',
             artista: song.artist || 'Desconhecido',
             capa: song.cover || '',
-            previewUrl: song.preview || song.url || '',
+            // 🔥 CORREÇÃO: Garante preview_url
+            previewUrl: song.preview || song.url || song.preview_url || '',
             duration: Number.isFinite(durationInSeconds) ? durationInSeconds : 30,
             ano: song.ano || null,
             album: song.album || ''

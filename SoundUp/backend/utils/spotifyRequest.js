@@ -119,23 +119,14 @@ async function _spotifyRequest(config, retries = 3, userToken = null) {
 
       const token = userToken || await getSpotifyToken()
 
-let finalUrl = config.url
-if (config.params && Object.keys(config.params).length > 0) {
-  // ✅ Codificação RFC3986 completa - não decodifica nada
-  const query = Object.entries(config.params)
-    .map(([key, val]) => {
-      return `${encodeURIComponent(key)}=${encodeURIComponent(String(val))}`
-    })
-    .join('&')
-  finalUrl += `?${query}`
-}
-
+      // ✅ CORREÇÃO: Usa axios params em vez de montar URL manualmente
       const tokenType = userToken ? ' [USER TOKEN]' : ' [APP TOKEN]'
-      console.log(`📤 Spotify Request (${attempt + 1}/${retries + 1})${tokenType} → ${finalUrl}`)
+      console.log(`📤 Spotify Request (${attempt + 1}/${retries + 1})${tokenType} → ${config.url}`)
 
       const response = await axios({
         method: config.method || 'GET',
-        url: finalUrl,
+        url: config.url,
+        params: config.params || {},
         headers: {
           Authorization: `Bearer ${token}`,
           ...(config.headers || {})
@@ -150,26 +141,18 @@ if (config.params && Object.keys(config.params).length > 0) {
     } catch (error) {
       const status = error.response?.status
 
-      // ✅ ERRO 400 — Token do usuário inválido, tenta com app token
+      // ❌ ERRO 400 — NÃO tenta app token (Spotify bloqueou catálogo para dev apps)
       if (status === 400 && userToken) {
-        console.warn('⚠️ Erro 400 com userToken, tentando com app token...')
-        userToken = null
-        if (attempt >= retries) {
-          error.isUserTokenExpired = true
-          throw error
-        }
-        continue
+        console.error('❌ Erro 400 com userToken — token expirado ou sem acesso. Reconecte o Spotify.')
+        error.isUserTokenExpired = true
+        throw error
       }
-
-      // ✅ ERRO 403 — Token do usuário sem permissão, tenta com app token
+      // ❌ ERRO 403 — Usuário sem Premium ou sem permissão
       if (status === 403 && userToken) {
-        console.warn('⚠️ Erro 403 com userToken, tentando com app token...')
-        userToken = null
-        if (attempt >= retries) {
-          error.isUserTokenExpired = true
-          throw error
-        }
-        continue
+        console.error('❌ Erro 403 com userToken — sem permissão (precisa Spotify Premium).')
+        error.isUserTokenForbidden = true
+        error.message = 'Spotify Premium necessário para este recurso'
+        throw error
       }
 
       // ✅ RATE LIMIT 429
@@ -224,7 +207,7 @@ if (config.params && Object.keys(config.params).length > 0) {
         continue
       }
 
-      // Log de erro genérico (só chega aqui se não for nenhum dos casos acima)
+      // Log de erro genérico
       console.error(`❌ Tentativa ${attempt + 1}/${retries + 1} falhou: ${status} - ${error.message}`)
       throw error
     }
@@ -272,12 +255,17 @@ async function getUserSpotifyToken(req) {
   const user = await Usuario.findById(userId)
   if (!user || !user.spotifyAccessToken) return null
 
-  if (user.spotifyTokenExpiresAt && new Date() > user.spotifyTokenExpiresAt) {
+  // Verifica se token expira em menos de 5 minutos (margem de segurança)
+  const expiresSoon = user.spotifyTokenExpiresAt && 
+    (new Date(user.spotifyTokenExpiresAt).getTime() - Date.now() < 5 * 60 * 1000)
+
+  if (expiresSoon || (user.spotifyTokenExpiresAt && new Date() > user.spotifyTokenExpiresAt)) {
     if (user.spotifyRefreshToken) {
       try {
         await refreshUserSpotifyToken(user)
         return user.spotifyAccessToken
       } catch (e) {
+        console.error('❌ Falha ao renovar token no getUserSpotifyToken:', e.message)
         return null
       }
     }
@@ -286,7 +274,6 @@ async function getUserSpotifyToken(req) {
 
   return user.spotifyAccessToken
 }
-
 async function refreshUserSpotifyToken(user) {
   const response = await axios.post(
     'https://accounts.spotify.com/api/token',
@@ -298,20 +285,26 @@ async function refreshUserSpotifyToken(user) {
       headers: {
         Authorization: 'Basic ' + Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64'),
         'Content-Type': 'application/x-www-form-urlencoded'
-      }
+      },
+      timeout: 10000
     }
   )
 
+  const newRefreshToken = response.data.refresh_token || user.spotifyRefreshToken
+  
   await user.updateSpotifyTokens(
     response.data.access_token,
-    user.spotifyRefreshToken,
+    newRefreshToken,
     response.data.expires_in
   )
+  
+  console.log('🔄 Token Spotify renovado para usuário:', user.email || user._id)
+  return response.data.access_token
 }
-
 module.exports = {
   spotifyRequest,
   refreshSpotifyToken,
   isTokenValid,
-  getUserSpotifyToken
-}
+  getUserSpotifyToken,
+  refreshUserSpotifyToken  // ← EXPORTADO para uso no controller
+} 

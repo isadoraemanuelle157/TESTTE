@@ -140,13 +140,7 @@
               </svg>
               Sincronizado
             </span>
-            <span class="badge spotify" v-if="isLoggedIn">
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-  </svg>
-  Spotify
-</span>
-        <span class="badge deezer" v-else>
+            <span class="badge deezer" v-if="currentTrack.deezerId">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
               </svg>
@@ -156,15 +150,14 @@
         </div>
 
         <!-- Audio Player -->
-<audio
-  ref="audioPlayer"
-  :src="audioSrc"
-  @timeupdate="updateTime"
-  @ended="handleTrackEnded"
-  @loadedmetadata="onLoadedMetadata"
-  @canplay="onCanPlay"
-  @error="handleAudioError"
-></audio>
+        <audio
+          ref="audioPlayer"
+          :src="currentTrack.preview"
+          @timeupdate="updateTime"
+          @ended="handleTrackEnded"
+          @loadedmetadata="onLoadedMetadata"
+          @canplay="onCanPlay"
+        ></audio>
 
         <!-- Progress Bar -->
         <div class="progress-section" v-if="currentTrack.id">
@@ -230,7 +223,7 @@
 
         <!-- Empty State -->
         <div v-else class="empty-state">
-         <p>Adicione músicas do {{ isLoggedIn ? 'Spotify' : 'Deezer' }} para começar</p>
+          <p>Adicione músicas da Deezer para começar</p>
           <button class="add-music-btn-large" @click="showAddMusic = true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -538,7 +531,7 @@
               <input
                 v-model="searchQuery"
                 @input="debouncedSearch"
-               :placeholder="`Buscar músicas, artistas ou álbuns no ${isLoggedIn ? 'Spotify' : 'Deezer'}...`"
+                placeholder="Buscar músicas, artistas ou álbuns na Deezer..."
                 type="text"
                 autofocus
               />
@@ -566,7 +559,7 @@
             </div>
 
             <div class="quick-add" v-if="!searchQuery">
-            <h4>Top Brasil - {{ isLoggedIn ? 'Spotify' : 'Deezer' }}</h4>
+              <h4>Top Brasil - Deezer</h4>
               <div class="quick-tracks">
                 <div v-for="track in deezerChart" :key="track.id" class="quick-track" @click="addToQueue(track)">
                   <img :src="track.album.cover_medium || track.album.cover" />
@@ -815,7 +808,7 @@ const scrollToListeners = () => {
 
 // ========== AUTH STATE ==========
 const isLoggedIn = ref(false)
-const roomSource = ref('spotify') // Padrão para usuários logados
+const roomSource = ref('deezer')
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002'
 
@@ -914,11 +907,7 @@ const currentTrack = ref({
   duration: 0,
   explicit: false,
   deezerId: null,
-  spotifyId: null,
-  preview: '',
-  url: null,        // ← ADICIONAR: URL genérica
-  spotifyUrl: null, // ← ADICIONAR: URL para quando logado
-  source: 'deezer'
+  preview: ''
 })
 
 // Queue
@@ -963,15 +952,6 @@ const progressPercent = computed(() => {
   return (currentTime.value / currentTrack.value.duration) * 100
 })
 
-// ========== AUDIO SOURCE COMPUTED ==========
-const audioSrc = computed(() => {
-  // Se precisa do Spotify SDK (logado + sem preview), não usa <audio>
-  if (currentTrack.value.needsSpotifySDK) return ''
-  
-  // Prioridade: preview direto > url genérica
-  return currentTrack.value.preview || currentTrack.value.url || ''
-})
-
 const DEEZER_API = 'https://api.deezer.com'
 
 const PROXIES = [
@@ -1000,94 +980,36 @@ const recentMessages = computed(() => messages.value.slice(-50))
 
 // ========== SINCRONIZACAO DE REPRODUCAO ==========
 const togglePlay = async () => {
-  if (!audioPlayer.value) {
-    console.warn('❌ togglePlay: audioPlayer não existe')
-    return
-  }
-  
-  if (!currentTrack.value.id) {
-    console.warn('❌ togglePlay: sem track atual')
-    return
-  }
+  if (!audioPlayer.value || !currentTrack.value.id) return
 
-  // ✅ Garante que o src está setado
-// ✅ CORRETO: Verifica se precisa do Web Playback SDK
-const track = currentTrack.value
+  const newIsPlaying = !isPlaying.value
+  isLocalAction.value = true
 
-// Se está logado no Spotify mas a track não tem preview/url direta,
-// precisa usar o Web Playback SDK (não o <audio> tag)
-if (track.needsSpotifySDK) {
-  showToast('info', 'Spotify', 'Iniciando reprodução no Spotify...')
-  // Aqui você chamaria o Web Playback SDK ou mostraria instruções
-  // Por enquanto, informa o usuário corretamente
-  showToast('error', 'Reprodução Spotify', 
-    'Para ouvir músicas completas, abra o Spotify e use a função "Conectar a um dispositivo"')
-  return
-}
-
-// Se precisa do Spotify SDK, não usa <audio>
-if (track.needsSpotifySDK) {
-  showToast('info', 'Spotify', 'Iniciando reprodução no Spotify...')
-  // TODO: Aqui você integraria com o Spotify Web Playback SDK
-  // Por enquanto, instrui o usuário
-  showToast('error', 'Reprodução Spotify', 
-    'Para ouvir músicas completas, abra o Spotify e use "Conectar a um dispositivo"')
-  isPlaying.value = false
-  return
-}
-
-const expectedSrc = track.preview || track.url
-if (!expectedSrc) {
-  showToast('error', 'Erro', 'URL de áudio não disponível para esta música')
-  return
-}
-
-// Só usa <audio> se tiver preview/url direta
-if (audioPlayer.value.src !== expectedSrc) {
-  audioPlayer.value.src = expectedSrc
-  audioPlayer.value.load()
-}
-
-const newIsPlaying = !isPlaying.value
-isLocalAction.value = true
-
-if (newIsPlaying) {
-  try {
-    await audioPlayer.value.play()
-    isPlaying.value = true
-  } catch (err) {
-    console.warn('❌ Erro ao tocar:', err)
-    isPlaying.value = false
-    
-    // ✅ MENSAGEM ESPECÍFICA baseada no erro real
-    if (err.name === 'NotSupportedError') {
-      showToast('error', 'Formato não suportado', 
-        'Esta música não pode ser reproduzida no navegador. Tente outra faixa.')
-    } else if (err.name === 'NotAllowedError') {
-      showToast('error', 'Autoplay bloqueado', 
-        'Clique na tela primeiro para permitir áudio.')
-    } else {
-      showToast('error', 'Erro de reprodução', 
-        'Não foi possível tocar esta música. Tente recarregar a página.')
-    }
-  }
-} else {
+  if (isPlaying.value) {
     audioPlayer.value.pause()
     isPlaying.value = false
+  } else {
+    try {
+      await audioPlayer.value.play()
+      isPlaying.value = true
+    } catch (err) {
+      console.warn('Erro ao tocar:', err)
+      isPlaying.value = false
+    }
   }
 
-  // Sincroniza no backend
+  // Envia estado para o backend
   try {
     await apiFetch(`/api/rooms/${room.value.id}/sync`, {
       method: 'POST',
       body: JSON.stringify({
-        isPlaying: isPlaying.value,
+        isPlaying: newIsPlaying,
         currentTime: currentTime.value,
         trackId: currentTrack.value.id
       })
     })
   } catch (e) {
-    console.warn('Erro ao sincronizar reprodução:', e)
+    console.warn('Erro ao sincronizar reproducao:', e)
   }
 
   setTimeout(() => { isLocalAction.value = false }, 500)
@@ -1115,17 +1037,10 @@ const nextTrack = async () => {
 
     if (response.ok) {
       const data = await response.json()
-if (data.currentTrack) {
-  // ✅ Garante preview para Deezer se não veio do backend
-  const track = {
-    ...data.currentTrack,
-    preview: data.currentTrack.preview || (data.currentTrack.deezerId 
-      ? `https://cdns-preview-1.dzcdn.net/api/1/1/${data.currentTrack.deezerId}/preview.mp3` 
-      : null)
-  }
-  loadTrack(track)
-  isPlaying.value = data.syncState?.isPlaying || false
-} else {
+      if (data.currentTrack) {
+        loadTrack(data.currentTrack)
+        isPlaying.value = data.syncState?.isPlaying || false
+      } else {
         isPlaying.value = false
         currentTime.value = 0
         currentTrack.value = { id: null, title: '', artist: '', cover: '', duration: 0, explicit: false, deezerId: null, preview: '' }
@@ -1150,72 +1065,36 @@ const handleTrackEnded = async () => {
 }
 
 const onCanPlay = () => {
-  console.log('✅ Audio canplay, isPlaying:', isPlaying.value, 'src:', audioPlayer.value?.src)
   if (isPlaying.value && audioPlayer.value) {
     audioPlayer.value.play().catch(err => {
-      console.warn('❌ Erro ao tocar audio:', err)
-      isPlaying.value = false
+      console.warn('Erro ao tocar audio:', err)
     })
   }
 }
 
 const loadTrack = (track) => {
   if (!track || !track.id) return
-  
-  console.log('🎵 loadTrack:', {
-    id: track.id,
-    title: track.title,
-    isLoggedIn: isLoggedIn.value,
-    preview: track.preview,
-    url: track.url,
-    source: track.source
-  })
-
-  const hasPreview = !!(track.preview && track.preview !== 'null' && track.preview !== 'undefined')
-  const isSpotifyTrack = track.source === 'spotify' || track.spotifyId
-  
-  // ✅ REGRA CLARA:
-  // - Preview disponível → toca no <audio> (30s ou url direta)
-  // - Logado no Spotify + sem preview → precisa do Web Playback SDK
-  const needsSDK = isLoggedIn.value && isSpotifyTrack && !hasPreview && !track.url
 
   currentTrack.value = {
     id: track.id,
     title: track.title,
     artist: track.artist?.name || track.artist,
     cover: track.album?.cover_medium || track.album?.cover || track.cover,
-    duration: track.duration || 0,
-    explicit: track.explicit_lyrics || track.explicit || false,
-    deezerId: track.deezerId || null,
-    spotifyId: track.spotifyId || null,
-    preview: track.preview || null,
-    url: track.url || null,
-    source: track.source || (isLoggedIn.value ? 'spotify' : 'deezer'),
-    needsSpotifySDK: needsSDK
+    duration: track.duration,
+    explicit: track.explicit_lyrics || false,
+    deezerId: track.id,
+    preview: track.preview
   }
-  
   currentTime.value = 0
 
   nextTick(() => {
     if (audioPlayer.value) {
-      // Só seta src se tiver áudio direto (preview/url)
-      const src = currentTrack.value.preview || currentTrack.value.url
-      if (src) {
-        audioPlayer.value.src = src
-        audioPlayer.value.load()
-        
-        if (isPlaying.value) {
-          audioPlayer.value.play().catch(err => {
-            console.warn('Autoplay bloqueado:', err)
-            isPlaying.value = false
-          })
-        }
-      } else if (needsSDK) {
-        // Limpa o player anterior
-        audioPlayer.value.src = ''
-        audioPlayer.value.load()
-        // Aqui você chamaria o Spotify SDK
-        showToast('info', 'Spotify', 'Use o app do Spotify para tocar esta música completa')
+      audioPlayer.value.load()
+      if (isPlaying.value) {
+        audioPlayer.value.play().catch(err => {
+          console.warn('Autoplay bloqueado:', err)
+          isPlaying.value = false
+        })
       }
     }
   })
@@ -1304,97 +1183,14 @@ const sendMessage = async () => {
     if (container) container.scrollTop = container.scrollHeight
   })
 }
-const handleAudioError = (e) => {
-  const audio = e.target
-  const error = audio.error
-  const code = error?.code
-  
-  console.error('❌ Audio error:', {
-    code,
-    message: error?.message,
-    src: audio.src,
-    networkState: audio.networkState
-  })
 
-  // Códigos de erro do MediaError:
-  // 1 = MEDIA_ERR_ABORTED - Abortado pelo usuário
-  // 2 = MEDIA_ERR_NETWORK - Erro de rede
-  // 3 = MEDIA_ERR_DECODE - Erro de decodificação
-  // 4 = MEDIA_ERR_SRC_NOT_SUPPORTED - Formato não suportado (mais comum com Spotify URLs)
-  
-  let title = 'Erro de Reprodução'
-  let message = 'Não foi possível tocar esta música'
-
-  switch(code) {
-    case 1:
-      title = 'Reprodução abortada'
-      message = 'Você cancelou a reprodução.'
-      break
-    case 2:
-      title = 'Erro de rede'
-      message = 'Verifique sua conexão com a internet.'
-      break
-    case 3:
-      title = 'Erro de decodificação'
-      message = 'Arquivo de áudio corrompido. Tente outra música.'
-      break
-    case 4:
-      title = 'Formato não suportado'
-      // ✅ MENSAGEM ESPECÍFICA - não é culpa do Premium!
-      if (audio.src?.includes('spotify') || currentTrack.value.source === 'spotify') {
-        message = 'URLs do Spotify não podem ser reproduzidas diretamente no navegador. Use o app do Spotify ou escolha uma música com preview disponível.'
-      } else {
-        message = 'Este formato de áudio não é suportado pelo seu navegador.'
-      }
-      break
-  }
-
-  showToast('error', title, message)
-  
-  isPlaying.value = false
-}
 // ========== DEEZER SEARCH ==========
-const searchMusic = async () => {
+const searchDeezer = async () => {
   if (!searchQuery.value.trim()) {
     searchResults.value = []
     return
   }
   isSearching.value = true
-  
-  if (isLoggedIn.value) {
-    // Buscar no Spotify
-    try {
-      const token = await getSpotifyToken()
-      const res = await fetch(
-        `https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery.value)}&type=track&limit=10`, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      const data = await res.json()
-searchResults.value = (data.tracks?.items || []).map(track => ({
-  id: track.id,
-  title: track.name,
-  artist: { name: track.artists?.map(a => a.name).join(', ') },
-  album: { 
-    cover_medium: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
-    cover: track.album?.images?.[0]?.url
-  },
-  duration: Math.floor(track.duration_ms / 1000),
-  preview: track.preview_url,  // ← ÚNICA URL que funciona no <audio> (30s preview)
-  // ✅ REMOVER url de página web - ela não é áudio!
-  // url: track.external_urls?.spotify,  // ← REMOVER ISSO
-  explicit_lyrics: track.explicit,
-  source: 'spotify',
-  // ✅ ADICIONAR flag
-  hasFullTrack: !track.preview_url && isLoggedIn.value  // indica que precisa do SDK
-}))
-      isSearching.value = false
-      return
-    } catch (e) {
-      console.warn('Spotify search falhou, usando Deezer:', e)
-    }
-  }
-  
-  // Fallback Deezer
   try {
     const data = await fetchJsonDeezer(`/search?q=${encodeURIComponent(searchQuery.value)}&limit=10`)
     searchResults.value = data.data || []
@@ -1408,33 +1204,13 @@ searchResults.value = (data.tracks?.items || []).map(track => ({
 
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(searchMusic, 300)
+  searchTimeout = setTimeout(searchDeezer, 300)
 }
 
-const fetchChart = async () => {
-  if (isLoggedIn.value) {
-    // Buscar do Spotify
-    try {
-      const token = await getSpotifyToken() // você precisa implementar isso
-      const res = await fetch('https://api.spotify.com/v1/browse/featured-playlists?limit=5', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await res.json()
-      // Adaptar formato...
-    } catch (e) {
-      console.warn('Spotify chart falhou, usando Deezer:', e)
-    }
-  }
-  
-try {
+const fetchDeezerChart = async () => {
+  try {
     const data = await fetchJsonDeezer(`/chart/0/tracks?limit=5`)
-deezerChart.value = (data.data || []).map(track => ({
-  ...track,
-  preview: track.preview,
-  url: track.preview,
-  spotifyUrl: null,  // ← Deezer não tem spotifyUrl
-  source: 'deezer'
-}))
+    deezerChart.value = data.data || []
   } catch (error) {
     console.error('Erro ao carregar chart:', error)
     deezerChart.value = []
@@ -1474,20 +1250,16 @@ const promoteToModerator = async (userId, userName) => {
 
 // ========== ADICIONAR A FILA (SINCRONIZADO) ==========
 const addToQueue = async (track) => {
-const trackData = {
-  id: String(track.id),
-  title: track.title,
-  artist: track.artist?.name || track.artist,
-  cover: track.album?.cover_medium || track.album?.cover || track.cover,
-  duration: track.duration,
-  explicit: track.explicit_lyrics || false,
-  deezerId: isLoggedIn.value ? null : String(track.id),
-  spotifyId: isLoggedIn.value ? String(track.id) : null,
-  preview: track.preview || null,  // ← só preview real
-  url: track.url || null,  // ← url genérica se houver
-  source: isLoggedIn.value ? 'spotify' : 'deezer',
-  needsSpotifySDK: isLoggedIn.value && !track.preview && !track.url
-}
+  const trackData = {
+    id: String(track.id),
+    title: track.title,
+    artist: track.artist?.name || track.artist,
+    cover: track.album?.cover_medium || track.album?.cover || track.cover,
+    duration: track.duration,
+    explicit: track.explicit_lyrics || false,
+    deezerId: String(track.id),
+    preview: track.preview
+  }
 
   // Envia para o backend
   try {
@@ -2045,19 +1817,9 @@ const syncRoomState = async () => {
     const data = await response.json()
 
     // Sincroniza musica atual
-if (data.currentTrack?.id && data.currentTrack.id !== currentTrack.value.id) {
-  const trackFromBackend = {
-    ...data.currentTrack,
-    // Não inventa spotifyUrl - usa só o que veio do backend
-    preview: data.currentTrack.preview || (data.currentTrack.deezerId 
-      ? `https://cdns-preview-1.dzcdn.net/api/1/1/${data.currentTrack.deezerId}/preview.mp3`
-      : null),
-    url: data.currentTrack.url || null,
-    needsSpotifySDK: data.currentTrack.needsSpotifySDK ?? 
-      (isLoggedIn.value && !data.currentTrack.preview && !data.currentTrack.url)
-  }
-  loadTrack(trackFromBackend)
-}
+    if (data.currentTrack?.id && data.currentTrack.id !== currentTrack.value.id) {
+      loadTrack(data.currentTrack)
+    }
 
     // Sincroniza estado de play/pause
     if (data.syncState && data.syncState.trackId === currentTrack.value.id) {
@@ -2139,7 +1901,7 @@ onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnloadHandler)
   checkAuth()
   await checkRoomAccess()
-  fetchChart()
+  fetchDeezerChart()
   saveRoomStateInterval = setInterval(saveRoomState, 5000)
   if (room.value.id) {
     sessionStorage.removeItem(`room_${room.value.id}_password`)
@@ -2149,10 +1911,8 @@ onMounted(async () => {
 const checkAuth = () => {
   const token = localStorage.getItem('token')
   const userRaw = localStorage.getItem('usuario') || localStorage.getItem('user')
-  
-  isLoggedIn.value = !!token  // ✅ PRIMEIRO seta isLoggedIn
-  
-  roomSource.value = isLoggedIn.value ? 'spotify' : 'deezer'
+
+  isLoggedIn.value = !!token
 
   if (token && userRaw) {
     try {
@@ -2181,17 +1941,9 @@ const applyRoomData = (data) => {
   roomSource.value = normalized.source || 'deezer'
   isRoomOwner.value = currentUser.value?.id && String(normalized.createdBy) === String(currentUser.value.id)
 
-if (normalized.currentTrack?.id) {
-  const trackWithPreview = {
-    ...normalized.currentTrack,
-    preview: normalized.currentTrack.preview || 
-      (normalized.currentTrack.deezerId
-        ? `https://cdns-preview-1.dzcdn.net/api/1/1/${normalized.currentTrack.deezerId}/preview.mp3`
-        : null),
-    url: normalized.currentTrack.url || null
+  if (normalized.currentTrack?.id) {
+    currentTrack.value = { ...currentTrack.value, ...normalized.currentTrack }
   }
-  loadTrack(trackWithPreview)
-}
 
   if (Array.isArray(normalized.queue)) {
     queue.value = normalized.queue
@@ -2651,13 +2403,7 @@ onUnmounted(() => {
 .kick-actions button { flex: 1; padding: 0.875rem; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
 .confirm-kick-btn { background: #ff6b6b; color: white; }
 .confirm-kick-btn:hover { background: #ff5252; transform: translateY(-1px); }
-.badge.spotify {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: #1DB954;
-  color: white;
-}
+
 @media (max-width: 1024px) {
   .room-layout { grid-template-columns: 1fr; }
   .room-sidebar { order: 2; }

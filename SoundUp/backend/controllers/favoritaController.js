@@ -32,7 +32,6 @@ const toggle = async (req, res) => {
     }
 
     // ========== BLOQUEIO DEEZER ==========
-    // Deezer NÃO permite favoritar (só Spotify e Local)
     const sourceNormalizado = source ? String(source).toLowerCase() : 'local'
     if (sourceNormalizado === 'deezer') {
       return res.status(403).json({ 
@@ -42,7 +41,6 @@ const toggle = async (req, res) => {
     }
 
     // ========== ITENS EXTERNOS (Spotify) ==========
-    // Qualquer source que não seja 'local' é tratado como externo
     const isExternal = sourceNormalizado !== 'local'
 
     if (isExternal) {
@@ -59,8 +57,6 @@ const toggle = async (req, res) => {
 
       const dadosEfetivos = dadosItem || dadosMusica
       
-      // Se ação for 'remover' e não tem dados, permite (vai tentar remover pelo ID)
-      // Se ação for 'toggle' ou 'favoritar' e não tem dados, erro
       if (!dadosEfetivos && acao !== 'remover') {
         return res.status(400).json({
           error: 'Dados do item obrigatórios para favoritar',
@@ -68,11 +64,17 @@ const toggle = async (req, res) => {
         })
       }
 
+      // ✅ Normaliza spotify_full para spotify
+      let sourceParaService = sourceNormalizado
+      if (sourceParaService === 'spotify_full') {
+        sourceParaService = 'spotify'
+      }
+
       try {
         const result = await favoritaService.toggleFavoritaExterna(
           usuarioId,
           String(id),
-          sourceNormalizado,
+          sourceParaService,  // ← USA O NORMALIZADO
           String(tipoEfetivo).toLowerCase(),
           dadosEfetivos || null,
           { acao: acao || 'toggle' }
@@ -143,7 +145,6 @@ const getMinhasFavoritas = async (req, res) => {
       return res.status(401).json({ error: 'Usuário não autenticado' })
     }
 
-    // Converte para ObjectId (igual no toggle)
     const userObjectId = mongoose.Types.ObjectId.isValid(usuarioId)
       ? new mongoose.Types.ObjectId(usuarioId)
       : usuarioId
@@ -164,7 +165,6 @@ const isFavorita = async (req, res) => {
   try {
     const usuarioId = req.user?.id || req.user?._id || req.user?.usuarioId
     
-    // Se não estiver logado, retorna false (não favoritado)
     if (!usuarioId) {
       return res.json({ 
         isFavorita: false,
@@ -188,17 +188,21 @@ const isFavorita = async (req, res) => {
 
     let isFav = false
 
-    // Itens externos (Spotify)
     if (sourceNormalizado !== 'local') {
+      // ✅ Normaliza spotify_full para spotify na verificação também
+      let sourceParaBusca = sourceNormalizado
+      if (sourceParaBusca === 'spotify_full') {
+        sourceParaBusca = 'spotify'
+      }
+
       const existing = await favoritaService.findFavoritaExterna(
         userObjectId,
         String(id),
-        sourceNormalizado,
+        sourceParaBusca,
         tipoNormalizado
       )
       isFav = !!existing
     } else {
-      // Itens locais
       const existing = await favoritaService.findFavoritaLocal(
         userObjectId,
         id,

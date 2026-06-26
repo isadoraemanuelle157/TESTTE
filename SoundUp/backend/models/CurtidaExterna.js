@@ -11,10 +11,10 @@ const CurtidaExternaSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  // Qual API: 'spotify' | 'deezer'
+  // Qual API: 'spotify' | 'deezer' | 'local' | 'spotify_full'
   source: {
     type: String,
-    enum: ['spotify', 'deezer', 'local'],
+    enum: ['spotify', 'deezer', 'local', 'spotify_full'],
     required: true
   },
   // Dados cacheados da música para exibição

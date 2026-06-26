@@ -21,19 +21,20 @@ const getMinhasCurtidas = async (req, res) => {
       createdAt: c.createdAt
     })).filter(m => m.id && m.nome)
 
-    // Formata curtidas externas
-    const musicasExternas = externas.map(c => ({
-      id: String(c.musicaId),  // <-- ID da API externa como string
-      nome: c.dadosMusica.titulo,
-      artist: c.dadosMusica.artista,
-      cover: c.dadosMusica.capa,
-      url: c.dadosMusica.previewUrl,
-      source: c.source,
-      duration: c.dadosMusica.duration,
-      ano: c.dadosMusica.ano,
-      album: c.dadosMusica.album,
-      createdAt: c.createdAt
-    }))
+   
+// Formata curtidas externas
+const musicasExternas = externas.map(c => ({
+  id: String(c.musicaId),
+  nome: c.dadosMusica?.titulo || 'Sem título',
+  artist: c.dadosMusica?.artista || 'Artista desconhecido',
+  cover: c.dadosMusica?.capa || '',
+  url: c.dadosMusica?.previewUrl || '',
+  source: c.source || 'spotify',
+  duration: c.dadosMusica?.duration || 30,
+  ano: c.dadosMusica?.ano || null,
+  album: c.dadosMusica?.album || '',
+  createdAt: c.createdAt
+})).filter(m => m.id && m.nome !== 'Sem título')
 
     // Junta tudo e ordena por data (mais recente primeiro)
     const todas = [...musicasLocais, ...musicasExternas]
@@ -188,17 +189,17 @@ const listarCurtidasPublicas = async (req, res) => {
       source: 'local'
     })).filter(m => m.id && m.nome)
 
-    const musicasExternas = externas.map(c => ({
-      id: String(c.musicaId),
-      nome: c.dadosMusica.titulo,
-      artist: c.dadosMusica.artista,
-      cover: c.dadosMusica.capa,
-      url: c.dadosMusica.previewUrl,
-      source: c.source,
-      duration: c.dadosMusica.duration,
-      ano: c.dadosMusica.ano,
-      album: c.dadosMusica.album
-    }))
+  const musicasExternas = externas.map(c => ({
+  id: String(c.musicaId),
+  nome: c.dadosMusica?.titulo || 'Sem título',
+  artist: c.dadosMusica?.artista || 'Artista desconhecido',
+  cover: c.dadosMusica?.capa || '',
+  url: c.dadosMusica?.previewUrl || '',
+  source: c.source || 'spotify',
+  duration: c.dadosMusica?.duration || 30,
+  ano: c.dadosMusica?.ano || null,
+  album: c.dadosMusica?.album || ''
+})).filter(m => m.id && m.nome !== 'Sem título')
 
     res.json([...musicasLocais, ...musicasExternas])
 

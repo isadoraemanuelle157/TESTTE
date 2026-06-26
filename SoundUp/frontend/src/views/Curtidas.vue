@@ -458,18 +458,21 @@ async carregarCurtidas() {
     const data = await res.json()
 
     this.musicas = data
-      .filter(c => c.source === 'spotify' || c.source === 'local')
-      .map(c => ({
-        id: c.id,
-        title: c.nome,
-        artist: c.artist || 'Artista desconhecido',
-        album: c.album || '',
-        cover: c.cover,
-        url: c.url,
-        source: c.source || 'local',
-        duration: c.duration || 180,
-        ano: c.ano || null
-      }))
+  .filter(c => {
+    const src = (c.source || '').toLowerCase()
+    return src.includes('spotify') || src === 'local' || src === 'deezer'
+  })
+     .map(c => ({
+  id: c.id,
+  title: c.nome,
+  artist: c.artist || 'Artista desconhecido',
+  album: c.album || '',
+  cover: c.cover,
+  url: c.url || c.previewUrl || c.preview_url || '',
+  source: c.source || 'local',  // mantém 'spotify_full' se for o caso
+  duration: c.duration || 180,
+  ano: c.ano || null
+}))
 
     // 🔥 NOVO: carregar estado (playlists + favoritada) de TODAS as músicas
     await this.carregarEstadosMusicas()
@@ -885,9 +888,12 @@ setDropdownTriggerRef(el, index) {
         // Remove do front imediatamente (UX mais fluida)
         this.musicas.splice(index, 1)
 
- const body = {
+const body = {
   source: musica.source || 'local'
 }
+
+// Se for spotify_full, normaliza para spotify no backend
+// OU mantém spotify_full se o backend aceita (já corrigimos os schemas)
 
 // 🔥 SE FOR EXTERNA → precisa mandar dadosMusica
 if (musica.source !== 'local') {
@@ -1029,18 +1035,20 @@ const res = await fetch(`http://localhost:3002/curtidas/${musica.id}`, {
       }, duration)
     },
 
-    playMusic(index) {
+        playMusic(index) {
       const musica = this.musicas[index]
       const playerSong = {
         id: musica.id,
         title: musica.title,
         artist: musica.artist,
         cover: musica.cover,
-        url: musica.url,
+        // 🔥 CORREÇÃO: Garante preview_url
+        url: musica.url || musica.previewUrl || musica.preview_url || '',
         duration: musica.duration || 30,
         source: musica.source,
         type: 'liked'
       }
+      // ... resto continua igual
   this.registrarHistorico(musica)
 
 window.dispatchEvent(new CustomEvent('play-song', {

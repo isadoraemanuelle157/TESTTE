@@ -86,6 +86,7 @@ function safeRequire(path) {
 // 📦 ROTAS
 // ============================================
 const { requireAuth, optionalAuth } = require('./middleware/auth')
+const spotifyAuth = require('./middleware/requireSpotifyAuth')
 const { spotifyRequest, isTokenValid } = require('./utils/spotifyRequest')
 const cache = require('./utils/cache')
 const { checkChatLimit } = require('./middleware/chatLimit')
@@ -447,6 +448,35 @@ app.get('/musicas/:id/audio', optionalAuth, async (req, res) => {
 
     res.status(500).json({
       error: 'Erro áudio'
+    })
+  }
+})
+// ============================================
+// 🔄 SPOTIFY TOKEN REFRESH (para o frontend renovar)
+// ============================================
+app.post('/spotify/refresh-token', requireAuth, async (req, res) => {
+  try {
+    const { refreshUserSpotifyToken } = require('./utils/spotifyRequest')
+    const Usuario = require('./models/Usuario')
+    
+    const user = await Usuario.findById(req.user.id || req.user._id)
+    if (!user || !user.spotifyRefreshToken) {
+      return res.status(403).json({ error: 'Spotify não conectado' })
+    }
+    
+    await refreshUserSpotifyToken(user)
+    
+    res.json({ 
+      success: true, 
+      access_token: user.spotifyAccessToken,
+      expires_in: Math.floor((user.spotifyTokenExpiresAt - Date.now()) / 1000)
+    })
+    
+  } catch (error) {
+    console.error('❌ Refresh token error:', error.message)
+    res.status(401).json({
+      error: 'TOKEN_REFRESH_FAILED',
+      message: 'Não foi possível renovar o token. Reconecte sua conta Spotify.'
     })
   }
 })

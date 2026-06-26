@@ -209,29 +209,32 @@ const addMusica = async (playlistId, musicaId, dadosMusica = null, source = 'loc
       ? Number(dadosMusica.duration) 
       : 30
 
-    // Verifica se a música externa já existe no banco
-    let musicaExterna = await MusicaExterna.findOne({ 
-      musicaId: musicaId, 
-      source: source 
-    })
-
-    // Se não existir, cria
-    if (!musicaExterna) {
-      musicaExterna = await MusicaExterna.create({
-        musicaId: musicaId,
-        source: source,
-        dadosMusica: {
-          titulo: dadosMusica.titulo,
-          artista: dadosMusica.artista,
-          capa: dadosMusica.capa || '',
-          previewUrl: dadosMusica.previewUrl || '',
-          duration: duration,
-          ano: dadosMusica.ano || null,
-          album: dadosMusica.album || ''
+       // Busca se já existe ou cria com upsert (nunca dá erro de duplicado)
+    const musicaExterna = await MusicaExterna.findOneAndUpdate(
+      { musicaId: musicaId, source: source },
+      {
+        $setOnInsert: {
+          musicaId: musicaId,
+          source: source
+        },
+        $set: {
+          dadosMusica: {
+            titulo: dadosMusica.titulo,
+            artista: dadosMusica.artista,
+            capa: dadosMusica.capa || '',
+            previewUrl: dadosMusica.previewUrl || '',
+            duration: duration,
+            ano: dadosMusica.ano || null,
+            album: dadosMusica.album || ''
+          }
         }
-      })
-    }
-
+      },
+      {
+        upsert: true,      // Cria se não existir
+        new: true,         // Retorna o documento atualizado/criado
+        runValidators: true
+      }
+    )
     // Adiciona à playlist (evita duplicatas)
     if (!playlist.musicasExternas.includes(musicaExterna._id)) {
       playlist.musicasExternas.push(musicaExterna._id)

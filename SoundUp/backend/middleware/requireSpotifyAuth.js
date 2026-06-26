@@ -82,4 +82,4 @@ module.exports = async function requireSpotifyAuth(req, res, next) {
     console.error('[SPOTIFY] Erro no middleware:', err)
     return res.status(500).json({ error: 'Erro interno ao verificar Spotify' })
   }
-} 
+}

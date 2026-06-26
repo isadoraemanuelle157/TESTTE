@@ -1,3 +1,4 @@
+
 <template>
   <div class="favoritas-page">
     <!-- Background Effects -->
@@ -501,19 +502,20 @@ async carregarFavoritas() {
   else if (f.albumExterno?.source) source = f.albumExterno.source
   else if (f.cantorExterno?.source) source = f.cantorExterno.source
   
-  // Só exibe Spotify e Local (não Deezer)
+  // Só exibe Spotify (inclui spotify_full) e Local (não Deezer)
   const sourceLower = String(source).toLowerCase()
-  return sourceLower === 'spotify' || sourceLower === 'local'
+  return sourceLower.includes('spotify') || sourceLower === 'local'
 })
 .map(f => {
-          // ========== MÚSICA EXTERNA ==========
+               // ========== MÚSICA EXTERNA ==========
           if (f.musicaExterna) {
             return {
               id: f.musicaExterna.id,
               title: f.musicaExterna.nome,
               subtitle: f.musicaExterna.artista,
               cover: f.musicaExterna.capa,
-              url: f.musicaExterna.previewUrl,
+              // 🔥 CORREÇÃO: Garante preview_url
+              url: f.musicaExterna.previewUrl || f.musicaExterna.preview_url || '',
               duration: f.musicaExterna.duration,
               source: f.musicaExterna.source,
               addedAt: f.createdAt,
@@ -521,7 +523,6 @@ async carregarFavoritas() {
               isExternal: true
             }
           }
-
           // ========== ÁLBUM EXTERNO ==========
           if (f.albumExterno) {
             return {
@@ -643,10 +644,13 @@ async remover(item) {
     }
 
     // 🔥 EXTERNO
-    if (item.isExternal && item.source) {
-      body.source = String(item.source).toLowerCase()
-      body.tipoItem = String(item.type).toLowerCase()
-    }
+ if (item.isExternal && item.source) {
+  let source = String(item.source).toLowerCase()
+  // Normaliza spotify_full para spotify se o backend precisar
+  if (source === 'spotify_full') source = 'spotify'
+  body.source = source
+  body.tipoItem = String(item.type).toLowerCase()
+}
 
     const res = await fetch(`http://localhost:3002/favoritas/${item.id}/favoritar`, {
       method: "POST",
@@ -683,19 +687,21 @@ async remover(item) {
   }
 },
 
-    play(item) {
+       play(item) {
       if (item.type !== "musica") return
-this.registrarHistorico(item)
+      this.registrarHistorico(item)
 
-window.dispatchEvent(new CustomEvent("play-song", {
+      window.dispatchEvent(new CustomEvent("play-song", {
         detail: {
           song: {
             id: item.id,
             title: item.title,
             artist: item.subtitle,
             cover: item.cover,
-            url: item.url,
-            duration: item.duration || 30
+            // 🔥 CORREÇÃO: Garante preview_url
+            url: item.url || item.previewUrl || item.preview_url || '',
+            duration: item.duration || 30,
+            source: item.source || 'spotify'
           },
           playlist: [item],
           index: 0
