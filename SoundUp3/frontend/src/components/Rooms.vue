@@ -710,11 +710,12 @@ watch(showJoinByLinkModal, (val) => {
 // API FUNCTIONS
 // ============================================
 const fetchAllRooms = async () => {
-  isLoading.value = true  // ✅ Sempre inicia como true
+  isLoading.value = true
   
   try {
-    const promises = [apiFetch('/api/rooms/todas')]
+   const promises = [apiFetch('/api/rooms/todas')]
 
+    // Se usuário estiver logado, busca também as salas dele (incluindo privadas)
     if (isLoggedIn.value) {
       promises.push(apiFetch('/api/rooms/my'))
     }
@@ -723,15 +724,18 @@ const fetchAllRooms = async () => {
     
     let apiRooms = []
     
+    // Salas públicas
     if (responses[0].ok) {
       const publicData = await responses[0].json()
       apiRooms = Array.isArray(publicData) ? publicData.map(normalizeRoom) : []
     }
 
+    // Salas do usuário (inclui privadas)
     if (isLoggedIn.value && responses[1]?.ok) {
       const myData = await responses[1].json()
       const myRooms = Array.isArray(myData) ? myData.map(normalizeRoom) : []
       
+      // Merge: adiciona as salas do usuário que ainda não estão na lista
       const existingIds = new Set(apiRooms.map(r => r.id || r._id))
       for (const room of myRooms) {
         const roomId = room.id || room._id
@@ -742,9 +746,11 @@ const fetchAllRooms = async () => {
       }
     }
 
+    // Fetch guest rooms from localStorage
     const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
     const normalizedGuestRooms = guestRooms.map(normalizeRoom)
 
+    // Combine and remove duplicates
     const all = [...apiRooms, ...normalizedGuestRooms]
     const seen = new Set()
     allRooms.value = all.filter(room => {
@@ -755,11 +761,12 @@ const fetchAllRooms = async () => {
     })
   } catch (error) {
     console.error('Erro ao buscar salas:', error)
-    allRooms.value = []  // ✅ Limpa em caso de erro
+    allRooms.value = []
   } finally {
-    isLoading.value = false  // ✅ SEMPRE desliga o loading, mesmo com erro!
+    isLoading.value = false
   }
 }
+
 // ============================================
 // NAVIGATION & ACTIONS
 // ============================================

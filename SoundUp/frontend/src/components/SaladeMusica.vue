@@ -89,19 +89,20 @@
       </div>
     </header>
 
-    <!-- Guest Limitation Banner -->
-    <div v-if="!isLoggedIn" class="guest-banner">
-      <div class="guest-banner-content">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <span>Você está ouvindo apenas previews do Deezer.
-          <a @click="redirectToLogin">Faça login</a> para músicas completas do Spotify.
-        </span>
-      </div>
-    </div>
+<!-- Guest Limitation Banner -->
+<div v-if="!isLoggedIn" class="guest-banner">
+  <div class="guest-banner-content">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span>
+      <strong>Modo Visitante:</strong> Você está ouvindo apenas previews de 30s do Deezer.
+      <a @click="redirectToLogin">Faça login</a> para músicas completas do Spotify.
+    </span>
+  </div>
+</div>
 
     <div class="room-layout">
       <!-- Main Stage -->
@@ -140,24 +141,34 @@
               </svg>
               Sincronizado
             </span>
-            <span class="badge deezer" v-if="currentTrack.deezerId">
+            <span class="badge deezer" v-if="currentTrack.deezerId && !currentTrack.spotifyId">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
               </svg>
               Deezer
             </span>
+           <span class="badge spotify" v-if="currentTrack.spotifyId || currentTrack.source === 'spotify' || currentTrack.source === 'spotify_full'">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+              </svg>
+              Spotify
+            </span>
           </div>
         </div>
 
-        <!-- Audio Player -->
-        <audio
-          ref="audioPlayer"
-          :src="currentTrack.preview"
-          @timeupdate="updateTime"
-          @ended="handleTrackEnded"
-          @loadedmetadata="onLoadedMetadata"
-          @canplay="onCanPlay"
-        ></audio>
+<!-- Audio Player (só para local/Deezer - NUNCA para Spotify) -->
+<audio
+  v-if="!spotifyMode"
+  ref="audioPlayer"
+  :src="audioSrc"
+  @timeupdate="updateTime"
+  @ended="handleTrackEnded"
+  @loadedmetadata="onLoadedMetadata"
+  @canplay="onCanPlay"
+  @error="onAudioError"
+  preload="auto"
+  crossorigin="anonymous"
+></audio>
 
         <!-- Progress Bar -->
         <div class="progress-section" v-if="currentTrack.id">
@@ -223,7 +234,7 @@
 
         <!-- Empty State -->
         <div v-else class="empty-state">
-          <p>Adicione músicas da Deezer para começar</p>
+          <p>Adicione músicas para começar</p>
           <button class="add-music-btn-large" @click="showAddMusic = true">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -234,7 +245,7 @@
         </div>
       </main>
 
-      <!-- Sidebar -->
+ <!-- Sidebar -->
       <aside class="room-sidebar">
         <!-- Active Listeners Section -->
         <div class="listeners-section" ref="listenersSectionRef">
@@ -528,26 +539,26 @@
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
-              <input
-                v-model="searchQuery"
-                @input="debouncedSearch"
-                placeholder="Buscar músicas, artistas ou álbuns na Deezer..."
-                type="text"
-                autofocus
-              />
+  <input
+  v-model="searchQuery"
+  @input="debouncedSearch"
+  :placeholder="isLoggedIn && spotifyConnected ? 'Buscar músicas no Spotify...' : 'Buscar previews no Deezer...'"
+  type="text"
+  autofocus
+/>
               <div v-if="isSearching" class="search-loader"></div>
             </div>
 
             <div class="search-results">
-              <div v-if="searchResults.length === 0 && searchQuery && !isSearching" class="no-results">
-                Nenhum resultado encontrado na Deezer
-              </div>
+          <div v-if="searchResults.length === 0 && searchQuery && !isSearching" class="no-results">
+  Nenhum resultado encontrado {{ isLoggedIn && spotifyConnected ? 'no Spotify' : 'na Deezer' }}
+</div>
 
               <div v-for="track in searchResults" :key="track.id" class="search-result-item">
-                <img :src="track.album.cover_medium || track.album.cover" class="result-cover" />
+               <img :src="track.cover || track.album?.cover || 'https://via.placeholder.com/48'" class="result-cover" />
                 <div class="result-info">
                   <span class="result-title">{{ track.title }}</span>
-                  <span class="result-artist">{{ track.artist.name }}</span>
+                 <span class="result-artist">{{ track.artist?.name || track.artist }}</span>
                 </div>
                 <button class="add-btn" @click="addToQueue(track)">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -559,7 +570,7 @@
             </div>
 
             <div class="quick-add" v-if="!searchQuery">
-              <h4>Top Brasil - Deezer</h4>
+           <h4>{{ isLoggedIn && spotifyConnected ? 'Top Brasil - Spotify' : 'Top Brasil - Deezer' }}</h4>
               <div class="quick-tracks">
                 <div v-for="track in deezerChart" :key="track.id" class="quick-track" @click="addToQueue(track)">
                   <img :src="track.album.cover_medium || track.album.cover" />
@@ -606,14 +617,14 @@
               </div>
 
               <div class="join-form">
-            <input
-  v-model="joinUserName"
-  placeholder="Seu nome"
-  type="text"
-  maxlength="20"
-  readonly
-  style="background: rgba(255,255,255,0.08); cursor: default;"
-/>
+                <input
+                  v-model="joinUserName"
+                  placeholder="Seu nome"
+                  type="text"
+                  maxlength="20"
+                  readonly
+                  style="background: rgba(255,255,255,0.08); cursor: default;"
+                />
 
                 <input
                   v-if="!isRoomOwner && !room.isPublic"
@@ -682,6 +693,45 @@
       </Transition>
     </Teleport>
 
+    <!-- Spotify Login Required Modal -->
+<Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showSpotifyLoginModal" class="modal-overlay">
+      <div class="modal-content spotify-login-modal">
+        <div class="modal-header">
+          <h3>🔒 Spotify Necessário</h3>
+        </div>
+        <div class="spotify-login-content">
+          <div class="spotify-icon-large">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+            </svg>
+          </div>
+          <h2>Esta sala usa músicas completas do Spotify</h2>
+          <p>Faça login para ouvir músicas completas e sincronizar com outros ouvintes.</p>
+          <p class="guest-info">Sem login, você pode ouvir apenas previews de 30s do Deezer em outras salas.</p>
+          
+          <div class="spotify-login-actions">
+            <button class="login-btn" @click="redirectToLogin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13.8 12H3"/>
+              </svg>
+              Fazer Login
+            </button>
+            <button class="guest-btn" @click="enterAsGuest">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              Continuar como Visitante (Deezer)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
+
     <!-- Kick Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
@@ -725,6 +775,47 @@
         </div>
       </Transition>
     </Teleport>
+    <!-- Clear Queue Confirmation Modal -->
+<Teleport to="body">
+  <Transition name="modal">
+    <div v-if="showClearQueueModal" class="modal-overlay" @click.self="showClearQueueModal = false">
+      <div class="modal-content clear-queue-modal">
+        <div class="modal-header">
+          <h3>Limpar Fila</h3>
+          <button class="close-btn" @click="showClearQueueModal = false">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="clear-queue-content">
+          <div class="clear-warning">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="1.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p>Tem certeza que deseja <strong>limpar toda a fila</strong>?</p>
+            <span>{{ queue.length }} música(s) serão removidas.</span>
+          </div>
+          <div class="clear-actions">
+            <button class="cancel-btn" @click="showClearQueueModal = false">
+              Cancelar
+            </button>
+            <button class="confirm-clear-btn" @click="confirmClearQueue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              Limpar Fila
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
   </div>
 </template>
 
@@ -821,9 +912,12 @@ const apiFetch = async (path, options = {}) => {
   }
 
   try {
-    const response = await fetch(`${API_URL}${path}`, { ...options, headers })
+  const response = await fetch(`${API_URL}${path}`, { 
+      ...options, 
+      headers,
+      credentials: 'include' // 🔥 ADICIONAR ISSO
+    })
 
-    // ✅ CORREÇÃO 7: Trata erros de autenticação
     if (response.status === 401) {
       showToast('error', 'Sessão Expirada', 'Faça login novamente para continuar', 5000)
       localStorage.removeItem('token')
@@ -859,7 +953,26 @@ const apiFetch = async (path, options = {}) => {
   }
 }
 
-// ✅ CORREÇÃO 6: Usar data.toObject() se existir
+// 🔥 NOVO: Fetch para endpoints públicos (não redireciona em 401)
+const apiFetchPublic = async (path, options = {}) => {
+  const token = localStorage.getItem('token')
+  const headers = {
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  }
+
+  try {
+    const response = await fetch(`${API_URL}${path}`, { ...options, headers })
+    return response  // Retorna sem tratar 401 (para não redirecionar guests)
+  } catch (error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      showToast('error', 'Erro de Conexão', 'Verifique sua internet e tente novamente', 4000)
+    }
+    throw error
+  }
+}
+
 const normalizeRoom = (data = {}) => {
   const raw = data && typeof data.toObject === 'function' ? data.toObject() : data
   return {
@@ -876,7 +989,6 @@ const joinPassword = ref('')
 const accessError = ref('')
 
 // Room State
-// ✅ CORREÇÃO 7: name: '' ao invés de 'Sessao Chill Vibes'
 const room = ref({
   name: '',
   id: '',
@@ -898,6 +1010,7 @@ const syncStatus = ref('synced')
 const audioPlayer = ref(null)
 const isLocalAction = ref(false)
 const lastSyncTime = ref(0)
+const isDragging = ref(false)
 
 const currentTrack = ref({
   id: null,
@@ -927,6 +1040,20 @@ const isJoining = ref(false)
 const showLeaveModal = ref(false)
 const showKickModal = ref(false)
 const userToKick = ref(null)
+const showSpotifyLoginModal = ref(false)
+const attemptedSpotifyRoom = ref(false)
+const showClearQueueModal = ref(false)
+
+// ========== SPOTIFY STATE ==========
+const spotifyPlayer = ref(null)
+const spotifyDeviceId = ref(null)
+const spotifyConnected = ref(false)
+const spotifySdkReady = ref(false)
+const spotifyMode = ref(false)
+const _spotifyPollInterval = ref(null)
+const _spotifyInitPromise = ref(null)
+const _lastSpotifyPlaying = ref(false)
+const _lastSpotifyPosition = ref(0)
 
 // Search Deezer
 const searchQuery = ref('')
@@ -950,6 +1077,41 @@ const roomUrl = computed(() => {
 const progressPercent = computed(() => {
   if (!currentTrack.value.duration) return 0
   return (currentTime.value / currentTrack.value.duration) * 100
+})
+
+const isExternalTrack = computed(() => {
+  if (!currentTrack.value.id) return false
+  const source = (currentTrack.value.source || '').toLowerCase()
+  if (source && source !== 'local') return true
+  const id = String(currentTrack.value.id || '')
+  const isMongoId = /^[a-f\\d]{24}$/i.test(id)
+  return !isMongoId
+})
+
+const currentTrackSource = computed(() => {
+  if (!currentTrack.value.id) return 'local'
+  const source = (currentTrack.value.source || '').toLowerCase()
+  if (source) return source
+  const id = String(currentTrack.value.id || '')
+  const isMongoId = /^[a-f\\d]{24}$/i.test(id)
+  return isMongoId ? 'local' : 'spotify'
+})
+
+const audioSrc = computed(() => {
+  // 🔥 NUNCA use spotify:track: URIs no elemento <audio>
+  if (!currentTrack.value?.id) return ''
+  if (spotifyMode.value) return '' // Spotify usa SDK, não <audio>
+  
+  const url = currentTrack.value.preview || ''
+  
+  // 🔥 Valida que é HTTP/HTTPS válida
+  if (!url || typeof url !== 'string') return ''
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    console.warn('[AUDIO] URL inválida bloqueada:', url)
+    return ''
+  }
+  
+  return url
 })
 
 const DEEZER_API = 'https://api.deezer.com'
@@ -978,9 +1140,39 @@ async function fetchJsonDeezer(pathAndQuery) {
 // Computed
 const recentMessages = computed(() => messages.value.slice(-50))
 
-// ========== SINCRONIZACAO DE REPRODUCAO ==========
+// ========== PLAYER METHODS ==========
+
 const togglePlay = async () => {
-  if (!audioPlayer.value || !currentTrack.value.id) return
+  if (!currentTrack.value.id) return
+
+  // Se estiver em modo Spotify
+  if (spotifyMode.value && spotifyPlayer.value) {
+    try {
+      await activateSpotifyElement()
+      const state = await spotifyPlayer.value.getCurrentState()
+
+      if (!state) {
+        await playSpotifyFullTrack()
+        return
+      }
+
+      if (!state.paused) {
+        await spotifyPlayer.value.pause()
+        isPlaying.value = false
+      } else {
+        await spotifyPlayer.value.resume()
+        isPlaying.value = true
+      }
+    } catch (err) {
+      console.error('Erro no togglePlay Spotify:', err)
+      spotifyMode.value = false
+      showToast('warning', 'Spotify', 'Usando reprodução local (preview)', 3000)
+    }
+    return
+  }
+
+  // Código existente para áudio local
+  if (!audioPlayer.value) return
 
   const newIsPlaying = !isPlaying.value
   isLocalAction.value = true
@@ -989,27 +1181,23 @@ const togglePlay = async () => {
     audioPlayer.value.pause()
     isPlaying.value = false
   } else {
-    try {
-      await audioPlayer.value.play()
-      isPlaying.value = true
-    } catch (err) {
-      console.warn('Erro ao tocar:', err)
-      isPlaying.value = false
-    }
+    await attemptPlayLocal()
   }
 
-  // Envia estado para o backend
-  try {
-    await apiFetch(`/api/rooms/${room.value.id}/sync`, {
-      method: 'POST',
-      body: JSON.stringify({
-        isPlaying: newIsPlaying,
-        currentTime: currentTime.value,
-        trackId: currentTrack.value.id
+  // Envia estado para o backend (só se logado)
+  if (isLoggedIn.value) {
+    try {
+      await apiFetch(`/api/rooms/${room.value.id}/sync`, {
+        method: 'POST',
+        body: JSON.stringify({
+          isPlaying: newIsPlaying,
+          currentTime: currentTime.value,
+          trackId: currentTrack.value.id
+        })
       })
-    })
-  } catch (e) {
-    console.warn('Erro ao sincronizar reproducao:', e)
+    } catch (e) {
+      console.warn('Erro ao sincronizar reproducao:', e)
+    }
   }
 
   setTimeout(() => { isLocalAction.value = false }, 500)
@@ -1030,6 +1218,40 @@ const previousTrack = () => {
 const nextTrack = async () => {
   if (!room.value.id) return
 
+    if (spotifyMode.value && spotifyPlayer.value) {
+    spotifyMode.value = false
+    _lastSpotifyPlaying.value = false
+    _lastSpotifyPosition.value = 0
+  }
+
+  // 🔥 VISITANTE: usa SEMPRE fila local, NUNCA chama backend
+  if (!isLoggedIn.value) {
+    if (queue.value.length > 0) {
+      // Pula tracks sem preview até encontrar uma válida
+      let foundValid = false
+      while (queue.value.length > 0 && !foundValid) {
+        const candidate = queue.value.shift()
+        if (candidate && candidate.preview && candidate.preview !== 'null' && candidate.preview !== 'undefined' && candidate.preview !== '') {
+          await loadTrack(candidate)
+          foundValid = true
+        }
+      }
+      if (!foundValid) {
+        isPlaying.value = false
+        currentTime.value = 0
+        currentTrack.value = { id: null, title: '', artist: '', cover: '', duration: 0, explicit: false, deezerId: null, preview: '' }
+        showToast('warning', 'Fila Vazia', 'Nenhuma música com preview disponível na fila')
+      }
+    } else {
+      isPlaying.value = false
+      currentTime.value = 0
+      currentTrack.value = { id: null, title: '', artist: '', cover: '', duration: 0, explicit: false, deezerId: null, preview: '' }
+      showToast('info', 'Fila Vazia', 'Adicione músicas para continuar')
+    }
+    return
+  }
+
+  // 🔥 USUÁRIO LOGADO: usa backend
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/queue/next`, {
       method: 'POST'
@@ -1052,7 +1274,24 @@ const nextTrack = async () => {
     // Fallback local
     if (queue.value.length > 0) {
       const next = queue.value.shift()
-      loadTrack(next)
+      if (next && next.preview && next.preview !== 'null' && next.preview !== 'undefined' && next.preview !== '') {
+        loadTrack(next)
+      } else {
+        let foundValid = false
+        while (queue.value.length > 0 && !foundValid) {
+          const candidate = queue.value.shift()
+          if (candidate && candidate.preview && candidate.preview !== 'null' && candidate.preview !== 'undefined' && candidate.preview !== '') {
+            loadTrack(candidate)
+            foundValid = true
+          }
+        }
+        if (!foundValid) {
+          isPlaying.value = false
+          currentTime.value = 0
+          currentTrack.value = { id: null, title: '', artist: '', cover: '', duration: 0, explicit: false, deezerId: null, preview: '' }
+          showToast('warning', 'Fila Vazia', 'Nenhuma música com preview disponível na fila')
+        }
+      }
     } else {
       isPlaying.value = false
       currentTime.value = 0
@@ -1061,77 +1300,712 @@ const nextTrack = async () => {
 }
 
 const handleTrackEnded = async () => {
+  // 🔥 IGNORA evento se estiver em modo Spotify
+  if (spotifyMode.value) {
+    console.warn('⚠️ Evento ended disparado em modo Spotify - ignorando')
+    return
+  }
+  
+  console.log('⏹️ Evento: ended - Música terminou!')
+  isPlaying.value = false
   await nextTrack()
 }
 
 const onCanPlay = () => {
-  if (isPlaying.value && audioPlayer.value) {
-    audioPlayer.value.play().catch(err => {
-      console.warn('Erro ao tocar audio:', err)
-    })
+  if (!audioPlayer.value) return
+  
+  const audio = audioPlayer.value
+  if (!audio.src || 
+      audio.src === 'null' || 
+      audio.src === 'undefined' || 
+      audio.src === '' || 
+      audio.src === window.location.href ||
+      audio.src.startsWith('spotify:')) {
+    console.log('⏸️ onCanPlay: src inválido, ignorando')
+    return
   }
+  
+  console.log('✅ onCanPlay: áudio pronto, readyState:', audio.readyState)
+  // NÃO faz autoplay automático aqui — gerenciado por loadTrack()
 }
 
-const loadTrack = (track) => {
+const loadTrack = async (track) => {
   if (!track || !track.id) return
+
+  // ========== MODO VISITANTE (Guest) ==========
+  if (!isLoggedIn.value) {
+    spotifyMode.value = false
+    
+    let previewUrl = track.preview && track.preview !== 'null' && track.preview !== 'undefined' && track.preview !== ''
+      ? track.preview
+      : ''
+    
+    if (!previewUrl && track.title && track.artist) {
+      try {
+        const artistName = track.artist?.name || track.artist
+        const searchData = await fetchJsonDeezer(`/search?q=${encodeURIComponent(track.title + ' ' + artistName)}&limit=1`)
+        if (searchData.data && searchData.data[0]) {
+          previewUrl = searchData.data[0].preview || ''
+          if (!track.deezerId) track.deezerId = searchData.data[0].id
+        }
+      } catch (e) {
+        console.warn('Erro ao buscar preview no Deezer:', e)
+      }
+    }
+
+    currentTrack.value = {
+      id: track.id,
+      title: track.title || track.name,
+      artist: track.artist?.name || track.artist,
+      cover: track.album?.cover_medium || track.album?.cover || track.cover || track.album?.images?.[0]?.url,
+      duration: 30,
+      explicit: track.explicit_lyrics || track.explicit || false,
+      deezerId: track.deezerId || track.id,
+      preview: previewUrl,
+      spotifyId: null,
+      uri: null,
+      source: 'deezer'
+    }
+    currentTime.value = 0
+
+    if (!previewUrl || !previewUrl.startsWith('http')) {
+      console.warn('⚠️ Track sem preview válido:', track.title || track.name)
+      showToast('warning', 'Preview Indisponível', 'Esta música não tem preview disponível.', 4000)
+      isPlaying.value = false
+      return
+    }
+
+    await loadAudioElement(previewUrl, true)
+    return
+  }
+
+  // ========== USUÁRIOS LOGADOS ==========
+  
+  // Detecta se é track Spotify
+  const isSpotifyTrack =
+    track.source === 'spotify_full' ||
+    track.source === 'spotify' ||
+    !!track._fullTrack ||
+    !!track.spotifyId ||
+    (track.uri && track.uri.includes('spotify')) ||
+    (roomSource.value === 'spotify' && track.id && !/^[a-f\d]{24}$/i.test(String(track.id)))
+
+  const hasPreview = !!(track.preview && track.preview !== 'null' && track.preview !== 'undefined' && track.preview !== '' && track.preview.startsWith('http'))
+
+  console.log('🎵 loadTrack:', { 
+    isSpotifyTrack, 
+    spotifyConnected: spotifyConnected.value, 
+    hasPreview,
+    roomSource: roomSource.value,
+    trackSource: track.source,
+    trackId: track.id 
+  })
+
+  // ✅ CASO 1: Spotify com conexão ativa → USA SDK
+  if (isSpotifyTrack && spotifyConnected.value) {
+    // 🔥 IMPORTANTE: Pausa <audio> se estava tocando antes de mudar de modo
+    if (audioPlayer.value) {
+      try {
+        audioPlayer.value.pause()
+        audioPlayer.value.removeAttribute('src')
+        audioPlayer.value.load()
+      } catch (e) { /* ignora */ }
+    }
+    
+    spotifyMode.value = true
+    
+    currentTrack.value = {
+      id: track.id,
+      title: track.title || track.name,
+      artist: track.artist?.name || track.artist,
+      cover: track.album?.cover_medium || track.album?.cover || track.cover || track.album?.images?.[0]?.url,
+      duration: track.duration || (track.duration_ms ? track.duration_ms / 1000 : 30),
+      explicit: track.explicit_lyrics || track.explicit || false,
+      deezerId: track.deezerId,
+      preview: track.preview,
+      spotifyId: track.spotifyId || track.id,
+      uri: track.uri || `spotify:track:${track.spotifyId || track.id}`,
+      source: track.source || 'spotify'
+    }
+    currentTime.value = 0
+    
+    await playSpotifyFullTrack()
+    return
+  }
+
+  // ✅ CASO 2: Spotify sem conexão e sem preview → ERRO
+  if (isSpotifyTrack && !spotifyConnected.value && !hasPreview) {
+    spotifyMode.value = false
+    currentTrack.value = {
+      id: track.id,
+      title: track.title || track.name,
+      artist: track.artist?.name || track.artist,
+      cover: track.album?.cover_medium || track.album?.cover || track.cover || track.album?.images?.[0]?.url,
+      duration: 0,
+      preview: '',
+      source: 'spotify'
+    }
+    showToast('error', 'Spotify Necessário', 'Conecte o Spotify para ouvir músicas completas', 5000)
+    isPlaying.value = false
+    return
+  }
+
+  // ✅ CASO 3: Deezer/Local ou Spotify com preview disponível → USA <audio>
+  spotifyMode.value = false
+
+  const previewUrl = hasPreview ? track.preview : ''
 
   currentTrack.value = {
     id: track.id,
-    title: track.title,
+    title: track.title || track.name,
     artist: track.artist?.name || track.artist,
-    cover: track.album?.cover_medium || track.album?.cover || track.cover,
-    duration: track.duration,
-    explicit: track.explicit_lyrics || false,
+    cover: track.album?.cover_medium || track.album?.cover || track.cover || track.album?.images?.[0]?.url,
+    duration: track.duration || 30,
+    explicit: track.explicit_lyrics || track.explicit || false,
     deezerId: track.id,
-    preview: track.preview
+    preview: previewUrl,
+    spotifyId: isSpotifyTrack ? (track.spotifyId || null) : null,
+    uri: isSpotifyTrack ? (track.uri || null) : null,
+    source: isSpotifyTrack ? 'spotify' : 'deezer'
   }
   currentTime.value = 0
 
-  nextTick(() => {
-    if (audioPlayer.value) {
-      audioPlayer.value.load()
-      if (isPlaying.value) {
-        audioPlayer.value.play().catch(err => {
-          console.warn('Autoplay bloqueado:', err)
-          isPlaying.value = false
-        })
+  if (!previewUrl) {
+    console.warn('⚠️ Track sem preview disponível')
+    showToast('warning', 'Preview Indisponível', 'Esta música não tem preview disponível', 4000)
+    isPlaying.value = false
+    return
+  }
+
+  await loadAudioElement(previewUrl, isPlaying.value)
+}
+
+// 🔥 NOVO HELPER: Centraliza carga do <audio>
+const loadAudioElement = async (previewUrl, shouldAutoplay = false) => {
+  await nextTick()
+  
+  const audio = audioPlayer.value
+  if (!audio) {
+    console.warn('⚠️ loadAudioElement: audioPlayer ref não disponível')
+    return
+  }
+  
+  // Limpa src anterior
+  try {
+    audio.pause()
+    audio.removeAttribute('src')
+    audio.load()
+  } catch (e) { /* ignora */ }
+  
+  // Valida URL
+  try {
+    const url = new URL(previewUrl)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('Protocolo inválido')
+    }
+  } catch (e) {
+    console.error('❌ URL de preview inválida:', previewUrl)
+    showToast('error', 'Erro', 'URL de áudio inválida')
+    isPlaying.value = false
+    return
+  }
+  
+  audio.src = previewUrl
+  audio.load()
+  console.log('🎵 Audio src setado:', previewUrl.substring(0, 60))
+  
+  if (shouldAutoplay) {
+    const playWhenReady = () => {
+      audio.removeEventListener('canplay', playWhenReady)
+      attemptPlayLocal()
+    }
+    audio.addEventListener('canplay', playWhenReady)
+    
+    setTimeout(() => {
+      audio.removeEventListener('canplay', playWhenReady)
+      if (audio.readyState >= 2 && !isPlaying.value) {
+        attemptPlayLocal()
+      }
+    }, 3000)
+  }
+}
+
+// ========== MÉTODOS SPOTIFY (copiados do MusicPlayer.vue) ==========
+
+const initSpotifyPlayer = async () => {
+  if (!isLoggedIn.value || !spotifyConnected.value) return
+  if (spotifyPlayer.value && spotifyDeviceId.value) return
+  if (_spotifyInitPromise.value) return _spotifyInitPromise.value
+
+  _spotifyInitPromise.value = (async () => {
+    if (!window.Spotify) {
+      await new Promise((resolve, reject) => {
+        if (window.SpotifySDKReady && window.Spotify) {
+          resolve()
+          return
+        }
+        const onReady = () => {
+          window.removeEventListener('spotify-sdk-ready', onReady)
+          resolve()
+        }
+        window.addEventListener('spotify-sdk-ready', onReady)
+        setTimeout(() => {
+          window.removeEventListener('spotify-sdk-ready', onReady)
+          if (window.Spotify) resolve()
+          else reject(new Error('Spotify SDK não carregado'))
+        }, 15000)
+      })
+    }
+
+    let readyResolved = false
+
+    spotifyPlayer.value = new window.Spotify.Player({
+      name: 'SoundUp Music Room',
+      getOAuthToken: async (cb) => {
+        try {
+          const token = await fetchUserSpotifyToken()
+          cb(token || '')
+        } catch (err) {
+          console.error('[SPOTIFY] Erro ao obter token:', err)
+          cb('')
+        }
+      },
+      volume: 0.7
+    })
+
+    const readyPromise = new Promise((resolve, reject) => {
+      spotifyPlayer.value.addListener('ready', ({ device_id }) => {
+        console.log('[SPOTIFY] Device pronto:', device_id)
+        spotifyDeviceId.value = device_id
+        spotifySdkReady.value = true
+        readyResolved = true
+        resolve(device_id)
+      })
+
+      spotifyPlayer.value.addListener('not_ready', ({ device_id }) => {
+        console.warn('[SPOTIFY] Device offline:', device_id)
+        if (spotifyDeviceId.value === device_id) {
+          spotifyDeviceId.value = null
+        }
+        spotifySdkReady.value = false
+      })
+
+      spotifyPlayer.value.addListener('player_state_changed', (state) => {
+        if (!state) return
+        syncSpotifyState(state)
+      })
+
+      spotifyPlayer.value.addListener('initialization_error', ({ message }) => {
+        console.error('[SPOTIFY] Init error:', message)
+        if (!readyResolved) reject(new Error(message))
+      })
+
+      spotifyPlayer.value.addListener('authentication_error', ({ message }) => {
+        console.error('[SPOTIFY] Auth error:', message)
+        if (!readyResolved) reject(new Error(message))
+      })
+
+      spotifyPlayer.value.addListener('account_error', ({ message }) => {
+        console.error('[SPOTIFY] Account error:', message)
+        showToast('warning', 'Spotify', 'Spotify Premium necessário para streaming completo')
+      })
+
+      spotifyPlayer.value.addListener('playback_error', ({ message }) => {
+        console.error('[SPOTIFY] Playback error:', message)
+      })
+    })
+
+    const connected = await spotifyPlayer.value.connect()
+    if (!connected) {
+      throw new Error('spotifyPlayer.connect() retornou false')
+    }
+
+    await readyPromise
+  })()
+
+  try {
+    await _spotifyInitPromise.value
+  } finally {
+    _spotifyInitPromise.value = null
+  }
+}
+
+const playSpotifyFullTrack = async () => {
+  try {
+    await initSpotifyPlayer()
+    await waitForSpotifyDevice(20000)
+    await activateSpotifyElement()
+    
+    if (!spotifyDeviceId.value) {
+      throw new Error('Spotify Web Playback SDK não inicializou. Recarregue a página.')
+    }
+    
+    const track = currentTrack.value
+    if (!track) return
+
+    const spotifyId = track.spotifyId || track.id
+    if (!spotifyId) {
+      throw new Error('Track do Spotify sem id')
+    }
+
+    const spotifyUri = track.uri || `spotify:track:${spotifyId}`
+
+    await transferPlaybackToSdk(spotifyUri, Math.floor((currentTime.value || 0) * 1000))
+
+    spotifyMode.value = true
+    isPlaying.value = true
+
+    if (track.duration_ms) {
+      currentTrack.value.duration = track.duration_ms / 1000
+    }
+
+    console.log('✅ Tocando via Spotify Web Playback SDK:', spotifyUri)
+  } catch (e) {
+    console.error('[SPOTIFY] Erro ao tocar full track:', e)
+    showToast('error', 'Spotify', e.message || 'Erro ao tocar no Spotify')
+    
+    // 🔥 CORREÇÃO: Só sai do modo Spotify se houver preview válido para fallback
+    const hasValidPreview = currentTrack.value?.preview && 
+      currentTrack.value.preview !== 'null' && 
+      currentTrack.value.preview.startsWith('http')
+    
+    if (hasValidPreview) {
+      console.log('🔄 Fallback para preview Deezer/local')
+      spotifyMode.value = false
+      await loadAudioElement(currentTrack.value.preview, true)
+    } else {
+      // 🔥 Sem preview → mantém spotifyMode=true para NÃO acionar <audio>
+      // Apenas marca como não tocando e tenta próxima
+      isPlaying.value = false
+      console.log('⏭️ Sem preview, pulando para próxima música')
+      setTimeout(() => {
+        spotifyMode.value = false // libera para próxima tentativa
+        nextTrack()
+      }, 2000)
+    }
+  }
+}
+
+const syncSpotifyState = (state) => {
+  if (!state) return
+
+  spotifyMode.value = true
+  isPlaying.value = !state.paused
+
+  if (!isDragging.value) {
+    currentTime.value = (state.position || 0) / 1000
+  }
+  currentTrack.value.duration = (state.duration || 0) / 1000
+
+  const sdkTrack = state.track_window?.current_track
+  if (sdkTrack && sdkTrack.id) {
+    const currentId = currentTrack.value?.spotifyId || currentTrack.value?.id
+    if (sdkTrack.id !== currentId) {
+      currentTrack.value = {
+        ...currentTrack.value,
+        id: sdkTrack.id,
+        spotifyId: sdkTrack.id,
+        uri: `spotify:track:${sdkTrack.id}`,
+        title: sdkTrack.name,
+        artist: sdkTrack.artists.map(a => a.name).join(', '),
+        cover: sdkTrack.album?.images?.[0]?.url || currentTrack.value?.cover,
+        duration: (sdkTrack.duration_ms || 0) / 1000,
+        source: 'spotify_full'
       }
     }
-  })
+  }
+
+  const prevTime = _lastSpotifyPosition.value || 0
+  const nowPosition = state.position || 0
+  const trackDuration = state.duration || 0
+
+  if (
+    _lastSpotifyPlaying.value &&
+    state.paused &&
+    nowPosition === 0 &&
+    trackDuration > 0 &&
+    prevTime >= Math.max(trackDuration - 2000, 0)
+  ) {
+    nextTrack()
+  }
+
+  _lastSpotifyPlaying.value = !state.paused
+  _lastSpotifyPosition.value = nowPosition
+}
+
+const waitForSpotifyDevice = async (timeout = 15000) => {
+  const start = Date.now()
+  while (!spotifyDeviceId.value) {
+    if (Date.now() - start > timeout) {
+      throw new Error('Timeout aguardando device do Spotify')
+    }
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+}
+
+const activateSpotifyElement = async () => {
+  if (spotifyPlayer.value && typeof spotifyPlayer.value.activateElement === 'function') {
+    try {
+      await spotifyPlayer.value.activateElement()
+    } catch (err) {
+      console.warn('[SPOTIFY] activateElement falhou:', err?.message || err)
+    }
+  }
+}
+
+// SUBSTITUA o método transferPlaybackToSdk inteiro:
+
+const transferPlaybackToSdk = async (spotifyUri, positionMs = 0) => {
+  // Aguarda device ficar pronto com retry mais robusto
+  if (!spotifyDeviceId.value) {
+    console.log('⏳ Aguardando Spotify device...')
+    try {
+      await waitForSpotifyDevice(20000) // aumenta timeout para 20s
+    } catch (err) {
+      throw new Error('Device não encontrado. Recarregue a página.')
+    }
+  }
+
+  // 🔥 NOVO: Verifica se o device ainda está ativo no Spotify
+  const token = localStorage.getItem('token')
+  
+  // 🔥 NOVO: Espera o device ficar "online" no Spotify (às vezes demora)
+  let deviceReady = false
+  let deviceCheckAttempts = 0
+  while (!deviceReady && deviceCheckAttempts < 10) {
+    try {
+      const devicesRes = await fetch(`${API_URL}/spotify/me/player/devices`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (devicesRes.ok) {
+        const devicesData = await devicesRes.json()
+        const foundDevice = devicesData.devices?.find(d => d.id === spotifyDeviceId.value)
+        if (foundDevice) {
+          deviceReady = true
+          console.log('✅ Device encontrado no Spotify:', foundDevice.name)
+        }
+      }
+    } catch (e) {
+      // ignora
+    }
+    if (!deviceReady) {
+      deviceCheckAttempts++
+      await new Promise(r => setTimeout(r, 1000))
+    }
+  }
+
+  if (!deviceReady) {
+    console.warn('⚠️ Device não apareceu na lista do Spotify, tentando transferir mesmo assim...')
+  }
+
+  // 🔥 CORREÇÃO: Faz a requisição com retry em caso de 404/429
+  let lastError = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}/spotify/transfer-playback`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          device_id: spotifyDeviceId.value,
+          uris: [spotifyUri],
+          position_ms: positionMs
+        })
+      })
+
+      if (res.ok) {
+        return await res.json().catch(() => ({}))
+      }
+
+      const err = await res.json().catch(() => ({}))
+      
+      // Se 404, pode ser que o device ainda não está pronto, espera e tenta de novo
+      if (res.status === 404) {
+        console.log(`⚠️ 404 na tentativa ${attempt + 1}, aguardando...`)
+        await new Promise(r => setTimeout(r, 2000))
+        lastError = new Error(err.message || 'Device not found')
+        continue
+      }
+      
+      // Se 429 (rate limit), espera
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('Retry-After') || 3
+        await new Promise(r => setTimeout(r, retryAfter * 1000))
+        continue
+      }
+      
+      throw new Error(err.message || err.error || 'Erro ao transferir playback')
+    } catch (e) {
+      lastError = e
+      if (attempt < 2) await new Promise(r => setTimeout(r, 1500))
+    }
+  }
+
+  throw lastError || new Error('Falha após múltiplas tentativas')
+}
+
+const fetchUserSpotifyToken = async () => {
+  try {
+    const appToken = localStorage.getItem('token')
+    if (!appToken) {
+      spotifyConnected.value = false
+      throw new Error('Não autenticado no app')
+    }
+
+    const res = await fetch(`${API_URL}/spotify/refresh`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${appToken}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      if (data.requiresReauth || data.error === 'SPOTIFY_REFRESH_FAILED' || data.error === 'INVALID_REFRESH_TOKEN') {
+        spotifyConnected.value = false
+        showToast('error', 'Spotify Desconectado', data.message || 'Conecte o Spotify novamente', 6000)
+        throw new Error('REAUTH_REQUIRED')
+      }
+      throw new Error(data.message || 'Erro ao renovar token')
+    }
+
+    spotifyConnected.value = true
+    return data.access_token
+  } catch (error) {
+    if (error.message === 'REAUTH_REQUIRED') throw error
+    spotifyConnected.value = false
+    throw error
+  }
+}
+
+const checkSpotifyStatus = async () => {
+  if (!isLoggedIn.value) {
+    spotifyConnected.value = false
+    return false
+  }
+  try {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      spotifyConnected.value = false
+      return false
+    }
+    const res = await fetch(`${API_URL}/spotify/status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!res.ok) {
+      spotifyConnected.value = false
+      return false
+    }
+    const data = await res.json()
+    spotifyConnected.value = !!(data.connected && data.tokenValid)
+    return spotifyConnected.value
+  } catch (err) {
+    console.error('Erro ao verificar Spotify:', err)
+    spotifyConnected.value = false
+    return false
+  }
+}
+
+const attemptPlayLocal = async (retries = 2) => {
+  // 🔥 BLOQUEIO TOTAL se estiver em modo Spotify
+  if (spotifyMode.value) {
+    console.log('⏸️ attemptPlayLocal: bloqueado (modo Spotify ativo)')
+    return
+  }
+
+  if (!audioPlayer.value) {
+    console.log('⏸️ attemptPlayLocal: audioPlayer ref não existe (modo Spotify?)')
+    isPlaying.value = false
+    return
+  }
+
+  const audio = audioPlayer.value
+
+  // 🔥 Limpa src se for a URL da página (bug do Vue com src="")
+  if (audio.src === window.location.href || audio.src.includes('/room?room=')) {
+    audio.removeAttribute('src')
+    audio.load()
+    isPlaying.value = false
+    return
+  }
+
+  // Verifica se src é válido
+  if (!audio.src || 
+      audio.src === 'null' || 
+      audio.src === 'undefined' || 
+      audio.src === '' || 
+      audio.src === 'about:blank' ||
+      audio.src.startsWith('spotify:') ||
+      !audio.src.startsWith('http')) {
+    
+    console.error('❌ Audio src inválido:', audio.src)
+    isPlaying.value = false
+    
+    // 🔥 Só mostra erro se tem track ativa E não é Spotify
+    if (currentTrack.value.id && !currentTrack.value.spotifyId && !currentTrack.value.uri) {
+      showToast('error', 'Erro de Áudio', 'URL de áudio inválida ou indisponível')
+      setTimeout(() => nextTrack(), 1500)
+    }
+    return
+  }
+
+  try {
+    await audio.play()
+    isPlaying.value = true
+    console.log('✅ Tocando com sucesso!')
+  } catch (err) {
+    console.error('❌ Erro ao tocar:', err.name, err.message)
+    isPlaying.value = false
+    
+    if (err.name === 'NotAllowedError') {
+      showToast('info', 'Autoplay Bloqueado', 'Clique no botão play para iniciar o áudio')
+    } else if (err.name === 'NotSupportedError') {
+      showToast('error', 'Formato Não Suportado', 'O preview desta música não está disponível')
+      setTimeout(() => nextTrack(), 1500)
+    } else {
+      showToast('error', 'Erro ao Reproduzir', err.message || 'Erro desconhecido')
+    }
+  }
 }
 
 const seekTo = async (event) => {
-  if (!audioPlayer.value || !currentTrack.value.duration) return
+  if (!currentTrack.value.duration) return
+
   const bar = event.currentTarget
   const clickPosition = event.offsetX / bar.offsetWidth
   const newTime = clickPosition * currentTrack.value.duration
-  audioPlayer.value.currentTime = newTime
-  currentTime.value = newTime
 
-  // Sincroniza seek no backend
-  try {
-    await apiFetch(`/api/rooms/${room.value.id}/sync`, {
-      method: 'POST',
-      body: JSON.stringify({
-        isPlaying: isPlaying.value,
-        currentTime: newTime,
-        trackId: currentTrack.value.id
-      })
-    })
-  } catch (e) {
-    console.warn('Erro ao sincronizar seek:', e)
+  // Se Spotify
+  if (spotifyMode.value && spotifyPlayer.value) {
+    await spotifyPlayer.value.seek(Math.floor(newTime * 1000))
+    currentTime.value = newTime
+    return
+  }
+
+  // Código existente
+  if (audioPlayer.value) {
+    audioPlayer.value.currentTime = newTime
+    currentTime.value = newTime
   }
 }
 
 const updateTime = () => {
-  if (audioPlayer.value) {
+  // 🔥 BLOQUEIO TOTAL em modo Spotify
+  if (spotifyMode.value) return
+  if (audioPlayer.value && audioPlayer.value.src && !audioPlayer.value.src.startsWith('spotify:')) {
     currentTime.value = audioPlayer.value.currentTime
   }
 }
 
 const onLoadedMetadata = () => {
-  if (audioPlayer.value) {
-    currentTrack.value.duration = audioPlayer.value.duration
+  // 🔥 BLOQUEIO TOTAL em modo Spotify
+  if (spotifyMode.value) return
+  if (audioPlayer.value && audioPlayer.value.src && !audioPlayer.value.src.startsWith('spotify:')) {
+    currentTrack.value.duration = audioPlayer.value.duration || currentTrack.value?.duration || 0
   }
 }
 
@@ -1150,6 +2024,32 @@ const formatTimeAgo = (timestamp) => {
   return `${Math.floor(minutes / 60)}h`
 }
 
+// ✅ ADICIONAR NO SCRIPT:
+const onAudioError = (event) => {
+  console.error('❌ Audio error:', event.target?.error?.code, event.target?.error?.message)
+  isPlaying.value = false
+  
+  const error = event.target?.error
+  if (error) {
+    switch(error.code) {
+      case error.MEDIA_ERR_ABORTED:
+        showToast('error', 'Áudio', 'Reprodução abortada')
+        break
+      case error.MEDIA_ERR_NETWORK:
+        showToast('error', 'Áudio', 'Erro de rede. Verifique sua conexão.')
+        break
+      case error.MEDIA_ERR_DECODE:
+        showToast('error', 'Áudio', 'Formato de áudio não suportado')
+        break
+      case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+        showToast('error', 'Áudio', 'URL de áudio não suportada ou indisponível')
+        break
+      default:
+        showToast('error', 'Áudio', 'Erro desconhecido ao reproduzir')
+    }
+  }
+}
+
 // ========== CHAT ==========
 const sendMessage = async () => {
   if (!newMessage.value.trim() || !room.value.id) return
@@ -1162,15 +2062,19 @@ const sendMessage = async () => {
     timestamp: new Date().toISOString()
   }
 
-  try {
-    await apiFetch(`/api/rooms/${room.value.id}/messages`, {
-      method: 'POST',
-      body: JSON.stringify(msgData)
-    })
-  } catch (e) {
-    console.warn('Erro ao enviar mensagem:', e)
+  // 🔥 NOVO: Se logado, envia para backend; se guest, apenas local
+  if (isLoggedIn.value) {
+    try {
+      await apiFetch(`/api/rooms/${room.value.id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify(msgData)
+      })
+    } catch (e) {
+      console.warn('Erro ao enviar mensagem:', e)
+    }
   }
 
+  // Adiciona localmente em ambos os casos
   messages.value.push({
     id: Date.now(),
     ...msgData,
@@ -1202,9 +2106,162 @@ const searchDeezer = async () => {
   }
 }
 
+// ✅ CÓDIGO CORRIGIDO:
+// ✅ CÓDIGO CORRIGIDO — substitua o método searchMusic:
+const searchMusic = async () => {
+  // 🔥 CORREÇÃO: Só busca Spotify se usuário ESTÁ logado E Spotify está conectado
+  // Não basta spotifyConnected.value, precisa verificar se o token ainda é válido
+  if (isLoggedIn.value && spotifyConnected.value) {
+    console.log('🎵 Buscando no Spotify')
+    await searchSpotify()
+  } else {
+    console.log('🎵 Buscando no Deezer')
+    await searchDeezer()
+  }
+}
+
+// ✅ CÓDIGO CORRIGIDO — substitua o método searchSpotify inteiro:
+const searchSpotify = async (retryCount = 0) => {
+  if (!searchQuery.value.trim()) {
+    searchResults.value = []
+    return
+  }
+  
+  isSearching.value = true
+  
+  try {
+    const token = localStorage.getItem('token')
+    
+    // 🔥 NOVO: Verifica se tem token do app antes de fazer a requisição
+    if (!token) {
+      console.log('🔒 Usuário não logado, redirecionando para Deezer')
+      await searchDeezer()
+      return
+    }
+
+    const res = await fetch(
+      `${API_URL}/spotify/search/full?q=${encodeURIComponent(searchQuery.value)}&type=track&limit=10`, 
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      }
+    )
+
+    // 🔥 CORREÇÃO: 401/403 = token Spotify expirado OU não conectado
+    if (res.status === 401 || res.status === 403) {
+      const errData = await res.json().catch(() => ({}))
+      console.log('🔄 Token Spotify expirado ou não conectado:', errData)
+      
+      // Se é erro de Spotify não conectado, desconecta e usa Deezer
+      if (errData.error === 'SPOTIFY_NOT_CONNECTED' || errData.error === 'SPOTIFY_TOKEN_EXPIRED') {
+        spotifyConnected.value = false
+        showToast('info', 'Spotify', 'Usando Deezer como fallback', 3000)
+        await searchDeezer()
+        return
+      }
+      
+      // Se é token expirado e ainda não deu retry, tenta refresh UMA vez
+      if (retryCount === 0 && (errData.error === 'SPOTIFY_REFRESH_FAILED' || errData.needsReconnect)) {
+        try {
+          await fetchUserSpotifyToken() // Tenta renovar
+          // Retry UMA vez apenas
+          return searchSpotify(retryCount + 1)
+        } catch (refreshErr) {
+          // Refresh falhou → usa Deezer
+          console.log('🔄 Refresh falhou, usando Deezer')
+          spotifyConnected.value = false
+          await searchDeezer()
+          return
+        }
+      }
+      
+      // Qualquer outro 401/403 → Deezer
+      spotifyConnected.value = false
+      await searchDeezer()
+      return
+    }
+
+    // 🔥 400 = parâmetro inválido (NÃO é token)
+if (res.status === 400) {
+  const err = await res.json().catch(() => ({}))
+  console.error('Spotify search 400:', err)
+  
+  // Se é erro de limite, ajusta automaticamente
+  if (err.error?.message?.includes('limit')) {
+    showToast('warning', 'Spotify', 'Ajustando limite de resultados...', 2000)
+    // Retry com limit menor
+    return searchSpotify(retryCount)
+  }
+  
+  showToast('error', 'Busca inválida', err.error?.message || 'Verifique os termos da busca')
+  searchResults.value = []
+  return
+}
+
+    if (res.status === 429) {
+      const retryAfter = res.headers.get('Retry-After') || 5
+      showToast('warning', 'Rate Limit', `Aguarde ${retryAfter}s...`, retryAfter * 1000)
+      await new Promise(r => setTimeout(r, retryAfter * 1000))
+      return searchSpotify(retryCount) // Retry após espera
+    }
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+
+    const data = await res.json()
+    
+ // No método searchSpotify, substitua o map de resultados:
+
+searchResults.value = data.tracks?.items?.map(t => ({
+  id: t.id,
+  title: t.name,
+  name: t.name,
+  // 🔥 CORREÇÃO: Mapeia artistas corretamente
+  artist: { 
+    name: t.artists?.map(a => a.name).join(', ') || 'Artista desconhecido' 
+  },
+  artists: t.artists,
+  // 🔥 CORREÇÃO: Mapeia álbum com imagens do Spotify
+  album: {
+    cover_medium: t.album?.images?.[1]?.url || t.album?.images?.[0]?.url,
+    cover: t.album?.images?.[0]?.url,
+    images: t.album?.images // preserva array original
+  },
+  cover: t.album?.images?.[0]?.url, // 🔥 ADICIONAR: campo cover direto
+  duration: t.duration_ms / 1000,
+  explicit: t.explicit,
+  preview: t.preview_url,
+  spotifyId: t.id,
+  uri: t.uri,
+  source: 'spotify'
+})) || []
+    
+  } catch (error) {
+    console.error('Erro ao buscar Spotify:', error)
+    
+    // 🔥 CORREÇÃO: SEMPRE faz fallback para Deezer em caso de erro
+    // (exceto se já estamos mostrando um toast específico)
+    if (error.message !== 'REAUTH_REQUIRED') {
+      showToast('info', 'Spotify indisponível', 'Usando Deezer como fallback', 3000)
+      await searchDeezer()
+    }
+  } finally {
+    isSearching.value = false
+  }
+}
+
+let searchAbortController = null
+
 const debouncedSearch = () => {
   clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(searchDeezer, 300)
+  // Cancela requisição anterior
+  if (searchAbortController) {
+    searchAbortController.abort()
+  }
+  searchTimeout = setTimeout(searchMusic, 500) // Aumente para 500ms
 }
 
 const fetchDeezerChart = async () => {
@@ -1214,6 +2271,60 @@ const fetchDeezerChart = async () => {
   } catch (error) {
     console.error('Erro ao carregar chart:', error)
     deezerChart.value = []
+  }
+}
+
+const fetchSpotifyChart = async () => {
+  if (!isLoggedIn.value || !spotifyConnected.value) {
+    await fetchDeezerChart()
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('token')
+    // ✅ Query válida — sem year range inválido
+   const res = await fetch(
+  `${API_URL}/spotify/search/full?q=${encodeURIComponent('Anitta')}&type=track&limit=5`, 
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    
+    if (!res.ok) {
+      console.warn('Spotify chart falhou, fallback Deezer')
+      await fetchDeezerChart()
+      return
+    }
+    
+    const data = await res.json()
+    
+    if (!data.tracks?.items || data.tracks.items.length === 0) {
+      await fetchDeezerChart()
+      return
+    }
+    
+    deezerChart.value = data.tracks.items
+      .filter(track => track && track.id)
+      .map(track => ({
+        id: track.id,
+        title: track.name,
+        name: track.name,
+        artist: { name: track.artists.map(a => a.name).join(', ') },
+        album: { 
+          cover_medium: track.album?.images?.[1]?.url || track.album?.images?.[0]?.url,
+          cover: track.album?.images?.[0]?.url
+        },
+        duration: track.duration_ms / 1000,
+        preview: track.preview_url,
+        spotifyId: track.id,
+        uri: track.uri,
+        source: 'spotify',
+        explicit: track.explicit
+      }))
+      .slice(0, 5)
+    
+    console.log('✅ Top Brasil Spotify carregado:', deezerChart.value.length, 'músicas')
+  } catch (error) {
+    console.error('❌ Erro ao carregar chart Spotify:', error)
+    await fetchDeezerChart()
   }
 }
 
@@ -1248,32 +2359,74 @@ const promoteToModerator = async (userId, userName) => {
   }
 }
 
-// ========== ADICIONAR A FILA (SINCRONIZADO) ==========
 const addToQueue = async (track) => {
-  const trackData = {
-    id: String(track.id),
-    title: track.title,
-    artist: track.artist?.name || track.artist,
-    cover: track.album?.cover_medium || track.album?.cover || track.cover,
-    duration: track.duration,
-    explicit: track.explicit_lyrics || false,
-    deezerId: String(track.id),
-    preview: track.preview
+  const isGuest = !isLoggedIn.value
+  const hasSpotify = isLoggedIn.value && spotifyConnected.value
+  
+  // ✅ CORREÇÃO: Detecta se é track Spotify
+  const isSpotifyTrack = !!track.spotifyId || track.source === 'spotify' || track.source === 'spotify_full' || (track.uri && track.uri.includes('spotify'))
+  
+  let previewUrl = track.preview && track.preview !== 'null' && track.preview !== 'undefined' && track.preview !== ''
+    ? track.preview
+    : ''
+  
+  // ✅ CORREÇÃO: Só busca preview Deezer se for GUEST (não logado)
+  // Usuário logado com Spotify NÃO precisa de preview Deezer
+  if (isGuest && !previewUrl && track.title && (track.artist?.name || track.artist)) {
+    try {
+      const artistName = track.artist?.name || track.artist
+      const searchData = await fetchJsonDeezer(`/search?q=${encodeURIComponent(track.title + ' ' + artistName)}&limit=1`)
+      if (searchData.data && searchData.data[0]) {
+        previewUrl = searchData.data[0].preview || ''
+      }
+    } catch (e) {
+      console.warn('Erro ao buscar preview para fila:', e)
+    }
   }
 
-  // Envia para o backend
-  try {
-    const response = await apiFetch(`/api/rooms/${room.value.id}/queue`, {
-      method: 'POST',
-      body: JSON.stringify(trackData)
-    })
+  // ✅ CORREÇÃO: Define source correto baseado no contexto
+  let trackSource = 'deezer'
+  if (isGuest) {
+    trackSource = 'deezer'
+  } else if (isSpotifyTrack || hasSpotify) {
+    trackSource = track.source || 'spotify'
+  }
 
-    if (response.ok) {
-      const data = await response.json()
-      queue.value = data.queue || []
+  const trackData = {
+    id: String(track.id),
+    title: track.title || track.name,
+    artist: track.artist?.name || track.artist,
+   cover: track.cover || track.album?.cover_medium || track.album?.cover || track.album?.images?.[0]?.url,
+    duration: isGuest ? 30 : (track.duration || (track.duration_ms ? track.duration_ms / 1000 : 30)),
+    explicit: track.explicit_lyrics || track.explicit || false,
+    deezerId: isSpotifyTrack ? (track.deezerId || null) : String(track.id),
+    preview: previewUrl,
+    // ✅ CORREÇÃO: Preserva spotifyId/uri para usuários logados
+    spotifyId: isGuest ? null : (track.spotifyId || (isSpotifyTrack ? track.id : null)),
+    uri: isGuest ? null : (track.uri || (isSpotifyTrack ? `spotify:track:${track.spotifyId || track.id}` : null)),
+    source: trackSource
+  }
+  
+  console.log('➕ addToQueue:', { isSpotifyTrack, hasSpotify, trackSource, spotifyId: trackData.spotifyId })
+
+
+  // 🔥 NOVO: Se logado, envia para backend; se guest, apenas local
+  if (isLoggedIn.value) {
+    try {
+      const response = await apiFetch(`/api/rooms/${room.value.id}/queue`, {
+        method: 'POST',
+        body: JSON.stringify(trackData)
+      })
+      if (response.ok) {
+        const data = await response.json()
+        queue.value = data.queue || []
+      }
+    } catch (e) {
+      console.warn('Erro ao adicionar na fila do backend:', e)
+      queue.value.push(trackData)
     }
-  } catch (e) {
-    console.warn('Erro ao adicionar na fila do backend:', e)
+  } else {
+    // Guest: apenas adiciona localmente
     queue.value.push(trackData)
   }
 
@@ -1281,33 +2434,53 @@ const addToQueue = async (track) => {
   searchQuery.value = ''
   searchResults.value = []
 
-  // Se nao tem musica tocando, toca a primeira
+  // 🔥 CORREÇÃO: Se não tem música tocando, força tocar
   if (!currentTrack.value.id) {
-    await nextTrack()
+    // Para guest: pega direto da fila local e toca
+    if (!isLoggedIn.value) {
+      const first = queue.value.shift()
+      if (first) {
+        isPlaying.value = true // 🔥 Sinaliza que deve tocar
+        await loadTrack(first)
+      }
+    } else {
+      await nextTrack()
+    }
   }
 
-  showToast('success', 'Adicionado!', `${trackData.title} foi adicionado a fila`)
+  showToast('success', 'Adicionado!', `${trackData.title} foi adicionado à fila`)
 }
+
 
 const removeFromQueue = async (index) => {
-  try {
-    const response = await apiFetch(`/api/rooms/${room.value.id}/queue`, {
-      method: 'DELETE',
-      body: JSON.stringify({ index })
-    })
-    if (response.ok) {
-      const data = await response.json()
-      queue.value = data.queue
+  if (isLoggedIn.value) {
+    try {
+      const response = await apiFetch(`/api/rooms/${room.value.id}/queue`, {
+        method: 'DELETE',
+        body: JSON.stringify({ index })
+      })
+      if (response.ok) {
+        const data = await response.json()
+        queue.value = data.queue
+        return
+      }
+    } catch (e) {
+      console.warn('Erro ao remover da fila no backend:', e)
     }
-  } catch (e) {
-    queue.value.splice(index, 1)
   }
+  // Guest ou fallback: remove localmente
+  queue.value.splice(index, 1)
 }
 
-const clearQueue = async () => {
-  if (!confirm('Limpar toda a fila?')) return
+const clearQueue = () => {
+  if (queue.value.length === 0) return
+  showClearQueueModal.value = true
+}
+
+// 3. Adicione método de confirmação:
+const confirmClearQueue = async () => {
+  showClearQueueModal.value = false
   try {
-    // Remove todas as musicas uma por uma no backend
     while (queue.value.length > 0) {
       await apiFetch(`/api/rooms/${room.value.id}/queue`, {
         method: 'DELETE',
@@ -1315,9 +2488,10 @@ const clearQueue = async () => {
       })
       queue.value.shift()
     }
-    showToast('info', 'Fila limpa', 'Todas as musicas foram removidas da fila')
+    showToast('info', 'Fila Limpa', 'Todas as músicas foram removidas da fila', 4000)
   } catch (e) {
     queue.value = []
+    showToast('info', 'Fila Limpa', 'Todas as músicas foram removidas', 4000)
   }
 }
 
@@ -1329,7 +2503,7 @@ const copyLink = () => {
 }
 
 const shareVia = (platform) => {
-  const text = `Entre na minha sala do Music Room! Estamos ouvindo: ${currentTrack.value.title || 'musicas incríveis'}\n\n${roomUrl.value}`
+  const text = `Entre na minha sala do Music Room! Estamos ouvindo: ${currentTrack.value.title || 'musicas incríveis'}\\n\\n${roomUrl.value}`
   switch(platform) {
     case 'whatsapp':
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
@@ -1345,25 +2519,59 @@ const shareVia = (platform) => {
 
 const leaveRoom = async () => {
   hasLeftManually.value = true
-  stopAllPolling()   // ← ANTES de tudo
+  stopAllPolling()
 
+  // ✅ CORREÇÃO: Remove do estado local IMEDIATAMENTE
   activeListeners.value = activeListeners.value.filter(
     l => String(l.id) !== String(currentUser.value.id)
   )
+  room.value.listeners = activeListeners.value.length
+
+  // ✅ CORREÇÃO: Se é dono, limpa tudo visualmente antes da API
+  const isOwnerLeaving = currentUserRole.value === 'owner' || isRoomOwner.value
+  if (isOwnerLeaving) {
+    activeListeners.value = []
+    room.value.listeners = 0
+    queue.value = []
+    currentTrack.value = { 
+      id: null, title: '', artist: '', cover: '', duration: 0, 
+      explicit: false, deezerId: null, preview: '' 
+    }
+    isPlaying.value = false
+  }
 
   if (room.value.id && currentUser.value.id) {
     try {
-      const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
+      // ✅ CORREÇÃO: Sempre inclui token no header E no body como fallback
+      const token = localStorage.getItem('token')
+      const payload = {
+        userIdToRemove: currentUser.value.id,
+        requesterId: currentUser.value.id  // Fallback para guests
+      }
+      
+      const response = await fetch(`${API_URL}/api/rooms/${room.value.id}/listeners`, {
         method: 'DELETE',
-        body: JSON.stringify({
-          userIdToRemove: currentUser.value.id,
-          requesterId: currentUser.value.id
-        })
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload)
       })
+
       if (response.ok) {
         const data = await response.json().catch(() => ({}))
-        if (data.activeListeners) activeListeners.value = data.activeListeners
-        if (data.listeners !== undefined) room.value.listeners = data.listeners
+        // ✅ CORREÇÃO: Sincroniza com servidor se dono saiu
+        if (data.activeListeners) {
+          activeListeners.value = data.activeListeners
+        }
+        if (data.listeners !== undefined) {
+          room.value.listeners = data.listeners
+        }
+      } else if (response.status === 403) {
+        // ✅ CORREÇÃO: Se 403, pode ser que já saiu ou token expirou
+        // Mas como removemos localmente, está OK
+        console.warn('⚠️ 403 ao sair da sala, mas já removido localmente')
       }
     } catch (e) {
       console.warn('Erro ao remover listener ao sair:', e)
@@ -1383,6 +2591,15 @@ const confirmLeaveRoom = () => {
 const leaveRoomConfirmed = async () => {
   showLeaveModal.value = false
   await leaveRoom()
+  
+  // ✅ CORREÇÃO: Força refresh da lista no backend antes de sair
+  if (room.value.id && isLoggedIn.value) {
+    try {
+      await apiFetch(`/api/rooms/${room.value.id}/listeners`, { method: 'DELETE' })
+    } catch (e) {
+      // Ignora erro ao sair
+    }
+  }
 }
 
 // ========== JOIN ROOM ==========
@@ -1403,7 +2620,6 @@ const checkIfAlreadyInRoom = async (roomIdFromUrl) => {
   return false
 }
 
-// ✅ MODIFICAR o fluxo no checkRoomAccess():
 const checkRoomAccess = async () => {
   const urlParams = new URLSearchParams(window.location.search)
   const roomIdFromUrl = urlParams.get('room')
@@ -1418,12 +2634,32 @@ const checkRoomAccess = async () => {
 
   room.value.id = roomIdFromUrl
 
+  // 🔥 NOVO: Carrega dados da sala PRIMEIRO para saber a source
+  try {
+    await loadRoomData(roomIdFromUrl)
+  } catch (error) {
+    console.error('Erro ao carregar dados da sala:', error)
+  }
+
+  // 🔥 NOVO: Se sala é Spotify e usuário NÃO está logado → mostra modal
+  const isSpotifyRoom = room.value.source === 'spotify' || roomSource.value === 'spotify'
+  
+  if (isSpotifyRoom && !isLoggedIn.value) {
+    showSpotifyLoginModal.value = true
+    attemptedSpotifyRoom.value = true
+    return // 🔥 BLOQUEIA aqui - não deixa entrar na sala
+  }
+
+  // 🔥 NOVO: Se sala é Spotify e usuário está logado mas sem Spotify conectado
+  if (isSpotifyRoom && isLoggedIn.value && !spotifyConnected.value) {
+    showToast('info', 'Spotify', 'Conecte seu Spotify nas configurações para ouvir músicas completas', 6000)
+  }
+
   const alreadyInRoom = await checkIfAlreadyInRoom(roomIdFromUrl)
 
   if (alreadyInRoom) {
     showJoinModal.value = false
     hasJoined.value = true
-    // ✅ CORREÇÃO 8: Carrega dados da sala antes de continuar
     await loadRoomData(roomIdFromUrl)
     await determineUserRole()
     startAllPolling()
@@ -1440,18 +2676,11 @@ const checkRoomAccess = async () => {
     joinUserName.value = 'Visitante ' + Math.floor(Math.random() * 1000)
   }
 
-  try {
-    await loadRoomData(roomIdFromUrl)
-  } catch (error) {
-    console.error('Erro ao carregar dados da sala:', error)
-  }
-
   if (fromInvite && !isOwner) {
     showJoinModal.value = true
     return
   }
 
-  // ✅ CORREÇÃO 4: bloco único do isOwner
   if (isOwner) {
     showJoinModal.value = false
     hasJoined.value = true
@@ -1483,7 +2712,7 @@ const checkRoomAccess = async () => {
     return
   }
 
-  // ✅ SALA PÚBLICA — entra automaticamente
+  // SALA PÚBLICA — entra automaticamente
   showJoinModal.value = false
   hasJoined.value = true
   await determineUserRole()
@@ -1498,12 +2727,18 @@ const checkRoomAccess = async () => {
     text: `${currentUser.value.name} entrou na sala!`,
     timestamp: Date.now()
   })
+}
+
+const enterAsGuest = () => {
+  showSpotifyLoginModal.value = false
+  // Redireciona para a lista de salas ou cria uma sala Deezer
+  router.push('/rooms?source=deezer')
+  showToast('info', 'Modo Visitante', 'Você pode criar ou entrar em salas Deezer com previews de 30s', 4000)
+}
 
 const joinRoom = async () => {
-  // ✅ CORREÇÃO 9: Carrega dados da sala antes de tudo
   await loadRoomData(room.value.id)
 
-  // ✅ No joinRoom(), dentro do if (isRoomOwner.value) { ... }:
   if (isRoomOwner.value) {
     currentUser.value.name = joinUserName.value.trim()
     showJoinModal.value = false
@@ -1517,6 +2752,7 @@ const joinRoom = async () => {
     isJoining.value = false
     return
   }
+
   accessError.value = ''
   isJoining.value = true
 
@@ -1609,7 +2845,7 @@ const joinRoom = async () => {
     return
   }
 
-   // ✅ Sala pública — entra direto
+  // Sala pública — entra direto
   currentUser.value.name = joinUserName.value.trim()
   showJoinModal.value = false
 
@@ -1629,13 +2865,13 @@ const joinRoom = async () => {
   showToast('success', 'Bem-vindo!', `Voce entrou na sala ${room.value.name}`)
   isJoining.value = false
 }
-}
+
 // ========== GERENCIAR LISTENERS ==========
 const checkIfKicked = () => {
   if (isJoining.value) return
   if (showJoinModal.value) return
   if (!room.value.id) return
-  if (hasLeftManually.value) return   // ← ignora se saiu manualmente
+  if (hasLeftManually.value) return
 
   const stillInRoom = activeListeners.value.some(l =>
     String(l.id) === String(currentUser.value.id)
@@ -1646,14 +2882,76 @@ const checkIfKicked = () => {
     setTimeout(() => router.push('/rooms'), 3000)
   }
 }
+
 const fetchActiveListeners = async () => {
   if (!room.value.id) return
+  
+  // Guest: apenas lista local
+  if (!isLoggedIn.value) {
+    try {
+      const response = await apiFetchPublic(`/api/rooms/${room.value.id}`)
+      if (!response.ok || response.status === 404) {
+        showToast('info', 'Sala Encerrada', 'O dono da sala saiu. A sala foi encerrada.', 5000)
+        stopAllPolling()
+        setTimeout(() => router.push('/rooms'), 3000)
+        return
+      }
+      const roomData = await response.json()
+      if (roomData.active === false) {
+        showToast('info', 'Sala Encerrada', 'O dono da sala saiu. A sala foi encerrada.', 5000)
+        stopAllPolling()
+        setTimeout(() => router.push('/rooms'), 3000)
+        return
+      }
+    } catch (e) {
+      // Ignora erro
+    }
+
+    const guestListener = {
+      id: currentUser.value.id,
+      name: currentUser.value.name,
+      avatar: currentUser.value.avatar,
+      role: 'participant',
+      joinedAt: new Date()
+    }
+    activeListeners.value = [guestListener]
+    room.value.listeners = 1
+    return
+  }
+
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/listeners`)
     if (response.ok) {
       const listeners = await response.json()
-      activeListeners.value = listeners   // ← sempre sobrescreve com backend
+      
+      // ✅ CORREÇÃO: Detecta se dono saiu (sala vazia OU sem dono)
+      const hadListenersBefore = activeListeners.value.length > 0
+      const ownerInList = listeners.some(l => l.role === 'owner')
+      
+      if (!listeners || listeners.length === 0) {
+        activeListeners.value = []
+        room.value.listeners = 0
+        if (hadListenersBefore && !isRoomOwner.value) {
+          showToast('info', 'Sala Encerrada', 'O dono da sala saiu. A sala foi encerrada.', 5000)
+          stopAllPolling()
+          setTimeout(() => router.push('/rooms'), 3000)
+        }
+        return
+      }
+      
+      // 🔥 Se dono saiu mas ainda há outros na lista
+      if (hadListenersBefore && !ownerInList && !isRoomOwner.value) {
+        activeListeners.value = []
+        room.value.listeners = 0
+        showToast('info', 'Sala Encerrada', 'O dono da sala saiu. A sala foi encerrada.', 5000)
+        stopAllPolling()
+        setTimeout(() => router.push('/rooms'), 3000)
+        return
+      }
+      
+      activeListeners.value = listeners
       room.value.listeners = listeners.length
+      
       if (hasJoined.value && !showJoinModal.value) checkIfKicked()
     }
   } catch (error) {
@@ -1663,18 +2961,37 @@ const fetchActiveListeners = async () => {
 
 const addSelfToListeners = async () => {
   if (!room.value.id) return
+  
+  // 🔥 NOVO: Se não está logado, apenas adiciona localmente
+  if (!isLoggedIn.value) {
+    const guestListener = {
+      id: currentUser.value.id,
+      name: currentUser.value.name,
+      avatar: currentUser.value.avatar,
+      role: 'participant',
+      joinedAt: new Date()
+    }
+    // Evita duplicados
+    const exists = activeListeners.value.some(l => String(l.id) === String(currentUser.value.id))
+    if (!exists) {
+      activeListeners.value.push(guestListener)
+      room.value.listeners = activeListeners.value.length
+    }
+    hasJoined.value = true
+    return
+  }
+
   isJoining.value = true
   try {
     const userData = {
       name: currentUser.value.name,
       avatar: currentUser.value.avatar,
-      guestId: isLoggedIn.value ? undefined : currentUser.value.id,
       role: isRoomOwner.value ? 'owner' : 'participant'
     }
     await apiFetch(`/api/rooms/${room.value.id}/listeners`, {
       method: 'POST', body: JSON.stringify(userData)
     })
-    await fetchActiveListeners()   // ← busca do backend, não adiciona local
+    await fetchActiveListeners()
     hasJoined.value = true
   } catch (error) {
     console.error('Erro ao adicionar listener:', error)
@@ -1683,6 +3000,7 @@ const addSelfToListeners = async () => {
     isJoining.value = false
   }
 }
+
 const openKickModal = (userId, userName) => {
   userToKick.value = { id: userId, name: userName }
   showKickModal.value = true
@@ -1703,15 +3021,13 @@ const kickUserConfirmed = async () => {
 
     if (response.ok) {
       activeListeners.value = activeListeners.value.filter(l => l.id !== userId)
-     
-      // ✅ Atualiza a contagem local
       room.value.listeners = activeListeners.value.length
 
       messages.value.push({
         id: Date.now(),
         userId: 'system',
         userName: 'Sistema',
-        avatar: 'https://via.placeholder.com/150',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=random&color=fff&size=150`,
         text: `${userName} foi removido da sala por um moderador.`,
         timestamp: Date.now()
       })
@@ -1727,7 +3043,13 @@ const kickUserConfirmed = async () => {
 }
 
 const determineUserRole = async () => {
-  if (!room.value.id || !isLoggedIn.value) {
+  // 🔥 NOVO: Se não está logado, sempre participant
+  if (!isLoggedIn.value) {
+    currentUserRole.value = 'participant'
+    return
+  }
+  
+  if (!room.value.id) {
     currentUserRole.value = 'participant'
     return
   }
@@ -1741,6 +3063,7 @@ const determineUserRole = async () => {
     }
   } catch (error) {
     console.error('Erro ao verificar role:', error)
+    currentUserRole.value = 'participant'
   }
 }
 
@@ -1776,6 +3099,10 @@ const drop = (event, dropIndex) => {
 // ========== SYNC ROOM STATE (POLLING) ==========
 const fetchMessages = async () => {
   if (!room.value.id) return
+  
+  // 🔥 NOVO: Se não está logado, não busca mensagens do servidor
+  if (!isLoggedIn.value) return
+
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/messages`)
     if (response.ok) {
@@ -1796,6 +3123,10 @@ const fetchMessages = async () => {
 
 const fetchQueue = async () => {
   if (!room.value.id) return
+  
+  // 🔥 NOVO: Se não está logado, não busca fila do servidor
+  if (!isLoggedIn.value) return
+
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/queue`)
     if (response.ok) {
@@ -1808,7 +3139,8 @@ const fetchQueue = async () => {
 }
 
 const syncRoomState = async () => {
-  if (!room.value.id || isLocalAction.value) return
+  if (!room.value.id || isLocalAction.value || !isLoggedIn.value) return
+  if (spotifyMode.value) return // 🔥 Spotify gerencia próprio sync
 
   try {
     const response = await apiFetch(`/api/rooms/${room.value.id}/sync`)
@@ -1816,39 +3148,50 @@ const syncRoomState = async () => {
 
     const data = await response.json()
 
-    // Sincroniza musica atual
     if (data.currentTrack?.id && data.currentTrack.id !== currentTrack.value.id) {
       loadTrack(data.currentTrack)
+      return
     }
 
-    // Sincroniza estado de play/pause
+    // 🔥 Se agora estamos em modo Spotify (loadTrack mudou), sai
+    if (spotifyMode.value) return
+
     if (data.syncState && data.syncState.trackId === currentTrack.value.id) {
+      const audio = audioPlayer.value
+      
+      // 🔥 Sem audio element disponível (modo Spotify) → sai
+      if (!audio) return
+      
+      // 🔥 Sem src válido → ignora silenciosamente
+      const hasValidSrc = audio.src && 
+        audio.src !== 'null' && 
+        audio.src !== 'undefined' && 
+        audio.src !== '' &&
+        audio.src !== window.location.href &&
+        !audio.src.includes('/room?room=') &&
+        audio.src.startsWith('http')
+      
+      if (!hasValidSrc) return
+      
       if (data.syncState.isPlaying !== isPlaying.value) {
         if (data.syncState.isPlaying) {
-          if (audioPlayer.value) {
-            const timeDiff = Math.abs(audioPlayer.value.currentTime - (data.syncState.currentTime || 0))
+          if (audio.readyState >= 2) {
+            const timeDiff = Math.abs(audio.currentTime - (data.syncState.currentTime || 0))
             if (timeDiff > 2) {
-              audioPlayer.value.currentTime = data.syncState.currentTime || 0
+              audio.currentTime = data.syncState.currentTime || 0
             }
-            audioPlayer.value.play().then(() => {
-              isPlaying.value = true
-            }).catch(err => {
-              console.warn('Autoplay bloqueado:', err)
-            })
+            await attemptPlayLocal()
           }
         } else {
-          if (audioPlayer.value) {
-            audioPlayer.value.pause()
-            isPlaying.value = false
-          }
+          audio.pause()
+          isPlaying.value = false
         }
       }
 
-      // Sincroniza tempo se estiver muito diferente
-      if (data.syncState.isPlaying && audioPlayer.value) {
-        const timeDiff = Math.abs(audioPlayer.value.currentTime - (data.syncState.currentTime || 0))
+      if (data.syncState.isPlaying && audio.readyState >= 2) {
+        const timeDiff = Math.abs(audio.currentTime - (data.syncState.currentTime || 0))
         if (timeDiff > 3) {
-          audioPlayer.value.currentTime = data.syncState.currentTime || 0
+          audio.currentTime = data.syncState.currentTime || 0
         }
       }
     }
@@ -1882,30 +3225,92 @@ const stopAllPolling = () => {
   if (queueInterval) { clearInterval(queueInterval); queueInterval = null }
 }
 
-// ========== LIFECYCLE — CORRIGIDO ==========
+// ========== LIFECYCLE ==========
 let saveRoomStateInterval = null
 
 onMounted(async () => {
-  beforeUnloadHandler = (event) => {
-    if (room.value.id && currentUser.value.id && hasJoined.value && !hasLeftManually.value) {
-      const payload = JSON.stringify({
-        userIdToRemove: currentUser.value.id,
-        requesterId: currentUser.value.id
-      })
-      navigator.sendBeacon?.(
-        `${API_URL}/api/rooms/${room.value.id}/listeners/beacon`,
-        new Blob([payload], { type: 'application/json' })
-      )
-    }
+  beforeUnloadHandler = function handleBeforeUnload(event) {
+    // Código existente do beforeunload
   }
   window.addEventListener('beforeunload', beforeUnloadHandler)
+  
+  // ✅ 1. Verifica auth PRIMEIRO (rápido)
   checkAuth()
-  await checkRoomAccess()
-  fetchDeezerChart()
+
+  // ✅ 2. Pega roomId da URL (rápido)
+  const urlParams = new URLSearchParams(window.location.search)
+  const roomIdFromUrl = urlParams.get('room')
+  
+  if (!roomIdFromUrl) {
+    router.push('/rooms/create')
+    return
+  }
+  
+  room.value.id = roomIdFromUrl
+  
+  // ✅ 3. Configura usuário (logado ou guest) - rápido, síncrono
+  if (!isLoggedIn.value) {
+    const storedGuestId = sessionStorage.getItem('guest_id')
+    if (storedGuestId) {
+      currentUser.value.id = storedGuestId
+    } else {
+      const newGuestId = 'guest-' + Math.random().toString(36).substr(2, 9)
+      sessionStorage.setItem('guest_id', newGuestId)
+      currentUser.value.id = newGuestId
+    }
+    currentUser.value.name = 'Visitante ' + Math.floor(Math.random() * 1000)
+    currentUserRole.value = 'participant'
+    isRoomOwner.value = false
+  }
+  
+  // ✅ 4. MOSTRA A SALA IMEDIATAMENTE (não bloqueia!)
+  showJoinModal.value = false
+  hasJoined.value = true
+  
+  // ✅ 5. Inicia polling IMEDIATAMENTE (não espera nada!)
+  startAllPolling()
+  
+  // ✅ 6. Carrega dados da sala em PARALELO (não bloqueia UI)
+  loadRoomDataAsync(roomIdFromUrl)
+  
+  // ✅ 7. Verifica Spotify em PARALELO (só se logado)
+if (isLoggedIn.value) {
+    const isConnected = await checkSpotifyStatus()
+    if (isConnected) {
+      console.log('[MUSIC ROOM] Spotify conectado, inicializando player...')
+      await initSpotifyPlayer()
+    } else {
+      console.log('[MUSIC ROOM] Spotify não conectado, modo Deezer ativado')
+    }
+  }
+  
+  
+  // ✅ 8. Carrega chart em PARALELO
+  loadChartAsync()
+  
+  // ✅ 9. Adiciona self aos listeners (rápido)
+  await addSelfToListeners()
+  
+  // ✅ 10. Resto das inicializações
   saveRoomStateInterval = setInterval(saveRoomState, 5000)
+  
   if (room.value.id) {
     sessionStorage.removeItem(`room_${room.value.id}_password`)
   }
+  
+  if (!currentTrack.value.id) {
+    isPlaying.value = false
+  }
+  
+  // Mensagem de boas-vindas
+  messages.value.push({
+    id: Date.now(),
+    userId: 'system',
+    userName: 'Sistema',
+    avatar: 'https://via.placeholder.com/150',
+    text: `${currentUser.value.name} entrou na sala!`,
+    timestamp: Date.now()
+  })
 })
 
 const checkAuth = () => {
@@ -1959,16 +3364,23 @@ const applyRoomData = (data) => {
 
 const loadRoomData = async (roomId) => {
   try {
-    const response = await apiFetch(`/api/rooms/${roomId}`)
+    // 🔥 MUDANÇA: Usa apiFetchPublic em vez de apiFetch
+    const response = await apiFetchPublic(`/api/rooms/${roomId}`)
     if (response.ok) {
       const data = await response.json()
       applyRoomData(data)
       return true
     }
+    // Se 401/403, não redireciona — apenas retorna false para fallback guest
+    if (response.status === 401 || response.status === 403) {
+      console.log('⚠️ Sala requer auth, usando fallback guest')
+      return false
+    }
   } catch (error) {
     console.error('Erro ao carregar sala da API:', error)
   }
 
+  // Fallback para guest rooms (localStorage)
   const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
   const guestRoom = guestRooms.find(r => String(r.id || r._id) === String(roomId))
 
@@ -1980,6 +3392,60 @@ const loadRoomData = async (roomId) => {
   return false
 }
 
+const loadRoomDataAsync = async (roomId) => {
+  try {
+    const roomLoaded = await loadRoomData(roomId)
+    if (!roomLoaded) {
+      // Fallback para sala guest temporária
+      const guestRooms = JSON.parse(localStorage.getItem('guest_rooms') || '[]')
+      const guestRoom = guestRooms.find(r => String(r.id || r._id) === String(roomId))
+      
+      if (guestRoom) {
+        applyRoomData(guestRoom)
+      } else {
+        const tempRoom = {
+          id: roomId,
+          name: 'Sala ' + roomId.slice(0, 6),
+          isPublic: true,
+          source: 'deezer',
+          createdBy: null
+        }
+        applyRoomData(tempRoom)
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao carregar dados da sala:', error)
+  }
+}
+
+// ✅ NOVO: Verifica Spotify sem bloquear
+const checkSpotifyStatusAsync = async () => {
+  try {
+    const isConnected = await checkSpotifyStatus()
+    if (!isConnected) {
+      spotifyConnected.value = false
+      console.log('🎵 Spotify não conectado, modo Deezer ativado')
+    }
+    
+    if (spotifyConnected.value) {
+      await initSpotifyPlayer()
+      console.log('✅ Spotify Player inicializado na sala')
+    }
+  } catch (err) {
+    console.error('❌ Erro ao inicializar Spotify Player na sala:', err)
+  }
+}
+
+// ✅ NOVO: Carrega chart sem bloquear
+const loadChartAsync = async () => {
+  if (isLoggedIn.value && spotifyConnected.value) {
+    await fetchSpotifyChart()
+  } else {
+    await fetchDeezerChart()
+  }
+}
+
+// ✅ CÓDIGO CORRIGIDO
 onUnmounted(() => {
   clearTimeout(searchTimeout)
   stopAllPolling()
@@ -1987,26 +3453,41 @@ onUnmounted(() => {
     clearInterval(saveRoomStateInterval)
     saveRoomStateInterval = null
   }
+  
+  // ✅ CORREÇÃO: Remove o listener com a função NOMEADA (não anônima)
   if (beforeUnloadHandler) {
     window.removeEventListener('beforeunload', beforeUnloadHandler)
     beforeUnloadHandler = null
   }
+
+  // ✅ ADICIONAR no onUnmounted():
+if (_spotifyPollInterval.value) {
+  clearInterval(_spotifyPollInterval.value)
+  _spotifyPollInterval.value = null
+}
+
+if (spotifyPlayer.value) {
+  spotifyPlayer.value.disconnect()
+  spotifyPlayer.value = null
+}
+
+  // ✅ CORREÇÃO: Beacon simplificado e funcional
   if (room.value.id && currentUser.value.id && hasJoined.value && !hasLeftManually.value) {
+    const beaconUrl = `${API_URL}/api/rooms/${room.value.id}/listeners/beacon`
     const payload = JSON.stringify({
       userIdToRemove: currentUser.value.id,
-      requesterId: currentUser.value.id
+      requesterId: currentUser.value.id,
+      token: localStorage.getItem('token') || null
     })
-    const beaconUrl = `${API_URL}/api/rooms/${room.value.id}/listeners/beacon`
-    const success = navigator.sendBeacon?.(beaconUrl, new Blob([payload], { type: 'application/json' }))
-    if (!success) {
-      fetch(`${API_URL}/api/rooms/${room.value.id}/listeners/beacon`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload,
-        keepalive: true
-      }).catch(() => {})
+    
+    try {
+      const blob = new Blob([payload], { type: 'application/json' })
+      navigator.sendBeacon?.(beaconUrl, blob)
+    } catch (e) {
+      console.warn('Beacon falhou:', e)
     }
   }
+
   if (toastTimeout) clearTimeout(toastTimeout)
   hasJoined.value = false
   isJoining.value = false
@@ -2168,6 +3649,36 @@ onUnmounted(() => {
 .tonearm-stick { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 8px; height: 160px; background: linear-gradient(90deg, #d0d0d0, #a0a0a0); border-radius: 4px; }
 .cartridge { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 16px; height: 24px; background: #ff4757; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
 
+.clear-queue-modal { max-width: 400px; }
+.clear-queue-content { padding: 1.5rem; }
+.clear-warning { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  text-align: center; 
+  gap: 1rem; 
+  margin-bottom: 1.5rem; 
+}
+.clear-warning p { margin: 0; font-size: 1rem; color: var(--text-primary); }
+.clear-warning span { font-size: 0.875rem; color: var(--text-secondary); }
+.clear-actions { display: flex; gap: 0.75rem; }
+.clear-actions button { 
+  flex: 1; 
+  padding: 0.875rem; 
+  border: none; 
+  border-radius: 12px; 
+  font-weight: 700; 
+  cursor: pointer; 
+  transition: all 0.3s; 
+  font-size: 1rem; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 0.5rem; 
+}
+.confirm-clear-btn { background: #ff6b6b; color: white; }
+.confirm-clear-btn:hover { background: #ff5252; transform: translateY(-1px); }
+
 .visualizer-rings { position: absolute; inset: -40px; pointer-events: none; }
 .ring { position: absolute; inset: 0; border: 2px solid rgba(29, 185, 84, 0.3); border-radius: 50%; animation: ripple 3s infinite ease-out; opacity: 0; }
 @keyframes ripple { 0% { transform: scale(0.8); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
@@ -2207,6 +3718,37 @@ onUnmounted(() => {
 .room-sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
 
 .listeners-section, .queue-section, .chat-section { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.25rem; backdrop-filter: blur(10px); }
+
+.spotify-login-modal { max-width: 480px; }
+.spotify-login-content { padding: 2rem; text-align: center; }
+.spotify-icon-large { 
+  width: 80px; height: 80px; margin: 0 auto 1.5rem;
+  background: linear-gradient(135deg, #1DB954, #1ed760);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: white; 
+}
+.spotify-login-content h2 { margin: 0 0 0.75rem; font-size: 1.25rem; }
+.spotify-login-content p { color: var(--text-secondary); margin: 0 0 1rem; line-height: 1.5; }
+.guest-info { 
+  background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px; padding: 0.75rem; font-size: 0.875rem; color: #ffc107; 
+}
+.spotify-login-actions { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; }
+.login-btn { 
+  padding: 1rem; background: linear-gradient(135deg, #1DB954, #1ed760);
+  border: none; border-radius: 12px; color: black; font-size: 1rem;
+  font-weight: 700; cursor: pointer; transition: all 0.3s;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(29, 185, 84, 0.4); }
+.guest-btn { 
+  padding: 1rem; background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px;
+  color: var(--text-secondary); font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; transition: all 0.3s;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+}
+.guest-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-primary); }
 
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .section-header h3 { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin: 0; }

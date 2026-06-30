@@ -40,6 +40,4 @@ router.get('/status', requireAuth, spotifyController.getSpotifyStatus)
 // ============================================
 router.put('/transfer-playback', requireAuth, requireSpotifyAuth, spotifyController.transferPlayback)
 
-router.get('/me/player/devices', requireAuth, requireSpotifyAuth, spotifyController.getDevices)
-
 module.exports = router

@@ -70,7 +70,13 @@ const buscarPorId = async (req, res) => {
   try {
     const room = await roomService.buscarPorId(req.params.id)
     if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
-    res.json(room)
+    
+    // Garante que source está presente
+    const roomObj = room.toObject ? room.toObject() : room
+    res.json({
+      ...roomObj,
+      source: roomObj.source || 'deezer'
+    })
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
@@ -392,38 +398,72 @@ const adicionarListener = async (req, res) => {
 }
 const removerListener = async (req, res) => {
   try {
-    const requesterId = req.user?.id || req.body?.requesterId
+    // ✅ CORREÇÃO: Prioriza req.user.id (token JWT), fallback para body
+    let requesterId = req.user?.id || req.user?._id || req.body?.requesterId
+    
+    // Se ainda não tem requesterId, tenta decodificar token do header
+    if (!requesterId && req.headers.authorization) {
+      try {
+        const jwt = require('jsonwebtoken')
+        const token = req.headers.authorization.replace('Bearer ', '')
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        requesterId = decoded.id || decoded._id || decoded.userId
+      } catch (e) {
+        // Token inválido, continua com body
+      }
+    }
+    
     const { userIdToRemove } = req.body
-    if (!userIdToRemove) return res.status(400).json({ error: 'userIdToRemove é obrigatório' })
-    if (!requesterId) return res.status(401).json({ error: 'Autenticação necessária' })
+    
+    if (!userIdToRemove) {
+      return res.status(400).json({ error: 'userIdToRemove é obrigatório' })
+    }
+    
+    if (!requesterId) {
+      // ✅ CORREÇÃO: Se é self-removal e não tem auth, permite com base no body
+      // Mas loga o aviso
+      console.warn('⚠️ removerListener sem requesterId identificado')
+      return res.status(401).json({ error: 'Autenticação necessária' })
+    }
 
-    const Room = require('../models/Room')
     const roomBefore = await Room.findById(req.params.id)
       .populate('activeListeners.userId', 'nome username avatar')
+      .populate('createdBy', '_id')
 
     const listenerToRemove = roomBefore?.activeListeners?.find(l =>
       String(l.userId?._id || l.userId) === String(userIdToRemove)
     )
     const userName = listenerToRemove?.name || listenerToRemove?.userId?.nome || 'Um usuário'
 
+    // Chama o service
     const room = await roomService.removerListener(req.params.id, userIdToRemove, requesterId)
 
     const wasRemoved = !room.activeListeners.some(l =>
       String(l.userId?._id || l.userId) === String(userIdToRemove)
     )
 
-    if (wasRemoved) {
-      await roomService.enviarMensagem(req.params.id, {
-        userId: 'system', userName: 'Sistema',
-        avatar: 'https://via.placeholder.com/150',
-        text: `${userName} saiu da sala.`,
-        timestamp: new Date()
-      })
-    }
+const ownerLeft = roomBefore?.activeListeners?.some(l => {
+  const uid = String(l.userId?._id || l.userId)
+  return uid === String(userIdToRemove) && l.role === 'owner'
+})
 
+if (wasRemoved && ownerLeft) {
+  // Envia mensagem de sistema informando que sala foi encerrada
+  await roomService.enviarMensagem(req.params.id, {
+    userId: 'system',
+    userName: 'Sistema',
+    avatar: 'https://via.placeholder.com/150',
+    text: `🚪 O dono da sala saiu. A sala será encerrada em alguns segundos...`,
+    timestamp: new Date()
+  })
+}
+
+    // ✅ CORREÇÃO: Formata listeners corretamente, incluindo verificação de dono
+    const ownerId = String(room.createdBy?._id || room.createdBy)
+    
     const formattedListeners = room.activeListeners.map(listener => {
       const uid = String(listener.userId?._id || listener.userId)
-      const isOwner = String(room.createdBy?._id || room.createdBy) === uid
+      const isOwner = ownerId === uid
       const isModerator = room.moderators?.some(m => String(m._id || m) === uid)
       return {
         id: uid,
@@ -434,18 +474,29 @@ const removerListener = async (req, res) => {
       }
     })
 
+    // ✅ CORREÇÃO: Retorna listeners vazios se dono saiu
     res.json({
       message: 'Usuário removido da sala',
       listeners: room.listeners || 0,
       activeListeners: formattedListeners
     })
   } catch (error) {
+    console.error('[removerListener] Erro:', error.message)
     res.status(403).json({ error: error.message })
   }
 }
+
+// ========== SUBSTITUA O MÉTODO listarListeners ==========
 const listarListeners = async (req, res) => {
   try {
     const listeners = await roomService.listarListeners(req.params.id)
+    
+    // 🔥 Se não há dono na lista, retorna vazio (sala encerrada)
+    const hasOwner = listeners.some(l => l.role === 'owner')
+    if (listeners.length > 0 && !hasOwner) {
+      return res.json([])
+    }
+    
     res.json(listeners)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -454,15 +505,32 @@ const listarListeners = async (req, res) => {
 
 const removerListenerBeacon = async (req, res) => {
   try {
-    const requesterId = req.user?.id || req.body?.requesterId
+    // 🔥 BEACON: req.user pode ser null porque sendBeacon não manda Authorization header
+    // O token vem no body como fallback
+    let requesterId = req.user?.id || req.user?._id || req.body?.requesterId
+    
+    // 🔥 Se ainda não tem requesterId, tenta validar o token do body
+    if (!requesterId && req.body?.token) {
+      try {
+        const jwt = require('jsonwebtoken')
+        const decoded = jwt.verify(req.body.token, process.env.JWT_SECRET)
+        requesterId = decoded.id || decoded._id || decoded.userId
+      } catch (e) {
+        console.warn('⚠️ Token do body inválido no beacon')
+      }
+    }
+    
     const { userIdToRemove } = req.body
-    if (!userIdToRemove || !requesterId) return res.status(200).send()
+    if (!userIdToRemove || !requesterId) {
+      console.log('⚠️ Beacon: dados incompletos, ignorando')
+      return res.status(200).send()
+    }
 
     await roomService.removerListener(req.params.id, userIdToRemove, requesterId)
     res.status(200).send()
   } catch (error) {
     console.error('Erro no beacon:', error)
-    res.status(200).send()
+    res.status(200).send() // Sempre retorna 200 para não travar o unload
   }
 }
 

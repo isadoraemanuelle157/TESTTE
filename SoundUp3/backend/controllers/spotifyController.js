@@ -139,7 +139,7 @@ exports.search = async (req, res) => {
       response = await spotifyRequest({
         method: 'GET',
         url: `${SPOTIFY_API_URL}/search`,
-       params: { q, type, limit: Math.min(parseInt(req.query.limit) || 5, 10), market }
+        params: { q, type, limit: 10, market }
       }, 3, userToken)
     } catch (err) {
       // ✅ SE FALHOU COM USER TOKEN, TENTA REFRESH UMA VEZ
@@ -159,7 +159,7 @@ exports.search = async (req, res) => {
             response = await spotifyRequest({
               method: 'GET',
               url: `${SPOTIFY_API_URL}/search`,
-           params: { q, type, limit: Math.min(parseInt(req.query.limit) || 5, 10), market }
+              params: { q, type, limit: 10, market }
             }, 3, userToken)
             
             console.log('✅ Busca Spotify bem-sucedida após refresh')
@@ -177,7 +177,7 @@ exports.search = async (req, res) => {
         response = await spotifyRequest({
           method: 'GET',
           url: `${SPOTIFY_API_URL}/search`,
-         params: { q, type, limit: Math.min(parseInt(req.query.limit) || 5, 10), market }
+          params: { q, type, limit: 10, market }
         }, 3, null)
       }
     }
@@ -225,51 +225,24 @@ exports.getArtist = async (req, res) => {
 exports.getArtistTopTracks = async (req, res) => {
   try {
     const { id } = req.params
-    const market = req.query.market || 'BR'
+    const market = req.query.market || 'US'
     const cacheKey = `spotify_artist_top_${id}_${market}`
     
     const cached = getCache(cacheKey)
     if (cached) return res.json(cached)
 
-    // 🔥 NOVO: Busca tracks do artista via search (top-tracks foi removido)
-    const artistRes = await spotifyRequest({
+    const response = await spotifyRequest({
       method: 'GET',
-      url: `${SPOTIFY_API_URL}/artists/${id}`
-    })
-    
-    const artistName = artistRes.data?.name
-    if (!artistName) {
-      return res.status(404).json({ error: 'Artista não encontrado' })
-    }
-
-    const searchRes = await spotifyRequest({
-      method: 'GET',
-      url: `${SPOTIFY_API_URL}/search`,
-      params: { 
-        q: `artist:"${artistName}"`, 
-        type: 'track', 
-        limit: 10,  // máximo permitido agora
-        market 
-      }
+      url: `${SPOTIFY_API_URL}/artists/${id}/top-tracks`,
+      params: { market }
     })
 
-    const tracks = searchRes.data?.tracks?.items || []
-    
-    // Mapeia para formato similar ao antigo top-tracks
-    const formattedTracks = tracks.map(t => ({
-      ...t,
-      // Adiciona campos que o frontend espera
-    }))
-
-    const result = { tracks: formattedTracks }
-    setCache(cacheKey, result, CACHE_TTL.artist)
-    res.json(result)
+    setCache(cacheKey, response.data, CACHE_TTL.artist) // 1 hora
+    res.json(response.data)
   } catch (error) {
-    console.error('❌ Artist top tracks error:', error.message)
     res.status(200).json({ tracks: [] })
   }
 }
-
 
 exports.getArtistAlbums = async (req, res) => {
   try {
@@ -281,15 +254,15 @@ exports.getArtistAlbums = async (req, res) => {
     const cached = getCache(cacheKey)
     if (cached) return res.json(cached)
 
-//    const response = await spotifyRequest({
-//      method: 'GET',
-//      url: `${SPOTIFY_API_URL}/artists/${id}/albums`,
-    //  params: {
-      //  limit: limit,
-     //   offset: offset,
-      //  include_groups: 'album,single,compilation'
-    //  }
-   // })
+    const response = await spotifyRequest({
+      method: 'GET',
+      url: `${SPOTIFY_API_URL}/artists/${id}/albums`,
+      params: {
+        limit: limit,
+        offset: offset,
+        include_groups: 'album,single,compilation'
+      }
+    })
 
      setCache(cacheKey, response.data, CACHE_TTL.album)
     console.log('✅ getArtistAlbums sucesso, items:', response.data.items?.length || 0)
@@ -679,7 +652,7 @@ exports.getPlaylist = async (req, res) => {
   try {
     const response = await spotifyRequest({
       method: 'GET',
-      url: `${SPOTIFY_API_URL}/playlists/${req.params.id}/items`,
+      url: `${SPOTIFY_API_URL}/playlists/${req.params.id}/tracks`,
       params: { limit: 50, market: 'BR' }
     })
     res.json(response.data)
@@ -915,7 +888,7 @@ exports.searchFullTracks = async (req, res) => {
     const response = await spotifyRequest({
       method: 'GET',
       url: `${SPOTIFY_API_URL}/search`,
-  params: { q, type, limit: Math.min(parseInt(req.query.limit) || 5, 10), market }
+      params: { q, type, limit: 20, market }
     }, 3, userToken)
 
     const data = response.data
@@ -1064,7 +1037,7 @@ exports.getAlbumTracks = async (req, res) => {
 
     const response = await spotifyRequest({
       method: 'GET',
-  url: `${SPOTIFY_API_URL}/albums/${id}/tracks`,
+      url: `${SPOTIFY_API_URL}/albums/${id}/tracks`,
       params: { limit, market }
     }, 3, userToken)
 
@@ -1196,26 +1169,5 @@ exports.transferPlayback = async (req, res) => {
       error: 'Erro ao transferir playback', 
       details: error.response?.data?.error?.message || error.message 
     })
-  }
-}
-
-// Adicione no spotifyController.js:
-
-exports.getDevices = async (req, res) => {
-  try {
-    const userToken = req.spotifyUserToken
-    if (!userToken) {
-      return res.status(403).json({ error: 'Spotify não conectado' })
-    }
-
-    const response = await spotifyRequest({
-      method: 'GET',
-      url: `${SPOTIFY_API_URL}/me/player/devices`
-    }, 3, userToken)
-
-    res.json(response.data)
-  } catch (error) {
-    console.error('❌ Get devices error:', error.message)
-    res.status(500).json({ error: 'Erro ao buscar devices', details: error.message })
   }
 }

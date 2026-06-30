@@ -20,6 +20,7 @@ const bcrypt = require('bcrypt')
       ...dados,
       name: normalizedName,
       createdBy: userId,
+       source: dados.source || 'spotify', 
       permissions: {
         addMusic: dados.permissions?.addMusic || 'everyone',
         invitePeople: dados.permissions?.invitePeople || 'moderators',
@@ -49,27 +50,26 @@ const bcrypt = require('bcrypt')
   }
 
   const listarMinhas = async (userId) => {
-    return Room.find({ createdBy: userId, active: true })
-      .sort({ createdAt: -1 })
+  return Room.find({ createdBy: userId, active: true })  // ✅ ADICIONAR active: true
+    .sort({ createdAt: -1 })
       .select('name description isPublic hasPassword source gradient listeners permissions moderators createdAt')
       .populate('moderators', 'nome username avatar')
   }
 
-  const listarPublicas = async () => {
-    return Room.find({ isPublic: true, active: true })
-      .sort({ createdAt: -1 })
-      .populate('createdBy', 'nome username avatar')
-      .populate('moderators', 'nome username avatar')
-      .select('name description isPublic hasPassword source gradient listeners createdBy createdAt')
-  }
+ const listarPublicas = async () => {
+  return Room.find({ isPublic: true, active: true })  // ✅ ADICIONAR active: true
+    .sort({ createdAt: -1 })
+    .populate('createdBy', 'nome username avatar')
+    .populate('moderators', 'nome username avatar')
+    .select('name description isPublic hasPassword source gradient listeners createdBy createdAt')
+}
 
-  const buscarPorId = async (id) => {
-    return Room.findById(id)
-      .populate('createdBy', 'nome username avatar')
-      .populate('moderators', 'nome username avatar')
-      .populate('invitedUsers', 'nome username avatar')
-  }
-
+ const buscarPorId = async (id) => {
+  return Room.findById(id)
+    .populate('createdBy', 'nome username avatar')
+    .populate('moderators', 'nome username avatar')
+    .populate('invitedUsers', 'nome username avatar')
+}
   // ========== ENTRAR NA SALA — CORRIGIDO (SENHA) ==========
   const entrar = async (roomId, userId, password) => {
     const room = await Room.findById(roomId)
@@ -406,8 +406,8 @@ const bcrypt = require('bcrypt')
 
   // ========== LISTAR TODAS ==========
   const listarTodas = async (userId) => {
-    const rooms = await Room.find({ active: true })
-      .sort({ createdAt: -1 })
+     const rooms = await Room.find({ active: true })  // ✅ ADICIONAR active: true
+    .sort({ createdAt: -1 })
       .populate('createdBy', 'nome username avatar')
       .populate('moderators', 'nome username avatar')
       .select('name description isPublic hasPassword source gradient listeners createdBy moderators createdAt')
@@ -425,22 +425,33 @@ const bcrypt = require('bcrypt')
   }
 
   // ========== LISTENERS — CORRIGIDO ==========
- const adicionarListener = async (roomId, userData) => {
+const adicionarListener = async (roomId, userData) => {
   const { userId, name, avatar, role = 'participant' } = userData
   const room = await Room.findById(roomId)
   if (!room) throw new Error('Sala não encontrada')
+
+  // ✅ CORREÇÃO: Limpa listeners inativos (mais de 5 minutos) antes de adicionar
+  const FIVE_MINUTES = 5 * 60 * 1000
+  const now = Date.now()
+  room.activeListeners = room.activeListeners.filter(l => {
+    const joinedTime = new Date(l.joinedAt).getTime()
+    return (now - joinedTime) < FIVE_MINUTES
+  })
 
   const existingIndex = room.activeListeners.findIndex(l =>
     String(l.userId) === String(userId)
   )
 
   if (existingIndex !== -1) {
-    room.activeListeners[existingIndex] = { userId, name, avatar, role, joinedAt: new Date() }
+    // Atualiza timestamp para manter ativo
+    room.activeListeners[existingIndex] = { 
+      userId, name, avatar, role, joinedAt: new Date() 
+    }
   } else {
     room.activeListeners.push({ userId, name, avatar, role, joinedAt: new Date() })
   }
 
-  room.listeners = room.activeListeners.length   // ← sempre sincronizado
+  room.listeners = room.activeListeners.length
   await room.save()
 
   return Room.findById(roomId)
@@ -448,38 +459,97 @@ const bcrypt = require('bcrypt')
     .populate('createdBy', 'nome username avatar')
 }
 
-  // ✅ CÓDIGO COMPLETO CORRIGIDO:
 const removerListener = async (roomId, userIdToRemove, requesterId) => {
   const room = await Room.findById(roomId)
     .populate('createdBy', '_id')
     .populate('moderators', '_id')
   if (!room) throw new Error('Sala não encontrada')
 
-  const isOwner = String(room.createdBy._id || room.createdBy) === String(requesterId)
-  const isModerator = room.moderators.some(m => String(m._id || m) === String(requesterId))
-  const isSelfRemoving = String(userIdToRemove) === String(requesterId)
+  // ✅ CORREÇÃO: Normaliza TODOS os IDs para string e trim
+  const normalizeId = (id) => {
+    if (!id) return ''
+    // Converte ObjectId para string se necessário
+    return String(id).trim()
+  }
+  
+  const reqId = normalizeId(requesterId)
+  const targetId = normalizeId(userIdToRemove)
+  const ownerId = normalizeId(room.createdBy._id || room.createdBy)
 
+  const isOwner = ownerId === reqId
+  const isModerator = room.moderators.some(m => 
+    normalizeId(m._id || m) === reqId
+  )
+  const isSelfRemoving = targetId === reqId
+
+  // ✅ LOG para debug (pode remover em produção)
+  console.log(`[removerListener] reqId=${reqId}, targetId=${targetId}, ownerId=${ownerId}, isOwner=${isOwner}, isSelfRemoving=${isSelfRemoving}`)
+
+  // ✅ CORREÇÃO: Permissões mais claras
+  // - Dono pode remover qualquer um (inclusive si mesmo)
+  // - Moderador pode remover participants (mas não dono nem outros moderadores)
+  // - Qualquer um pode se remover (self-removal)
+  
   if (!isOwner && !isModerator && !isSelfRemoving) {
     throw new Error('Sem permissão para remover usuários')
   }
 
-  const existingIndex = room.activeListeners.findIndex(l =>
-    String(l.userId) === String(userIdToRemove)
-  )
-  if (existingIndex === -1) throw new Error('Usuário não está na sala')
-
-  const targetIsOwner = String(room.createdBy._id || room.createdBy) === String(userIdToRemove)
-  if (targetIsOwner) throw new Error('Não é possível expulsar o dono da sala')
-
-  if (isModerator && !isOwner) {
-    const targetIsModerator = room.moderators.some(m =>
-      String(m._id || m) === String(userIdToRemove)
-    )
-    if (targetIsModerator) throw new Error('Apenas o dono pode expulsar moderadores')
+  // Moderador não-dono não pode remover dono
+  if (isModerator && !isOwner && targetId === ownerId) {
+    throw new Error('Apenas o dono pode ser removido por si mesmo')
   }
 
+  // Moderador não-dono não pode remover outro moderador
+  if (isModerator && !isOwner) {
+    const targetIsModerator = room.moderators.some(m => 
+      normalizeId(m._id || m) === targetId
+    )
+    if (targetIsModerator) {
+      throw new Error('Apenas o dono pode expulsar moderadores')
+    }
+  }
+
+  // ✅ CORREÇÃO: Procura o listener com comparação flexível
+  const existingIndex = room.activeListeners.findIndex(l => {
+    const listenerId = normalizeId(l.userId?._id || l.userId)
+    return listenerId === targetId
+  })
+  
+  if (existingIndex === -1) {
+    // Já saiu, considera sucesso (idempotente)
+    console.log(`[removerListener] Usuário ${targetId} não encontrado, retornando sucesso`)
+    return room
+  }
+
+  const removedListener = room.activeListeners[existingIndex]
+  
+  // ✅ CORREÇÃO CRÍTICA: Verifica se quem está saindo É o dono
+  const removedId = normalizeId(removedListener.userId?._id || removedListener.userId)
+  const wasOwner = removedId === ownerId
+
+  console.log(`[removerListener] Removendo: ${removedListener.name}, wasOwner=${wasOwner}`)
+
+  // Remove o listener
   room.activeListeners.splice(existingIndex, 1)
-  room.listeners = Math.max(0, room.activeListeners.length)   // ← nunca negativo
+  
+  // ✅ CORREÇÃO CRÍTICA: Se o dono saiu, limpa TUDO
+  if (wasOwner) {
+    console.log(`[removerListener] 🚨 DONO SAIU! Limpando sala ${roomId}`)
+    room.activeListeners = []
+    room.listeners = 0
+    room.currentTrack = null
+    room.syncState = {
+      isPlaying: false,
+      currentTime: 0,
+      trackId: null,
+      lastUpdated: new Date()
+    }
+     room.active = false
+  } else {
+    // Atualiza contagem normalmente
+    room.listeners = Math.max(0, room.activeListeners.length)
+  }
+  
   await room.save()
 
   return room

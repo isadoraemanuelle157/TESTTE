@@ -1269,6 +1269,7 @@ const typeMap = {
     this.loadHistory()
     this.loadLocalizacoes()
     this.loadRecentCategories()
+    this.checkSpotifyStatus()
   
      const savedGoldState = localStorage.getItem('soundup_avatar_gold_equipped');
   if (savedGoldState !== null) {
@@ -1282,15 +1283,12 @@ const typeMap = {
     this.currentUserId = userData.id || userData._id;
   }
 
-   this.checkSpotifyStatus()
+   window.addEventListener('spotify-connected', this.handleSpotifyConnected)
   
-  // 🔥 ADICIONAR: Listener para evento de conexão do Spotify
-  window.addEventListener('spotify-connected', this.handleSpotifyConnected)
-  
-  // 🔥 ADICIONAR: Listener para storage (outra aba)
+  // 🔥 NOVO: Listener para storage (caso abra em outra aba)
   window.addEventListener('storage', this.handleStorageChange)
   
-  // 🔥 ADICIONAR: Revalida quando a aba ganha foco
+  // 🔥 NOVO: Revalida status quando a janela ganha foco
   window.addEventListener('focus', this.handleWindowFocus)
 
    if (this.$route.query.spotify_connected === 'true') {
@@ -1339,33 +1337,33 @@ beforeUnmount() {
   methods: {
     // 🔥 NOVO: Handler para evento spotify-connected
 async handleSpotifyConnected() {
-    console.log('[SEARCH] Evento spotify-connected recebido')
+  console.log('[SEARCH] Evento spotify-connected recebido')
+  await this.checkSpotifyStatus()
+  if (this.spotifyConnected) {
+    this.showToast('Spotify conectado com sucesso!', 'success')
+    // Recarrega top tracks com Spotify ativo
+    await this.loadTopTracksByCategory(this.currentTopCategory)
+  }
+},
+
+// 🔥 NOVO: Handler para mudança no localStorage (outra aba)
+async handleStorageChange(e) {
+  if (e.key === 'spotify_connected' && e.newValue === 'true') {
+    console.log('[SEARCH] LocalStorage atualizado - Spotify conectado em outra aba')
     await this.checkSpotifyStatus()
     if (this.spotifyConnected) {
-      this.showToast('Spotify conectado com sucesso!', 'success')
-      // Recarrega top tracks com Spotify ativo
       await this.loadTopTracksByCategory(this.currentTopCategory)
     }
-  },
+  }
+},
 
-  // 🔥 NOVO: Handler para mudança no localStorage (outra aba)
-  async handleStorageChange(e) {
-    if (e.key === 'spotify_connected' && e.newValue === 'true') {
-      console.log('[SEARCH] LocalStorage atualizado - Spotify conectado em outra aba')
-      await this.checkSpotifyStatus()
-      if (this.spotifyConnected) {
-        await this.loadTopTracksByCategory(this.currentTopCategory)
-      }
-    }
-  },
-
-  // 🔥 NOVO: Revalida quando a aba ganha foco
-  async handleWindowFocus() {
-    if (this.isLogged && !this.spotifyConnected) {
-      console.log('[SEARCH] Janela ganhou foco - revalidando status do Spotify')
-      await this.checkSpotifyStatus()
-    }
-  },
+// 🔥 NOVO: Revalida quando a aba ganha foco (caso usuário volte da aba do Spotify)
+async handleWindowFocus() {
+  if (this.isLogged && !this.spotifyConnected) {
+    console.log('[SEARCH] Janela ganhou foco - revalidando status do Spotify')
+    await this.checkSpotifyStatus()
+  }
+},
 
      handleAvatarGoldChanged(e) {
     this.isAvatarGoldEquipped = e.detail?.equipped || false;
@@ -1489,7 +1487,6 @@ async checkSpotifyStatus() {
     if (!res.ok) {
       this.spotifyConnected = false
       this.spotifyTokenValid = false
-      localStorage.removeItem('spotify_connected')
       return
     }
 
@@ -1503,22 +1500,14 @@ async checkSpotifyStatus() {
       return
     }
 
-    // 🔥 CORREÇÃO: se connected=true, considera conectado mesmo que tokenValid venha false
-    // (o backend já tenta refresh automático antes de responder)
     this.spotifyConnected = !!data.connected
-    this.spotifyTokenValid = !!data.tokenValid || !!data.refreshed
+    this.spotifyTokenValid = !!data.tokenValid
 
-    if (this.spotifyConnected) {
+    if (this.spotifyConnected && this.spotifyTokenValid) {
       localStorage.setItem('spotify_connected', 'true')
     } else {
       localStorage.removeItem('spotify_connected')
     }
-
-    console.log('[SEARCH] Status Spotify:', {
-      connected: this.spotifyConnected,
-      tokenValid: this.spotifyTokenValid,
-      refreshed: data.refreshed
-    })
   } catch (err) {
     console.error('[SPOTIFY STATUS] Erro:', err)
     this.spotifyConnected = false
@@ -2334,8 +2323,8 @@ async loadTopTracksByCategory(category = 'Brasil') {
           `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(safeCategory)}&type=track&limit=10&market=BR`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          },
-          8000
+            signal: AbortSignal.timeout(8000)
+          }
         )
 
         // 🔥 NOVO: Se token expirou, tenta refresh e reexecuta
@@ -2358,8 +2347,8 @@ async loadTopTracksByCategory(category = 'Brasil') {
                 `http://localhost:3002/spotify/search/full?q=${encodeURIComponent(safeCategory)}&type=track&limit=10&market=BR`,
                 {
                   headers: { Authorization: `Bearer ${token}` },
-                },
-                8000
+                  signal: AbortSignal.timeout(8000)
+                }
               )
               
               if (retryRes.ok) {
@@ -2505,8 +2494,8 @@ async searchSpotifyAndLocal(query) {
         `${this.SPOTIFY_API}/search?q=${encodeURIComponent(safeQuery)}&type=track,artist,album&limit=20&market=BR`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        },
-        8000
+          signal: AbortSignal.timeout(8000)
+        }
       )
      
       if (res.ok) {
@@ -2531,8 +2520,8 @@ async searchSpotifyAndLocal(query) {
               `${this.SPOTIFY_API}/search?q=${encodeURIComponent(safeQuery)}&type=track,artist,album&limit=20&market=BR`,
               {
                 headers: { Authorization: `Bearer ${token}` },
-              },
-              8000
+                signal: AbortSignal.timeout(8000)
+              }
             )
             
             if (retryRes.ok) {
@@ -3640,28 +3629,7 @@ if (matchedExploreGenres.length > 0) {
       }
     },
 
-    // 🔥 FUNÇÃO UTILITÁRIA para fetch com timeout
-async fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    })
-    clearTimeout(timeoutId)
-    return response
-  } catch (err) {
-    clearTimeout(timeoutId)
-    if (err.name === 'AbortError') {
-      throw new Error('Timeout na requisição')
-    }
-    throw err
-  }
-},
-
-convertToPlayerFormat(track) {
+  convertToPlayerFormat(track) {
   const rawPreview = track.preview || track.link || track.url || ''
   const isSpotifyLike = track.source === 'spotify' || track.source === 'spotify_full'
   const hasPreview = !!(rawPreview && rawPreview !== 'null' && rawPreview !== 'undefined')
@@ -3674,8 +3642,7 @@ convertToPlayerFormat(track) {
     title: track.title || this.getResultTitle(track),
     artist: track.artist?.name || track.artist || 'Artista desconhecido',
     cover: this.getBestImage(track) || track.album?.cover_medium || '',
-    // 🔥 CORREÇÃO: NUNCA passe spotify:track: como url do <audio>
-    url: isSpotifyFull ? '' : (rawPreview || ''),
+    url: isSpotifyFull ? '' : rawPreview,
     preview: rawPreview,
     duration: track.duration || 30,
     type: track.type || 'search',

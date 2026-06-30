@@ -30,17 +30,7 @@ const { DEEZER_API_URL, SPOTIFY_API_URL } = require('./config/spotify')
 // ============================================
 // 🛡️ MIDDLEWARES
 // ============================================
-// ============================================
-// 🛡️ MIDDLEWARES
-// ============================================
-const corsOptions = {
-  origin: 'http://localhost:5173',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}
-
-app.use(cors(corsOptions))
+app.use(cors())
 
 app.use(express.json({
   limit: '20mb'
@@ -288,105 +278,39 @@ const MOODS = [
   }
 ]
 
-// ============================================
-// POST /spotify/refresh
-// ============================================
-app.post('/spotify/refresh', requireAuth, async (req, res) => {
+app.post('/spotify/refresh-token', requireAuth, async (req, res) => {
   try {
-    const Usuario = require('../models/Usuario')
+    const { refresh_token } = req.body || req.user?.spotifyRefreshToken
     
-    // Busca usuário com campos Spotify
-    const user = await Usuario.findById(req.user.id).select(
-      '+spotifyRefreshToken +spotifyAccessToken +spotifyTokenExpiresAt +spotifyConnected'
-    )
-
-    if (!user) {
-      return res.status(401).json({
-        error: 'USER_NOT_FOUND',
-        message: 'Usuário não encontrado'
-      })
+    if (!refresh_token) {
+      return res.status(400).json({ error: 'Refresh token não fornecido' })
     }
-
-    if (!user.spotifyRefreshToken) {
-      user.spotifyConnected = false
-      await user.save()
-      
-      return res.status(403).json({
-        error: 'NO_REFRESH_TOKEN',
-        message: 'Spotify não conectado. Faça login no Spotify.',
-        requiresReauth: true
-      })
-    }
-
-    const axios = require('axios')
-    const { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } = process.env
 
     const response = await axios.post(
       'https://accounts.spotify.com/api/token',
       new URLSearchParams({
         grant_type: 'refresh_token',
-        refresh_token: user.spotifyRefreshToken,
-        client_id: SPOTIFY_CLIENT_ID,
-        client_secret: SPOTIFY_CLIENT_SECRET
+        refresh_token: refresh_token
       }).toString(),
       {
         headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64'),
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       }
     )
 
-    const { access_token, expires_in, refresh_token: newRefreshToken } = response.data
-
-    // Atualiza usuário
-    user.spotifyAccessToken = access_token
-    user.spotifyTokenExpiresAt = new Date(Date.now() + expires_in * 1000)
-    user.spotifyConnected = true
-    if (newRefreshToken) {
-      user.spotifyRefreshToken = newRefreshToken
-    }
-    await user.save()
-
     res.json({
-      access_token,
-      expires_in
+      access_token: response.data.access_token,
+      expires_in: response.data.expires_in,
+      scope: response.data.scope
     })
 
   } catch (error) {
-    console.error('[SPOTIFY REFRESH] Erro:', error.response?.data || error.message)
-
-    const spotifyError = error.response?.data?.error
-    
-    // Token inválido ou revogado
-    if (error.response?.status === 400 && (
-      spotifyError === 'invalid_grant' || 
-      spotifyError === 'invalid_request'
-    )) {
-      // Limpa tokens do usuário
-      try {
-        const Usuario = require('../models/Usuario')
-        await Usuario.findByIdAndUpdate(req.user.id, {
-          $set: { spotifyConnected: false },
-          $unset: { 
-            spotifyAccessToken: 1,
-            spotifyRefreshToken: 1,
-            spotifyTokenExpiresAt: 1
-          }
-        })
-      } catch (e) {
-        console.error('Erro ao limpar tokens:', e)
-      }
-
-      return res.status(400).json({
-        error: 'INVALID_REFRESH_TOKEN',
-        message: 'Token do Spotify inválido ou revogado. Conecte novamente.',
-        requiresReauth: true
-      })
-    }
-
-    res.status(500).json({
-      error: 'REFRESH_FAILED',
-      message: 'Erro ao renovar token do Spotify'
+    console.error('[SPOTIFY] Refresh token error:', error.response?.data || error.message)
+    res.status(401).json({
+      error: 'TOKEN_REFRESH_FAILED',
+      message: 'Não foi possível renovar o token do Spotify. Faça login novamente.'
     })
   }
 })
